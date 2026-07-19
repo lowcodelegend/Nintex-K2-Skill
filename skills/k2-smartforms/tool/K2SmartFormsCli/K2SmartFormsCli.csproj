@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{6BA890CC-6297-4CC7-BF6A-2148E94777C9}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>K2SmartFormsCli</RootNamespace>
+    <AssemblyName>k2forms</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <K2InstallDir Condition=" '$(K2InstallDir)' == '' ">C:\Program Files\K2</K2InstallDir>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Web.Extensions" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="SourceCode.Framework">
+      <HintPath>$(K2InstallDir)\Bin\SourceCode.Framework.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="SourceCode.HostClientAPI">
+      <HintPath>$(K2InstallDir)\Bin\SourceCode.HostClientAPI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="SourceCode.SmartObjects.Client">
+      <HintPath>$(K2InstallDir)\Bin\SourceCode.SmartObjects.Client.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="SourceCode.Forms.Authoring">
+      <HintPath>$(K2InstallDir)\Bin\SourceCode.Forms.Authoring.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="SourceCode.Forms.Management">
+      <HintPath>$(K2InstallDir)\Bin\SourceCode.Forms.Management.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="SourceCode.Forms.Utilities">
+      <HintPath>$(K2InstallDir)\Bin\SourceCode.Forms.Utilities.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Cli.cs" />
+    <Compile Include="Manifest.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="RuntimeAssemblyResolver.cs" />
+    <Compile Include="SmartFormsManager.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

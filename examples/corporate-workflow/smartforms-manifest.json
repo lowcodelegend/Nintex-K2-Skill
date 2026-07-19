@@ -1,0 +1,162 @@
+{
+  "name": "Corporate workflow CRUD SmartForms v0.1",
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "application": {
+    "categoryPath": "K2 Skills\\Corporate Workflow\\v0.1",
+    "theme": "Lithium",
+    "replaceExisting": true,
+    "checkIn": true,
+    "views": [
+      {
+        "name": "CW Request Editor v0.1",
+        "smartObject": "K2Skills_CorporateWorkflow_Test_app_WorkflowRequest",
+        "type": "capture",
+        "properties": [
+          "RequestId",
+          "RequestNumber",
+          "RequestTypeId",
+          "RequestorEmployeeId",
+          "DepartmentId",
+          "Title",
+          "Description",
+          "Amount",
+          "Priority",
+          "Status",
+          "SubmittedOn",
+          "CompletedOn"
+        ],
+        "methods": ["Create", "Read", "Update", "Delete"],
+        "options": ["editable", "labels-left", "colon-labels", "toolbar"]
+      },
+      {
+        "name": "CW Request List v0.1",
+        "smartObject": "K2Skills_CorporateWorkflow_Test_app_WorkflowRequest",
+        "type": "list",
+        "properties": [
+          "RequestId",
+          "RequestNumber",
+          "Title",
+          "Amount",
+          "Priority",
+          "Status",
+          "SubmittedOn",
+          "CreatedOn"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": ["toolbar"]
+      },
+      {
+        "name": "CW Approval Task Editor v0.1",
+        "smartObject": "K2Skills_CorporateWorkflow_Test_app_ApprovalTask",
+        "type": "capture",
+        "properties": [
+          "ApprovalTaskId",
+          "RequestId",
+          "StepNumber",
+          "StepName",
+          "AssignedEmployeeId",
+          "Status",
+          "Decision",
+          "DecisionComment",
+          "DueOn",
+          "ActedOn"
+        ],
+        "methods": ["Create", "Read", "Update", "Delete"],
+        "options": ["editable", "labels-left", "colon-labels", "toolbar"]
+      },
+      {
+        "name": "CW Approval Task List v0.1",
+        "smartObject": "K2Skills_CorporateWorkflow_Test_app_ApprovalTask",
+        "type": "list",
+        "properties": [
+          "ApprovalTaskId",
+          "RequestId",
+          "StepNumber",
+          "StepName",
+          "AssignedEmployeeId",
+          "Status",
+          "Decision",
+          "DueOn"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": ["toolbar"]
+      },
+      {
+        "name": "CW Request Type Editor v0.1",
+        "smartObject": "K2Skills_CorporateWorkflow_Test_app_RequestType",
+        "type": "capture",
+        "properties": [
+          "RequestTypeId",
+          "RequestTypeCode",
+          "RequestTypeName",
+          "Description",
+          "DefaultSlaHours",
+          "RequiresAmount",
+          "IsActive"
+        ],
+        "methods": ["Create", "Read", "Update", "Delete"],
+        "options": ["editable", "labels-left", "colon-labels", "toolbar"]
+      },
+      {
+        "name": "CW Request Type List v0.1",
+        "smartObject": "K2Skills_CorporateWorkflow_Test_app_RequestType",
+        "type": "list",
+        "properties": [
+          "RequestTypeId",
+          "RequestTypeCode",
+          "RequestTypeName",
+          "DefaultSlaHours",
+          "RequiresAmount",
+          "IsActive"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": ["toolbar"]
+      }
+    ],
+    "forms": [
+      {
+        "name": "CW Request Management v0.1",
+        "views": ["CW Request Editor v0.1", "CW Request List v0.1"],
+        "options": ["no-tabs"],
+        "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]
+      },
+      {
+        "name": "CW Approval Task Management v0.1",
+        "views": ["CW Approval Task Editor v0.1", "CW Approval Task List v0.1"],
+        "options": ["no-tabs"],
+        "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]
+      },
+      {
+        "name": "CW Request Type Administration v0.1",
+        "views": ["CW Request Type Editor v0.1", "CW Request Type List v0.1"],
+        "options": ["no-tabs"],
+        "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]
+      }
+    ]
+  },
+  "verification": {
+    "expectedViews": [
+      "CW Request Editor v0.1",
+      "CW Request List v0.1",
+      "CW Approval Task Editor v0.1",
+      "CW Approval Task List v0.1",
+      "CW Request Type Editor v0.1",
+      "CW Request Type List v0.1"
+    ],
+    "expectedForms": [
+      "CW Request Management v0.1",
+      "CW Approval Task Management v0.1",
+      "CW Request Type Administration v0.1"
+    ],
+    "smokeTestRuntime": true,
+    "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime"
+  }
+}
