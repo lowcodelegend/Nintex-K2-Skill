@@ -40,3 +40,14 @@ $formsSkillRoot = Join-Path $env:USERPROFILE '.codex\skills\k2-smartforms'
 Example runtime URL:
 
 `https://spk2.trials.demome.tech/Runtime/Runtime/Form/CW+Approval+Task+Management/`
+
+## Workflow baseline
+
+`workflow-manifest.json` creates the modern HTML5 Workflow Designer JSON baseline `CW Request Approval` in `K2 Skills\Corporate Workflow\Workflows`. v0.1 deliberately contains only Start → End; it proves JSON authoring, publication, runtime deployment, verification, and safe lifecycle handling before SmartObject events and user tasks are added.
+
+```powershell
+$workflowSkillRoot = Join-Path $env:USERPROFILE '.codex\skills\k2-workflows'
+& "$workflowSkillRoot\scripts\k2wf.ps1" plan "$PWD\workflow-manifest.json"
+& "$workflowSkillRoot\scripts\k2wf.ps1" deploy "$PWD\workflow-manifest.json" --confirm
+& "$workflowSkillRoot\scripts\k2wf.ps1" verify "$PWD\workflow-manifest.json"
+```

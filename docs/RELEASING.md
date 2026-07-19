@@ -9,7 +9,7 @@ Maintain suite and skill versions in `release/skills.json`. Each skill entry dec
 - Build outputs to add after ordinary `bin` and `obj` directories are excluded.
 - An optional executable version check that prevents release metadata and tool versions from drifting.
 
-Do not declare or package K2's `SourceCode.*.dll` assemblies. The SQL SmartObjects CLI resolves those proprietary assemblies from the target K2 installation.
+Do not declare or package K2's `SourceCode.*.dll` assemblies. The CLIs resolve those proprietary assemblies from the target K2 installation.
 
 ## Build packages
 

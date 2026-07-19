@@ -1,0 +1,4 @@
+interface:
+  display_name: "K2 Five Workflows"
+  short_description: "Build and publish modern K2 JSON workflows"
+  default_prompt: "Use $k2-workflows to plan, build, publish, and verify a K2 Five HTML5 Workflow Designer JSON workflow."

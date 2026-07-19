@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "name": "Corporate request approval workflow baseline",
+  "k2": { "designerHost": "smartforms" },
+  "application": { "rootCategoryPath": "K2 Skills\\Corporate Workflow" },
+  "workflow": {
+    "name": "CW Request Approval",
+    "kind": "start-end",
+    "publish": true,
+    "replaceExisting": false,
+    "comment": "k2wf v0.1 Start to End baseline"
+  }
+}

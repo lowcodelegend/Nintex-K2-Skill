@@ -1,4 +1,4 @@
-# K2 Five environment and SQL SmartObject learnings
+# K2 Five environment and builder learnings
 
 ## Local environment
 
@@ -69,6 +69,19 @@ The `examples/request-management` fixture was deployed twice:
 
 The corporate workflow proof generated six checked-in views under `K2 Skills\Corporate Workflow\Views` and three forms under `K2 Skills\Corporate Workflow\Forms`, then verified their definitions, categories, theme, view references, and runtime routes. Form/view names and categories remain stable and version-free.
 
+## HTML5 Workflow Designer findings
+
+- The K2 Five web designer persists a JSON graph and calls `api/workflow/savejson`; on this installation the hosted designer environment token is `smartforms`, not the server hostname.
+- The supported installed client path is `K2DesignerManagementClient.SaveKprx`. The publish flag compiles the modern `K2Process` JSON through the web-designer code-generation/deployment pipeline and creates the runtime definition.
+- The working example is designer schema `14`, root component `50001`. A minimal Start → End definition needs the designer's activity configuration, ports, reciprocal link references, and process configuration; a hand-waved graph is not sufficient.
+- Modern workflow assemblies are `SourceCode.WebDesigner.Framework.ObjectModel.Workflow`, `SourceCode.WebDesigner.Framework.CodeGen.Workflow`, and `SourceCode.WebDesigner.Deployment.K2Process`. Do not use the installed legacy `SourceCode.Workflow.Design`/`SourceCode.Workflow.Authoring` models for JSON authoring.
+- Some concrete provider types used by the modern on-prem web application remain under a `.Legacy` namespace. They are server adapters, not the legacy workflow design-time model.
+- Publication returns separate JSON process ID, runtime process ID, and runtime version. Verification should check the saved JSON through the designer client and the published process through `WorkflowManagementServer`.
+- Runtime cleanup must refuse live instances. K2 will not delete a default process definition until `SetDefaultProcess(..., 0)` clears the default; after that the exact runtime versions and designer JSON can be removed without deleting logs.
+- The native server build environment is C# 5/.NET Framework MSBuild, so tool source must avoid newer compiler-only syntax even when the runtime libraries support newer APIs.
+
+The disposable workflow proof published JSON process `1040` as runtime process `3312`, verified schema `14`, two nodes, one link, and the runtime definition, then deleted both layers and proved the JSON was absent. A separate early schema probe was also removed from both designer and runtime stores.
+
 ## Important constraints
 
 - K2 documentation explicitly warns against direct access or modification of the K2 database. All K2 mutations must go through supported APIs.
@@ -87,3 +100,6 @@ The corporate workflow proof generated six checked-in views under `K2 Skills\Cor
 - [Generating Forms and Views with C#](https://help.nintex.com/en-us/k2five/devref/5.6/content/Forms/FormsSamples.htm)
 - [Using SmartObjects in SmartForms](https://help.nintex.com/en-us/k2five/userguide/5.3/Content/create/SmartObjects/UsingSmOInSmartForms.htm)
 - [Generate a View](https://help.nintex.com/en-US/k2five/userguide/5.3/content/Create/SmartObjects/CreateSmOContextMenu.htm)
+- [About K2 Workflow Designer](https://help.nintex.com/en-US/K2Five/UserGuide/5.3/Content/K2-Workflow-Designer/About/About-Workflow-Designer.htm)
+- [Deploy a workflow](https://help.nintex.com/en-US/k2cloud/userguide/current/Content/K2-Workflow-Designer/Deploy/Deploy.htm)
+- [Workflow Management API](https://help.nintex.com/en-US/k2five/devref/5.6/Content/Runtime/WF-Manage/WFManage-Intro.htm)

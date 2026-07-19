@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "suiteName": "k2-skills",
-  "suiteVersion": "0.2.2",
+  "suiteVersion": "0.3.0",
   "skills": [
     {
       "name": "k2-sql-smartobjects",
@@ -39,6 +39,25 @@
         "path": "skills/k2-smartforms/tool/K2SmartFormsCli/bin/Release/k2forms.exe",
         "arguments": ["version"],
         "expectedOutput": "k2forms 0.1.2"
+      }
+    },
+    {
+      "name": "k2-workflows",
+      "version": "0.1.0",
+      "platform": "win-x64",
+      "buildScript": "skills/k2-workflows/scripts/build.ps1",
+      "buildParameters": {
+        "Configuration": "Release",
+        "Clean": true
+      },
+      "builtFiles": [
+        "skills/k2-workflows/tool/K2WorkflowCli/bin/Release/k2wf.exe",
+        "skills/k2-workflows/tool/K2WorkflowCli/bin/Release/k2wf.exe.config"
+      ],
+      "versionCommand": {
+        "path": "skills/k2-workflows/tool/K2WorkflowCli/bin/Release/k2wf.exe",
+        "arguments": ["version"],
+        "expectedOutput": "k2wf 0.1.0"
       }
     }
   ]
