@@ -16,6 +16,8 @@ Use `scripts/k2wf.ps1`; do not write to the K2 database or invoke legacy workflo
 5. Run `inspect` and `verify`. Verification must prove both the saved JSON and, when `publish=true`, the runtime process definition.
 6. For a disposable workflow, run `cleanup ... --confirm --delete-deployed` and prove `inspect` no longer finds it.
 
+`deploy` explicitly releases the HTML5 designer lock after every successful save/publish. If a prior tool/browser session left a workflow locked, run `unlock <manifest> --confirm`, then refresh the Designer page. Do not assume that matching the displayed lock owner makes a different browser client identifier editable.
+
 ## v0.1 scope
 
 Prefer `workflow.kind=start-end` for the known-good manually started Start → End baseline. Use `json-file` only with a definition produced by this K2 Five HTML5 designer schema; the CLI rejects non-JSON/legacy roots and normalizes the root name.

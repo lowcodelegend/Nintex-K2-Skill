@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Security.Principal;
@@ -90,6 +91,17 @@ namespace K2WorkflowCli
             Console.WriteLine("JSON process ID: " + Convert.ToString(result["SavedId"]));
             if (result["ProcID"] != null) Console.WriteLine("Runtime process ID: " + Convert.ToString(result["ProcID"]));
             if (result["VersionNumber"] != null) Console.WriteLine("Runtime version: " + Convert.ToString(result["VersionNumber"]));
+            var savedId = Convert.ToInt32(result["SavedId"]);
+            Unlock(savedId);
+            Console.WriteLine("Released designer lock: " + _manifest.Workflow.ProcessFullName);
+        }
+
+        public void Unlock()
+        {
+            var id = GetProcessId();
+            if (!id.HasValue) throw new CliException("Workflow not found: " + _manifest.Workflow.ProcessFullName);
+            Unlock(id.Value);
+            Console.WriteLine("Released designer lock: " + _manifest.Workflow.ProcessFullName);
         }
 
         public void Inspect()
@@ -199,6 +211,11 @@ namespace K2WorkflowCli
         }
 
         private object GetProcessInfo(int id) { return Invoke("GetProcessJson", id); }
+        private void Unlock(int processId)
+        {
+            Invoke("ExecuteFrameworkMethod", _manifest.K2.DesignerHost, "Process", "Processdataservice", "UnlockProcess",
+                CultureInfo.CurrentUICulture.Name, new object[] { processId, _userName });
+        }
         private object Invoke(string name, params object[] args)
         {
             try

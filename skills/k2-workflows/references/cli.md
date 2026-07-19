@@ -9,10 +9,13 @@ From the skill directory:
 & '.\scripts\k2wf.ps1' deploy '<manifest.json>' --confirm
 & '.\scripts\k2wf.ps1' inspect '<manifest.json>'
 & '.\scripts\k2wf.ps1' verify '<manifest.json>'
+& '.\scripts\k2wf.ps1' unlock '<manifest.json>' --confirm
 & '.\scripts\k2wf.ps1' cleanup '<manifest.json>' --confirm --delete-deployed
 ```
 
-`render` is local-only. `deploy` uses the logged-on Windows identity and the K2 designer BaseAPI connection on port 5555. `verify` checks the stored JSON and checks the Workflow Management API when the manifest expects publication.
+`render` is local-only. `deploy` uses the logged-on Windows identity and the K2 designer BaseAPI connection on port 5555. After a successful save or publish it calls the designer's explicit `UnlockProcess` operation with the saved process ID and authenticated user. `verify` checks the stored JSON and checks the Workflow Management API when the manifest expects publication.
+
+`unlock` is an idempotent recovery command for workflows left locked by an interrupted CLI or browser session. K2 locks are client-session-sensitive, so a workflow can appear locked by the same AD username when the browser has a different client identifier.
 
 Cleanup first refuses any workflow with runtime instances. It unsets the K2 default runtime version, deletes the exact runtime definitions without log deletion, then removes the exact designer JSON/category link. It does not remove the `Workflows` category.
 
