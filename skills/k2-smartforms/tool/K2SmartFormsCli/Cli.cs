@@ -91,7 +91,7 @@ namespace K2SmartFormsCli
             }
             foreach (var form in manifest.Application.Forms)
             {
-                Console.WriteLine("    form views: " + form.Name + " <= [" + string.Join(", ", form.Views.ToArray()) + "]");
+                Console.WriteLine("    form views: " + form.Name + " <= [" + string.Join(", ", form.Views.ToArray()) + "], legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant());
             }
             if (dependencies.Count > 0)
             {
@@ -110,7 +110,8 @@ namespace K2SmartFormsCli
                     Console.WriteLine(state.Kind + ": absent (" + state.Name + ")");
                     continue;
                 }
-                Console.WriteLine(state.Kind + ": " + state.Name + " (" + state.Guid + ", v" + state.Version + ", " + state.Type + ", category " + state.CategoryPath + ", checkedOut=" + state.CheckedOut + ")");
+                var themeMode = state.Kind == "Form" ? ", legacyTheme=" + (state.UseLegacyTheme.HasValue ? state.UseLegacyTheme.Value.ToString().ToLowerInvariant() : "<unset>") : string.Empty;
+                Console.WriteLine(state.Kind + ": " + state.Name + " (" + state.Guid + ", v" + state.Version + ", " + state.Type + ", category " + state.CategoryPath + ", checkedOut=" + state.CheckedOut + themeMode + ")");
             }
         }
 
@@ -158,7 +159,7 @@ namespace K2SmartFormsCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2forms 0.1.1");
+            Console.WriteLine("k2forms 0.1.2");
         }
 
         private static void PrintHelp()

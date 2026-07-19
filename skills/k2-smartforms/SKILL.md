@@ -50,12 +50,13 @@ Build checked-in SmartForms through the supported K2 `FormsManager` and `AutoGen
 - Use unique disposable names during development; do not reuse business-critical form names.
 - Never append release/version numbers to K2 form names, view names, or category paths. K2 maintains artifact versions internally; stable names preserve URLs and references.
 - Keep the application root business-oriented and let the CLI create its `Views` and `Forms` subcategories.
+- Use modern theme mode for new forms. Leave `useLegacyTheme` omitted or set it to `false`; opt into `true` only for an application that depends on legacy-theme behavior. The CLI writes and verifies K2's `UseLegacyTheme` property explicitly because a theme name alone does not determine the rendering mode.
 - Check in runtime artifacts unless an intentional design-time draft is required.
 - Prefer one editor/list pair per CRUD screen. Exclude SQL-managed concurrency fields and unnecessary technical fields from visible layouts.
 - Generated UX is a baseline. Validate labels, required inputs, lookups, responsive layout, accessibility, destructive-action confirmation, and business rules in Designer/browser before production use.
 
 ## Boundary
 
-Version 0.1 generates capture, list, content, and editable-list views plus forms composed from those views. It supports standard generator options, Lithium or another installed theme, list-click load, and list refresh behaviors. It does not yet hand-author controls/rules, configure lookup controls, preserve Designer customizations during replacement, export rollback packages, or automate authenticated browser interactions.
+Version 0.1 generates capture, list, content, and editable-list views plus forms composed from those views. It supports standard generator options, modern theme mode by default, Lithium or another installed theme, list-click load, and list refresh behaviors. It does not yet hand-author controls/rules, configure lookup controls, preserve Designer customizations during replacement, export rollback packages, or automate authenticated browser interactions.
 
 Read [references/cli.md](references/cli.md) for commands and exit codes. Start from `examples/corporate-workflow/smartforms-manifest.json` for a tested CRUD pattern.

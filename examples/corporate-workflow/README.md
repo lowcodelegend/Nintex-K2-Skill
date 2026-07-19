@@ -28,7 +28,7 @@ Because this fixture is explicitly disposable, it can be removed with:
 
 ## SmartForms baseline
 
-`smartforms-manifest.json` generates three Lithium CRUD screens over the deployed request, approval-task, and request-type SmartObjects. It creates six views in `K2 Skills\Corporate Workflow\Views` and three forms in `K2 Skills\Corporate Workflow\Forms`. K2 handles artifact versions internally, so names and folders remain version-free.
+`smartforms-manifest.json` generates three modern-mode Lithium CRUD screens over the deployed request, approval-task, and request-type SmartObjects. Modern mode is the default, so the omitted per-form `useLegacyTheme` setting resolves to `false`. It creates six views in `K2 Skills\Corporate Workflow\Views` and three forms in `K2 Skills\Corporate Workflow\Forms`. K2 handles artifact versions internally, so names and folders remain version-free.
 
 ```powershell
 $formsSkillRoot = Join-Path $env:USERPROFILE '.codex\skills\k2-smartforms'

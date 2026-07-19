@@ -7,8 +7,8 @@
 | `doctor --manifest` | No | Validate JSON, K2 connectivity, theme, SmartObjects, properties, and methods. |
 | `plan --manifest` | No | Show creates, replacements, collisions, external dependencies, and verification scope. |
 | `deploy --manifest --confirm` | Yes | Optionally replace exact declared artifacts, generate checked-in views/forms, and verify. |
-| `verify --manifest` | No | Validate definitions, GUID references, category, theme, check-in state, and runtime routes. |
-| `inspect --manifest` | No | Print exact artifact GUIDs, versions, types, categories, and checkout state. |
+| `verify --manifest` | No | Validate definitions, GUID references, category, theme, explicit legacy-theme mode, check-in state, and runtime routes. |
+| `inspect --manifest` | No | Print exact artifact GUIDs, versions, types, categories, legacy-theme mode, and checkout state. |
 | `cleanup --manifest --confirm` | Destructive | Delete exact declared forms then views after dependency checks. |
 | `version` | No | Print the CLI version. |
 

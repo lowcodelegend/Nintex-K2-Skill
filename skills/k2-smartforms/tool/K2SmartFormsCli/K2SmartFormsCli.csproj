@@ -65,6 +65,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cli.cs" />
+    <Compile Include="FormThemeDefinition.cs" />
     <Compile Include="Manifest.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="RuntimeAssemblyResolver.cs" />

@@ -97,6 +97,7 @@ namespace K2SmartFormsCli
                         continue;
                     }
                     var info = manager.GetForm(form.Name);
+                    var useLegacyTheme = FormThemeDefinition.ReadUseLegacyTheme(manager.GetFormDefinition(info.Guid));
                     result.Add(new ArtifactState
                     {
                         Kind = "Form",
@@ -106,7 +107,8 @@ namespace K2SmartFormsCli
                         CategoryPath = info.CategoryPath,
                         Version = info.Version,
                         CheckedOut = info.IsCheckedOut,
-                        Type = info.Type.ToString()
+                        Type = info.Type.ToString(),
+                        UseLegacyTheme = useLegacyTheme
                     });
                 }
                 return result;
@@ -193,9 +195,10 @@ namespace K2SmartFormsCli
                     {
                         var formGenerator = new FormGenerator(ParseFormOptions(form.Options), ParseFormBehaviors(form.Behaviors), _manifest.Application.Theme);
                         var generated = generator.Generate(formGenerator, form.Views.ToArray(), form.Name);
-                        manager.DeployForms(generated.ToXml(), _manifest.Application.FormsCategoryPath, _manifest.Application.CheckIn);
+                        var definition = FormThemeDefinition.SetUseLegacyTheme(generated.ToXml(), form.UseLegacyTheme);
+                        manager.DeployForms(definition, _manifest.Application.FormsCategoryPath, _manifest.Application.CheckIn);
                         var info = manager.GetForm(form.Name);
-                        Console.WriteLine("Form: deployed (" + form.Name + ", " + info.Guid + ", theme " + info.Theme.Name + ")");
+                        Console.WriteLine("Form: deployed (" + form.Name + ", " + info.Guid + ", theme " + info.Theme.Name + ", legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant() + ")");
                     }
                 }
                 return 0;
@@ -228,13 +231,20 @@ namespace K2SmartFormsCli
                     if (!string.Equals(info.CategoryPath, _manifest.Application.FormsCategoryPath, StringComparison.OrdinalIgnoreCase))
                         throw new CliException("K2 Form is in category '" + info.CategoryPath + "', expected '" + _manifest.Application.FormsCategoryPath + "': " + expected);
                     if (_manifest.Application.CheckIn && info.IsCheckedOut) throw new CliException("K2 Form remains checked out: " + expected);
-                    foreach (var viewName in _manifest.Application.Forms.Where(x => string.Equals(x.Name, expected, StringComparison.OrdinalIgnoreCase)).SelectMany(x => x.Views))
+                    var declaredForm = _manifest.Application.Forms.SingleOrDefault(x => string.Equals(x.Name, expected, StringComparison.OrdinalIgnoreCase));
+                    if (declaredForm == null) throw new CliException("Expected K2 Form is not declared in application.forms: " + expected);
+                    var useLegacyTheme = FormThemeDefinition.ReadUseLegacyTheme(definition);
+                    if (!useLegacyTheme.HasValue)
+                        throw new CliException("K2 Form does not explicitly set UseLegacyTheme: " + expected);
+                    if (useLegacyTheme.Value != declaredForm.UseLegacyTheme)
+                        throw new CliException("K2 Form UseLegacyTheme is " + useLegacyTheme.Value.ToString().ToLowerInvariant() + ", expected " + declaredForm.UseLegacyTheme.ToString().ToLowerInvariant() + ": " + expected);
+                    foreach (var viewName in declaredForm.Views)
                     {
                         var viewGuid = manager.GetView(viewName).Guid.ToString();
                         if (definition.IndexOf(viewGuid, StringComparison.OrdinalIgnoreCase) < 0)
                             throw new CliException("K2 Form '" + expected + "' does not reference expected view '" + viewName + "'.");
                     }
-                    Console.WriteLine("Form verification: OK (" + expected + ", " + info.Guid + ", v" + info.Version + ", theme " + info.Theme.Name + ")");
+                    Console.WriteLine("Form verification: OK (" + expected + ", " + info.Guid + ", v" + info.Version + ", theme " + info.Theme.Name + ", legacyTheme=" + useLegacyTheme.Value.ToString().ToLowerInvariant() + ")");
                     runtimeForms.Add(expected);
                 }
                 return 0;
@@ -295,7 +305,7 @@ namespace K2SmartFormsCli
             request.AllowAutoRedirect = false;
             request.Timeout = 30000;
             request.ReadWriteTimeout = 30000;
-            request.UserAgent = "k2forms/0.1.1";
+            request.UserAgent = "k2forms/0.1.2";
             try
             {
                 using (var response = (HttpWebResponse)request.GetResponse())
@@ -470,6 +480,7 @@ namespace K2SmartFormsCli
         public int Version { get; set; }
         public bool CheckedOut { get; set; }
         public string Type { get; set; }
+        public bool? UseLegacyTheme { get; set; }
 
         public static ArtifactState Absent(string kind, string name)
         {

@@ -263,6 +263,7 @@ namespace K2SmartFormsCli
     public sealed class FormDefinition
     {
         public string Name { get; set; }
+        public bool UseLegacyTheme { get; set; }
         public List<string> Views { get; set; }
         public List<string> Options { get; set; }
         public List<string> Behaviors { get; set; }

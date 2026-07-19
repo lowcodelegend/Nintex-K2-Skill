@@ -18,7 +18,9 @@ Version 0.1 does not convert foreign-key IDs into lookups. Treat numeric relatio
 
 ## Presentation
 
-Use an installed theme; `Lithium` is the tested K2 Five 5.10 default for this skill. Capture-view options `editable`, `labels-left`, `colon-labels`, and `toolbar` produce a compact conventional editor. Use `toolbar` on list views.
+Use an installed theme; `Lithium` is the tested K2 Five 5.10 default for this skill. Theme selection and theme mode are separate K2 properties: a form can report `Lithium` while still using legacy theme mode. New forms default to modern mode through an explicit `UseLegacyTheme=false` form-control property. Set a form's `useLegacyTheme` to `true` only for intentional compatibility with older styling.
+
+Capture-view options `editable`, `labels-left`, `colon-labels`, and `toolbar` produce a compact conventional editor. Use `toolbar` on list views.
 
 Automatic generation creates controls and standard SmartObject method rules. It does not replace visual review. Test keyboard navigation, focus order, labels, required-state messaging, contrast, phone/tablet layout, long values, empty states, and destructive actions.
 

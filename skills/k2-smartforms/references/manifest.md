@@ -38,6 +38,7 @@
     "forms": [
       {
         "name": "Expense Management",
+        "useLegacyTheme": false,
         "views": ["Expense Editor", "Expense List"],
         "options": ["no-tabs"],
         "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]
@@ -58,6 +59,8 @@
 `k2` supports integrated authentication by default. For explicit AD authentication, set `integrated` false plus `domain`, `userName`, and `passwordEnvironmentVariable`; never store the password itself.
 
 `application.rootCategoryPath` is the stable application root. It must not contain a version segment or end in `Forms`/`Views`; the CLI derives `<root>\Views` and `<root>\Forms`. Form and view names must not contain version tokens because K2 maintains internal artifact versions. `theme` must match an installed K2 theme. `checkIn` should normally remain true.
+
+Each form's optional `useLegacyTheme` defaults to `false`. The CLI writes the K2 `UseLegacyTheme` property explicitly and verifies it after deployment. Keep the default for modern theme rendering; set it to `true` only when legacy compatibility is intentional. The configured theme name does not imply this mode.
 
 Supported view types are `capture`, `list`, `content`, and `capture-list`. Supported options are `display-controls`, `all-properties`, `all-methods`, `labels-left`, `colon-labels`, `toolbar`, and `editable`. Editable types require `editable`.
 
