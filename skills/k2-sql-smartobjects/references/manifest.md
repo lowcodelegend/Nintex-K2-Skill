@@ -1,0 +1,96 @@
+# Deployment manifest
+
+## Minimal structure
+
+```json
+{
+  "name": "Expense application data",
+  "database": {
+    "server": "localhost",
+    "name": "ExpenseApp",
+    "integratedSecurity": true,
+    "createIfMissing": true,
+    "runtimePrincipal": "DOMAIN\\k2svc",
+    "scripts": ["sql/001_schema.sql", "sql/002_api.sql"]
+  },
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2",
+    "serviceInstance": {
+      "systemName": "ExpenseAppSql",
+      "displayName": "Expense App SQL",
+      "authenticationMode": "service-account",
+      "useNativeSqlExecution": true
+    },
+    "smartObjects": {
+      "createNew": true,
+      "updateExisting": true,
+      "deleteRemoved": false
+    }
+  },
+  "verification": {
+    "sqlObjects": [
+      { "type": "table", "schema": "app", "name": "Expense" },
+      { "type": "view", "schema": "app", "name": "OpenExpense" },
+      { "type": "procedure", "schema": "app", "name": "Expense_Submit" }
+    ],
+    "queries": [
+      { "name": "status seed", "sql": "SELECT COUNT(*) FROM app.Status", "expectedScalar": "4" }
+    ],
+    "smartObjectServiceObjects": ["app-Expense", "app-OpenExpense", "app-Expense_Submit"],
+    "minimumGeneratedSmartObjects": 3,
+    "smokeTestListMethods": true
+  }
+}
+```
+
+Paths in `database.scripts` are relative to the manifest. Scripts run in order; lines containing only `GO` or `GO n` separate batches. Each script runs in its own transaction.
+
+## Database fields
+
+| Field | Default | Purpose |
+| --- | --- | --- |
+| `server` | `localhost` | SQL Server data source. |
+| `name` | required | Application database. |
+| `integratedSecurity` | `true` | Use the current Windows identity for deployment. |
+| `userName` | empty | SQL login when integrated security is false. |
+| `passwordEnvironmentVariable` | empty | Environment variable containing the SQL login password. |
+| `createIfMissing` | `true` | Create the database when absent. |
+| `commandTimeoutSeconds` | `120` | SQL command timeout. |
+| `runtimePrincipal` | empty | Optional Windows/AD login granted DML, EXECUTE, and VIEW DEFINITION rights in the application database. |
+| `scripts` | `[]` | Ordered SQL files. |
+
+Use `runtimePrincipal` only when that standard permission set is appropriate. Apply narrower grants in SQL when the application requires stricter least privilege.
+
+## K2 connection fields
+
+| Field | Default | Purpose |
+| --- | --- | --- |
+| `host` | `localhost` | K2 Host Server. |
+| `port` | `5555` | K2 management/client API port. |
+| `integrated` | `true` | Authenticate as the current Windows identity. |
+| `securityLabel` | `K2` | AD security label. |
+| `domain`, `userName` | empty | Explicit AD identity when integrated is false. |
+| `passwordEnvironmentVariable` | empty | Environment variable containing the explicit AD password. |
+
+## Service Instance fields
+
+`systemName` is the stable idempotency key and accepts letters, digits, underscore, dot, and hyphen. Changing it creates a different Service Instance.
+
+`sqlServer` and `database` default to the database connection values. `authenticationMode` supports:
+
+- `service-account`: connect to SQL as the K2 Server service identity.
+- `impersonate`: pass the K2 runtime user identity to SQL; configure delegation when servers differ.
+- `static`: store the specified SQL/AD identity in K2; supply its password through `passwordEnvironmentVariable`.
+
+Other fields are `commandTimeoutSeconds` (30), `useNativeSqlExecution` (true), `useSqlPaging` (false), `encryptConnection` (false), and `onDifferentSqlServer` (false).
+
+## Verification fields
+
+- Use `sqlObjects` types `table`, `view`, or `procedure`.
+- Use `queries` for scalar assertions; values compare as invariant strings.
+- Use `smartObjectServiceObjects` for exact broker service-object names. For this K2 SQL broker they are typically `schema-object`.
+- Use `minimumGeneratedSmartObjects` to catch empty or incomplete discovery.
+- Keep `smokeTestListMethods` true to execute parameterless List methods through the K2 runtime API. Procedures requiring parameters are reported as skipped.

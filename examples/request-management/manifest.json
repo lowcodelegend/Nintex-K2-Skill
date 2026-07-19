@@ -49,6 +49,13 @@
       }
     ],
     "minimumGeneratedSmartObjects": 5,
+    "smartObjectServiceObjects": [
+      "app-Request",
+      "app-RequestLine",
+      "app-OpenRequest",
+      "app-Request_Create",
+      "app-Request_Get"
+    ],
     "smokeTestListMethods": true
   }
 }

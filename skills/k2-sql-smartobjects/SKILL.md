@@ -1,85 +1,63 @@
 ---
 name: k2-sql-smartobjects
-description: [TODO: Complete and informative explanation of what the skill does and when to use it. Include WHEN to use this skill - specific scenarios, file types, or tasks that trigger it.]
+description: Build, update, inspect, verify, and clean up SQL Server-backed SmartObjects in self-hosted Nintex K2 Five using declarative JSON manifests and the bundled k2sql .NET CLI. Use for SQL data modeling, SQL tables/views/stored procedures, SQL Server Service Instances, generated SmartObjects, K2 SQL integration troubleshooting, or repeatable K2 database deployments. Do not use for SmartBox, SharePoint, REST, Oracle, SmartForms, or workflow construction.
 ---
 
-# K2 Sql Smartobjects
+# K2 SQL SmartObjects
 
-## Overview
+Deploy a SQL model and its K2 SQL Server Service Instance as one repeatable unit. Use the bundled CLI instead of changing K2 databases directly or automating the K2 Management UI.
 
-[TODO: 1-2 sentences explaining what this skill enables]
+## Workflow
 
-## Structuring This Skill
+1. Confirm the target is self-hosted K2 Five and the data source is Microsoft SQL Server.
+2. Read [references/sql-design.md](references/sql-design.md) before designing tables, views, or procedures.
+3. Read [references/manifest.md](references/manifest.md) and create a manifest plus ordered, idempotent SQL scripts.
+4. Keep passwords out of JSON and SQL. Name an environment variable in the manifest when explicit credentials are unavoidable.
+5. Build and diagnose the CLI:
 
-[TODO: Choose the structure that best fits this skill's purpose. Common patterns:
+   ```powershell
+   & '<skill-root>\scripts\build.ps1' -Configuration Release
+   & '<skill-root>\scripts\k2sql.ps1' doctor --manifest '<manifest.json>'
+   ```
 
-**1. Workflow-Based** (best for sequential processes)
-- Works well when there are clear step-by-step procedures
-- Example: DOCX skill with "Workflow Decision Tree" -> "Reading" -> "Creating" -> "Editing"
-- Structure: ## Overview -> ## Workflow Decision Tree -> ## Step 1 -> ## Step 2...
+6. Review the non-mutating plan:
 
-**2. Task-Based** (best for tool collections)
-- Works well when the skill offers different operations/capabilities
-- Example: PDF skill with "Quick Start" -> "Merge PDFs" -> "Split PDFs" -> "Extract Text"
-- Structure: ## Overview -> ## Quick Start -> ## Task Category 1 -> ## Task Category 2...
+   ```powershell
+   & '<skill-root>\scripts\k2sql.ps1' plan --manifest '<manifest.json>'
+   ```
 
-**3. Reference/Guidelines** (best for standards or specifications)
-- Works well for brand guidelines, coding standards, or requirements
-- Example: Brand styling with "Brand Guidelines" -> "Colors" -> "Typography" -> "Features"
-- Structure: ## Overview -> ## Guidelines -> ## Specifications -> ## Usage...
+7. Show the plan to the user before affecting an environment whose ownership or purpose is unclear. Deploy only when the requested scope authorizes the listed SQL and K2 mutations:
 
-**4. Capabilities-Based** (best for integrated systems)
-- Works well when the skill provides multiple interrelated features
-- Example: Product Management with "Core Capabilities" -> numbered capability list
-- Structure: ## Overview -> ## Core Capabilities -> ### 1. Feature -> ### 2. Feature...
+   ```powershell
+   & '<skill-root>\scripts\k2sql.ps1' deploy --manifest '<manifest.json>' --confirm
+   ```
 
-Patterns can be mixed and matched as needed. Most skills combine patterns (e.g., start with task-based, add workflow for complex operations).
+8. Run verification independently after deployment:
 
-Delete this entire "Structuring This Skill" section when done - it's just guidance.]
+   ```powershell
+   & '<skill-root>\scripts\k2sql.ps1' verify --manifest '<manifest.json>'
+   & '<skill-root>\scripts\k2sql.ps1' inspect --manifest '<manifest.json>'
+   ```
 
-## [TODO: Replace with the first main section based on chosen structure]
+9. Report the created database objects, Service Instance GUID, generated SmartObject names and methods, runtime smoke-test results, and any skipped tests.
 
-[TODO: Add content here. See examples in existing skills:
-- Code samples for technical skills
-- Decision trees for complex workflows
-- Concrete examples with realistic user requests
-- References to scripts/templates/references as needed]
+## Safety rules
 
-## Resources (optional)
+- Never read from or modify K2's own database except through supported K2 APIs. The CLI only targets the application database named by the manifest.
+- Keep `deleteRemoved` false unless the user explicitly authorizes removal and dependent K2 artifacts have been assessed.
+- Treat `cleanup` as destructive. It force-deletes generated SmartObjects before the Service Instance. Use it only for disposable or explicitly retired artifacts after `inspect` confirms the exact target.
+- Never use `cleanup --drop-database` against shared or production data. The CLI blocks SQL system databases and the default `K2` database, but it cannot infer business criticality.
+- Prefer `service-account` SQL authentication with a least-privilege database user. Use `impersonate` only when delegation and per-user SQL authorization are intentional.
+- Require primary keys on tables that need generated Create, Read, Update, and Delete methods.
+- Make every SQL script rerunnable. Use guarded `CREATE TABLE` and `CREATE OR ALTER` for views and procedures.
+- Grant the discovery/runtime principal `VIEW DEFINITION` and only the DML/EXECUTE rights required by the solution.
 
-Create only the resource directories this skill actually needs. Delete this section if no resources are required.
+## Tool behavior
 
-### scripts/
-Executable code (Python/Bash/etc.) that can be run directly to perform specific operations.
+The CLI performs deployment in this order:
 
-**Examples from other skills:**
-- PDF skill: `fill_fillable_fields.py`, `extract_form_field_info.py` - utilities for PDF manipulation
-- DOCX skill: `document.py`, `utilities.py` - Python modules for document processing
+`create database → apply SQL scripts → grant optional runtime access → create/update and refresh Service Instance → generate/update SmartObjects → verify SQL → verify and smoke-test K2`
 
-**Appropriate for:** Python scripts, shell scripts, or any executable code that performs automation, data processing, or specific operations.
+It discovers K2 from `K2_INSTALL_DIR`, the SourceCode registry key, or `C:\Program Files\K2`. It builds as a 64-bit .NET Framework executable and resolves the installed K2 client assemblies at runtime.
 
-**Note:** Scripts may be executed without loading into context, but can still be read by Codex for patching or environment adjustments.
-
-### references/
-Documentation and reference material intended to be loaded into context to inform Codex's process and thinking.
-
-**Examples from other skills:**
-- Product management: `communication.md`, `context_building.md` - detailed workflow guides
-- BigQuery: API reference documentation and query examples
-- Finance: Schema documentation, company policies
-
-**Appropriate for:** In-depth documentation, API references, database schemas, comprehensive guides, or any detailed information that Codex should reference while working.
-
-### assets/
-Files not intended to be loaded into context, but rather used within the output Codex produces.
-
-**Examples from other skills:**
-- Brand styling: PowerPoint template files (.pptx), logo files
-- Frontend builder: HTML/React boilerplate project directories
-- Typography: Font files (.ttf, .woff2)
-
-**Appropriate for:** Templates, boilerplate code, document templates, images, icons, fonts, or any files meant to be copied or used in the final output.
-
----
-
-**Not every skill requires all three types of resources.**
+Read [references/cli.md](references/cli.md) for commands, exit codes, authentication, and cleanup details. Start from the repository fixture at `examples/request-management` when a concrete model is useful.

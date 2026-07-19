@@ -22,8 +22,9 @@ if (-not (Test-Path -LiteralPath $msbuild -PathType Leaf)) {
 }
 
 $target = if ($Clean) { 'Rebuild' } else { 'Build' }
-& $msbuild $project "/t:$target" "/p:Configuration=$Configuration" "/p:K2InstallDir=$($k2InstallDir.TrimEnd('\'))" /nologo /verbosity:minimal
+$buildOutput = & $msbuild $project "/t:$target" "/p:Configuration=$Configuration" "/p:K2InstallDir=$($k2InstallDir.TrimEnd('\'))" /nologo /verbosity:quiet 2>&1
 if ($LASTEXITCODE -ne 0) {
+    $buildOutput | Write-Error
     exit $LASTEXITCODE
 }
 
