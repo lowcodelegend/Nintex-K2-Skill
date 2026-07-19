@@ -22,6 +22,12 @@ Use an installed theme; `Lithium` is the tested K2 Five 5.10 default for this sk
 
 Automatic generation creates controls and standard SmartObject method rules. It does not replace visual review. Test keyboard navigation, focus order, labels, required-state messaging, contrast, phone/tablet layout, long values, empty states, and destructive actions.
 
+## Naming and categories
+
+Use stable business names such as `Expense Editor`, `Expense List`, and `Expense Management`. Do not add `v1`, `v0.2`, release numbers, dates used as releases, or similar suffixes. K2 assigns and increments its own artifact versions, while stable names preserve form URLs and dependencies.
+
+Set `rootCategoryPath` to the application root, such as `K2 Skills\Expense`. The CLI always deploys views to `<root>\Views` and forms to `<root>\Forms`; do not create version folders or include `Forms`/`Views` in the configured root.
+
 ## Replacement and dependencies
 
 Artifact names are the manifest's ownership boundary. With `replaceExisting: false`, any collision blocks deployment. With replacement enabled, the CLI:

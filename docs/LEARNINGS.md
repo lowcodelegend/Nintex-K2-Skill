@@ -61,12 +61,12 @@ The `examples/request-management` fixture was deployed twice:
 - `FormsManager` connects over the K2 management port and deploys/checks in form and view XML. `AutoGenerator` builds supported definitions from existing SmartObjects; no K2 database access is required.
 - `ViewGenerator` supports capture, list, content, and editable-list view types. It accepts selected SmartObject properties, instance methods, a default List method, and standard layout/toolbar flags.
 - `FormGenerator` composes deployed views and can create list-click load plus refresh-after-submit/load behaviors. The tested `Lithium` theme is installed locally.
-- Deploying with the category path created the missing category hierarchy automatically.
+- Deploying with category paths created the missing hierarchy automatically. Stable application roots should contain separate `Views` and `Forms` subcategories; version folders are incorrect because K2 versions artifacts internally.
 - Generated artifacts use new GUIDs. Repeatable replacement therefore requires deleting forms before their dependent views; it cannot preserve manual Designer edits or GUID-based external references.
 - Dependency inspection through `FormsManager.GetFormsForView` can block replacement/cleanup when a managed view is used by a form outside the manifest.
 - Runtime vanity URLs use `https://spk2.trials.demome.tech/Runtime/Runtime/Form/<URL-encoded-form-name>/`. A non-browser request reaches the Windows STS redirect but cannot complete interactive WIF authentication; authoritative CLI verification uses the management API definitions and GUID references, with final rendering/CRUD checked in a browser.
 
-The corporate workflow proof generated six checked-in views and three forms in `K2 Skills\Corporate Workflow\v0.1`, then verified their definitions, categories, theme, view references, and runtime routes.
+The corporate workflow proof generated six checked-in views under `K2 Skills\Corporate Workflow\Views` and three forms under `K2 Skills\Corporate Workflow\Forms`, then verified their definitions, categories, theme, view references, and runtime routes. Form/view names and categories remain stable and version-free.
 
 ## Important constraints
 

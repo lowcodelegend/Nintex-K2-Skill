@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Web.Script.Serialization;
 
 namespace K2SmartFormsCli
@@ -57,7 +58,10 @@ namespace K2SmartFormsCli
 
             Require(Name, "name");
             Require(K2.Host, "k2.host");
-            Require(Application.CategoryPath, "application.categoryPath");
+            if (!string.IsNullOrWhiteSpace(Application.CategoryPath))
+                throw new CliException("application.categoryPath is no longer supported. Use application.rootCategoryPath; the CLI creates Forms and Views subcategories.");
+            Require(Application.RootCategoryPath, "application.rootCategoryPath");
+            ValidateRootCategoryPath(Application.RootCategoryPath);
             Require(Application.Theme, "application.theme");
             if (K2.Port <= 0 || K2.Port > 65535) throw new CliException("k2.port must be between 1 and 65535.");
             if (!K2.Integrated)
@@ -78,6 +82,7 @@ namespace K2SmartFormsCli
                 if (view.Methods == null) view.Methods = new List<string>();
                 if (view.Options == null) view.Options = new List<string>();
                 RequireArtifactName(view.Name, "view.name");
+                RejectVersionToken(view.Name, "view.name");
                 Require(view.SmartObject, "view.smartObject");
                 view.Type = (view.Type ?? string.Empty).Trim().ToLowerInvariant();
                 if (!AllowedViewTypes.Contains(view.Type))
@@ -97,6 +102,7 @@ namespace K2SmartFormsCli
                 if (form.Options == null) form.Options = new List<string>();
                 if (form.Behaviors == null) form.Behaviors = new List<string>();
                 RequireArtifactName(form.Name, "form.name");
+                RejectVersionToken(form.Name, "form.name");
                 if (form.Views.Count == 0) throw new CliException("Form '" + form.Name + "' must reference at least one view.");
                 EnsureUniqueValues(form.Views, "view reference", form.Name);
                 foreach (var viewName in form.Views)
@@ -163,6 +169,28 @@ namespace K2SmartFormsCli
                 throw new CliException("Manifest field '" + field + "' contains unsupported punctuation.");
         }
 
+        private static void ValidateRootCategoryPath(string value)
+        {
+            var segments = value.Split(new[] { '\\' }, StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length == 0) throw new CliException("application.rootCategoryPath must contain a category name.");
+            if (segments.Any(IsVersionSegment))
+                throw new CliException("application.rootCategoryPath must not contain version folders. K2 versions artifacts internally.");
+            var leaf = segments[segments.Length - 1];
+            if (leaf.Equals("Forms", StringComparison.OrdinalIgnoreCase) || leaf.Equals("Views", StringComparison.OrdinalIgnoreCase))
+                throw new CliException("application.rootCategoryPath must be the application root; the CLI appends Forms and Views subcategories.");
+        }
+
+        private static bool IsVersionSegment(string value)
+        {
+            return Regex.IsMatch(value.Trim(), @"^(?:v\d+(?:\.\d+)*|\d+\.\d+(?:\.\d+)*)$", RegexOptions.IgnoreCase);
+        }
+
+        private static void RejectVersionToken(string value, string field)
+        {
+            if (Regex.IsMatch(value, @"(?:^|[\s._-])(?:v\d+(?:\.\d+)*|\d+\.\d+(?:\.\d+)*)(?=$|[\s._-])", RegexOptions.IgnoreCase))
+                throw new CliException("Manifest field '" + field + "' must not contain a version token. K2 versions forms and views internally.");
+        }
+
         private static void Require(string value, string field)
         {
             if (string.IsNullOrWhiteSpace(value)) throw new CliException("Manifest field '" + field + "' is required.");
@@ -190,12 +218,19 @@ namespace K2SmartFormsCli
 
     public sealed class ApplicationOptions
     {
+        public string RootCategoryPath { get; set; }
         public string CategoryPath { get; set; }
         public string Theme { get; set; }
         public bool ReplaceExisting { get; set; }
         public bool CheckIn { get; set; }
         public List<ViewDefinition> Views { get; set; }
         public List<FormDefinition> Forms { get; set; }
+
+        [ScriptIgnore]
+        public string ViewsCategoryPath { get { return RootCategoryPath.TrimEnd('\\') + "\\Views"; } }
+
+        [ScriptIgnore]
+        public string FormsCategoryPath { get { return RootCategoryPath.TrimEnd('\\') + "\\Forms"; } }
 
         public ApplicationOptions()
         {

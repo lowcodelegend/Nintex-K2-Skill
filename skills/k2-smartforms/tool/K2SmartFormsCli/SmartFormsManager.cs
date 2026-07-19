@@ -184,7 +184,7 @@ namespace K2SmartFormsCli
                             viewGenerator.DefaultListMethod = view.DefaultListMethod;
 
                         var generated = generator.Generate(viewGenerator, view.SmartObject, view.Name);
-                        manager.DeployViews(generated.ToXml(), _manifest.Application.CategoryPath, _manifest.Application.CheckIn);
+                        manager.DeployViews(generated.ToXml(), _manifest.Application.ViewsCategoryPath, _manifest.Application.CheckIn);
                         var info = manager.GetView(view.Name);
                         Console.WriteLine("View: deployed (" + view.Name + ", " + info.Guid + ", " + info.Type + ")");
                     }
@@ -193,7 +193,7 @@ namespace K2SmartFormsCli
                     {
                         var formGenerator = new FormGenerator(ParseFormOptions(form.Options), ParseFormBehaviors(form.Behaviors), _manifest.Application.Theme);
                         var generated = generator.Generate(formGenerator, form.Views.ToArray(), form.Name);
-                        manager.DeployForms(generated.ToXml(), _manifest.Application.CategoryPath, _manifest.Application.CheckIn);
+                        manager.DeployForms(generated.ToXml(), _manifest.Application.FormsCategoryPath, _manifest.Application.CheckIn);
                         var info = manager.GetForm(form.Name);
                         Console.WriteLine("Form: deployed (" + form.Name + ", " + info.Guid + ", theme " + info.Theme.Name + ")");
                     }
@@ -213,8 +213,8 @@ namespace K2SmartFormsCli
                     var info = manager.GetView(expected);
                     var definition = manager.GetViewDefinition(info.Guid);
                     if (string.IsNullOrWhiteSpace(definition)) throw new CliException("K2 View has an empty definition: " + expected);
-                    if (!string.Equals(info.CategoryPath, _manifest.Application.CategoryPath, StringComparison.OrdinalIgnoreCase))
-                        throw new CliException("K2 View is in category '" + info.CategoryPath + "', expected '" + _manifest.Application.CategoryPath + "': " + expected);
+                    if (!string.Equals(info.CategoryPath, _manifest.Application.ViewsCategoryPath, StringComparison.OrdinalIgnoreCase))
+                        throw new CliException("K2 View is in category '" + info.CategoryPath + "', expected '" + _manifest.Application.ViewsCategoryPath + "': " + expected);
                     if (_manifest.Application.CheckIn && info.IsCheckedOut) throw new CliException("K2 View remains checked out: " + expected);
                     Console.WriteLine("View verification: OK (" + expected + ", " + info.Guid + ", v" + info.Version + ", " + info.Type + ")");
                 }
@@ -225,8 +225,8 @@ namespace K2SmartFormsCli
                     var info = manager.GetForm(expected);
                     var definition = manager.GetFormDefinition(info.Guid);
                     if (string.IsNullOrWhiteSpace(definition)) throw new CliException("K2 Form has an empty definition: " + expected);
-                    if (!string.Equals(info.CategoryPath, _manifest.Application.CategoryPath, StringComparison.OrdinalIgnoreCase))
-                        throw new CliException("K2 Form is in category '" + info.CategoryPath + "', expected '" + _manifest.Application.CategoryPath + "': " + expected);
+                    if (!string.Equals(info.CategoryPath, _manifest.Application.FormsCategoryPath, StringComparison.OrdinalIgnoreCase))
+                        throw new CliException("K2 Form is in category '" + info.CategoryPath + "', expected '" + _manifest.Application.FormsCategoryPath + "': " + expected);
                     if (_manifest.Application.CheckIn && info.IsCheckedOut) throw new CliException("K2 Form remains checked out: " + expected);
                     foreach (var viewName in _manifest.Application.Forms.Where(x => string.Equals(x.Name, expected, StringComparison.OrdinalIgnoreCase)).SelectMany(x => x.Views))
                     {
@@ -295,7 +295,7 @@ namespace K2SmartFormsCli
             request.AllowAutoRedirect = false;
             request.Timeout = 30000;
             request.ReadWriteTimeout = 30000;
-            request.UserAgent = "k2forms/0.1.0";
+            request.UserAgent = "k2forms/0.1.1";
             try
             {
                 using (var response = (HttpWebResponse)request.GetResponse())

@@ -11,7 +11,7 @@ Build checked-in SmartForms through the supported K2 `FormsManager` and `AutoGen
 
 1. Confirm that the target is self-hosted K2 Five and the required SmartObjects already exist.
 2. Read [references/design.md](references/design.md) before selecting views, properties, methods, behaviors, and theme.
-3. Read [references/manifest.md](references/manifest.md), then create a manifest with uniquely named views/forms and an isolated category.
+3. Read [references/manifest.md](references/manifest.md), then create a manifest with stable, version-free view/form names and one application root category. The CLI places views under `Views` and forms under `Forms`.
 4. Keep passwords out of manifests. Name an environment variable only when integrated K2 authentication is unavailable.
 5. Build and diagnose the CLI:
 
@@ -48,6 +48,8 @@ Build checked-in SmartForms through the supported K2 `FormsManager` and `AutoGen
 - The CLI blocks replacement or cleanup when a managed view is used by a form outside the manifest.
 - Treat `cleanup` as destructive. Inspect the exact GUIDs and dependency findings first.
 - Use unique disposable names during development; do not reuse business-critical form names.
+- Never append release/version numbers to K2 form names, view names, or category paths. K2 maintains artifact versions internally; stable names preserve URLs and references.
+- Keep the application root business-oriented and let the CLI create its `Views` and `Forms` subcategories.
 - Check in runtime artifacts unless an intentional design-time draft is required.
 - Prefer one editor/list pair per CRUD screen. Exclude SQL-managed concurrency fields and unnecessary technical fields from visible layouts.
 - Generated UX is a baseline. Validate labels, required inputs, lookups, responsive layout, accessibility, destructive-action confirmation, and business rules in Designer/browser before production use.

@@ -26,9 +26,9 @@ Because this fixture is explicitly disposable, it can be removed with:
 & "$skillRoot\scripts\k2sql.ps1" cleanup --manifest "$PWD\manifest.json" --confirm --drop-database
 ```
 
-## SmartForms v0.1
+## SmartForms baseline
 
-`smartforms-manifest.json` generates three Lithium CRUD screens over the deployed request, approval-task, and request-type SmartObjects. It creates six views and three forms in `K2 Skills\Corporate Workflow\v0.1`.
+`smartforms-manifest.json` generates three Lithium CRUD screens over the deployed request, approval-task, and request-type SmartObjects. It creates six views in `K2 Skills\Corporate Workflow\Views` and three forms in `K2 Skills\Corporate Workflow\Forms`. K2 handles artifact versions internally, so names and folders remain version-free.
 
 ```powershell
 $formsSkillRoot = Join-Path $env:USERPROFILE '.codex\skills\k2-smartforms'
@@ -39,4 +39,4 @@ $formsSkillRoot = Join-Path $env:USERPROFILE '.codex\skills\k2-smartforms'
 
 Example runtime URL:
 
-`https://spk2.trials.demome.tech/Runtime/Runtime/Form/CW+Approval+Task+Management+v0.1/`
+`https://spk2.trials.demome.tech/Runtime/Runtime/Form/CW+Approval+Task+Management/`

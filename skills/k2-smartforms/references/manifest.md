@@ -12,13 +12,13 @@
     "securityLabel": "K2"
   },
   "application": {
-    "categoryPath": "K2 Skills\\Expense\\v0.1",
+    "rootCategoryPath": "K2 Skills\\Expense",
     "theme": "Lithium",
     "replaceExisting": false,
     "checkIn": true,
     "views": [
       {
-        "name": "Expense Editor v0.1",
+        "name": "Expense Editor",
         "smartObject": "ExpenseSql_app_Expense",
         "type": "capture",
         "properties": ["ExpenseId", "Title", "Amount", "Status"],
@@ -26,7 +26,7 @@
         "options": ["editable", "labels-left", "colon-labels", "toolbar"]
       },
       {
-        "name": "Expense List v0.1",
+        "name": "Expense List",
         "smartObject": "ExpenseSql_app_Expense",
         "type": "list",
         "properties": ["ExpenseId", "Title", "Amount", "Status"],
@@ -37,16 +37,16 @@
     ],
     "forms": [
       {
-        "name": "Expense Management v0.1",
-        "views": ["Expense Editor v0.1", "Expense List v0.1"],
+        "name": "Expense Management",
+        "views": ["Expense Editor", "Expense List"],
         "options": ["no-tabs"],
         "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]
       }
     ]
   },
   "verification": {
-    "expectedViews": ["Expense Editor v0.1", "Expense List v0.1"],
-    "expectedForms": ["Expense Management v0.1"],
+    "expectedViews": ["Expense Editor", "Expense List"],
+    "expectedForms": ["Expense Management"],
     "smokeTestRuntime": true,
     "runtimeBaseUrl": "https://k2.example.test/Runtime"
   }
@@ -57,7 +57,7 @@
 
 `k2` supports integrated authentication by default. For explicit AD authentication, set `integrated` false plus `domain`, `userName`, and `passwordEnvironmentVariable`; never store the password itself.
 
-`application.categoryPath` is the K2 category for all generated artifacts. `theme` must match an installed K2 theme. `checkIn` should normally remain true.
+`application.rootCategoryPath` is the stable application root. It must not contain a version segment or end in `Forms`/`Views`; the CLI derives `<root>\Views` and `<root>\Forms`. Form and view names must not contain version tokens because K2 maintains internal artifact versions. `theme` must match an installed K2 theme. `checkIn` should normally remain true.
 
 Supported view types are `capture`, `list`, `content`, and `capture-list`. Supported options are `display-controls`, `all-properties`, `all-methods`, `labels-left`, `colon-labels`, `toolbar`, and `editable`. Editable types require `editable`.
 

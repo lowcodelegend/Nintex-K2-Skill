@@ -30,7 +30,7 @@ Create advanced/composite SmartObjects with controlled names, properties, method
 
 ### 3. K2 SmartForms builder — v0.1 implemented
 
-The baseline creates checked-in capture/list/content/editable-list views and multi-view forms from declarative manifests using supported K2 generation APIs. It validates SmartObjects, properties, methods, themes, collisions, and dependencies; supports safe planning, exact replacement/cleanup, definition verification, and runtime-route probes. The corporate workflow fixture proves six views and three Lithium CRUD forms.
+The baseline creates checked-in capture/list/content/editable-list views and multi-view forms from declarative manifests using supported K2 generation APIs. It validates SmartObjects, properties, methods, themes, stable version-free naming, collisions, and dependencies; separates artifacts into `Views` and `Forms` subcategories; and supports safe planning, exact replacement/cleanup, definition verification, and runtime-route probes. The corporate workflow fixture proves six views and three Lithium CRUD forms.
 
 Next increments:
 

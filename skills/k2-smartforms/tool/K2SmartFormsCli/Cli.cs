@@ -73,7 +73,9 @@ namespace K2SmartFormsCli
             var dependencies = manager.GetExternalDependencies();
 
             Console.WriteLine("Plan: " + manifest.Name);
-            Console.WriteLine("  Category: " + manifest.Application.CategoryPath);
+            Console.WriteLine("  Application category: " + manifest.Application.RootCategoryPath);
+            Console.WriteLine("  Views category: " + manifest.Application.ViewsCategoryPath);
+            Console.WriteLine("  Forms category: " + manifest.Application.FormsCategoryPath);
             Console.WriteLine("  Theme: " + manifest.Application.Theme);
             foreach (var state in states)
             {
@@ -156,7 +158,7 @@ namespace K2SmartFormsCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2forms 0.1.0");
+            Console.WriteLine("k2forms 0.1.1");
         }
 
         private static void PrintHelp()
