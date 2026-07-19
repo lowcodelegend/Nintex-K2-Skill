@@ -1,0 +1,4 @@
+interface:
+  display_name: "K2 SQL SmartObjects"
+  short_description: "Build SQL-backed K2 Five SmartObjects"
+  default_prompt: "Use $k2-sql-smartobjects to deploy a SQL data model and generate its K2 SmartObjects."

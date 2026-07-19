@@ -1,0 +1,54 @@
+{
+  "name": "K2 SQL CLI request-management end-to-end test",
+  "database": {
+    "server": "localhost",
+    "name": "K2Skills_Cli_E2E",
+    "integratedSecurity": true,
+    "createIfMissing": true,
+    "commandTimeoutSeconds": 120,
+    "runtimePrincipal": "TRIALS\\k2svc",
+    "scripts": [
+      "sql/001_request_model.sql"
+    ]
+  },
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2",
+    "serviceInstance": {
+      "systemName": "K2Skills_Cli_E2E",
+      "displayName": "K2 Skills CLI E2E",
+      "description": "Disposable end-to-end test for the k2sql CLI",
+      "authenticationMode": "service-account",
+      "commandTimeoutSeconds": 30,
+      "useNativeSqlExecution": true,
+      "useSqlPaging": false,
+      "encryptConnection": false,
+      "onDifferentSqlServer": false
+    },
+    "smartObjects": {
+      "createNew": true,
+      "updateExisting": true,
+      "deleteRemoved": false
+    }
+  },
+  "verification": {
+    "sqlObjects": [
+      { "type": "table", "schema": "app", "name": "Request" },
+      { "type": "table", "schema": "app", "name": "RequestLine" },
+      { "type": "view", "schema": "app", "name": "OpenRequest" },
+      { "type": "procedure", "schema": "app", "name": "Request_Create" },
+      { "type": "procedure", "schema": "app", "name": "Request_Get" }
+    ],
+    "queries": [
+      {
+        "name": "seed request exists",
+        "sql": "SELECT COUNT(*) FROM app.Request WHERE Title = N'CLI smoke test'",
+        "expectedScalar": "1"
+      }
+    ],
+    "minimumGeneratedSmartObjects": 5,
+    "smokeTestListMethods": true
+  }
+}
