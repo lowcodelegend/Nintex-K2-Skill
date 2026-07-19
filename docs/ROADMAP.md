@@ -74,3 +74,7 @@ The eventual top-level skill should:
 - Emit machine-readable results as the orchestration layer matures.
 - Test only with uniquely named disposable artifacts and prove their removal afterward.
 - Maintain small Git commits at working checkpoints.
+
+## Release infrastructure
+
+Repository-level packaging and installation are implemented. Releases validate and build declared skills, exclude proprietary K2 assemblies and intermediate files, produce per-skill and suite ZIPs with SHA-256 metadata, and install with checksum verification, explicit replacement, backups, and rollback.

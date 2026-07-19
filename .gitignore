@@ -8,6 +8,8 @@
 .artifacts/
 .tmp/
 .tools/
+.test-install*/
+dist/
 TestResults/
 *.trx
 
