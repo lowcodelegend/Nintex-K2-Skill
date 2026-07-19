@@ -1,0 +1,26 @@
+# .NET build outputs
+**/bin/
+**/obj/
+*.user
+*.suo
+
+# Local tooling and test outputs
+.artifacts/
+.tmp/
+TestResults/
+*.trx
+
+# Local configuration and secrets
+*.local.json
+*.secrets.json
+.env
+.env.*
+
+# IDE metadata
+.vs/
+.vscode/
+.idea/
+
+# OS files
+Thumbs.db
+Desktop.ini
