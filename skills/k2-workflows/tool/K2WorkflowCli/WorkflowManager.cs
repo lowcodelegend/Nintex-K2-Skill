@@ -32,6 +32,8 @@ namespace K2WorkflowCli
             var webBin = RuntimeAssemblyResolver.WorkflowDesignerBin;
             foreach (var file in new[] { "SourceCode.K2Designer.dll", "SourceCode.Designer.Client.dll", "Newtonsoft.Json.dll" })
                 if (!File.Exists(Path.Combine(webBin, file))) throw new CliException("Required K2 Workflow Designer assembly is missing: " + file);
+            foreach (var file in new[] { "SourceCode.Framework.dll", "SourceCode.HostClientAPI.dll", "SourceCode.SmartObjects.Client.dll" })
+                if (!File.Exists(Path.Combine(RuntimeAssemblyResolver.InstallDirectory, "Bin", file))) throw new CliException("Required K2 assembly is missing: " + file);
             Console.WriteLine("K2 install: " + RuntimeAssemblyResolver.InstallDirectory);
             Console.WriteLine("Workflow designer: " + webBin);
             Console.WriteLine("Identity: " + WindowsIdentity.GetCurrent().Name);
@@ -48,6 +50,8 @@ namespace K2WorkflowCli
                 if (!File.Exists(path)) throw new CliException("Workflow definition file not found: " + path);
                 json = File.ReadAllText(path);
             }
+            else if (string.Equals(_manifest.Workflow.Kind, "request-approval", StringComparison.OrdinalIgnoreCase))
+                json = WorkflowJsonBuilder.BuildRequestApproval(_manifest.Workflow, SmartObjectMetadata.Load(_manifest.K2, _manifest.Workflow.RequestStatusUpdate));
             else json = WorkflowJsonBuilder.BuildStartEnd(_manifest.Workflow.Name);
             return WorkflowJsonBuilder.ParseAndValidate(json, _manifest.Workflow.Name).ToString(Formatting.None);
         }
@@ -84,7 +88,8 @@ namespace K2WorkflowCli
             var result = JObject.Parse(Convert.ToString(response));
             if ((bool?)result["Success"] != true)
             {
-                var errors = result["Errors"] == null ? result.ToString(Formatting.None) : string.Join("; ", result["Errors"].Values<string>().ToArray());
+                var errors = result["Errors"] == null ? result.ToString(Formatting.None) :
+                    string.Join("; ", result["Errors"].Children().Select(x => x.Type == JTokenType.String ? Convert.ToString(x) : x.ToString(Formatting.None)).ToArray());
                 throw new CliException("K2 rejected the workflow: " + errors);
             }
             Console.WriteLine((_manifest.Workflow.Publish ? "Published" : "Saved draft") + ": " + _manifest.Workflow.ProcessFullName);
@@ -117,6 +122,10 @@ namespace K2WorkflowCli
             Console.WriteLine("JSON ID: " + GetStringProperty(info, "JsonId"));
             Console.WriteLine("Nodes: " + ((JArray)root["nodes"]).Count);
             Console.WriteLine("Links: " + ((JArray)root["links"]).Count);
+            var eventTypes = ((JArray)root["nodes"]).OfType<JObject>()
+                .SelectMany(x => (x["children"] as JArray) == null ? Enumerable.Empty<JObject>() : ((JArray)x["children"]).OfType<JObject>())
+                .Select(x => Convert.ToString(x["componentId"])).ToArray();
+            if (eventTypes.Length > 0) Console.WriteLine("Event components: " + string.Join(", ", eventTypes));
             Console.WriteLine("JSON bytes: " + System.Text.Encoding.UTF8.GetByteCount(json));
         }
 
@@ -128,6 +137,20 @@ namespace K2WorkflowCli
             var root = WorkflowJsonBuilder.ParseAndValidate(GetStringProperty(info, "Json"), _manifest.Workflow.Name);
             if (!string.Equals(Convert.ToString(root["systemName"]), _manifest.Workflow.Name, StringComparison.Ordinal))
                 throw new CliException("Saved workflow JSON name differs from the manifest.");
+            if (string.Equals(_manifest.Workflow.Kind, "request-approval", StringComparison.OrdinalIgnoreCase))
+            {
+                var components = ((JArray)root["nodes"]).OfType<JObject>()
+                    .SelectMany(x => (x["children"] as JArray) == null ? Enumerable.Empty<JObject>() : ((JArray)x["children"]).OfType<JObject>())
+                    .Select(x => (int?)x["componentId"]).ToArray();
+                foreach (var required in new[] { 30011, 30004, 30009 })
+                    if (!components.Contains(required)) throw new CliException("Saved request-approval workflow is missing event component " + required + ".");
+                var fields = root["configuration"]["dataFields"] as JArray;
+                if (fields == null || !fields.OfType<JObject>().Any(x => string.Equals(Convert.ToString(x["title"]), _manifest.Workflow.RequestStatusUpdate.IdentifierDataField, StringComparison.Ordinal)))
+                    throw new CliException("Saved workflow is missing the request identifier data field.");
+                var references = root["externalReferenceDefinitions"] as JArray;
+                if (references == null || !references.OfType<JObject>().Any(x => string.Equals(Convert.ToString(x["systemName"]), _manifest.Workflow.RequestStatusUpdate.SmartObject, StringComparison.OrdinalIgnoreCase)))
+                    throw new CliException("Saved workflow is missing the request SmartObject reference.");
+            }
             if (_manifest.Workflow.Publish)
             {
                 using (var runtime = new RuntimeWorkflowManager())

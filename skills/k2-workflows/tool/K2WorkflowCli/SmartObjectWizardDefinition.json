@@ -1,0 +1,1219 @@
+{
+  "pages": [
+    {
+      "rows": [
+        {
+          "controls": [
+            {
+              "smartObjectDefaultLoadMethod": "Load",
+              "heading": "{wizard_asset_heading}",
+              "recentContextValue": "SmartObject",
+              "dropDownIcon": "icon-set-steps ic-smartobjectevent",
+              "icon": "icon icon-size16 icon-set-steps ic-smartobjectevent",
+              "categoryIcon": "icon icon-set-toolbox icon-size16 ic-category",
+              "watermarkText": "{wizard_pick_smartObject}",
+              "type": "SmartObjectPicker",
+              "name": "spSmartObject",
+              "text": "__SMARTOBJECT_DISPLAY_NAME__",
+              "click": "LoadSmartObjectMethods,GetDefaultLoadMethod,CopySmartObjectName",
+              "visibleValue": true,
+              "enabledValue": true,
+              "required": "True",
+              "requiredMessage": "{wizard_smartobject_required}",
+              "internalId": 1,
+              "componentId": 60033
+            }
+          ],
+          "internalId": 1,
+          "componentId": 60032
+        },
+        {
+          "controls": [
+            {
+              "type": "Header",
+              "name": "lnMethodHeading",
+              "text": "{wizard_label}",
+              "visibleValue": true,
+              "enabledValue": true,
+              "internalId": 1,
+              "componentId": 60003
+            }
+          ],
+          "internalId": 2,
+          "componentId": 60032
+        },
+        {
+          "controls": [
+            {
+              "items": [
+                {
+                  "key": "Create",
+                  "title": "Create",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 1,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Delete",
+                  "title": "Delete",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 2,
+                  "componentId": 60028
+                },
+                {
+                  "key": "GetList",
+                  "title": "Get List",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 3,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Load",
+                  "title": "Load",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 4,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Save",
+                  "title": "Save",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 5,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Create",
+                  "title": "Create",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 1,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Delete",
+                  "title": "Delete",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 2,
+                  "componentId": 60028
+                },
+                {
+                  "key": "GetList",
+                  "title": "Get List",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 3,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Load",
+                  "title": "Load",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 4,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Save",
+                  "title": "Save",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 5,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Create",
+                  "title": "Create",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 1,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Delete",
+                  "title": "Delete",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 2,
+                  "componentId": 60028
+                },
+                {
+                  "key": "GetList",
+                  "title": "Get List",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 3,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Load",
+                  "title": "Load",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 4,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Save",
+                  "title": "Save",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 5,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Create",
+                  "title": "Create",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 1,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Delete",
+                  "title": "Delete",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 2,
+                  "componentId": 60028
+                },
+                {
+                  "key": "GetList",
+                  "title": "Get List",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 3,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Load",
+                  "title": "Load",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 4,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Save",
+                  "title": "Save",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 5,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Create",
+                  "title": "Create",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 1,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Delete",
+                  "title": "Delete",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 2,
+                  "componentId": 60028
+                },
+                {
+                  "key": "GetList",
+                  "title": "Get List",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 3,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Load",
+                  "title": "Load",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 4,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Save",
+                  "title": "Save",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 5,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Create",
+                  "title": "Create",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 1,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Delete",
+                  "title": "Delete",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 2,
+                  "componentId": 60028
+                },
+                {
+                  "key": "GetList",
+                  "title": "Get List",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 3,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Load",
+                  "title": "Load",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 4,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Save",
+                  "title": "Save",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 5,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Create",
+                  "title": "Create",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 1,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Delete",
+                  "title": "Delete",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 2,
+                  "componentId": 60028
+                },
+                {
+                  "key": "GetList",
+                  "title": "Get List",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 3,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Load",
+                  "title": "Load",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 4,
+                  "componentId": 60028
+                },
+                {
+                  "key": "Save",
+                  "title": "Save",
+                  "metaData": {
+                    "componentId": 60041
+                  },
+                  "internalId": 5,
+                  "componentId": 60028
+                }
+              ],
+              "watermarkText": "{wizard_pick_method}",
+              "type": "Combobox",
+              "name": "cbbMethods",
+              "text": "Save",
+              "click": "GetMethodType,CopyNames,GetMethodProperties,LoadInputs,LoadOutputs,CopySmartObjectName,CheckMapToFields",
+              "visibleValue": true,
+              "enabled": "{spSmartObject} != {kdEmpty}",
+              "enabledValue": true,
+              "externalReferenceType": "SmartObjectMethod",
+              "externalReferenceParent": "{spSmartObject}",
+              "required": "True",
+              "requiredMessage": "{wizard_method_required}",
+              "internalId": 1,
+              "componentId": 60008
+            }
+          ],
+          "internalId": 3,
+          "componentId": 60032
+        },
+        {
+          "controls": [
+            {
+              "type": "Header",
+              "name": "lnIdentifier",
+              "text": "{wizard_identifier}",
+              "visible": "{kdMethodType} == {kdList}",
+              "enabledValue": true,
+              "internalId": 1,
+              "componentId": 60003
+            }
+          ],
+          "internalId": 4,
+          "componentId": 60032
+        },
+        {
+          "controls": [
+            {
+              "type": "Combobox",
+              "name": "cbbMethodProperties",
+              "click": "CopyNames,CopySmartObjectName",
+              "visible": "{kdMethodType} == {kdList}",
+              "enabledValue": true,
+              "externalReferenceType": "SmartObjectMethodProperty",
+              "externalReferencePropertyType": "return",
+              "externalReferenceParent": "{cbbMethods}",
+              "requiredMessage": "{wizard_identifier_required}",
+              "internalId": 1,
+              "componentId": 60008
+            }
+          ],
+          "internalId": 5,
+          "componentId": 60032
+        },
+        {
+          "controls": [
+            {
+              "type": "Header",
+              "name": "hdrFilters",
+              "text": "{wizard_filters}",
+              "visible": "{kdMethodType} == {kdList}",
+              "enabledValue": true,
+              "internalId": 1,
+              "componentId": 60003
+            }
+          ],
+          "internalId": 6,
+          "componentId": 60032
+        },
+        {
+          "controls": [
+            {
+              "type": "FilterControl",
+              "name": "pmFilterInputs",
+              "visible": "{kdMethodType} == {kdList}",
+              "enabledValue": true,
+              "externalReferenceParent": "{cbbMethods}",
+              "internalId": 1,
+              "componentId": 60040
+            }
+          ],
+          "internalId": 7,
+          "componentId": 60032
+        },
+        {
+          "controls": [
+            {
+              "type": "Header",
+              "name": "lnPropertiesInput",
+              "text": "{wizard_input}",
+              "visibleValue": true,
+              "enabledValue": true,
+              "internalId": 1,
+              "componentId": 60003
+            }
+          ],
+          "internalId": 8,
+          "componentId": 60032
+        },
+        {
+          "controls": [
+            {
+              "icon": "icon-set-steps ic-executesmartobject selected",
+              "type": "PropertyMapper",
+              "name": "pmInputs",
+              "visibleValue": true,
+              "enabledValue": true,
+              "externalReferenceParent": "{cbbMethods}",
+              "internalId": 1,
+              "componentId": 60010
+            }
+          ],
+          "internalId": 9,
+          "componentId": 60032
+        },
+        {
+          "controls": [
+            {
+              "type": "Header",
+              "name": "lnPropertiesOuput",
+              "text": "{wizard_ouput}",
+              "visibleValue": true,
+              "enabledValue": true,
+              "internalId": 1,
+              "componentId": 60003
+            }
+          ],
+          "internalId": 10,
+          "componentId": 60032
+        },
+        {
+          "controls": [
+            {
+              "group": "SmartObject",
+              "type": "RadioButton",
+              "name": "radReference",
+              "text": "{wizard_map_reference}",
+              "click": "CopySmartObjectName",
+              "visible": "{kdMethodType} != {kdDelete}",
+              "visibleValue": true,
+              "enabled": "{DefaultLoad} != {Empty}",
+              "enabledValue": true,
+              "internalId": 1,
+              "componentId": 60009
+            }
+          ],
+          "internalId": 11,
+          "componentId": 60032
+        },
+        {
+          "controls": [
+            {
+              "type": "SaveSmartfieldControl",
+              "name": "ccReference",
+              "text": "__SMARTOBJECT_DISPLAY_NAME__",
+              "visible": "{kdMethodType} != {kdDelete}",
+              "visibleValue": true,
+              "enabled": "{radReference},{DefaultLoad} != {Empty}",
+              "enabledValue": true,
+              "internalId": 1,
+              "componentId": 60039
+            }
+          ],
+          "internalId": 12,
+          "componentId": 60032
+        },
+        {
+          "controls": [
+            {
+              "group": "SmartObject",
+              "type": "RadioButton",
+              "name": "radOutputs",
+              "text": "{wizard_map_outputs}",
+              "visibleValue": true,
+              "enabledValue": true,
+              "internalId": 1,
+              "componentId": 60009
+            }
+          ],
+          "internalId": 13,
+          "componentId": 60032
+        },
+        {
+          "controls": [
+            {
+              "icon": "icon-set-steps ic-executesmartobject selected",
+              "mapToDataFields": true,
+              "type": "PropertyMapper",
+              "name": "pmOutputs",
+              "visibleValue": true,
+              "enabled": "{radOutputs}",
+              "externalReferenceParent": "{cbbMethods}",
+              "internalId": 1,
+              "componentId": 60010
+            }
+          ],
+          "internalId": 14,
+          "componentId": 60032
+        },
+        {
+          "controls": [
+            {
+              "group": "SmartObject",
+              "type": "RadioButton",
+              "name": "radNoOutputs",
+              "text": "{wizard_dont_map_outputs}",
+              "visibleValue": true,
+              "enabledValue": true,
+              "internalId": 1,
+              "componentId": 60009
+            }
+          ],
+          "internalId": 15,
+          "componentId": 60032
+        },
+        {
+          "controls": [
+            {
+              "type": "ListOptionsControl",
+              "name": "loOptions",
+              "visible": "{kdMethodType} == {kdList}",
+              "enabledValue": true,
+              "externalReferenceParent": "{cbbMethods}",
+              "internalId": 1,
+              "componentId": 60042
+            }
+          ],
+          "internalId": 16,
+          "componentId": 60032
+        },
+        {
+          "controls": [
+            {
+              "rows": [
+                {
+                  "controls": [
+                    {
+                      "isChecked": "false",
+                      "type": "Checkbox",
+                      "name": "cbxExternalSystem",
+                      "text": "{wizard_wait_for_external}",
+                      "position": {
+                        "y": 10
+                      },
+                      "visible": "true",
+                      "visibleValue": true,
+                      "enabledValue": true,
+                      "internalId": 1,
+                      "componentId": 60007
+                    }
+                  ],
+                  "internalId": 1,
+                  "componentId": 60032
+                },
+                {
+                  "controls": [
+                    {
+                      "type": "Label",
+                      "name": "lblExternalSystem",
+                      "text": "{wizard_wait_for_external_description}",
+                      "visibleValue": true,
+                      "enabledValue": true,
+                      "internalId": 1,
+                      "componentId": 60003
+                    },
+                    {
+                      "helpContextId": "302",
+                      "type": "Hyperlink",
+                      "name": "btnLearnMore",
+                      "visibleValue": true,
+                      "enabledValue": true,
+                      "internalId": 2,
+                      "componentId": 60045
+                    }
+                  ],
+                  "cssClass": "inline-text-elements indent",
+                  "internalId": 2,
+                  "componentId": 60032
+                }
+              ],
+              "type": "Accordion",
+              "name": "accOptions",
+              "text": "{wizard_options}",
+              "visibleValue": true,
+              "enabledValue": true,
+              "internalId": 1,
+              "componentId": 60044
+            }
+          ],
+          "internalId": 17,
+          "componentId": 60032
+        },
+        {
+          "controls": [
+            {
+              "type": "K2Data",
+              "name": "DefaultLoad",
+              "text": "Load",
+              "internalId": 1,
+              "componentId": 60003
+            },
+            {
+              "type": "K2Data",
+              "name": "kdDefaultLoad",
+              "text": "Load",
+              "internalId": 2,
+              "componentId": 60003
+            },
+            {
+              "type": "K2Data",
+              "name": "Empty",
+              "internalId": 3,
+              "componentId": 60003
+            },
+            {
+              "type": "K2Data",
+              "name": "kdMethodPropertiesType",
+              "text": "return",
+              "internalId": 4,
+              "componentId": 60003
+            },
+            {
+              "type": "K2Data",
+              "name": "kdReturnDefaultLoadProperties",
+              "text": "true",
+              "internalId": 5,
+              "componentId": 60003
+            },
+            {
+              "type": "K2Data",
+              "name": "kdReturnOnlyKeys",
+              "text": "true",
+              "internalId": 6,
+              "componentId": 60003
+            },
+            {
+              "type": "K2Data",
+              "name": "kdMethodType",
+              "text": "update",
+              "internalId": 7,
+              "componentId": 60003
+            },
+            {
+              "type": "K2Data",
+              "name": "kdCreate",
+              "text": "create",
+              "internalId": 8,
+              "componentId": 60003
+            },
+            {
+              "type": "K2Data",
+              "name": "kdRead",
+              "text": "read",
+              "internalId": 9,
+              "componentId": 60003
+            },
+            {
+              "type": "K2Data",
+              "name": "kdList",
+              "text": "list",
+              "internalId": 10,
+              "componentId": 60003
+            },
+            {
+              "type": "K2Data",
+              "name": "kdDelete",
+              "text": "delete",
+              "internalId": 11,
+              "componentId": 60003
+            },
+            {
+              "type": "K2Data",
+              "name": "kdExecute",
+              "text": "execute",
+              "internalId": 12,
+              "componentId": 60003
+            },
+            {
+              "type": "K2Data",
+              "name": "kdDefaultMethodType",
+              "text": "read",
+              "internalId": 13,
+              "componentId": 60003
+            },
+            {
+              "type": "K2Data",
+              "name": "kdEmpty",
+              "internalId": 14,
+              "componentId": 60003
+            },
+            {
+              "type": "K2Data",
+              "name": "kdTrue",
+              "text": "true",
+              "internalId": 15,
+              "componentId": 60003
+            }
+          ],
+          "internalId": 18,
+          "componentId": 60032
+        }
+      ],
+      "header": "{wizard_smartobject}",
+      "name": "SmartObject",
+      "internalId": 1,
+      "componentId": 60002
+    }
+  ],
+  "runtime": {
+    "steps": [
+      {
+        "id": 1,
+        "name": "Execute",
+        "target": "Execute",
+        "internalId": 1,
+        "componentId": 60023
+      }
+    ],
+    "componentId": 60022
+  },
+  "dataMappingSets": [
+    {
+      "dataMappings": [
+        {
+          "name": "Copy_Default_Method_Name",
+          "inputControl": "{kdDefaultLoad}",
+          "returnControl": "{DefaultLoad}",
+          "execute": "{kdMethodType} != {kdList},{kdMethodType} != {kdRead}",
+          "internalId": 1,
+          "componentId": 60015
+        },
+        {
+          "name": "Copy_Read_Method_Name",
+          "inputControl": "{cbbMethods}",
+          "returnControl": "{DefaultLoad}",
+          "execute": "{kdMethodType} == {kdRead}",
+          "internalId": 2,
+          "componentId": 60015
+        },
+        {
+          "name": "Copy_List_Method_Name",
+          "inputControl": "{cbbMethods}",
+          "returnControl": "{DefaultLoad}",
+          "execute": "{kdMethodType} == {kdList}",
+          "internalId": 3,
+          "componentId": 60015
+        },
+        {
+          "name": "Copy_Default_Method_Type",
+          "inputControl": "{kdRead}",
+          "returnControl": "{kdDefaultMethodType}",
+          "execute": "{kdMethodType} != {kdList}",
+          "internalId": 4,
+          "componentId": 60015
+        },
+        {
+          "name": "Copy_List_Method_Type",
+          "inputControl": "{kdMethodType}",
+          "returnControl": "{kdDefaultMethodType}",
+          "execute": "{kdMethodType} == {kdList}",
+          "internalId": 5,
+          "componentId": 60015
+        }
+      ],
+      "name": "Copy_Names",
+      "internalId": 1,
+      "componentId": 60017
+    },
+    {
+      "dataMappings": [
+        {
+          "name": "Copy_SmartObject_Name",
+          "inputProperty": "text",
+          "inputControl": "{spSmartObject}",
+          "returnControl": "{ccReference}",
+          "execute": "{cbbMethods} != {Empty},{DefaultLoad} != {Empty},{cbbMethodProperties} != {Empty}",
+          "internalId": 1,
+          "componentId": 60015
+        }
+      ],
+      "name": "Copy_SmartObject_Name",
+      "internalId": 2,
+      "componentId": 60017
+    },
+    {
+      "dataMappings": [
+        {
+          "name": "Check_Map_To_Fields",
+          "inputProperty": "text",
+          "inputControl": "{kdTrue}",
+          "returnProperty": "isChecked",
+          "returnControl": "{radOutputs}",
+          "execute": "{!radNoOutputs},{kdMethodType} == {kdDelete}",
+          "internalId": 1,
+          "componentId": 60015
+        }
+      ],
+      "name": "Check_Map_To_Fields",
+      "internalId": 3,
+      "componentId": 60017
+    }
+  ],
+  "smartObjectMappings": [
+    {
+      "name": "Load_SmartObject_Methods",
+      "smartObjectName": "root.externalReferenceDefinitions[{\"internalId\":1}]",
+      "methods": [
+        {
+          "name": "GetSmartObjectMethods",
+          "methodType": "List",
+          "listControl": "{cbbMethods}",
+          "properties": [
+            {
+              "name": "SmartObjectName",
+              "inputControl": "{spSmartObject}",
+              "internalId": 1,
+              "componentId": 60024
+            },
+            {
+              "name": "MethodName",
+              "returnProperty": "Key",
+              "internalId": 2,
+              "componentId": 60024
+            },
+            {
+              "name": "MethodDisplayName",
+              "returnProperty": "Value",
+              "internalId": 3,
+              "componentId": 60024
+            }
+          ],
+          "internalId": 1,
+          "componentId": 60030
+        }
+      ],
+      "internalId": 1,
+      "componentId": 60025
+    },
+    {
+      "name": "Get_Method_Type",
+      "smartObjectName": "root.externalReferenceDefinitions[{\"internalId\":1}]",
+      "methods": [
+        {
+          "name": "GetSmartObjectMethodType",
+          "methodType": "Read",
+          "properties": [
+            {
+              "name": "SmartObjectName",
+              "inputControl": "{spSmartObject}",
+              "internalId": 1,
+              "componentId": 60024
+            },
+            {
+              "name": "MethodName",
+              "inputControl": "{cbbMethods}",
+              "internalId": 2,
+              "componentId": 60024
+            },
+            {
+              "name": "MethodType",
+              "returnControl": "{kdMethodType}",
+              "internalId": 3,
+              "componentId": 60024
+            }
+          ],
+          "internalId": 1,
+          "componentId": 60030
+        }
+      ],
+      "internalId": 2,
+      "componentId": 60025
+    },
+    {
+      "name": "Get_Default_Load_Method",
+      "smartObjectName": "root.externalReferenceDefinitions[{\"internalId\":1}]",
+      "methods": [
+        {
+          "name": "GetDefaultLoadMethod",
+          "methodType": "Read",
+          "properties": [
+            {
+              "name": "SmartObjectName",
+              "inputControl": "{spSmartObject}",
+              "internalId": 1,
+              "componentId": 60024
+            },
+            {
+              "name": "MethodName",
+              "returnControl": "{kdDefaultLoad}",
+              "internalId": 2,
+              "componentId": 60024
+            }
+          ],
+          "internalId": 1,
+          "componentId": 60030
+        }
+      ],
+      "internalId": 3,
+      "componentId": 60025
+    },
+    {
+      "name": "Get_Method_Properties",
+      "smartObjectName": "root.externalReferenceDefinitions[{\"internalId\":1}]",
+      "methods": [
+        {
+          "name": "GetSmartObjectMethodProperties",
+          "methodType": "List",
+          "execute": "{kdMethodType} == {kdList}",
+          "listControl": "{cbbMethodProperties}",
+          "properties": [
+            {
+              "name": "SmartObjectName",
+              "inputControl": "{spSmartObject}",
+              "internalId": 1,
+              "componentId": 60024
+            },
+            {
+              "name": "MethodName",
+              "inputControl": "{cbbMethods}",
+              "internalId": 2,
+              "componentId": 60024
+            },
+            {
+              "name": "MethodPropertiesType",
+              "inputControl": "{kdMethodPropertiesType}",
+              "internalId": 3,
+              "componentId": 60024
+            },
+            {
+              "name": "ReturnDefaultLoadProperties",
+              "inputControl": "{kdReturnDefaultLoadProperties}",
+              "internalId": 4,
+              "componentId": 60024
+            },
+            {
+              "name": "ReturnOnlyKeys",
+              "inputControl": "{kdReturnOnlyKeys}",
+              "internalId": 5,
+              "componentId": 60024
+            },
+            {
+              "name": "MethodPropertyName",
+              "returnProperty": "Key",
+              "internalId": 6,
+              "componentId": 60024
+            },
+            {
+              "name": "MethodPropertyDisplayName",
+              "returnProperty": "Value",
+              "internalId": 7,
+              "componentId": 60024
+            }
+          ],
+          "internalId": 1,
+          "componentId": 60030
+        }
+      ],
+      "internalId": 4,
+      "componentId": 60025
+    },
+    {
+      "name": "Load_Inputs",
+      "smartObjectName": "{spSmartObject}",
+      "methods": [
+        {
+          "name": "{cbbMethods}",
+          "methodType": "DescribeInput",
+          "execute": "{cbbMethods} != {Empty}",
+          "listControl": "{pmInputs}",
+          "internalId": 1,
+          "componentId": 60030
+        },
+        {
+          "name": "{cbbMethods}",
+          "methodType": "DescribeReturn",
+          "execute": "{kdMethodType} == {kdList}",
+          "listControl": "{pmFilterInputs}",
+          "internalId": 2,
+          "componentId": 60030
+        }
+      ],
+      "internalId": 5,
+      "componentId": 60025
+    },
+    {
+      "name": "Load_Outputs",
+      "smartObjectName": "{spSmartObject}",
+      "methods": [
+        {
+          "name": "{cbbMethods}",
+          "methodType": "DescribeReturn",
+          "execute": "{cbbMethods} != {Empty}",
+          "listControl": "{pmOutputs}",
+          "internalId": 1,
+          "componentId": 60030
+        },
+        {
+          "name": "{cbbMethods}",
+          "methodType": "DescribeReturn",
+          "execute": "{kdMethodType} == {kdList}",
+          "listControl": "{loOptions}",
+          "internalId": 2,
+          "componentId": 60030
+        }
+      ],
+      "internalId": 6,
+      "componentId": 60025
+    },
+    {
+      "name": "Execute",
+      "smartObjectName": "{spSmartObject}",
+      "methods": [
+        {
+          "name": "{cbbMethods}",
+          "methodType": "{kdMethodType}",
+          "saveReference": "CreateReference",
+          "inputControl": "{pmInputs}",
+          "returnControl": "{pmOutputs}",
+          "filter": "{pmFilterInputs}",
+          "listOptions": "{loOptions}",
+          "internalId": 1,
+          "componentId": 60030
+        }
+      ],
+      "internalId": 7,
+      "componentId": 60025
+    }
+  ],
+  "events": [
+    {
+      "name": "LoadSmartObjectMethods",
+      "type": "SmartObjectMapping",
+      "target": "Load_SmartObject_Methods",
+      "internalId": 1,
+      "componentId": 60031
+    },
+    {
+      "name": "GetMethodType",
+      "type": "SmartObjectMapping",
+      "target": "Get_Method_Type",
+      "internalId": 2,
+      "componentId": 60031
+    },
+    {
+      "name": "GetMethodProperties",
+      "type": "SmartObjectMapping",
+      "target": "Get_Method_Properties",
+      "internalId": 3,
+      "componentId": 60031
+    },
+    {
+      "name": "CopyNames",
+      "type": "DataMapping",
+      "target": "Copy_Names",
+      "internalId": 4,
+      "componentId": 60031
+    },
+    {
+      "name": "CopySmartObjectName",
+      "type": "DataMapping",
+      "target": "Copy_SmartObject_Name",
+      "internalId": 5,
+      "componentId": 60031
+    },
+    {
+      "name": "CheckMapToFields",
+      "type": "DataMapping",
+      "target": "Check_Map_To_Fields",
+      "internalId": 6,
+      "componentId": 60031
+    },
+    {
+      "name": "LoadInputs",
+      "type": "SmartObjectMapping",
+      "target": "Load_Inputs",
+      "internalId": 7,
+      "componentId": 60031
+    },
+    {
+      "name": "LoadOutputs",
+      "type": "SmartObjectMapping",
+      "target": "Load_Outputs",
+      "internalId": 8,
+      "componentId": 60031
+    },
+    {
+      "name": "GetDefaultLoadMethod",
+      "type": "SmartObjectMapping",
+      "target": "Get_Default_Load_Method",
+      "internalId": 9,
+      "componentId": 60031
+    },
+    {
+      "name": "Execute",
+      "type": "SmartObjectMapping",
+      "target": "Execute",
+      "internalId": 10,
+      "componentId": 60031
+    }
+  ],
+  "references": [
+    {
+      "name": "CreateReference",
+      "systemName": "{ccReference}",
+      "defaultLoad": {
+        "methodName": "{DefaultLoad}",
+        "methodType": "{kdDefaultMethodType}",
+        "names": "{cbbMethodProperties}",
+        "componentId": 60020
+      },
+      "internalId": 1,
+      "componentId": 60021
+    }
+  ],
+  "exceptions": {
+    "controls": [
+      {
+        "isChecked": "False",
+        "type": "Checkbox",
+        "name": "cbxContinueOnError",
+        "text": "{wizard_continue_on_error}",
+        "visibleValue": true,
+        "enabledValue": true,
+        "internalId": 1,
+        "componentId": 60007
+      },
+      {
+        "isChecked": "true",
+        "checkedValue": true,
+        "type": "Checkbox",
+        "name": "cbxEnableRequiredFieldsValidation",
+        "text": "{wizard_required_fields_validation}",
+        "visibleValue": true,
+        "enabledValue": true,
+        "internalId": 2,
+        "componentId": 60007
+      }
+    ],
+    "componentId": 60037
+  },
+  "resourceHash": "1701158746",
+  "resourceFile": "configs\\localization\\wizards\\smartObject.json",
+  "asyncServerEvent": "{cbxExternalSystem}",
+  "continueOnError": "{cbxContinueOnError}",
+  "requiredFieldsValidation": "{cbxEnableRequiredFieldsValidation}",
+  "icon": "smartObjectWizardStep",
+  "name": "SmartObject Method",
+  "type": "smartWizard",
+  "eventComponentId": 30011,
+  "eventConfigurationComponentId": 30012,
+  "nameToken": "wizardName_smartObject",
+  "descriptionToken": "wizarddescription_wizardname_smartobject",
+  "tooltipTitleToken": "configpanel_tabs_task_tooltips_title_smartobject",
+  "tooltipDescriptionToken": "configpanel_tabs_task_tooltips_description_smartobject",
+  "componentId": 60001
+}

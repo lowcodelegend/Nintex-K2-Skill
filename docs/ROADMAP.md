@@ -42,16 +42,15 @@ Next increments:
 - Add authenticated browser automation for visual, accessibility, and full CRUD tests.
 - Add workflow start/action rules after the workflow-builder contract exists.
 
-### 4. K2 workflow builder — v0.1 implemented
+### 4. K2 workflow builder — v0.2 implemented
 
-The baseline creates, saves, publishes, inspects, verifies, and safely removes K2 Five HTML5 Workflow Designer JSON definitions. It provides a tested Start → End generator plus a schema-checked JSON-file escape hatch, keeps workflows in a stable `Workflows` subcategory, and proves both designer JSON and compiled runtime deployment without using legacy design-time authoring APIs.
+The builder creates, saves, publishes, inspects, verifies, and safely removes K2 Five HTML5 Workflow Designer JSON definitions. Alongside Start → End and a schema-checked JSON-file escape hatch, its typed request-approval baseline resolves a live request SmartObject and generates status Update, Email, and User Task events with actions/outcomes and SmartForms task parameters. It keeps workflows in a stable `Workflows` subcategory and proves designer JSON plus compiled runtime deployment without legacy design-time authoring APIs.
 
 Next increments:
 
-- Add typed process data fields and SmartObject item references.
-- Add SmartObject method events over the corporate workflow model.
-- Add user tasks, destinations, actions/outcomes, and SmartForms task integration.
-- Add decision/split/merge routing, rework loops, email, reminders, and escalations.
+- Add decision/split/merge routing, outcome-specific status updates, and rework loops.
+- Add SmartObject item references and property-driven recipients/content.
+- Add task notifications, reminders, deadlines, and escalations.
 - Add subworkflows, exception paths, instance-start/task-action smoke tests, and rollback/export.
 
 ### 5. K2 categories and packaging

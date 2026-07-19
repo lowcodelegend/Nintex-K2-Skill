@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace K2WorkflowCli
@@ -33,6 +34,10 @@ namespace K2WorkflowCli
             if (SchemaVersion != 1) throw new CliException("schemaVersion must be 1.");
             if (K2 == null) K2 = new K2Settings();
             if (string.IsNullOrWhiteSpace(K2.DesignerHost)) K2.DesignerHost = "smartforms";
+            if (string.IsNullOrWhiteSpace(K2.Host)) K2.Host = "localhost";
+            if (K2.Port == 0) K2.Port = 5555;
+            if (!K2.Integrated) K2.Integrated = true;
+            if (string.IsNullOrWhiteSpace(K2.SecurityLabel)) K2.SecurityLabel = "K2";
             if (!string.Equals(K2.DesignerHost, "smartforms", StringComparison.OrdinalIgnoreCase))
                 throw new CliException("k2.designerHost must be 'smartforms' for the installed K2 Five HTML5 Workflow Designer environment.");
             if (Application == null || string.IsNullOrWhiteSpace(Application.RootCategoryPath))
@@ -46,10 +51,51 @@ namespace K2WorkflowCli
             if (Workflow.Name.IndexOfAny(new[] { '\\', '/' }) >= 0) throw new CliException("workflow.name must be a leaf name.");
             if (string.IsNullOrWhiteSpace(Workflow.Kind)) Workflow.Kind = "start-end";
             if (!string.Equals(Workflow.Kind, "start-end", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(Workflow.Kind, "request-approval", StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(Workflow.Kind, "json-file", StringComparison.OrdinalIgnoreCase))
-                throw new CliException("workflow.kind must be 'start-end' or 'json-file'.");
+                throw new CliException("workflow.kind must be 'start-end', 'request-approval', or 'json-file'.");
             if (string.Equals(Workflow.Kind, "json-file", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(Workflow.DefinitionFile))
                 throw new CliException("workflow.definitionFile is required when workflow.kind is 'json-file'.");
+            if (string.Equals(Workflow.Kind, "request-approval", StringComparison.OrdinalIgnoreCase)) ValidateRequestApproval();
+        }
+
+        private void ValidateRequestApproval()
+        {
+            var update = Workflow.RequestStatusUpdate;
+            if (update == null) throw new CliException("workflow.requestStatusUpdate is required for request-approval.");
+            Required(update.SmartObject, "workflow.requestStatusUpdate.smartObject");
+            Required(update.Method, "workflow.requestStatusUpdate.method");
+            Required(update.IdentifierProperty, "workflow.requestStatusUpdate.identifierProperty");
+            Required(update.StatusProperty, "workflow.requestStatusUpdate.statusProperty");
+            Required(update.StatusValue, "workflow.requestStatusUpdate.statusValue");
+            if (string.IsNullOrWhiteSpace(update.IdentifierDataField)) update.IdentifierDataField = update.IdentifierProperty;
+
+            var email = Workflow.Email;
+            if (email == null) throw new CliException("workflow.email is required for request-approval.");
+            Required(email.Name, "workflow.email.name"); Required(email.From, "workflow.email.from");
+            Required(email.Subject, "workflow.email.subject"); Required(email.Body, "workflow.email.body");
+            if (email.To == null || email.To.Count == 0 || email.To.Any(string.IsNullOrWhiteSpace))
+                throw new CliException("workflow.email.to must contain at least one recipient.");
+
+            var task = Workflow.UserTask;
+            if (task == null) throw new CliException("workflow.userTask is required for request-approval.");
+            Required(task.Name, "workflow.userTask.name"); Required(task.Instructions, "workflow.userTask.instructions");
+            Required(task.FormUrl, "workflow.userTask.formUrl");
+            Uri uri;
+            if (!Uri.TryCreate(task.FormUrl, UriKind.Absolute, out uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+                throw new CliException("workflow.userTask.formUrl must be an absolute HTTP(S) URL.");
+            if (task.Assignees == null || task.Assignees.Count == 0 || task.Assignees.Any(string.IsNullOrWhiteSpace))
+                throw new CliException("workflow.userTask.assignees must contain at least one K2 user/group identity.");
+            if (task.Actions == null || task.Actions.Count == 0 || task.Actions.Any(string.IsNullOrWhiteSpace))
+                throw new CliException("workflow.userTask.actions must contain at least one action.");
+            if (task.Actions.Distinct(StringComparer.OrdinalIgnoreCase).Count() != task.Actions.Count)
+                throw new CliException("workflow.userTask.actions must be unique.");
+            if (string.IsNullOrWhiteSpace(task.RequestIdParameter)) task.RequestIdParameter = update.IdentifierDataField;
+        }
+
+        private static void Required(string value, string field)
+        {
+            if (string.IsNullOrWhiteSpace(value)) throw new CliException(field + " is required.");
         }
 
         private static void ValidateNoVersion(string value, string field)
@@ -62,6 +108,10 @@ namespace K2WorkflowCli
     internal sealed class K2Settings
     {
         [JsonProperty("designerHost")] public string DesignerHost { get; set; }
+        [JsonProperty("host")] public string Host { get; set; }
+        [JsonProperty("port")] public int Port { get; set; }
+        [JsonProperty("integrated")] public bool Integrated { get; set; }
+        [JsonProperty("securityLabel")] public string SecurityLabel { get; set; }
     }
 
     internal sealed class ApplicationSettings
@@ -78,6 +128,40 @@ namespace K2WorkflowCli
         [JsonProperty("publish")] public bool Publish { get; set; }
         [JsonProperty("replaceExisting")] public bool ReplaceExisting { get; set; }
         [JsonProperty("comment")] public string Comment { get; set; }
+        [JsonProperty("requestStatusUpdate")] public RequestStatusUpdateSettings RequestStatusUpdate { get; set; }
+        [JsonProperty("email")] public EmailSettings Email { get; set; }
+        [JsonProperty("userTask")] public UserTaskSettings UserTask { get; set; }
         [JsonIgnore] public string ProcessFullName { get { return "Workflows\\" + Name; } }
+    }
+
+    internal sealed class RequestStatusUpdateSettings
+    {
+        [JsonProperty("name")] public string Name { get; set; }
+        [JsonProperty("smartObject")] public string SmartObject { get; set; }
+        [JsonProperty("method")] public string Method { get; set; }
+        [JsonProperty("identifierProperty")] public string IdentifierProperty { get; set; }
+        [JsonProperty("identifierDataField")] public string IdentifierDataField { get; set; }
+        [JsonProperty("statusProperty")] public string StatusProperty { get; set; }
+        [JsonProperty("statusValue")] public string StatusValue { get; set; }
+    }
+
+    internal sealed class EmailSettings
+    {
+        [JsonProperty("name")] public string Name { get; set; }
+        [JsonProperty("from")] public string From { get; set; }
+        [JsonProperty("to")] public List<string> To { get; set; }
+        [JsonProperty("subject")] public string Subject { get; set; }
+        [JsonProperty("body")] public string Body { get; set; }
+        [JsonProperty("html")] public bool Html { get; set; }
+    }
+
+    internal sealed class UserTaskSettings
+    {
+        [JsonProperty("name")] public string Name { get; set; }
+        [JsonProperty("assignees")] public List<string> Assignees { get; set; }
+        [JsonProperty("instructions")] public string Instructions { get; set; }
+        [JsonProperty("actions")] public List<string> Actions { get; set; }
+        [JsonProperty("formUrl")] public string FormUrl { get; set; }
+        [JsonProperty("requestIdParameter")] public string RequestIdParameter { get; set; }
     }
 }

@@ -25,6 +25,15 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="SourceCode.Framework">
+      <HintPath>$(K2InstallDir)\Bin\SourceCode.Framework.dll</HintPath><Private>False</Private>
+    </Reference>
+    <Reference Include="SourceCode.HostClientAPI">
+      <HintPath>$(K2InstallDir)\Bin\SourceCode.HostClientAPI.dll</HintPath><Private>False</Private>
+    </Reference>
+    <Reference Include="SourceCode.SmartObjects.Client">
+      <HintPath>$(K2InstallDir)\Bin\SourceCode.SmartObjects.Client.dll</HintPath><Private>False</Private>
+    </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>$(K2InstallDir)\K2 smartforms Designer\K2 workflow Designer\bin\Newtonsoft.Json.dll</HintPath>
       <Private>False</Private>
@@ -35,9 +44,11 @@
     <Compile Include="Manifest.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="RuntimeAssemblyResolver.cs" />
+    <Compile Include="SmartObjectMetadata.cs" />
     <Compile Include="WorkflowJsonBuilder.cs" />
     <Compile Include="WorkflowManager.cs" />
   </ItemGroup>
   <ItemGroup><None Include="App.config" /></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="SmartObjectWizardDefinition.json"><LogicalName>K2WorkflowCli.SmartObjectWizardDefinition.json</LogicalName></EmbeddedResource></ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

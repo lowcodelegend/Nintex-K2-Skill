@@ -1,6 +1,6 @@
 ---
 name: k2-workflows
-description: Build, publish, inspect, verify, and clean up K2 Five HTML5 Workflow Designer JSON workflows using declarative manifests and the bundled k2wf .NET CLI. Use for modern JSON workflow definitions, K2 workflow categories, deployment/version verification, or repeatable workflow construction. Do not use for legacy K2 Studio/K2 Designer XML authoring, cloud Nintex Workflow, SmartForms, SmartObjects, or direct K2 database changes.
+description: Build, publish, inspect, verify, and clean up K2 Five HTML5 Workflow Designer JSON workflows using declarative manifests and the bundled k2wf .NET CLI. Use for modern JSON workflows, request SmartObject status updates, email events, user tasks/actions, SmartForms task URLs, K2 workflow categories, deployment/version verification, or repeatable workflow construction. Do not use for legacy K2 Studio/K2 Designer XML authoring, cloud Nintex Workflow, creating SmartForms/SmartObjects, or direct K2 database changes.
 ---
 
 # K2 Five workflows
@@ -18,9 +18,11 @@ Use `scripts/k2wf.ps1`; do not write to the K2 database or invoke legacy workflo
 
 `deploy` explicitly releases the HTML5 designer lock after every successful save/publish. If a prior tool/browser session left a workflow locked, run `unlock <manifest> --confirm`, then refresh the Designer page. Do not assume that matching the displayed lock owner makes a different browser client identifier editable.
 
-## v0.1 scope
+## Generated workflows
 
-Prefer `workflow.kind=start-end` for the known-good manually started Start → End baseline. Use `json-file` only with a definition produced by this K2 Five HTML5 designer schema; the CLI rejects non-JSON/legacy roots and normalizes the root name.
+Use `workflow.kind=request-approval` for the typed baseline: Start → request SmartObject Update → Email → User Task → End. Supply an existing request SmartObject Update method, identifier/status inputs, literal email settings, K2 assignees/actions, and an absolute task-form URL. The CLI loads live SmartObject metadata, rejects missing/wrong inputs, creates a process identifier data field, maps it into the Update method, and verifies all three event components after deployment.
+
+Use `workflow.kind=start-end` for the minimal smoke-test baseline. Use `json-file` only with a definition produced by this K2 Five HTML5 designer schema; the CLI rejects non-JSON/legacy roots and normalizes the root name.
 
 The CLI creates a `Workflows` subcategory beneath an existing application root. It will not create an application root or version folder. It refuses replacement unless `replaceExisting=true`.
 
@@ -32,4 +34,5 @@ Read [references/design.md](references/design.md) before extending generated ste
 - Treat `deploy` and `cleanup` as mutations requiring explicit confirmation.
 - Cleanup refuses workflows with runtime instances and never deletes workflow log/instance data.
 - Preserve an existing workflow unless replacement is explicitly requested and reviewed.
+- Review email recipients, task assignees, form URLs, status values, and the request identifier data-field contract before publication.
 - Do not confuse `SourceCode.WebDesigner.*` plus the modern designer client with legacy K2 Studio/K2 Designer authoring APIs.

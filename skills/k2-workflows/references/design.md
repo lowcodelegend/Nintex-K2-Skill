@@ -17,9 +17,13 @@ Some concrete on-prem provider namespaces contain the word `Legacy`. They are ad
 - Publishing returns separate saved JSON and deployed runtime identifiers/version information.
 - `SaveKprx(close=true)` did not reliably clear the HTML5 designer lock for a CLI-created client identifier. Match the website lifecycle by explicitly invoking `Processdataservice.UnlockProcess(processId, userName)` after every successful save/publish.
 - K2 prevents direct deletion of the default runtime definition. Safe cleanup verifies zero instances, unsets the default, deletes definitions, then removes designer JSON.
+- Activity and connector `systemName` values are container keys, not merely labels. Reusing `DefaultLine` fails compilation when a graph has multiple connectors; follow K2's `DefaultLine`, `DefaultLine 1`, ... convention. Parent activities keep type names such as `SmartObject Method`, `Send Email`, and `Task`, while child events carry friendly titles.
+- SmartObject method events use external-reference, method, and input metadata plus property-mapper token references. Resolve input ordering/types with `SmartObjectClientServer`; do not infer them from SQL column order.
+- SmartObject events also need the hydrated smart-wizard definition and `SmartObject_Service_Functions` reference for later browser configuration. Compilation alone succeeds without them, but the Designer config panel expects `event.wizardDefinition` when its dynamic wizard cache is empty.
+- Task action references and parent outcomes must target the same action internal IDs. Pass the standard `SN` serial parameter to the task form and add the request identifier separately when required.
 
 ## Extension plan
 
-Keep `start-end` immutable as the smoke-test template. Add new declarative step builders one at a time, each derived from a designer-created fixture and proven with create/publish/inspect/runtime/cleanup tests. Recommended order: data fields, SmartObject method event, user task with outcomes, decision routing, email, escalation/reminder, and subworkflow.
+Keep `start-end` immutable as the smoke-test template. The typed `request-approval` builder covers a request identifier data field, SmartObject status Update, Email, and User Task with outcomes/form integration. Add decision routing and outcome-specific status updates next, followed by reminders/escalations and subworkflows. Derive each from a designer-created fixture and prove create/publish/inspect/runtime/cleanup behavior.
 
 Do not accept arbitrary component IDs or opaque fragments in the high-level manifest. Raw `json-file` remains an expert escape hatch and must be schema validated.

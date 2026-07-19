@@ -43,7 +43,7 @@ Example runtime URL:
 
 ## Workflow baseline
 
-`workflow-manifest.json` creates the modern HTML5 Workflow Designer JSON baseline `CW Request Approval` in `K2 Skills\Corporate Workflow\Workflows`. v0.1 deliberately contains only Start → End; it proves JSON authoring, publication, runtime deployment, verification, and safe lifecycle handling before SmartObject events and user tasks are added.
+`workflow-manifest.json` creates `CW Request Approval` in `K2 Skills\Corporate Workflow\Workflows` as Start → set `WorkflowRequest.Status` → email → assigned approval task → End. It maps the workflow `WorkflowRequestId` data field into the request SmartObject Update method and opens the version-free `CW Approval Task Management` form with `SN` and `RequestId` parameters.
 
 ```powershell
 $workflowSkillRoot = Join-Path $env:USERPROFILE '.codex\skills\k2-workflows'
