@@ -55,6 +55,19 @@ The `examples/request-management` fixture was deployed twice:
 7. Repeated deployment successfully, exercising the update/refresh/idempotency path.
 8. Deleted all five test SmartObjects and the test Service Instance, dropped the database, and independently confirmed both were absent.
 
+## SmartForms generation findings
+
+- K2 Five 5.10 ships supported SmartForms generation APIs in `SourceCode.Forms.Management.dll`, `SourceCode.Forms.Authoring.dll`, and `SourceCode.Forms.Utilities.dll`.
+- `FormsManager` connects over the K2 management port and deploys/checks in form and view XML. `AutoGenerator` builds supported definitions from existing SmartObjects; no K2 database access is required.
+- `ViewGenerator` supports capture, list, content, and editable-list view types. It accepts selected SmartObject properties, instance methods, a default List method, and standard layout/toolbar flags.
+- `FormGenerator` composes deployed views and can create list-click load plus refresh-after-submit/load behaviors. The tested `Lithium` theme is installed locally.
+- Deploying with the category path created the missing category hierarchy automatically.
+- Generated artifacts use new GUIDs. Repeatable replacement therefore requires deleting forms before their dependent views; it cannot preserve manual Designer edits or GUID-based external references.
+- Dependency inspection through `FormsManager.GetFormsForView` can block replacement/cleanup when a managed view is used by a form outside the manifest.
+- Runtime vanity URLs use `https://spk2.trials.demome.tech/Runtime/Runtime/Form/<URL-encoded-form-name>/`. A non-browser request reaches the Windows STS redirect but cannot complete interactive WIF authentication; authoritative CLI verification uses the management API definitions and GUID references, with final rendering/CRUD checked in a browser.
+
+The corporate workflow proof generated six checked-in views and three forms in `K2 Skills\Corporate Workflow\v0.1`, then verified their definitions, categories, theme, view references, and runtime routes.
+
 ## Important constraints
 
 - K2 documentation explicitly warns against direct access or modification of the K2 database. All K2 mutations must go through supported APIs.
@@ -70,3 +83,6 @@ The `examples/request-management` fixture was deployed twice:
 - [K2 connection string samples](https://help.nintex.com/en-us/k2five/devref/5.3/Content/Concepts/ConnectionStringSamples.htm)
 - [SmartObject management API example](https://help.nintex.com/en-us/k2five/devref/current/Content/Runtime/SmO-Manage/List.html)
 - [K2 database support boundary](https://help.nintex.com/en-us/k2five/devref/current/content/reference/DB/Database.html)
+- [Generating Forms and Views with C#](https://help.nintex.com/en-us/k2five/devref/5.6/content/Forms/FormsSamples.htm)
+- [Using SmartObjects in SmartForms](https://help.nintex.com/en-us/k2five/userguide/5.3/Content/create/SmartObjects/UsingSmOInSmartForms.htm)
+- [Generate a View](https://help.nintex.com/en-US/k2five/userguide/5.3/content/Create/SmartObjects/CreateSmOContextMenu.htm)

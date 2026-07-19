@@ -28,9 +28,19 @@ Next increments:
 
 Create advanced/composite SmartObjects with controlled names, properties, methods, defaults, associations, and mappings to service objects. Cover cases where automatic generation is too coarse.
 
-### 3. K2 SmartForms builder
+### 3. K2 SmartForms builder — v0.1 implemented
 
-Create item/list views, forms, controls, expressions, rules, validation, responsive layouts, and workflow start/action integration. Establish reusable form design and accessibility patterns.
+The baseline creates checked-in capture/list/content/editable-list views and multi-view forms from declarative manifests using supported K2 generation APIs. It validates SmartObjects, properties, methods, themes, collisions, and dependencies; supports safe planning, exact replacement/cleanup, definition verification, and runtime-route probes. The corporate workflow fixture proves six views and three Lithium CRUD forms.
+
+Next increments:
+
+- Configure friendly SmartObject-backed lookup controls for foreign keys.
+- Control required/read-only/hidden fields and validation messages.
+- Hand-author responsive sections, tabs, controls, expressions, and conditional formatting through supported authoring APIs.
+- Add explicit confirmation dialogs and stronger generated delete patterns.
+- Preserve or export existing artifacts before replacement and add rollback.
+- Add authenticated browser automation for visual, accessibility, and full CRUD tests.
+- Add workflow start/action rules after the workflow-builder contract exists.
 
 ### 4. K2 workflow builder
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "K2 SmartForms Builder"
+  short_description: "Build CRUD SmartForms over K2 SmartObjects"
+  default_prompt: "Use $k2-smartforms to generate and verify a polished CRUD form over existing K2 SmartObjects."
