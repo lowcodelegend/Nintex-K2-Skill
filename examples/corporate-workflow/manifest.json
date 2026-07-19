@@ -1,0 +1,85 @@
+{
+  "name": "Corporate workflow application test model",
+  "database": {
+    "server": "localhost",
+    "name": "K2Skills_CorporateWorkflow_Test",
+    "integratedSecurity": true,
+    "createIfMissing": true,
+    "commandTimeoutSeconds": 120,
+    "runtimePrincipal": "TRIALS\\k2svc",
+    "scripts": [
+      "sql/001_schemas_and_reference_data.sql",
+      "sql/002_workflow_model.sql",
+      "sql/003_views_procedures_and_test_data.sql"
+    ]
+  },
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2",
+    "serviceInstance": {
+      "systemName": "K2Skills_CorporateWorkflow_Test",
+      "displayName": "K2 Skills Corporate Workflow Test",
+      "description": "Disposable corporate workflow SQL SmartObject test model",
+      "authenticationMode": "service-account",
+      "commandTimeoutSeconds": 30,
+      "useNativeSqlExecution": true,
+      "useSqlPaging": false,
+      "encryptConnection": false,
+      "onDifferentSqlServer": false
+    },
+    "smartObjects": {
+      "createNew": true,
+      "updateExisting": true,
+      "deleteRemoved": false
+    }
+  },
+  "verification": {
+    "sqlObjects": [
+      { "type": "table", "schema": "org", "name": "Department" },
+      { "type": "table", "schema": "org", "name": "Employee" },
+      { "type": "table", "schema": "app", "name": "RequestType" },
+      { "type": "table", "schema": "app", "name": "WorkflowRequest" },
+      { "type": "table", "schema": "app", "name": "ApprovalTask" },
+      { "type": "table", "schema": "app", "name": "RequestComment" },
+      { "type": "view", "schema": "reporting", "name": "RequestSummary" },
+      { "type": "view", "schema": "reporting", "name": "ApprovalInbox" },
+      { "type": "procedure", "schema": "app", "name": "WorkflowRequest_Submit" },
+      { "type": "procedure", "schema": "app", "name": "ApprovalTask_Decide" },
+      { "type": "procedure", "schema": "reporting", "name": "WorkflowDashboard" }
+    ],
+    "queries": [
+      {
+        "name": "reference departments seeded",
+        "sql": "SELECT COUNT(*) FROM org.Department",
+        "expectedScalar": "4"
+      },
+      {
+        "name": "test request exists",
+        "sql": "SELECT COUNT(*) FROM app.WorkflowRequest WHERE RequestNumber = N'CW-TEST-0001'",
+        "expectedScalar": "1"
+      },
+      {
+        "name": "pending approval exists",
+        "sql": "SELECT COUNT(*) FROM app.ApprovalTask WHERE RequestId = (SELECT RequestId FROM app.WorkflowRequest WHERE RequestNumber = N'CW-TEST-0001') AND Status = N'Pending'",
+        "expectedScalar": "1"
+      }
+    ],
+    "minimumGeneratedSmartObjects": 11,
+    "smartObjectServiceObjects": [
+      "org-Department",
+      "org-Employee",
+      "app-RequestType",
+      "app-WorkflowRequest",
+      "app-ApprovalTask",
+      "app-RequestComment",
+      "reporting-RequestSummary",
+      "reporting-ApprovalInbox",
+      "app-WorkflowRequest_Submit",
+      "app-ApprovalTask_Decide",
+      "reporting-WorkflowDashboard"
+    ],
+    "smokeTestListMethods": true
+  }
+}
