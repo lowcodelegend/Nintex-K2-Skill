@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 2,
+  "shortCode": "CWF",
+  "solution": "CWF.Corporate Workflow",
+  "deployedAtUtc": "2026-07-20T19:15:54Z",
+  "environment": "spk2-local",
+  "sourceRevision": "9d7b7f85b4076d3037edfcd9ed379f0ba6c18f09",
+  "result": "complete-with-errata",
+  "manifestChecksums": {
+    "manifest.json": "fba8152c75fb71fa17fcd09c506c47e2aa16a3233968d49e0cd5f0fc2aac45af",
+    "smartforms-manifest.json": "fcc771aa2389c9db4ea5f6199b66941f6e17710d77457368e12db3bf5e8479b8",
+    "workflow-manifest.json": "72bbd99edb4505ad02a04a338138830999678fd3b27d8258a1cf45eba0fba006",
+    "solution-manifest.json": "e1f1d56059fc9d08b9e4b06b79ded0fa74bd40768271d2d62b2864cd33403f03"
+  },
+  "artifacts": [
+    { "id": "source:solution-manifest", "layer": "source", "kind": "manifest", "name": "solution-manifest.json", "action": "reused", "location": "examples/corporate-workflow", "identifier": null, "version": 1, "source": "solution-manifest.json", "verification": "k2build validate and plan passed" },
+    { "id": "source:sql-manifest", "layer": "source", "kind": "manifest", "name": "manifest.json", "action": "reused", "location": "examples/corporate-workflow", "identifier": null, "version": 1, "source": "manifest.json", "verification": "k2sql verify passed" },
+    { "id": "source:forms-manifest", "layer": "source", "kind": "manifest", "name": "smartforms-manifest.json", "action": "reused", "location": "examples/corporate-workflow", "identifier": null, "version": 1, "source": "smartforms-manifest.json", "verification": "k2forms deploy and verify passed" },
+    { "id": "source:workflow-manifest", "layer": "source", "kind": "manifest", "name": "workflow-manifest.json", "action": "reused", "location": "examples/corporate-workflow", "identifier": null, "version": 1, "source": "workflow-manifest.json", "verification": "k2wf deploy and verify passed" },
+    { "id": "source:sql-001", "layer": "source", "kind": "sql-script", "name": "001_schemas_and_reference_data.sql", "action": "reused", "location": "examples/corporate-workflow/sql", "identifier": null, "version": null, "source": "manifest.json", "verification": "database verification passed" },
+    { "id": "source:sql-002", "layer": "source", "kind": "sql-script", "name": "002_workflow_model.sql", "action": "reused", "location": "examples/corporate-workflow/sql", "identifier": null, "version": null, "source": "manifest.json", "verification": "database verification passed" },
+    { "id": "source:sql-003", "layer": "source", "kind": "sql-script", "name": "003_views_procedures_and_test_data.sql", "action": "reused", "location": "examples/corporate-workflow/sql", "identifier": null, "version": null, "source": "manifest.json", "verification": "database verification passed" },
+
+    { "id": "sql-database:CWF.CorporateWorkflowTest", "layer": "sql", "kind": "database", "name": "CWF.CorporateWorkflowTest", "action": "reused", "location": "localhost", "identifier": null, "version": null, "source": "manifest.json", "verification": "SQL verification passed" },
+    { "id": "sql-schema:CWF", "layer": "sql", "kind": "schema", "name": "CWF", "action": "reused", "location": "CWF.CorporateWorkflowTest", "identifier": null, "version": null, "source": "sql/001_schemas_and_reference_data.sql", "verification": "verified" },
+    { "id": "sql-table:CWF.Department", "layer": "sql", "kind": "table", "name": "CWF.Department", "action": "reused", "location": "CWF.CorporateWorkflowTest", "identifier": null, "version": null, "source": "sql/001_schemas_and_reference_data.sql", "verification": "verified" },
+    { "id": "sql-table:CWF.Employee", "layer": "sql", "kind": "table", "name": "CWF.Employee", "action": "reused", "location": "CWF.CorporateWorkflowTest", "identifier": null, "version": null, "source": "sql/001_schemas_and_reference_data.sql", "verification": "verified" },
+    { "id": "sql-table:CWF.RequestType", "layer": "sql", "kind": "table", "name": "CWF.RequestType", "action": "reused", "location": "CWF.CorporateWorkflowTest", "identifier": null, "version": null, "source": "sql/001_schemas_and_reference_data.sql", "verification": "verified" },
+    { "id": "sql-table:CWF.RequestPriority", "layer": "sql", "kind": "table", "name": "CWF.RequestPriority", "action": "reused", "location": "CWF.CorporateWorkflowTest", "identifier": null, "version": null, "source": "sql/001_schemas_and_reference_data.sql", "verification": "verified" },
+    { "id": "sql-table:CWF.RequestStatus", "layer": "sql", "kind": "table", "name": "CWF.RequestStatus", "action": "reused", "location": "CWF.CorporateWorkflowTest", "identifier": null, "version": null, "source": "sql/001_schemas_and_reference_data.sql", "verification": "verified" },
+    { "id": "sql-table:CWF.ApprovalTaskStatus", "layer": "sql", "kind": "table", "name": "CWF.ApprovalTaskStatus", "action": "reused", "location": "CWF.CorporateWorkflowTest", "identifier": null, "version": null, "source": "sql/001_schemas_and_reference_data.sql", "verification": "verified" },
+    { "id": "sql-table:CWF.ApprovalDecision", "layer": "sql", "kind": "table", "name": "CWF.ApprovalDecision", "action": "reused", "location": "CWF.CorporateWorkflowTest", "identifier": null, "version": null, "source": "sql/001_schemas_and_reference_data.sql", "verification": "verified" },
+    { "id": "sql-table:CWF.WorkflowRequest", "layer": "sql", "kind": "table", "name": "CWF.WorkflowRequest", "action": "reused", "location": "CWF.CorporateWorkflowTest", "identifier": null, "version": null, "source": "sql/002_workflow_model.sql", "verification": "verified" },
+    { "id": "sql-table:CWF.ApprovalTask", "layer": "sql", "kind": "table", "name": "CWF.ApprovalTask", "action": "reused", "location": "CWF.CorporateWorkflowTest", "identifier": null, "version": null, "source": "sql/002_workflow_model.sql", "verification": "verified" },
+    { "id": "sql-table:CWF.RequestComment", "layer": "sql", "kind": "table", "name": "CWF.RequestComment", "action": "reused", "location": "CWF.CorporateWorkflowTest", "identifier": null, "version": null, "source": "sql/002_workflow_model.sql", "verification": "verified" },
+    { "id": "sql-table:CWF.RequestApprovalMatrix", "layer": "sql", "kind": "approval-matrix-table", "name": "CWF.RequestApprovalMatrix", "action": "reused", "location": "CWF.CorporateWorkflowTest", "identifier": "CWF.REQUEST", "version": null, "source": "manifest.json approvalMatrices", "verification": "4 rows; matrix verification passed" },
+    { "id": "sql-view:CWF.RequestSummary", "layer": "sql", "kind": "view", "name": "CWF.RequestSummary", "action": "reused", "location": "CWF.CorporateWorkflowTest", "identifier": null, "version": null, "source": "sql/003_views_procedures_and_test_data.sql", "verification": "verified" },
+    { "id": "sql-view:CWF.ApprovalInbox", "layer": "sql", "kind": "view", "name": "CWF.ApprovalInbox", "action": "reused", "location": "CWF.CorporateWorkflowTest", "identifier": null, "version": null, "source": "sql/003_views_procedures_and_test_data.sql", "verification": "verified" },
+    { "id": "sql-procedure:CWF.WorkflowRequest_Submit", "layer": "sql", "kind": "stored-procedure", "name": "CWF.WorkflowRequest_Submit", "action": "reused", "location": "CWF.CorporateWorkflowTest", "identifier": null, "version": null, "source": "sql/003_views_procedures_and_test_data.sql", "verification": "metadata verified; parameterless smoke test not applicable" },
+    { "id": "sql-procedure:CWF.ApprovalTask_Decide", "layer": "sql", "kind": "stored-procedure", "name": "CWF.ApprovalTask_Decide", "action": "reused", "location": "CWF.CorporateWorkflowTest", "identifier": null, "version": null, "source": "sql/003_views_procedures_and_test_data.sql", "verification": "metadata verified; parameterless smoke test not applicable" },
+    { "id": "sql-procedure:CWF.WorkflowDashboard", "layer": "sql", "kind": "stored-procedure", "name": "CWF.WorkflowDashboard", "action": "reused", "location": "CWF.CorporateWorkflowTest", "identifier": null, "version": null, "source": "sql/003_views_procedures_and_test_data.sql", "verification": "List returned one row" },
+    { "id": "sql-procedure:CWF.ResolveRequestApproval", "layer": "sql", "kind": "approval-matrix-resolver", "name": "CWF.ResolveRequestApproval", "action": "reused", "location": "CWF.CorporateWorkflowTest", "identifier": "CWF.REQUEST", "version": null, "source": "manifest.json approvalMatrices", "verification": "happy-path and terminal matrix verification passed" },
+
+    { "id": "k2-category:data", "layer": "smartobjects", "kind": "category", "name": "Data", "action": "reused", "location": "K2 Skills\\CWF.Corporate Workflow", "identifier": null, "version": null, "source": "manifest.json", "verification": "category placement verified" },
+    { "id": "k2-service:CWF.CorporateWorkflowTest", "layer": "smartobjects", "kind": "sql-service-instance", "name": "CWF.CorporateWorkflowTest", "action": "reused", "location": "K2 management server", "identifier": "9d7f016d-76c1-42cd-95ae-c649eb2fefa8", "version": null, "source": "manifest.json", "verification": "17 generated SmartObjects verified" },
+    { "id": "smartobject:CWF_ApprovalDecision", "layer": "smartobjects", "kind": "SmartObject", "name": "CWF_CorporateWorkflowTest_CWF_ApprovalDecision", "action": "reused", "location": "K2 Skills\\CWF.Corporate Workflow\\Data", "identifier": "CWF-ApprovalDecision", "version": null, "source": "manifest.json", "verification": "CRUD/List; List smoke passed" },
+    { "id": "smartobject:CWF_ApprovalInbox", "layer": "smartobjects", "kind": "SmartObject", "name": "CWF_CorporateWorkflowTest_CWF_ApprovalInbox", "action": "reused", "location": "K2 Skills\\CWF.Corporate Workflow\\Data", "identifier": "CWF-ApprovalInbox", "version": null, "source": "manifest.json", "verification": "List smoke passed" },
+    { "id": "smartobject:CWF_ApprovalTask", "layer": "smartobjects", "kind": "SmartObject", "name": "CWF_CorporateWorkflowTest_CWF_ApprovalTask", "action": "reused", "location": "K2 Skills\\CWF.Corporate Workflow\\Data", "identifier": "CWF-ApprovalTask", "version": null, "source": "manifest.json", "verification": "CRUD/List; List smoke passed" },
+    { "id": "smartobject:CWF_ApprovalTask_Decide", "layer": "smartobjects", "kind": "SmartObject", "name": "CWF_CorporateWorkflowTest_CWF_ApprovalTask_Decide", "action": "reused", "location": "K2 Skills\\CWF.Corporate Workflow\\Data", "identifier": "CWF-ApprovalTask_Decide", "version": null, "source": "manifest.json", "verification": "List metadata verified; parameterized" },
+    { "id": "smartobject:CWF_ApprovalTaskStatus", "layer": "smartobjects", "kind": "SmartObject", "name": "CWF_CorporateWorkflowTest_CWF_ApprovalTaskStatus", "action": "reused", "location": "K2 Skills\\CWF.Corporate Workflow\\Data", "identifier": "CWF-ApprovalTaskStatus", "version": null, "source": "manifest.json", "verification": "CRUD/List; List smoke passed" },
+    { "id": "smartobject:CWF_Department", "layer": "smartobjects", "kind": "SmartObject", "name": "CWF_CorporateWorkflowTest_CWF_Department", "action": "reused", "location": "K2 Skills\\CWF.Corporate Workflow\\Data", "identifier": "CWF-Department", "version": null, "source": "manifest.json", "verification": "CRUD/List; List smoke passed" },
+    { "id": "smartobject:CWF_Employee", "layer": "smartobjects", "kind": "SmartObject", "name": "CWF_CorporateWorkflowTest_CWF_Employee", "action": "reused", "location": "K2 Skills\\CWF.Corporate Workflow\\Data", "identifier": "CWF-Employee", "version": null, "source": "manifest.json", "verification": "CRUD/List; List smoke passed" },
+    { "id": "smartobject:CWF_RequestApprovalMatrix", "layer": "smartobjects", "kind": "SmartObject", "name": "CWF_CorporateWorkflowTest_CWF_RequestApprovalMatrix", "action": "reused", "location": "K2 Skills\\CWF.Corporate Workflow\\Data", "identifier": "CWF-RequestApprovalMatrix", "version": null, "source": "manifest.json", "verification": "CRUD/List; List smoke passed" },
+    { "id": "smartobject:CWF_RequestComment", "layer": "smartobjects", "kind": "SmartObject", "name": "CWF_CorporateWorkflowTest_CWF_RequestComment", "action": "reused", "location": "K2 Skills\\CWF.Corporate Workflow\\Data", "identifier": "CWF-RequestComment", "version": null, "source": "manifest.json", "verification": "CRUD/List; List smoke passed" },
+    { "id": "smartobject:CWF_RequestPriority", "layer": "smartobjects", "kind": "SmartObject", "name": "CWF_CorporateWorkflowTest_CWF_RequestPriority", "action": "reused", "location": "K2 Skills\\CWF.Corporate Workflow\\Data", "identifier": "CWF-RequestPriority", "version": null, "source": "manifest.json", "verification": "CRUD/List; List smoke passed" },
+    { "id": "smartobject:CWF_RequestStatus", "layer": "smartobjects", "kind": "SmartObject", "name": "CWF_CorporateWorkflowTest_CWF_RequestStatus", "action": "reused", "location": "K2 Skills\\CWF.Corporate Workflow\\Data", "identifier": "CWF-RequestStatus", "version": null, "source": "manifest.json", "verification": "CRUD/List; List smoke passed" },
+    { "id": "smartobject:CWF_RequestSummary", "layer": "smartobjects", "kind": "SmartObject", "name": "CWF_CorporateWorkflowTest_CWF_RequestSummary", "action": "reused", "location": "K2 Skills\\CWF.Corporate Workflow\\Data", "identifier": "CWF-RequestSummary", "version": null, "source": "manifest.json", "verification": "List smoke passed" },
+    { "id": "smartobject:CWF_RequestType", "layer": "smartobjects", "kind": "SmartObject", "name": "CWF_CorporateWorkflowTest_CWF_RequestType", "action": "reused", "location": "K2 Skills\\CWF.Corporate Workflow\\Data", "identifier": "CWF-RequestType", "version": null, "source": "manifest.json", "verification": "CRUD/List; List smoke passed" },
+    { "id": "smartobject:CWF_ResolveRequestApproval", "layer": "smartobjects", "kind": "SmartObject", "name": "CWF_CorporateWorkflowTest_CWF_ResolveRequestApproval", "action": "reused", "location": "K2 Skills\\CWF.Corporate Workflow\\Data", "identifier": "CWF-ResolveRequestApproval", "version": null, "source": "manifest.json", "verification": "resolver mappings and matrix behavior verified" },
+    { "id": "smartobject:CWF_WorkflowDashboard", "layer": "smartobjects", "kind": "SmartObject", "name": "CWF_CorporateWorkflowTest_CWF_WorkflowDashboard", "action": "reused", "location": "K2 Skills\\CWF.Corporate Workflow\\Data", "identifier": "CWF-WorkflowDashboard", "version": null, "source": "manifest.json", "verification": "List returned one row" },
+    { "id": "smartobject:CWF_WorkflowRequest", "layer": "smartobjects", "kind": "SmartObject", "name": "CWF_CorporateWorkflowTest_CWF_WorkflowRequest", "action": "reused", "location": "K2 Skills\\CWF.Corporate Workflow\\Data", "identifier": "CWF-WorkflowRequest", "version": null, "source": "manifest.json", "verification": "CRUD/List; List smoke passed" },
+    { "id": "smartobject:CWF_WorkflowRequest_Submit", "layer": "smartobjects", "kind": "SmartObject", "name": "CWF_CorporateWorkflowTest_CWF_WorkflowRequest_Submit", "action": "reused", "location": "K2 Skills\\CWF.Corporate Workflow\\Data", "identifier": "CWF-WorkflowRequest_Submit", "version": null, "source": "manifest.json", "verification": "List metadata verified; parameterized" },
+
+    { "id": "view:CWF.Request Editor", "layer": "smartforms", "kind": "view", "name": "CWF.Request Editor", "action": "replaced", "location": "K2 Skills\\CWF.Corporate Workflow\\Views", "identifier": "3c5a215a-1364-4c24-b610-6bae29013ae4", "version": 1, "source": "smartforms-manifest.json", "verification": "capture view and 5 lookups verified" },
+    { "id": "view:CWF.Request List", "layer": "smartforms", "kind": "view", "name": "CWF.Request List", "action": "replaced", "location": "K2 Skills\\CWF.Corporate Workflow\\Views", "identifier": "32eb5825-e3e3-4830-b5bc-c9433ece1340", "version": 1, "source": "smartforms-manifest.json", "verification": "List view verified" },
+    { "id": "view:CWF.Approval Task Editor", "layer": "smartforms", "kind": "view", "name": "CWF.Approval Task Editor", "action": "replaced", "location": "K2 Skills\\CWF.Corporate Workflow\\Views", "identifier": "3ec0c71b-067d-4007-8053-f2dab8fc5201", "version": 1, "source": "smartforms-manifest.json", "verification": "capture view and 3 lookups verified" },
+    { "id": "view:CWF.Approval Task List", "layer": "smartforms", "kind": "view", "name": "CWF.Approval Task List", "action": "replaced", "location": "K2 Skills\\CWF.Corporate Workflow\\Views", "identifier": "6c46c9e9-b248-4bbe-8fd8-0ec4a1b301d2", "version": 1, "source": "smartforms-manifest.json", "verification": "List view verified" },
+    { "id": "view:CWF.Request Type Editor", "layer": "smartforms", "kind": "admin-view", "name": "CWF.Request Type Editor", "action": "replaced", "location": "K2 Skills\\CWF.Corporate Workflow\\Admin\\Views", "identifier": "ae9cdff1-7116-41b2-b060-0e88dde7eb38", "version": 1, "source": "smartforms-manifest.json", "verification": "capture view verified" },
+    { "id": "view:CWF.Request Type List", "layer": "smartforms", "kind": "admin-view", "name": "CWF.Request Type List", "action": "replaced", "location": "K2 Skills\\CWF.Corporate Workflow\\Admin\\Views", "identifier": "223288fe-eb96-4254-969b-35ce5b7c1ddf", "version": 1, "source": "smartforms-manifest.json", "verification": "List view verified" },
+    { "id": "view:CWF.Request Priority Editor", "layer": "smartforms", "kind": "admin-view", "name": "CWF.Request Priority Editor", "action": "replaced", "location": "K2 Skills\\CWF.Corporate Workflow\\Admin\\Views", "identifier": "6d57bd82-9105-40af-8b29-aa22e297a4f1", "version": 1, "source": "smartforms-manifest.json", "verification": "capture view verified" },
+    { "id": "view:CWF.Request Priority List", "layer": "smartforms", "kind": "admin-view", "name": "CWF.Request Priority List", "action": "replaced", "location": "K2 Skills\\CWF.Corporate Workflow\\Admin\\Views", "identifier": "bffcd48d-3361-4abd-83b7-3d6459f473ca", "version": 1, "source": "smartforms-manifest.json", "verification": "List view verified" },
+    { "id": "view:CWF.Approval Matrix Rule Editor", "layer": "smartforms", "kind": "admin-view", "name": "CWF.Approval Matrix Rule Editor", "action": "replaced", "location": "K2 Skills\\CWF.Corporate Workflow\\Admin\\Views", "identifier": "9c073fa6-3183-431c-b59e-f3a272292426", "version": 1, "source": "smartforms-manifest.json", "verification": "capture view and Department lookup verified" },
+    { "id": "view:CWF.Approval Matrix Rule List", "layer": "smartforms", "kind": "admin-view", "name": "CWF.Approval Matrix Rule List", "action": "replaced", "location": "K2 Skills\\CWF.Corporate Workflow\\Admin\\Views", "identifier": "f8ee4b4f-36e0-4b1c-8386-ba1d8662297b", "version": 1, "source": "smartforms-manifest.json", "verification": "List view verified" },
+    { "id": "form:CWF.Request Management", "layer": "smartforms", "kind": "form", "name": "CWF.Request Management", "action": "replaced", "location": "K2 Skills\\CWF.Corporate Workflow\\Forms", "identifier": "4687c7b6-8f9c-4511-99c4-66fa0c901694", "version": 2, "source": "smartforms-manifest.json", "verification": "checked in; Style Profile, header lifecycle calls, 3 tabs, Worklist, Start/Task rules verified" },
+    { "id": "form:CWF.Approval Task Management", "layer": "smartforms", "kind": "form", "name": "CWF.Approval Task Management", "action": "replaced", "location": "K2 Skills\\CWF.Corporate Workflow\\Forms", "identifier": "9d13bd73-9c01-41b9-8be6-560ab171e9cb", "version": 1, "source": "smartforms-manifest.json", "verification": "checked in; Style Profile, header lifecycle calls, 2 tabs verified" },
+    { "id": "form:CWF.Request Type Administration", "layer": "smartforms", "kind": "admin-form", "name": "CWF.Request Type Administration", "action": "replaced", "location": "K2 Skills\\CWF.Corporate Workflow\\Admin\\Forms", "identifier": "b2464794-3703-494b-909a-38810a9845f2", "version": 1, "source": "smartforms-manifest.json", "verification": "checked in; Style Profile and header lifecycle calls verified" },
+    { "id": "form:CWF.Request Priority Administration", "layer": "smartforms", "kind": "admin-form", "name": "CWF.Request Priority Administration", "action": "replaced", "location": "K2 Skills\\CWF.Corporate Workflow\\Admin\\Forms", "identifier": "f369b8c2-d840-49e9-8221-6a15f4de687e", "version": 1, "source": "smartforms-manifest.json", "verification": "checked in; Style Profile and header lifecycle calls verified" },
+    { "id": "form:CWF.Approval Matrix Administration", "layer": "smartforms", "kind": "admin-form", "name": "CWF.Approval Matrix Administration", "action": "replaced", "location": "K2 Skills\\CWF.Corporate Workflow\\Admin\\Forms", "identifier": "33dd677d-82ba-4425-b4c6-53615a85039b", "version": 1, "source": "smartforms-manifest.json", "verification": "checked in; Style Profile and header lifecycle calls verified" },
+    { "id": "dependency:PSF.FrameworkHeader", "layer": "smartforms", "kind": "environment-header-view", "name": "PSF.FrameworkHeader", "action": "reused", "location": "Demo - PSF Case Management\\PSF Core\\Framework Views", "identifier": "a6d0b4d6-aca4-49ba-9d5e-2d42cb0b8b65", "version": 1, "source": "spk2-local environment profile", "verification": "Init and ServerPreRender form calls verified on all generated forms" },
+    { "id": "dependency:PSF UX v1", "layer": "smartforms", "kind": "style-profile", "name": "PSF Nintex", "action": "reused", "location": "Demo - PSF Case Management\\PSF Core\\Style Profiles", "identifier": "4b7701e3-fed6-41ca-adf2-53f071b6606c", "version": 1, "source": "spk2-local environment profile", "verification": "PSF UX v1 with UseLegacyTheme=false verified on all forms" },
+
+    { "id": "workflow-category:CWF.Corporate Workflow WFs", "layer": "workflow", "kind": "category", "name": "CWF.Corporate Workflow WFs", "action": "reused", "location": "K2 Skills\\CWF.Corporate Workflow", "identifier": "428", "version": null, "source": "workflow-manifest.json", "verification": "verified" },
+    { "id": "workflow-json:CWF.Request Approval", "layer": "workflow", "kind": "HTML5 Designer JSON workflow", "name": "CWF.Request Approval", "action": "updated", "location": "CWF.Corporate Workflow WFs", "identifier": "1051", "version": 14, "source": "workflow-manifest.json", "verification": "8 nodes, 8 links, JSON verified, designer lock released" },
+    { "id": "workflow-runtime:CWF.Request Approval", "layer": "workflow", "kind": "published-runtime-process", "name": "CWF.Request Approval", "action": "updated", "location": "CWF.Corporate Workflow WFs", "identifier": "3339", "version": 7, "source": "workflow-manifest.json", "verification": "published runtime definition verified" },
+    { "id": "workflow-state:CWF.Request Approval Start", "layer": "workflow", "kind": "SmartForms-start-state", "name": "CWF.Request Approval Start", "action": "created", "location": "CWF.Request Management", "identifier": null, "version": 2, "source": "workflow-manifest.json", "verification": "default=true; StartProcess rule verified" },
+    { "id": "workflow-state:CWF.Request Approval Task", "layer": "workflow", "kind": "SmartForms-task-state", "name": "CWF.Request Approval Task", "action": "created", "location": "CWF.Request Management", "identifier": null, "version": 2, "source": "workflow-manifest.json", "verification": "default=false; LoadProcess and ActionProcess rules verified" },
+    { "id": "workflow-task:CWF.Review Corporate Request", "layer": "workflow", "kind": "approval-matrix-user-task", "name": "CWF.Review Corporate Request", "action": "updated", "location": "CWF.Request Approval", "identifier": "CWF.REQUEST.ApproverValue", "version": 7, "source": "workflow-manifest.json", "verification": "resolver mappings, Approve/Reject actions, notification, participant field, and multi-stage loop verified" }
+  ],
+  "runtimeUrls": [
+    "https://spk2.trials.demome.tech/Runtime/Runtime/Form/CWF+Request+Management/",
+    "https://spk2.trials.demome.tech/Runtime/Runtime/Form/CWF+Approval+Task+Management/",
+    "https://spk2.trials.demome.tech/Runtime/Runtime/Form/CWF+Request+Type+Administration/",
+    "https://spk2.trials.demome.tech/Runtime/Runtime/Form/CWF+Request+Priority+Administration/",
+    "https://spk2.trials.demome.tech/Runtime/Runtime/Form/CWF+Approval+Matrix+Administration/"
+  ],
+  "verification": {
+    "specialistChecks": [
+      "k2env validate: passed",
+      "k2build validate and plan: passed",
+      "k2sql verify and inspect: passed; 17 SmartObjects",
+      "k2forms deploy, verify, inspect, workflow check-in, and post-integration verify: passed; 10 views and 5 forms",
+      "k2wf deploy, verify, and inspect: passed; JSON process 1051, runtime process 3339 version 7"
+    ],
+    "endToEndScenarios": [
+      {
+        "name": "CWF.Submit and decide a corporate request",
+        "status": "not-run",
+        "evidence": "Runtime routes reached the expected HTTP 302 interactive-authentication redirect; no authenticated browser transaction was executed."
+      }
+    ]
+  },
+  "errata": [
+    {
+      "id": "ERR-CWF-001",
+      "category": "placeholder",
+      "severity": "warning",
+      "artifactIds": ["sql-table:CWF.RequestApprovalMatrix", "workflow-task:CWF.Review Corporate Request"],
+      "description": "Approval rules DEFAULT-STAGE-1, HR-MANAGER, HR-DIRECTOR, and EXECUTIVE-STAGE-2 use $designer, resolved to K2:TRIALS\\Administrator.",
+      "impact": "All demo matrix routes currently allocate to the deploying designer identity rather than production approvers.",
+      "remediation": "Confirm these assignments or replace each ApproverValue with the intended production K2 user, group, role, or destination string before go-live.",
+      "status": "open"
+    },
+    {
+      "id": "ERR-CWF-002",
+      "category": "skipped-verification",
+      "severity": "warning",
+      "artifactIds": ["form:CWF.Request Management", "workflow-runtime:CWF.Request Approval", "workflow-task:CWF.Review Corporate Request"],
+      "description": "Authenticated browser rendering, dropdown population, CRUD, workflow start, Worklist task opening/action, threshold branches, and final request status were not exercised.",
+      "impact": "CLI definition and runtime publication checks passed, but the complete user journey is not proven in an interactive session.",
+      "remediation": "Run the solution manifest scenario from the ordinary CWF.Request Management URL using a valid K2 user and test all matrix boundaries and stages.",
+      "status": "open"
+    },
+    {
+      "id": "ERR-CWF-003",
+      "category": "skipped-verification",
+      "severity": "info",
+      "artifactIds": ["smartobject:CWF_ApprovalTask_Decide", "smartobject:CWF_WorkflowRequest_Submit"],
+      "description": "The generic SmartObject smoke runner skipped these List methods because they require input parameters.",
+      "impact": "Their metadata and existence are verified, but they were not invoked by the parameterless smoke-test phase.",
+      "remediation": "Exercise both procedures with disposable valid inputs during the authenticated end-to-end scenario.",
+      "status": "open"
+    },
+    {
+      "id": "ERR-CWF-004",
+      "category": "known-limitation",
+      "severity": "info",
+      "artifactIds": ["form:CWF.Request Management", "form:CWF.Approval Task Management"],
+      "description": "Selecting a row loads the details View but generated rules do not automatically switch from the list tab to the details tab.",
+      "impact": "Users may need to select the details tab after choosing a row.",
+      "remediation": "Add an explicit tab-selection rule manually or implement it when the SmartForms CLI gains tab-navigation generation.",
+      "status": "accepted"
+    }
+  ],
+  "rollbackNotes": [
+    "Source revision used for this deployment: 9d7b7f85b4076d3037edfcd9ed379f0ba6c18f09.",
+    "The regenerated SmartForms received new GUIDs; rollback requires redeploying a prior package/manifest or restoring exported K2 artifacts, not a Git-only rollback.",
+    "Published workflow runtime process 3339 version 7 is now the verified version; existing in-flight instances may remain on earlier runtime versions."
+  ]
+}
