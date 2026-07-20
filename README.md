@@ -104,8 +104,9 @@ Claude: /k2-builder create an expense approval solution with code EXP. Plan,
 
 - Generate checked-in capture, list, content, and editable-list views plus composed forms.
 - Use modern Style Profiles with legacy theme mode disabled.
-- Build tabs, list/details navigation, native My Tasks Worklist tabs, lookup dropdowns, and lookup/approval-matrix Admin UX.
-- Build item-view/editable-list master-detail forms with Form-level create/update/delete item-state batches and filtered child reloads.
+- Build tabs, list/details navigation, native My Tasks Worklist tabs, lookup and cascading dropdowns, and lookup/approval-matrix Admin UX.
+- Build item-view/editable-list master-detail forms with one Form Save action, returned-key transfer, create/update/delete item-state batches, filtered child reloads, and bypass-button suppression.
+- Generate read-only controls, responsive four-column capture layouts, and hidden `tblDebug` Data Label variables.
 - Apply discovered shared headers/footers, view titles, initialization/server-load rules, combined control transfers, and footer ordering.
 - Plan, deploy, inspect, verify Runtime definitions/routes, check in exact forms, and dependency-safe cleanup/replace.
 

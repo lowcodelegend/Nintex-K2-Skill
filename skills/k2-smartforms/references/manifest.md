@@ -22,6 +22,9 @@
         "smartObject": "ExpenseSql_app_Expense",
         "type": "capture",
         "properties": ["ExpenseId", "Title", "Amount", "Status"],
+        "readOnlyProperties": ["ExpenseId", "Status"],
+        "layoutColumns": 4,
+        "hiddenVariables": [{ "name": "dlbMode", "dataType": "Text", "defaultValue": "Create" }],
         "methods": ["Create", "Read", "Update", "Delete"],
         "options": ["editable", "labels-left", "colon-labels", "toolbar"]
       },
@@ -123,7 +126,26 @@ Declare each reusable lookup source once under `application.lookups`, then bind 
 }
 ```
 
-The lookup method must be a parameterless SmartObject List method. The target property and lookup `valueProperty` must have compatible K2 types (`Number`/`Autonumber` and `Guid`/`AutoGuid` are compatible pairs). `displayProperty` supplies the dropdown label. Version 0.2 supports one display property and no lookup filters; use a purpose-built lookup SmartObject when filtering or projection is required.
+The lookup method must be a parameterless SmartObject List method. The target property and lookup `valueProperty` must have compatible K2 types (`Number`/`Autonumber` and `Guid`/`AutoGuid` are compatible pairs). `displayProperty` supplies the dropdown label.
+
+For cascading dropdowns, declare both parent and child controls and add the join contract to the child:
+
+```json
+"lookupControls": [
+  { "property": "CountryId", "lookup": "Country" },
+  {
+    "property": "CityId",
+    "lookup": "City",
+    "cascade": {
+      "parentProperty": "CountryId",
+      "parentJoinProperty": "CountryId",
+      "childJoinProperty": "CountryId"
+    }
+  }
+]
+```
+
+`parentProperty` names another property/control on the same View. `parentJoinProperty` must exist on the parent lookup SmartObject and `childJoinProperty` on the child lookup SmartObject. The CLI emits and verifies K2 `ParentControl`, `ParentJoinProperty`, and `ChildJoinProperty` metadata. Use a purpose-built lookup SmartObject when the required filter or projection is more complex than this equality join.
 
 `adminForm` is optional because external masters and fixed workflow vocabularies may not be application-administered. When present, it must reference a form with `area: "admin"` that contains CRUD capture and List views over the lookup SmartObject. Business-managed lookups should declare it by default.
 
@@ -162,6 +184,21 @@ For capture and capture-list views, `properties` must contain every required inp
 
 Supported view types are `capture`, `list`, `content`, and `capture-list`. Supported options are `display-controls`, `all-properties`, `all-methods`, `labels-left`, `colon-labels`, `toolbar`, and `editable`. Editable types require `editable`.
 
+`readOnlyProperties` names selected capture/capture-list properties whose controls remain visible with K2 `IsReadOnly=true`. Use it for generated keys, workflow status, audit timestamps/users, and calculated values. It does not supply required method inputs.
+
+`layoutColumns` defaults to `2`. On capture Views, `4` repacks short field rows as label/control/label/control with 18/32/18/32 widths; Memo rows remain full-width. Do not use it merely to make a dense View smaller.
+
+`hiddenVariables` adds named Data Label controls inside a hidden `tblDebug` table:
+
+```json
+"hiddenVariables": [
+  { "name": "dlbMode", "dataType": "Text", "defaultValue": "Create" },
+  { "name": "dlbValidationStatus", "dataType": "Boolean" }
+]
+```
+
+These controls are transient rule variables, not persisted data or a place for secrets.
+
 Supported form options are `no-tabs`. Supported behaviors are `load-form-list-click`, `refresh-list-form-submit`, and `refresh-list-form-load`.
 
 ## Master-detail rules
@@ -175,6 +212,7 @@ Declare one master and one or more editable-list children on a Form:
   "masterCreateMethod": "Create",
   "masterUpdateMethod": "Update",
   "masterReadMethod": "Read",
+  "saveButtonText": "Save Claim",
   "details": [
     {
       "view": "EXP.Claim Lines",
@@ -188,7 +226,7 @@ Declare one master and one or more editable-list children on a Form:
 }
 ```
 
-The master must be a `capture` View containing its key and selected Create/Update/Read methods. Each detail must be `capture-list` with `editable` and selected Create/Update/Delete/List methods. The CLI generates and verifies Form-level K2 actions for the create batch (`Added`), update batch (`Changed`, `Added`, `Removed`), returned-key mapping, and filtered detail List after master Read. Method defaults shown above apply when omitted.
+The master must be a `capture` View containing its key and selected Create/Update/Read methods. Each detail must be `capture-list` with `editable` and selected Create/Update/Delete/List methods. The CLI adds one Form-level button (`saveButtonText`, default `Save`) with Create and Update branches based on whether the master key is blank. Create maps the returned SmartObject identity to the master View field before child foreign-key use; Update processes `Changed`, `Added`, and `Removed` states. Master Read is followed by a foreign-key-filtered detail List. The CLI hides master Create/Read/Update/Delete buttons plus detail Save/Refresh buttons, while retaining detail Add/Edit/Delete controls for item-state editing. Verification scopes persistence actions to the Form Save event and rejects a missing returned-key mapping.
 
 `capture-list` is a manifest intent: the CLI uses K2's List generator with editable mode, producing the native editable-list View and item-state rules. On complete solution forms, combine it with a list tab and `listClickTabNavigation` so a selected master is read before its child List runs.
 
@@ -230,6 +268,6 @@ The CLI validates that the installed environment registers the native `Worklist`
 
 `listClickTabNavigation` is a generic list/detail navigation contract. Each entry names a declared list `sourceView` and a different existing `targetTab`. It requires the `load-form-list-click` behavior. On the source View's `ListClick` rule, the CLI preserves the generated SmartObject `Read` action and appends one native synchronous `Focus` action targeting the destination tab Panel. Verification requires exactly one matching action and proves that it follows the Read. Use it when selecting an item should drill into a details/editor tab—for example, a workflow request list opening `Request Details`. Multiple list views may each target their own tab, but each source view may appear only once.
 
-Tabs must have stable, version-free names. Version 0.11 supports one Worklist tab per form. It loads the current K2 user's default worklist across processes; process-specific Worklist filters, workflow-specific SmartObjects, and fixed users are not configured.
+Tabs must have stable, version-free names. Version 0.12 supports one Worklist tab per form. It loads the current K2 user's default worklist across processes; process-specific Worklist filters, workflow-specific SmartObjects, and fixed users are not configured.
 
 When expected artifacts are omitted, verification defaults to every declared view and form. Verification checks tab order/content, list-click Read-before-tab-focus behavior, native Worklist properties, its click-to-open-task rule, and any resolved common framework's header-first/footer-last placement and titles, initialization bindings, server-load control targets/values/order, and explicit server-rule calls. Runtime routes use `<runtimeBaseUrl>/Runtime/Form/<URL-encoded-form-name>/`; an unauthenticated CLI may verify the route up to the environment's interactive authentication redirect, which is not an interactive Worklist test.

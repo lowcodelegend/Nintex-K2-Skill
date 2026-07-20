@@ -74,6 +74,7 @@
     <Compile Include="RuntimeAssemblyResolver.cs" />
     <Compile Include="SmartFormsManager.cs" />
     <Compile Include="ViewLookupDefinition.cs" />
+    <Compile Include="ViewPresentationDefinition.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

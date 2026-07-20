@@ -1,4 +1,4 @@
-# SmartForms v0.11 design guide
+# SmartForms v0.12 design guide
 
 ## CRUD shape
 
@@ -35,11 +35,11 @@ Declare the relationship on the Form. `k2forms` extends the generated Form rules
 3. Master Update batches child Update for `Changed`, Create for `Added`, and Delete for `Removed` rows.
 4. A master Read is followed by child List with the master key mapped as its foreign-key filter.
 
-This follows K2's parent/child pattern: users may stage lines in the editable list, but persist the transaction through the master Create/Update button. Never rely on a View rule to coordinate another View. Test creation with two rows, reload/filtering, and then one added, one changed, and one removed row.
+This follows K2's parent/child pattern: users stage lines with the editable-list Add/Edit/Delete controls, then persist the whole transaction through one Form-level Save button. The CLI hides master Create/Read/Update/Delete and detail Save/Refresh buttons so a partial or unfiltered View operation is not presented as a valid transaction. Never rely on a View rule to coordinate another View. Test creation with two rows, confirm the generated parent key was transferred before child persistence, reload and confirm foreign-key filtering, then test one added, one changed, and one removed row.
 
 ## Property selection
 
-Order fields by user task, not database column order. Include the stable key when generated Read/Update/Delete rules need it, but review whether it should be hidden or rendered as a data label in a later Designer pass. Exclude `rowversion`, audit fields users cannot edit, and large technical projections unless the screen needs them.
+Order fields by user task and process stage, not database column order. Include the stable key when generated Read/Update/Delete rules need it, but mark it read-only when users need the reference and hide it when they do not. Request-entry views should emphasize editable business input; approval views should show read-only request context plus decision/comment controls; downstream finance or fulfilment views should expose only their stage-specific fields. Exclude `rowversion` and large technical projections. Show status, audit, derived totals, and workflow-owned fields only when they help the current task, and mark them with `readOnlyProperties`.
 
 For every method selected on a capture or capture-list view, include every property reported by that live SmartObject method's `RequiredProperties` collection. The sole exception is a child foreign key explicitly mapped from the master by `form.masterDetail`; the Form supplies it. The CLI blocks invalid omissions. A SQL `DEFAULT` constraint does not necessarily make a generated SQL broker Create input optional.
 
@@ -62,6 +62,14 @@ Unless a form has a concrete exception, `k2forms` reads the selected environment
 The discovered PSF convention uses `PSF.FrameworkHeader` plus `PSF.FrameworkFooter` and Style Profile `PSF UX v1`. When selected, the header instance name is exactly `Header`, its visible title is blank, and it is non-collapsible. Form server load first calls header `ServerPreRender`, then one transfer action sets the form name on `Main Header Data Label` and application name on `Sub Header Data Label`; those values are not header parameters. The footer remains last. Apply this only after live discovery and user selection.
 
 Capture-view options `editable`, `labels-left`, `colon-labels`, and `toolbar` produce a compact conventional editor. Use `toolbar` on list views.
+
+A conventional K2 capture layout has two columns: label and control. Set `layoutColumns: 4` only when the form is wide and most adjacent fields are short, related values; this yields label/control/label/control. Memo/narrative rows remain full-width. Prefer the default two-column layout for long text, attachments, narrow task forms, mixed-height controls, or mobile-heavy use.
+
+Use `hiddenVariables` for rule state that must remain available to the Context Browser without appearing to users. The CLI creates hidden `tblDebug` with named Data Label controls. Use meaningful names such as `dlbMode`, `dlbValidationStatus`, or `dlbCalculatedTotal`; do not treat hidden labels as durable business storage, and do not put secrets in them.
+
+When a child lookup depends on a parent selection, declare a cascade on the child dropdown. Join the parent lookup's stable key to the child lookup's foreign-key property. Verify initial empty behavior, parent changes, stale child clearing, and edit/reload behavior.
+
+Use separate Forms when stages have materially different actors, security, actions, or density. Reuse one Form with several Views when the overall context is shared and stage differences are modest; control those View instances through Form-level rules or workflow-created states because a View cannot coordinate sibling View visibility. Prefer the simpler design, and record any visibility rule the CLI cannot express as manual errata rather than exposing every field at every stage.
 
 Automatic generation creates controls and standard SmartObject method rules. It does not replace visual review. Test keyboard navigation, focus order, labels, required-state messaging, contrast, phone/tablet layout, long values, empty states, and destructive actions.
 

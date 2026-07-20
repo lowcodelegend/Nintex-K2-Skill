@@ -87,6 +87,17 @@ namespace K2SmartFormsCli
                         var source = lookupSources[binding.Lookup];
                         if (!AreLookupTypesCompatible(targetProperty.Type.ToString(), source.ValuePropertyType))
                             throw new CliException("View '" + view.Name + "' lookup property '" + binding.Property + "' type " + targetProperty.Type + " does not match lookup '" + binding.Lookup + "' value property type " + source.ValuePropertyType + ".");
+                        if (binding.Cascade != null)
+                        {
+                            var parentBinding = view.LookupControls.SingleOrDefault(x => string.Equals(x.Property, binding.Cascade.ParentProperty, StringComparison.OrdinalIgnoreCase));
+                            if (parentBinding == null)
+                                throw new CliException("View '" + view.Name + "' cascading lookup parent '" + binding.Cascade.ParentProperty + "' must also be declared in lookupControls.");
+                            var parentSource = lookupSources[parentBinding.Lookup];
+                            if (!parentSource.PropertyNames.Contains(binding.Cascade.ParentJoinProperty))
+                                throw new CliException("Cascading lookup parent source '" + parentBinding.Lookup + "' has no join property '" + binding.Cascade.ParentJoinProperty + "'.");
+                            if (!source.PropertyNames.Contains(binding.Cascade.ChildJoinProperty))
+                                throw new CliException("Cascading lookup child source '" + binding.Lookup + "' has no join property '" + binding.Cascade.ChildJoinProperty + "'.");
+                        }
                     }
 
                     Console.WriteLine("SmartObject input: OK (" + view.SmartObject + ", " + properties.Count + " properties, " + methods.Count + " methods, " + view.LookupControls.Count + " lookup control(s))");
@@ -136,6 +147,7 @@ namespace K2SmartFormsCli
                         DisplayPropertyName = displayProperty.Name,
                         DisplayPropertyDisplayName = displayProperty.Metadata == null ? displayProperty.Name : displayProperty.Metadata.DisplayName,
                         DisplayPropertyType = displayProperty.Type.ToString()
+                        ,PropertyNames = new HashSet<string>(smartObject.Properties.Cast<SmartProperty>().Select(x => x.Name), StringComparer.OrdinalIgnoreCase)
                     };
                     Console.WriteLine("Lookup source: OK (" + source.Name + " <= " + smartObject.Name + "." + method.Name + ", value=" + valueProperty.Name + ", display=" + displayProperty.Name + ")");
                 }
@@ -326,6 +338,9 @@ namespace K2SmartFormsCli
 
                         var generated = generator.Generate(viewGenerator, view.SmartObject, view.Name);
                         var definition = ViewLookupDefinition.Apply(generated.ToXml(), view, lookupSources);
+                        var isMaster = _manifest.Application.Forms.Any(f => f.MasterDetail != null && string.Equals(f.MasterDetail.MasterView, view.Name, StringComparison.OrdinalIgnoreCase));
+                        var isDetail = _manifest.Application.Forms.Any(f => f.MasterDetail != null && f.MasterDetail.Details.Any(d => string.Equals(d.View, view.Name, StringComparison.OrdinalIgnoreCase)));
+                        definition = ViewPresentationDefinition.Apply(definition, view, isMaster, isDetail);
                         manager.DeployViews(definition, _manifest.Application.GetViewCategoryPath(view), _manifest.Application.CheckIn);
                         var info = manager.GetView(view.Name);
                         Console.WriteLine("View: deployed (" + view.Name + ", " + info.Guid + ", " + info.Type + ", category " + info.CategoryPath + ", " + view.LookupControls.Count + " lookup control(s))");
@@ -372,6 +387,9 @@ namespace K2SmartFormsCli
                         throw new CliException("K2 View is in category '" + info.CategoryPath + "', expected '" + expectedCategory + "': " + expected);
                     if (_manifest.Application.CheckIn && info.IsCheckedOut) throw new CliException("K2 View remains checked out: " + expected);
                     ViewLookupDefinition.Verify(definition, declaredView, lookupSources);
+                    var isMaster = _manifest.Application.Forms.Any(f => f.MasterDetail != null && string.Equals(f.MasterDetail.MasterView, declaredView.Name, StringComparison.OrdinalIgnoreCase));
+                    var isDetail = _manifest.Application.Forms.Any(f => f.MasterDetail != null && f.MasterDetail.Details.Any(d => string.Equals(d.View, declaredView.Name, StringComparison.OrdinalIgnoreCase)));
+                    ViewPresentationDefinition.Verify(definition, declaredView, isMaster, isDetail);
                     Console.WriteLine("View verification: OK (" + expected + ", " + info.Guid + ", v" + info.Version + ", " + info.Type + ")");
                 }
 
@@ -470,7 +488,7 @@ namespace K2SmartFormsCli
             request.AllowAutoRedirect = false;
             request.Timeout = 30000;
             request.ReadWriteTimeout = 30000;
-            request.UserAgent = "k2forms/0.11.0";
+            request.UserAgent = "k2forms/0.12.0";
             try
             {
                 using (var response = (HttpWebResponse)request.GetResponse())

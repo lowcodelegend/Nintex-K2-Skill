@@ -60,7 +60,8 @@ namespace K2SmartFormsCli
             {
                 Id = RequiredAttribute(field, "ID", viewName + "." + property),
                 Name = ChildValue(field, "Name") ?? property,
-                DisplayName = ChildValue(field, "FieldDisplayName") ?? property
+                DisplayName = ChildValue(field, "FieldDisplayName") ?? property,
+                DataType = (string)field.Attribute("DataType") ?? "Text"
             };
         }
 
@@ -117,6 +118,7 @@ namespace K2SmartFormsCli
         public string Id { get; set; }
         public string Name { get; set; }
         public string DisplayName { get; set; }
+        public string DataType { get; set; }
     }
 
     internal static class MasterDetailRules
@@ -128,28 +130,7 @@ namespace K2SmartFormsCli
             var form = document.Descendants().First(x => x.Name.LocalName == "Form");
             var masterInstance = FindInstance(form, relationship.MasterViewGuid, relationship.MasterViewName, formDefinition.Name);
 
-            var masterCreate = FindMethodActions(form, masterInstance, relationship.Definition.MasterCreateMethod, null).FirstOrDefault();
-            if (masterCreate == null) throw new CliException("Generated form '" + formDefinition.Name + "' has no master Create action for '" + relationship.MasterViewName + "'.");
-            var masterUpdate = FindMethodActions(form, masterInstance, relationship.Definition.MasterUpdateMethod, null).FirstOrDefault();
-            if (masterUpdate == null) throw new CliException("Generated form '" + formDefinition.Name + "' has no master Update action for '" + relationship.MasterViewName + "'.");
-
-            var customCreate = BuildMasterAction(relationship.MasterCreateAction, masterInstance);
-            masterCreate.ReplaceWith(customCreate);
-            masterCreate = customCreate;
-            var customUpdate = BuildMasterAction(relationship.MasterUpdateAction, masterInstance);
-            masterUpdate.ReplaceWith(customUpdate);
-            masterUpdate = customUpdate;
-
-            AddBatchActions(masterCreate, relationship.Details.Select(x => BuildStateAction(form.Name.Namespace, x, x.CreateAction, "Added", masterInstance, relationship.MasterKey, FindInstance(form, x.ViewGuid, x.ViewName, formDefinition.Name))).ToList());
-            var updateActions = new List<XElement>();
-            foreach (var child in relationship.Details)
-            {
-                var detailInstance = FindInstance(form, child.ViewGuid, child.ViewName, formDefinition.Name);
-                updateActions.Add(BuildStateAction(form.Name.Namespace, child, child.UpdateAction, "Changed", masterInstance, relationship.MasterKey, detailInstance));
-                updateActions.Add(BuildStateAction(form.Name.Namespace, child, child.CreateAction, "Added", masterInstance, relationship.MasterKey, detailInstance));
-                updateActions.Add(BuildStateAction(form.Name.Namespace, child, child.DeleteAction, "Removed", masterInstance, relationship.MasterKey, detailInstance));
-            }
-            AddBatchActions(masterUpdate, updateActions);
+            AddFormSaveButton(form, formDefinition, relationship, masterInstance);
 
             var masterReads = FindMethodActions(form, masterInstance, relationship.Definition.MasterReadMethod, null).ToList();
             if (masterReads.Count == 0)
@@ -172,8 +153,13 @@ namespace K2SmartFormsCli
             var document = XDocument.Parse(xml);
             var form = document.Descendants().First(x => x.Name.LocalName == "Form");
             var masterInstance = FindInstance(form, relationship.MasterViewGuid, relationship.MasterViewName, formDefinition.Name);
-            VerifyBatch(form, masterInstance, relationship.Definition.MasterCreateMethod, relationship.Details, new[] { "Added" }, relationship.MasterKey, formDefinition.Name);
-            VerifyBatch(form, masterInstance, relationship.Definition.MasterUpdateMethod, relationship.Details, new[] { "Changed", "Added", "Removed" }, relationship.MasterKey, formDefinition.Name);
+            var saveEvent = FindFormSaveEvent(form, relationship.Definition.SaveButtonText);
+            if (saveEvent == null) throw new CliException("K2 Form '" + formDefinition.Name + "' has no Form-level master-detail Save button rule.");
+            VerifyBatch(form, saveEvent, masterInstance, relationship.Definition.MasterCreateMethod, relationship.Details, new[] { "Added" }, relationship.MasterKey, formDefinition.Name);
+            VerifyBatch(form, saveEvent, masterInstance, relationship.Definition.MasterUpdateMethod, relationship.Details, new[] { "Changed", "Added", "Removed" }, relationship.MasterKey, formDefinition.Name);
+            var create = FindMethodActions(saveEvent, masterInstance, relationship.Definition.MasterCreateMethod, null).First();
+            if (!HasMasterKeyResult(create, masterInstance, relationship.MasterKey.Id))
+                throw new CliException("K2 Form '" + formDefinition.Name + "' Form-level Create does not transfer the generated master key back to the master View field.");
             var masterReads = FindMethodActions(form, masterInstance, relationship.Definition.MasterReadMethod, null).ToList();
             if (masterReads.Count == 0)
                 throw new CliException("K2 Form '" + formDefinition.Name + "' has no master Read action for '" + relationship.MasterViewName + "'.");
@@ -194,15 +180,121 @@ namespace K2SmartFormsCli
             Console.WriteLine("Master-detail form rules: OK (" + formDefinition.Name + ", master=" + relationship.MasterViewName + ", details=" + relationship.Details.Count + ")");
         }
 
-        private static void AddBatchActions(XElement masterAction, IList<XElement> childActions)
+        private static void AddFormSaveButton(XElement form, FormDefinition formDefinition, ResolvedMasterDetailRules relationship, string masterInstance)
         {
-            masterAction.SetAttributeValue("ExecutionType", "Parallel");
-            var actions = masterAction.Parent;
-            foreach (var existing in actions.Elements().Where(x => x.Name.LocalName == "Action" && childActions.Any(c => SameGeneratedAction(x, c))).ToList()) existing.Remove();
-            foreach (var child in childActions) actions.Add(child);
+            var ns = form.Name.Namespace;
+            var controls = form.Elements().First(x => x.Name.LocalName == "Controls");
+            var tableId = NewId(); var rowId = NewId(); var cellId = NewId(); var buttonId = NewId();
+            var areaId = NewId(); var itemId = NewId();
+            var buttonName = "btnSave";
+            var buttonText = string.IsNullOrWhiteSpace(relationship.Definition.SaveButtonText) ? "Save" : relationship.Definition.SaveButtonText;
+
+            controls.Add(Control(ns, tableId, "Table", "tblFormActions", Property(ns, "IsResponsive", "true", "true", "true")));
+            controls.Add(Control(ns, rowId, "Row", "Form Actions Row"));
+            controls.Add(Control(ns, cellId, "Cell", "Form Actions Cell"));
+            controls.Add(Control(ns, buttonId, "Button", buttonName,
+                Property(ns, "Text", buttonText, buttonText, buttonText),
+                Property(ns, "ButtonStyle", "mainaction", "mainaction", "mainaction")));
+            controls.Add(Control(ns, areaId, "Area", "Form Actions Area"));
+            controls.Add(Control(ns, itemId, "AreaItem", "Form Actions Area Item"));
+
+            var canvas = new XElement(ns + "Canvas",
+                new XElement(ns + "Control", new XAttribute("ID", tableId), new XAttribute("LayoutType", "Grid"),
+                    new XElement(ns + "Columns", new XElement(ns + "Column", new XAttribute("ID", NewId()), new XAttribute("Size", "100%"))),
+                    new XElement(ns + "Rows", new XElement(ns + "Row", new XAttribute("ID", rowId),
+                        new XElement(ns + "Cells", new XElement(ns + "Cell", new XAttribute("ID", cellId),
+                            new XElement(ns + "Control", new XAttribute("ID", buttonId))))))));
+            var area = new XElement(ns + "Area", new XAttribute("ID", areaId),
+                new XElement(ns + "Items", new XElement(ns + "Item", new XAttribute("ID", itemId), canvas)));
+            var lastDetail = relationship.Details.Last();
+            var detailItem = form.Descendants().First(x => x.Name.LocalName == "Item" &&
+                (string.Equals((string)x.Attribute("ViewID"), lastDetail.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals((string)x.Attribute("ViewName"), lastDetail.ViewName, StringComparison.OrdinalIgnoreCase)));
+            detailItem.Ancestors().First(x => x.Name.LocalName == "Area").AddAfterSelf(area);
+
+            var states = form.Elements().First(x => x.Name.LocalName == "States");
+            var state = states.Elements().First(x => x.Name.LocalName == "State");
+            var events = state.Elements().FirstOrDefault(x => x.Name.LocalName == "Events");
+            if (events == null) { events = new XElement(ns + "Events"); state.Add(events); }
+            var saveEvent = new XElement(ns + "Event", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                new XAttribute("Type", "User"), new XAttribute("SourceID", buttonId), new XAttribute("SourceType", "Control"),
+                new XAttribute("SourceName", buttonName), new XAttribute("SourceDisplayName", buttonName),
+                new XElement(ns + "Name", "OnClick"),
+                new XElement(ns + "Properties",
+                    Property(ns, "RuleFriendlyName", "When " + buttonName + " is Clicked", null, null),
+                    Property(ns, "Location", formDefinition.Name, null, null)),
+                new XElement(ns + "Handlers"));
+            var handlers = saveEvent.Elements().First(x => x.Name.LocalName == "Handlers");
+            handlers.Add(BuildSaveHandler(form, relationship, masterInstance, true));
+            handlers.Add(BuildSaveHandler(form, relationship, masterInstance, false));
+            events.Add(saveEvent);
         }
 
-        private static XElement BuildMasterAction(string prototypeXml, string masterInstance)
+        private static XElement BuildSaveHandler(XElement form, ResolvedMasterDetailRules relationship, string masterInstance, bool create)
+        {
+            var ns = form.Name.Namespace;
+            var actions = new XElement(ns + "Actions");
+            var master = BuildMasterAction(create ? relationship.MasterCreateAction : relationship.MasterUpdateAction, masterInstance, relationship.MasterKey);
+            actions.Add(master);
+            if (create)
+            {
+                foreach (var child in relationship.Details)
+                    actions.Add(BuildStateAction(ns, child, child.CreateAction, "Added", masterInstance, relationship.MasterKey, FindInstance(form, child.ViewGuid, child.ViewName, ChildValue(form, "Name"))));
+            }
+            else
+            {
+                foreach (var child in relationship.Details)
+                {
+                    var detailInstance = FindInstance(form, child.ViewGuid, child.ViewName, ChildValue(form, "Name"));
+                    actions.Add(BuildStateAction(ns, child, child.UpdateAction, "Changed", masterInstance, relationship.MasterKey, detailInstance));
+                    actions.Add(BuildStateAction(ns, child, child.CreateAction, "Added", masterInstance, relationship.MasterKey, detailInstance));
+                    actions.Add(BuildStateAction(ns, child, child.DeleteAction, "Removed", masterInstance, relationship.MasterKey, detailInstance));
+                }
+            }
+            var conditionName = create ? "SimpleBlankViewFieldCondition" : "SimpleNotBlankViewFieldCondition";
+            var expression = create ? "IsBlank" : "IsNotBlank";
+            return new XElement(ns + "Handler", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                new XElement(ns + "Properties", Property(ns, "HandlerName", "IfLogicalHandler", null, null), Property(ns, "Location", "form", null, null)),
+                new XElement(ns + "Conditions", new XElement(ns + "Condition", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()), new XAttribute("InstanceID", masterInstance),
+                    new XElement(ns + "Properties", Property(ns, "Location", "Form", null, null), Property(ns, "Name", conditionName, null, null)),
+                    new XElement(ns + "Expressions", new XElement(ns + expression,
+                        new XElement(ns + "Item", new XAttribute("SourceType", "ViewField"), new XAttribute("SourceName", relationship.MasterKey.Name),
+                            new XAttribute("SourceDisplayName", relationship.MasterKey.DisplayName), new XAttribute("SourceInstanceID", masterInstance),
+                            new XAttribute("SourceID", relationship.MasterKey.Id), new XAttribute("DataType", relationship.MasterKey.DataType)))))), actions);
+        }
+
+        private static XElement Control(XNamespace ns, string id, string type, string name, params XElement[] extraProperties)
+        {
+            var properties = new XElement(ns + "Properties", Property(ns, "ControlName", name, name, name));
+            foreach (var property in extraProperties) properties.Add(property);
+            return new XElement(ns + "Control", new XAttribute("ID", id), new XAttribute("Type", type),
+                new XElement(ns + "Name", name), new XElement(ns + "DisplayName", name), properties);
+        }
+
+        private static XElement FindFormSaveEvent(XElement form, string buttonText)
+        {
+            var controls = form.Elements().First(x => x.Name.LocalName == "Controls");
+            var button = controls.Elements().FirstOrDefault(x => x.Name.LocalName == "Control" &&
+                string.Equals((string)x.Attribute("Type"), "Button", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(ChildValue(x, "Name"), "btnSave", StringComparison.OrdinalIgnoreCase));
+            if (button == null) return null;
+            var id = (string)button.Attribute("ID");
+            return form.Descendants().FirstOrDefault(x => x.Name.LocalName == "Event" &&
+                string.Equals((string)x.Attribute("Type"), "User", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("SourceType"), "Control", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("SourceID"), id, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(ChildValue(x, "Name"), "OnClick", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static bool HasMasterKeyResult(XElement action, string masterInstance, string masterFieldId)
+        {
+            return action.Descendants().Any(x => x.Name.LocalName == "Result" &&
+                string.Equals((string)x.Attribute("TargetType"), "ViewField", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("TargetInstanceID"), masterInstance, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("TargetID"), masterFieldId, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static XElement BuildMasterAction(string prototypeXml, string masterInstance, ResolvedViewField masterKey)
         {
             var action = XElement.Parse(prototypeXml);
             action.SetAttributeValue("ID", NewId());
@@ -215,6 +307,15 @@ namespace K2SmartFormsCli
                 parameter.SetAttributeValue("SourceInstanceID", masterInstance);
             foreach (var result in action.Descendants().Where(x => x.Name.LocalName == "Result" && string.Equals((string)x.Attribute("TargetType"), "ViewField", StringComparison.OrdinalIgnoreCase)))
                 result.SetAttributeValue("TargetInstanceID", masterInstance);
+            foreach (var result in action.Descendants().Where(x => x.Name.LocalName == "Result" &&
+                string.Equals((string)x.Attribute("SourceID"), masterKey.Name, StringComparison.OrdinalIgnoreCase)))
+            {
+                result.SetAttributeValue("TargetID", masterKey.Id);
+                result.SetAttributeValue("TargetName", masterKey.Name);
+                result.SetAttributeValue("TargetDisplayName", masterKey.DisplayName);
+                result.SetAttributeValue("TargetType", "ViewField");
+                result.SetAttributeValue("TargetInstanceID", masterInstance);
+            }
             return action;
         }
 
@@ -294,9 +395,9 @@ namespace K2SmartFormsCli
             return result;
         }
 
-        private static void VerifyBatch(XElement form, string masterInstance, string masterMethod, IList<ResolvedMasterDetailChild> children, IEnumerable<string> states, ResolvedViewField masterKey, string formName)
+        private static void VerifyBatch(XElement form, XElement scope, string masterInstance, string masterMethod, IList<ResolvedMasterDetailChild> children, IEnumerable<string> states, ResolvedViewField masterKey, string formName)
         {
-            var master = FindMethodActions(form, masterInstance, masterMethod, null)
+            var master = FindMethodActions(scope, masterInstance, masterMethod, null)
                 .FirstOrDefault(x => string.Equals((string)x.Attribute("ExecutionType"), "Parallel", StringComparison.OrdinalIgnoreCase));
             if (master == null)
                 throw new CliException("K2 Form '" + formName + "' master method '" + masterMethod + "' is not configured for batch persistence.");
@@ -339,18 +440,10 @@ namespace K2SmartFormsCli
                 (string.Equals((string)x.Attribute("ViewID"), viewGuid.ToString(), StringComparison.OrdinalIgnoreCase) ||
                  string.Equals((string)x.Attribute("ViewName"), viewName, StringComparison.OrdinalIgnoreCase)));
             var id = item == null ? null : (string)item.Attribute("ID");
-            if (string.IsNullOrWhiteSpace(id)) throw new CliException("Generated form '" + formName + "' has no view instance for '" + viewName + "'.");
+            if (string.IsNullOrWhiteSpace(id)) throw new CliException("Generated form '" + formName + "' has no view instance for '" + viewName + "' [" + viewGuid + "]. Available: " +
+                string.Join("; ", form.Descendants().Where(x => x.Name.LocalName == "Item" && x.Attribute("ViewID") != null)
+                    .Select(x => ((string)x.Attribute("ViewName") ?? ChildValue(x, "Name") ?? "<unnamed>") + " [" + (string)x.Attribute("ViewID") + "]").Distinct().ToArray()));
             return id;
-        }
-
-        private static bool SameGeneratedAction(XElement left, XElement right)
-        {
-            return string.Equals((string)left.Attribute("InstanceID"), (string)right.Attribute("InstanceID"), StringComparison.OrdinalIgnoreCase) &&
-                string.Equals((string)left.Attribute("ItemState"), (string)right.Attribute("ItemState"), StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(ReadProperty(left, "Method"), ReadProperty(right, "Method"), StringComparison.OrdinalIgnoreCase) &&
-                left.Descendants().Any(x => x.Name.LocalName == "Parameter" && right.Descendants().Any(y => y.Name.LocalName == "Parameter" &&
-                    string.Equals((string)x.Attribute("TargetID"), (string)y.Attribute("TargetID"), StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals((string)x.Attribute("SourceInstanceID"), (string)y.Attribute("SourceInstanceID"), StringComparison.OrdinalIgnoreCase)));
         }
 
         private static string MethodForState(ResolvedMasterDetailChild child, string state)

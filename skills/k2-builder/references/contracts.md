@@ -45,6 +45,10 @@ Treat any requirement for multiple line items, details, rows, allocations, attac
 
 Declare the same relationship in SQL `masterDetails`, SmartForms `form.masterDetail`, and solution `policies.masterDetails`; `k2build` rejects an incomplete cross-layer contract. Keep workflow status and the primary workflow reference on the master unless child-specific processing is an explicit requirement.
 
+The complete-solution UX contract is one Form-level transaction: a capture/item master, native editable-list children, returned master identity, foreign-key transfer for `Added` rows, filtered List after Read, and coordinated update of `Changed`/`Added`/`Removed` rows. Do not expose master method buttons or detail Save/Refresh buttons that bypass that transaction. Include disposable tests for two-row creation, reload isolation between two masters, and mixed add/change/remove updates.
+
+Choose fields and views per stage. Keep workflow-managed status, audit, identity, and derived values read-only when visible. Split stages into different Forms when actors/security/actions differ materially; otherwise compose stage Views on one Form and use Form-level state/visibility rules. Prefer four-column label/control layouts only for wide screens with short related fields. Put transient rule variables in hidden `tblDebug` Data Labels. Use cascading lookups for dimensional dependencies and Admin forms for application-managed parent/child lookup values.
+
 The verification scenario must create at least two child rows, prove they share the returned parent key, reload only that parent's children, then add/change/remove rows and prove all three item states persisted. Record authenticated browser interaction as errata when it cannot be executed.
 
 ## Request workflow baseline

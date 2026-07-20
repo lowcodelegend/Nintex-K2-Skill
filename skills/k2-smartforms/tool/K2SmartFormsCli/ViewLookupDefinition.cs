@@ -10,12 +10,13 @@ namespace K2SmartFormsCli
         private static readonly string[] LookupPropertyNames =
         {
             "DataSourceType", "AssociationSO", "AssociationMethod", "ValueProperty",
-            "DisplayTemplate", "AllowEmptySelection", "FixedListItems", "FilterProperty", "WaterMarkText"
+            "DisplayTemplate", "AllowEmptySelection", "FixedListItems", "FilterProperty", "WaterMarkText",
+            "ParentControl", "ParentJoinProperty", "ChildJoinProperty"
         };
 
         public static string Apply(string xml, ViewDefinition view, IDictionary<string, LookupRuntimeSource> sources)
         {
-            if (view.LookupControls.Count == 0) return xml;
+            if (view.LookupControls.Count == 0 && view.ReadOnlyProperties.Count == 0) return xml;
             var document = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
             foreach (var binding in view.LookupControls)
             {
@@ -41,13 +42,22 @@ namespace K2SmartFormsCli
                 SetProperty(properties, "ValueProperty", source.ValuePropertyName, source.ValuePropertyDisplayName, source.ValuePropertyName);
                 SetProperty(properties, "DisplayTemplate", BuildTemplate(source), "[" + source.DisplayPropertyDisplayName + "]", null);
                 SetProperty(properties, "AllowEmptySelection", binding.AllowEmptySelection ? "true" : "false", binding.AllowEmptySelection ? "true" : "false", null);
+                if (binding.Cascade != null)
+                {
+                    var parent = FindEditableControl(document, view, binding.Cascade.ParentProperty);
+                    var parentName = ChildValue(parent, "Name") ?? binding.Cascade.ParentProperty;
+                    SetProperty(properties, "ParentControl", (string)parent.Attribute("ID"), parentName, parentName);
+                    SetProperty(properties, "ParentJoinProperty", binding.Cascade.ParentJoinProperty, binding.Cascade.ParentJoinProperty, binding.Cascade.ParentJoinProperty);
+                    SetProperty(properties, "ChildJoinProperty", binding.Cascade.ChildJoinProperty, binding.Cascade.ChildJoinProperty, binding.Cascade.ChildJoinProperty);
+                }
             }
+            ApplyReadOnly(document, view);
             return document.ToString(SaveOptions.DisableFormatting);
         }
 
         public static void Verify(string xml, ViewDefinition view, IDictionary<string, LookupRuntimeSource> sources)
         {
-            if (view.LookupControls.Count == 0) return;
+            if (view.LookupControls.Count == 0 && view.ReadOnlyProperties.Count == 0) return;
             var document = XDocument.Parse(xml);
             foreach (var binding in view.LookupControls)
             {
@@ -66,6 +76,37 @@ namespace K2SmartFormsCli
                 var displayTemplate = GetPropertyValue(properties, "DisplayTemplate");
                 if (displayTemplate == null || displayTemplate.IndexOf("SourceID=\"" + source.DisplayPropertyName + "\"", StringComparison.OrdinalIgnoreCase) < 0)
                     throw new CliException("View '" + view.Name + "' lookup for '" + binding.Property + "' has the wrong display template.");
+                if (binding.Cascade != null)
+                {
+                    var parent = FindEditableControl(document, view, binding.Cascade.ParentProperty);
+                    AssertProperty(properties, "ParentControl", (string)parent.Attribute("ID"), view, binding);
+                    AssertProperty(properties, "ParentJoinProperty", binding.Cascade.ParentJoinProperty, view, binding);
+                    AssertProperty(properties, "ChildJoinProperty", binding.Cascade.ChildJoinProperty, view, binding);
+                }
+            }
+            VerifyReadOnly(document, view);
+        }
+
+        private static void ApplyReadOnly(XDocument document, ViewDefinition view)
+        {
+            foreach (var property in view.ReadOnlyProperties)
+            {
+                var control = FindEditableControl(document, view, property);
+                var properties = control.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
+                if (properties == null) { properties = new XElement(control.Name.Namespace + "Properties"); control.Add(properties); }
+                foreach (var old in properties.Elements().Where(x => x.Name.LocalName == "Property" && string.Equals(GetPropertyName(x), "IsReadOnly", StringComparison.OrdinalIgnoreCase)).ToList()) old.Remove();
+                SetProperty(properties, "IsReadOnly", "true", "true", null);
+            }
+        }
+
+        private static void VerifyReadOnly(XDocument document, ViewDefinition view)
+        {
+            foreach (var property in view.ReadOnlyProperties)
+            {
+                var control = FindEditableControl(document, view, property);
+                var properties = control.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
+                if (!string.Equals(GetPropertyValue(properties, "IsReadOnly"), "true", StringComparison.OrdinalIgnoreCase))
+                    throw new CliException("View '" + view.Name + "' property '" + property + "' is not read-only.");
             }
         }
 
@@ -154,5 +195,6 @@ namespace K2SmartFormsCli
         public string DisplayPropertyName { get; set; }
         public string DisplayPropertyDisplayName { get; set; }
         public string DisplayPropertyType { get; set; }
+        public HashSet<string> PropertyNames { get; set; }
     }
 }

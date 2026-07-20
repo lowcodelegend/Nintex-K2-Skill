@@ -111,6 +111,8 @@ namespace K2SmartFormsCli
                 if (view.Methods == null) view.Methods = new List<string>();
                 if (view.Options == null) view.Options = new List<string>();
                 if (view.LookupControls == null) view.LookupControls = new List<LookupControlDefinition>();
+                if (view.ReadOnlyProperties == null) view.ReadOnlyProperties = new List<string>();
+                if (view.HiddenVariables == null) view.HiddenVariables = new List<HiddenVariableDefinition>();
                 RequireArtifactName(view.Name, "view.name");
                 RejectVersionToken(view.Name, "view.name");
                 Require(view.SmartObject, "view.smartObject");
@@ -120,6 +122,23 @@ namespace K2SmartFormsCli
                 ValidateValues(view.Options, AllowedViewOptions, "view option", view.Name);
                 EnsureUniqueValues(view.Properties, "property", view.Name);
                 EnsureUniqueValues(view.Methods, "method", view.Name);
+                EnsureUniqueValues(view.ReadOnlyProperties, "read-only property", view.Name);
+                EnsureUniqueValues(view.HiddenVariables.Select(x => x == null ? null : x.Name), "hidden variable", view.Name);
+                foreach (var variable in view.HiddenVariables)
+                {
+                    if (variable == null) throw new CliException("View '" + view.Name + "' hiddenVariables cannot contain null entries.");
+                    Require(variable.Name, "view.hiddenVariables.name");
+                    Require(variable.DataType, "view.hiddenVariables.dataType");
+                }
+                if (view.HiddenVariables.Count > 0 && view.Type != "capture")
+                    throw new CliException("View '" + view.Name + "' hiddenVariables are currently supported only on capture/item views.");
+                if (view.LayoutColumns != 0 && view.LayoutColumns != 2 && view.LayoutColumns != 4)
+                    throw new CliException("View '" + view.Name + "' layoutColumns must be 2 or 4.");
+                if (view.LayoutColumns == 4 && view.Type != "capture")
+                    throw new CliException("View '" + view.Name + "' can use layoutColumns=4 only for capture/item views.");
+                foreach (var property in view.ReadOnlyProperties)
+                    if (!view.Properties.Contains(property, StringComparer.OrdinalIgnoreCase))
+                        throw new CliException("View '" + view.Name + "' readOnlyProperties entry is not selected in view.properties: " + property);
                 if ((view.Type == "list" || view.Type == "content") && string.IsNullOrWhiteSpace(view.DefaultListMethod))
                     view.DefaultListMethod = "List";
                 view.Area = NormalizeArea(view.Area, "view", view.Name);
@@ -134,6 +153,16 @@ namespace K2SmartFormsCli
                         throw new CliException("View '" + view.Name + "' lookup property is not selected in view.properties: " + control.Property);
                     if (view.Type != "capture" && view.Type != "capture-list")
                         throw new CliException("Lookup controls are supported only on capture or capture-list views: " + view.Name);
+                    if (control.Cascade != null)
+                    {
+                        Require(control.Cascade.ParentProperty, "view.lookupControls.cascade.parentProperty");
+                        Require(control.Cascade.ParentJoinProperty, "view.lookupControls.cascade.parentJoinProperty");
+                        Require(control.Cascade.ChildJoinProperty, "view.lookupControls.cascade.childJoinProperty");
+                        if (string.Equals(control.Property, control.Cascade.ParentProperty, StringComparison.OrdinalIgnoreCase))
+                            throw new CliException("View '" + view.Name + "' cascading lookup cannot use itself as its parent: " + control.Property);
+                        if (!view.Properties.Contains(control.Cascade.ParentProperty, StringComparer.OrdinalIgnoreCase))
+                            throw new CliException("View '" + view.Name + "' cascading lookup parent is not selected in view.properties: " + control.Cascade.ParentProperty);
+                    }
                 }
             }
 
@@ -506,6 +535,9 @@ namespace K2SmartFormsCli
         public List<string> Options { get; set; }
         public string Area { get; set; }
         public List<LookupControlDefinition> LookupControls { get; set; }
+        public List<string> ReadOnlyProperties { get; set; }
+        public int LayoutColumns { get; set; }
+        public List<HiddenVariableDefinition> HiddenVariables { get; set; }
 
         public ViewDefinition()
         {
@@ -515,7 +547,18 @@ namespace K2SmartFormsCli
             Options = new List<string>();
             Area = "application";
             LookupControls = new List<LookupControlDefinition>();
+            ReadOnlyProperties = new List<string>();
+            LayoutColumns = 2;
+            HiddenVariables = new List<HiddenVariableDefinition>();
         }
+    }
+
+    public sealed class HiddenVariableDefinition
+    {
+        public string Name { get; set; }
+        public string DataType { get; set; }
+        public string DefaultValue { get; set; }
+        public HiddenVariableDefinition() { DataType = "Text"; }
     }
 
     public sealed class FormDefinition
@@ -559,6 +602,7 @@ namespace K2SmartFormsCli
         public string MasterCreateMethod { get; set; }
         public string MasterUpdateMethod { get; set; }
         public string MasterReadMethod { get; set; }
+        public string SaveButtonText { get; set; }
         public List<MasterDetailChildDefinition> Details { get; set; }
 
         public MasterDetailFormDefinition()
@@ -566,6 +610,7 @@ namespace K2SmartFormsCli
             MasterCreateMethod = "Create";
             MasterUpdateMethod = "Update";
             MasterReadMethod = "Read";
+            SaveButtonText = "Save";
             Details = new List<MasterDetailChildDefinition>();
         }
     }
@@ -645,6 +690,14 @@ namespace K2SmartFormsCli
         public string Property { get; set; }
         public string Lookup { get; set; }
         public bool AllowEmptySelection { get; set; }
+        public CascadeDefinition Cascade { get; set; }
+    }
+
+    public sealed class CascadeDefinition
+    {
+        public string ParentProperty { get; set; }
+        public string ParentJoinProperty { get; set; }
+        public string ChildJoinProperty { get; set; }
     }
 
     public sealed class VerificationOptions
