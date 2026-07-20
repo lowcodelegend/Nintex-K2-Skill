@@ -39,9 +39,9 @@ Next increments:
 
 Create advanced/composite SmartObjects with controlled names, properties, methods, defaults, associations, and mappings to service objects. Cover cases where automatic generation is too coarse.
 
-### 3. K2 SmartForms builder — v0.9 precise common-framework instance rules implemented
+### 3. K2 SmartForms builder — v0.10 list-click tab navigation implemented
 
-The tool creates checked-in capture/list/content/editable-list views and multi-view forms from declarative manifests using supported K2 generation APIs. It sets and verifies a visible title for every solution view instance, consumes a selected environment header and optional footer, keeps them first/last, calls the header initialization rule with templated parameters, applies exact external-view instance name/title/collapse settings, executes server-rule calls and one combined control transfer in the configured order, creates named tabs and a native K2 Worklist, separates ordinary artifacts from `Admin` CRUD UX, and verifies modern Style Profiles. The corporate example uses the discovered PSF Nintex framework contract.
+The tool creates checked-in capture/list/content/editable-list views and multi-view forms from declarative manifests using supported K2 generation APIs. It sets and verifies a visible title for every solution view instance, consumes a selected environment header and optional footer, keeps them first/last, calls the header initialization rule with templated parameters, applies exact external-view instance name/title/collapse settings, executes server-rule calls and one combined control transfer in the configured order, creates named tabs and a native K2 Worklist, and can append a native tab `Focus` action after a generated list-click `Read` so selection opens the corresponding details tab. It separates ordinary artifacts from `Admin` CRUD UX and verifies modern Style Profiles. The corporate example uses the discovered PSF Nintex framework contract and list/detail navigation.
 
 Next increments:
 
@@ -52,7 +52,6 @@ Next increments:
 - Preserve or export existing artifacts before replacement and add rollback.
 - Add authenticated browser automation for visual, accessibility, and full CRUD tests.
 - Add workflow start/action rules after the workflow-builder contract exists.
-- Add optional list-row selection rules that automatically activate the details tab.
 - Add declarative process/activity filters for native Worklist tabs.
 - **Mid-horizon iterative improvement:** import existing form/view definitions with stable artifact, control, and rule identities; track tool ownership; patch only declared layout, control, method, and rule changes; preserve unmanaged Designer customizations; surface merge conflicts before deployment; and support export-backed rollback.
 

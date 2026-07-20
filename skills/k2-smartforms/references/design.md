@@ -1,4 +1,4 @@
-# SmartForms v0.3 design guide
+# SmartForms v0.10 design guide
 
 ## CRUD shape
 
@@ -14,7 +14,7 @@ The standard workflow shell is:
 2. `<Entity> Details` — the capture/edit view;
 3. `My Tasks` — the native K2 Worklist control when the application should surface the current user's tasks.
 
-List selection loads the details view's data but v0.3 does not automatically select the details tab. Record that UX limitation when it materially affects the application.
+When the list and editor are on different tabs, add `listClickTabNavigation` from the list view to the details tab. The CLI appends a native synchronous `Focus` action to the generated `ListClick` rule after its SmartObject `Read` action, and verification enforces that order. Use this by default for list/detail workflow shells and other drill-in UX; omit it when row selection is intentionally background-only or the user must remain on the list.
 
 ## View titles on forms
 

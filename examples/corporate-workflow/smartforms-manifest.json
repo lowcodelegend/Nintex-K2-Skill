@@ -282,6 +282,9 @@
             }
           }
         ],
+        "listClickTabNavigation": [
+          { "sourceView": "CWF.Request List", "targetTab": "Request Details" }
+        ],
         "options": [],
         "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]
       },
@@ -295,6 +298,9 @@
         "tabs": [
           { "name": "Tasks", "views": ["CWF.Approval Task List"] },
           { "name": "Task Details", "views": ["CWF.Approval Task Editor"] }
+        ],
+        "listClickTabNavigation": [
+          { "sourceView": "CWF.Approval Task List", "targetTab": "Task Details" }
         ],
         "options": [],
         "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]

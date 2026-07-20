@@ -145,6 +145,7 @@ namespace K2SmartFormsCli
                 if (form.Options == null) form.Options = new List<string>();
                 if (form.Behaviors == null) form.Behaviors = new List<string>();
                 if (form.Tabs == null) form.Tabs = new List<FormTabDefinition>();
+                if (form.ListClickTabNavigation == null) form.ListClickTabNavigation = new List<ListClickTabNavigationDefinition>();
                 if (form.ViewTitles == null) form.ViewTitles = new Dictionary<string, string>();
                 if (form.UntitledViews == null) form.UntitledViews = new Dictionary<string, string>();
                 RequireArtifactName(form.Name, "form.name");
@@ -173,6 +174,7 @@ namespace K2SmartFormsCli
                 ValidateValues(form.Behaviors, AllowedFormBehaviors, "form behavior", form.Name);
                 form.Area = NormalizeArea(form.Area, "form", form.Name);
                 ValidateTabs(form);
+                ValidateListClickTabNavigation(form, Application.Views);
             }
 
             foreach (var lookup in Application.Lookups.Where(x => !string.IsNullOrWhiteSpace(x.AdminForm)))
@@ -255,6 +257,33 @@ namespace K2SmartFormsCli
                 throw new CliException("Form '" + form.Name + "' tabs do not place declared view(s): " + string.Join(", ", omitted));
             if (worklistCount > 1)
                 throw new CliException("Form '" + form.Name + "' supports at most one Worklist tab.");
+        }
+
+        private static void ValidateListClickTabNavigation(FormDefinition form, IEnumerable<ViewDefinition> views)
+        {
+            if (form.ListClickTabNavigation.Count == 0) return;
+            if (form.Tabs.Count == 0)
+                throw new CliException("Form '" + form.Name + "' listClickTabNavigation requires form.tabs.");
+            if (!form.Behaviors.Contains("load-form-list-click", StringComparer.OrdinalIgnoreCase))
+                throw new CliException("Form '" + form.Name + "' listClickTabNavigation requires behavior 'load-form-list-click' so the selected item is loaded before the tab changes.");
+            EnsureUniqueValues(form.ListClickTabNavigation.Select(x => x == null ? null : x.SourceView), "list-click tab source view", form.Name);
+            foreach (var navigation in form.ListClickTabNavigation)
+            {
+                if (navigation == null) throw new CliException("Form '" + form.Name + "' listClickTabNavigation cannot contain null entries.");
+                Require(navigation.SourceView, "form.listClickTabNavigation.sourceView");
+                Require(navigation.TargetTab, "form.listClickTabNavigation.targetTab");
+                if (!form.Views.Contains(navigation.SourceView, StringComparer.OrdinalIgnoreCase))
+                    throw new CliException("Form '" + form.Name + "' listClickTabNavigation references a source view not present on the form: " + navigation.SourceView);
+                var sourceView = views.Single(x => string.Equals(x.Name, navigation.SourceView, StringComparison.OrdinalIgnoreCase));
+                if (!string.Equals(sourceView.Type, "list", StringComparison.OrdinalIgnoreCase))
+                    throw new CliException("Form '" + form.Name + "' listClickTabNavigation source must be a list view: " + navigation.SourceView);
+                var sourceTab = form.Tabs.Single(x => x.Views.Contains(navigation.SourceView, StringComparer.OrdinalIgnoreCase));
+                var targetTab = form.Tabs.SingleOrDefault(x => string.Equals(x.Name, navigation.TargetTab, StringComparison.OrdinalIgnoreCase));
+                if (targetTab == null)
+                    throw new CliException("Form '" + form.Name + "' listClickTabNavigation references an unknown target tab: " + navigation.TargetTab);
+                if (object.ReferenceEquals(sourceTab, targetTab))
+                    throw new CliException("Form '" + form.Name + "' listClickTabNavigation target must differ from the source view's tab: " + navigation.TargetTab);
+            }
         }
 
         private static string NormalizeArea(string value, string kind, string owner)
@@ -456,6 +485,7 @@ namespace K2SmartFormsCli
         public List<string> Behaviors { get; set; }
         public string Area { get; set; }
         public List<FormTabDefinition> Tabs { get; set; }
+        public List<ListClickTabNavigationDefinition> ListClickTabNavigation { get; set; }
         public Dictionary<string, string> ViewTitles { get; set; }
         public Dictionary<string, string> UntitledViews { get; set; }
 
@@ -466,6 +496,7 @@ namespace K2SmartFormsCli
             Behaviors = new List<string>();
             Area = "application";
             Tabs = new List<FormTabDefinition>();
+            ListClickTabNavigation = new List<ListClickTabNavigationDefinition>();
             ViewTitles = new Dictionary<string, string>();
             UntitledViews = new Dictionary<string, string>();
         }
@@ -476,6 +507,12 @@ namespace K2SmartFormsCli
             var custom = ViewTitles.FirstOrDefault(x => string.Equals(x.Key, viewName, StringComparison.OrdinalIgnoreCase));
             return string.IsNullOrWhiteSpace(custom.Key) ? viewName : custom.Value;
         }
+    }
+
+    public sealed class ListClickTabNavigationDefinition
+    {
+        public string SourceView { get; set; }
+        public string TargetTab { get; set; }
     }
 
     public sealed class FormTabDefinition

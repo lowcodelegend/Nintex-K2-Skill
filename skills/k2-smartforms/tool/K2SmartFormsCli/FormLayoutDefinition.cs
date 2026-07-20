@@ -64,6 +64,7 @@ namespace K2SmartFormsCli
                 if (footerArea != null && object.ReferenceEquals(tab, definition.Tabs[definition.Tabs.Count - 1])) areas.Add(new XElement(footerArea));
                 panels.Add(panel);
             }
+            ApplyListClickTabNavigation(form, definition);
             return document.ToString(SaveOptions.DisableFormatting);
         }
 
@@ -101,7 +102,83 @@ namespace K2SmartFormsCli
                     throw new CliException("K2 Form '" + definition.Name + "' common footer must occur once on the last tab only.");
                 if (expected.Worklist != null) VerifyWorklist(form, controls, panel, definition, expected);
             }
+            VerifyListClickTabNavigation(form, definition);
             VerifyFrameworkPositions(form, header, definition.Name);
+        }
+
+        private static void ApplyListClickTabNavigation(XElement form, FormDefinition definition)
+        {
+            foreach (var navigation in definition.ListClickTabNavigation)
+            {
+                var sourceItem = form.Descendants().First(x => x.Name.LocalName == "Item" &&
+                    string.Equals((string)x.Attribute("ViewName"), navigation.SourceView, StringComparison.OrdinalIgnoreCase));
+                var sourceInstanceId = (string)sourceItem.Attribute("ID");
+                var targetPanel = RequiredChild(form, "Panels").Elements().First(x => x.Name.LocalName == "Panel" &&
+                    string.Equals(ChildValue(x, "Name"), navigation.TargetTab, StringComparison.OrdinalIgnoreCase));
+                var targetPanelId = (string)targetPanel.Attribute("ID");
+                var listClick = FindListClickEvent(form, navigation.SourceView, sourceInstanceId);
+                if (listClick == null)
+                    throw new CliException("Generated form '" + definition.Name + "' has no list-click rule for '" + navigation.SourceView + "'.");
+                var handler = RequiredChild(RequiredChild(listClick, "Handlers"), "Handler");
+                var actions = RequiredChild(handler, "Actions");
+                foreach (var existing in actions.Elements().Where(x => IsTabFocusAction(x, targetPanelId)).ToList()) existing.Remove();
+                actions.Add(BuildTabFocusAction(form.Name.Namespace, targetPanelId, navigation.TargetTab));
+            }
+        }
+
+        private static void VerifyListClickTabNavigation(XElement form, FormDefinition definition)
+        {
+            foreach (var navigation in definition.ListClickTabNavigation)
+            {
+                var sourceItem = form.Descendants().First(x => x.Name.LocalName == "Item" &&
+                    string.Equals((string)x.Attribute("ViewName"), navigation.SourceView, StringComparison.OrdinalIgnoreCase));
+                var sourceInstanceId = (string)sourceItem.Attribute("ID");
+                var targetPanel = RequiredChild(form, "Panels").Elements().First(x => x.Name.LocalName == "Panel" &&
+                    string.Equals(ChildValue(x, "Name"), navigation.TargetTab, StringComparison.OrdinalIgnoreCase));
+                var targetPanelId = (string)targetPanel.Attribute("ID");
+                var listClick = FindListClickEvent(form, navigation.SourceView, sourceInstanceId);
+                if (listClick == null)
+                    throw new CliException("K2 Form '" + definition.Name + "' has no list-click rule for '" + navigation.SourceView + "'.");
+                var actions = listClick.Descendants().Where(x => x.Name.LocalName == "Action").ToList();
+                var focusActions = actions.Where(x => IsTabFocusAction(x, targetPanelId)).ToList();
+                if (focusActions.Count != 1)
+                    throw new CliException("K2 Form '" + definition.Name + "' must have exactly one list-click action that changes to tab '" + navigation.TargetTab + "'.");
+                var readIndexes = actions.Select((action, index) => new { action, index })
+                    .Where(x => string.Equals((string)x.action.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(ReadActionProperty(x.action, "Method"), "Read", StringComparison.OrdinalIgnoreCase))
+                    .Select(x => x.index).ToList();
+                if (readIndexes.Count == 0 || actions.IndexOf(focusActions[0]) <= readIndexes.Max())
+                    throw new CliException("K2 Form '" + definition.Name + "' must load the selected '" + navigation.SourceView + "' item before changing to tab '" + navigation.TargetTab + "'.");
+            }
+        }
+
+        private static XElement FindListClickEvent(XElement form, string sourceView, string sourceInstanceId)
+        {
+            return form.Descendants().FirstOrDefault(x => x.Name.LocalName == "Event" &&
+                string.Equals((string)x.Attribute("Type"), "User", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("SourceType"), "View", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("SourceName"), sourceView, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("InstanceID"), sourceInstanceId, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals((string)x.Attribute("IsReference"), "True", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(ChildValue(x, "Name"), "ListClick", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static XElement BuildTabFocusAction(XNamespace ns, string panelId, string tabName)
+        {
+            return new XElement(ns + "Action", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                new XAttribute("Type", "Focus"), new XAttribute("ExecutionType", "Synchronous"),
+                new XElement(ns + "Properties",
+                    Property(ns, "Location", "Form", false),
+                    new XElement(ns + "Property", new XElement(ns + "Name", "PanelID"),
+                        new XElement(ns + "DisplayValue", tabName), new XElement(ns + "NameValue", tabName),
+                        new XElement(ns + "Value", panelId))));
+        }
+
+        private static bool IsTabFocusAction(XElement action, string panelId)
+        {
+            return string.Equals((string)action.Attribute("Type"), "Focus", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(ReadActionProperty(action, "Location"), "Form", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(ReadActionProperty(action, "PanelID"), panelId, StringComparison.OrdinalIgnoreCase);
         }
 
         private static XElement FindHeaderArea(XElement form, ResolvedCommonHeader header, string formName)
