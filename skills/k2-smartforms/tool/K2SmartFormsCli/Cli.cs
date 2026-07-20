@@ -55,6 +55,12 @@ namespace K2SmartFormsCli
                     Inspect(manager);
                     return 0;
 
+                case "checkin":
+                    RequireConfirmation(options, "checkin");
+                    manager.CheckInForm(GetOption(options, "form", true));
+                    Console.WriteLine("CHECKIN SUCCEEDED: " + manifest.Name);
+                    return 0;
+
                 case "cleanup":
                     RequireConfirmation(options, "cleanup");
                     manager.Cleanup();
@@ -159,7 +165,7 @@ namespace K2SmartFormsCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2forms 0.1.3");
+            Console.WriteLine("k2forms 0.1.4");
         }
 
         private static void PrintHelp()
@@ -172,6 +178,7 @@ namespace K2SmartFormsCli
             Console.WriteLine("  k2forms deploy  --manifest <path> --confirm");
             Console.WriteLine("  k2forms verify  --manifest <path>");
             Console.WriteLine("  k2forms inspect --manifest <path>");
+            Console.WriteLine("  k2forms checkin --manifest <path> --form <exact-name> --confirm");
             Console.WriteLine("  k2forms cleanup --manifest <path> --confirm");
             Console.WriteLine("  k2forms version");
             Console.WriteLine();

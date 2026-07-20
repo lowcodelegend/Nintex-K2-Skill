@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "suiteName": "k2-skills",
-  "suiteVersion": "0.8.0",
+  "suiteVersion": "0.8.1",
   "skills": [
     {
       "name": "k2-sql-smartobjects",
@@ -24,7 +24,7 @@
     },
     {
       "name": "k2-smartforms",
-      "version": "0.1.3",
+      "version": "0.1.4",
       "platform": "win-x64",
       "buildScript": "skills/k2-smartforms/scripts/build.ps1",
       "buildParameters": {
@@ -38,7 +38,7 @@
       "versionCommand": {
         "path": "skills/k2-smartforms/tool/K2SmartFormsCli/bin/Release/k2forms.exe",
         "arguments": ["version"],
-        "expectedOutput": "k2forms 0.1.3"
+        "expectedOutput": "k2forms 0.1.4"
       }
     },
     {

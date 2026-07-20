@@ -168,6 +168,30 @@ namespace K2SmartFormsCli
             });
         }
 
+        public void CheckInForm(string formName)
+        {
+            if (!_manifest.Application.Forms.Any(x => string.Equals(x.Name, formName, StringComparison.OrdinalIgnoreCase)))
+                throw new CliException("Form is not declared in application.forms: " + formName);
+
+            WithFormsManager(delegate(FormsManager manager)
+            {
+                if (!manager.CheckFormExists(formName)) throw new CliException("K2 Form does not exist: " + formName);
+                var info = manager.GetForm(formName);
+                if (!info.IsCheckedOut)
+                {
+                    Console.WriteLine("Form: already checked in (" + info.Name + ", " + info.Guid + ", v" + info.Version + ")");
+                    return 0;
+                }
+
+                Console.WriteLine("Form: checking in (" + info.Name + ", " + info.Guid + ", v" + info.Version + ", checkedOutBy=" + info.CheckedOutBy + ")");
+                manager.CheckInForm(info.Guid);
+                var checkedIn = manager.GetForm(info.Guid);
+                if (checkedIn.IsCheckedOut) throw new CliException("K2 Form remains checked out after CheckInForm: " + formName);
+                Console.WriteLine("Form: checked in (" + checkedIn.Name + ", " + checkedIn.Guid + ", v" + checkedIn.Version + ")");
+                return 0;
+            });
+        }
+
         public void Deploy()
         {
             CheckConnectionAndInputs();
