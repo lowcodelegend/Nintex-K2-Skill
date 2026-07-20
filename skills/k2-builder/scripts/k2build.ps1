@@ -1,10 +1,9 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('validate', 'plan')]
+    [ValidateSet('validate', 'plan', 'version')]
     [string]$Command = 'validate',
 
-    [Parameter(Mandatory = $true)]
     [string]$Manifest,
 
     [ValidateSet('text', 'json')]
@@ -12,6 +11,16 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+if ($Command -eq 'version') {
+    Write-Output 'k2build 0.1.0'
+    exit 0
+}
+
+if ([string]::IsNullOrWhiteSpace($Manifest)) {
+    Write-Error 'Manifest is required for validate and plan.'
+    exit 2
+}
 
 function Add-Issue {
     param([string]$Message)
