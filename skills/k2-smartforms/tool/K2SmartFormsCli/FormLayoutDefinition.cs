@@ -12,6 +12,7 @@ namespace K2SmartFormsCli
             if (definition.Tabs.Count == 0) return xml;
             var document = Parse(xml);
             var form = FindForm(document);
+            form.SetAttributeValue("Layout", "TabControl");
             var controls = RequiredChild(form, "Controls");
             var panels = RequiredChild(form, "Panels");
             var originalPanels = panels.Elements().Where(x => x.Name.LocalName == "Panel").ToList();
@@ -55,6 +56,8 @@ namespace K2SmartFormsCli
             if (definition.Tabs.Count == 0) return;
             var document = Parse(xml);
             var form = FindForm(document);
+            if (!string.Equals((string)form.Attribute("Layout"), "TabControl", StringComparison.OrdinalIgnoreCase))
+                throw new CliException("K2 Form '" + definition.Name + "' has multiple tabs but Layout is '" + (string)form.Attribute("Layout") + "', expected 'TabControl'.");
             var controls = RequiredChild(form, "Controls");
             var panels = RequiredChild(form, "Panels").Elements().Where(x => x.Name.LocalName == "Panel").ToList();
             if (panels.Count != definition.Tabs.Count)
