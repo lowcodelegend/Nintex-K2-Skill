@@ -67,6 +67,23 @@ namespace K2WorkflowCli
             var task = GetContent(form.FormId, workflow.ProcessFullName + "\\Task", false);
             if (string.IsNullOrWhiteSpace(Nested(task, "workflowAction", "id")))
                 throw new CliException("SmartForm task integration was not found for " + workflow.ProcessFullName + "\\Task.");
+
+            var states = JArray.Parse(InvokeData("GetFormStates", _host, form.FormId)).OfType<JObject>().ToList();
+            var startState = states.FirstOrDefault(x => string.Equals(Convert.ToString(x["name"]), workflow.SmartForms.StartState, StringComparison.Ordinal));
+            if (startState == null) throw new CliException("SmartForm Start state was not found: " + workflow.SmartForms.StartState + ".");
+            var taskState = states.FirstOrDefault(x => string.Equals(Convert.ToString(x["name"]), workflow.SmartForms.TaskState, StringComparison.Ordinal));
+            if (taskState == null) throw new CliException("SmartForm task state was not found: " + workflow.SmartForms.TaskState + ".");
+
+            var startIsDefault = (bool?)startState["isDefault"] == true;
+            var taskIsDefault = (bool?)taskState["isDefault"] == true;
+            if (taskIsDefault) throw new CliException("SmartForm task state must not be default: " + workflow.SmartForms.TaskState + ".");
+            if (startIsDefault != workflow.SmartForms.MakeStartStateDefault)
+                throw new CliException("SmartForm Start state default mismatch for '" + workflow.SmartForms.StartState + "': manifest=" +
+                    workflow.SmartForms.MakeStartStateDefault.ToString().ToLowerInvariant() + ", runtime=" + startIsDefault.ToString().ToLowerInvariant() + ".");
+            if (workflow.SmartForms.MakeStartStateDefault && states.Count(x => (bool?)x["isDefault"] == true) != 1)
+                throw new CliException("SmartForm must have exactly one default state when the workflow Start state is default: " + workflow.SmartForms.Form + ".");
+
+            Console.WriteLine("Verified SmartForm states: Start default=" + startIsDefault.ToString().ToLowerInvariant() + ", Task default=false");
         }
 
         public void Remove(WorkflowSettings workflow, SmartFormsIntegrationDescriptor form)
@@ -92,7 +109,19 @@ namespace K2WorkflowCli
         private void IntegrateStart(WorkflowSettings workflow, SmartFormsIntegrationDescriptor form)
         {
             var current = GetContent(form.FormId, workflow.ProcessFullName, true);
-            if (!string.IsNullOrWhiteSpace(Nested(current, "workflowAction", "id"))) return;
+            if (!string.IsNullOrWhiteSpace(Nested(current, "workflowAction", "id")))
+            {
+                var currentStateId = Convert.ToString(current["workflowActionStateId"]);
+                var currentStates = JArray.Parse(InvokeData("GetFormStates", _host, form.FormId));
+                var currentState = currentStates.OfType<JObject>().FirstOrDefault(x =>
+                    string.Equals(Convert.ToString(x["id"]), currentStateId, StringComparison.OrdinalIgnoreCase));
+                var currentIsDefault = currentState != null && (bool?)currentState["isDefault"] == true;
+                if (currentIsDefault == workflow.SmartForms.MakeStartStateDefault) return;
+
+                Console.WriteLine("Reconciling SmartForm Start default state: " + currentIsDefault.ToString().ToLowerInvariant() +
+                    " -> " + workflow.SmartForms.MakeStartStateDefault.ToString().ToLowerInvariant());
+                RemoveOne(form.FormId, workflow.ProcessFullName, true, workflow.SmartForms.StartState);
+            }
             var state = BaseState(form.FormId);
             var rule = SelectRule(form.FormId, Convert.ToString(state["id"]), true, workflow.SmartForms.StartRuleContains);
             var tree = GetRuleTree(form.FormId, state, rule, workflow.ProcessFullName, true);

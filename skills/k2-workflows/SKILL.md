@@ -13,10 +13,12 @@ Use `scripts/k2wf.ps1`; do not write to the K2 database or invoke legacy workflo
 2. Read [references/manifest.md](references/manifest.md) and create a manifest. Keep names and category paths free of version numbers; K2 owns artifact versions.
 3. Run `plan`, review exact category/name/action, then run `render` when JSON review is useful.
 4. Run `deploy ... --confirm` only after the plan. A published workflow creates a K2 runtime major version; a draft remains designer JSON only.
-5. Run `inspect` and `verify`. Verification must prove both the saved JSON and, when `publish=true`, the runtime process definition.
+5. Run `inspect` and `verify`. Verification must prove both the saved JSON and, when `publish=true`, the runtime process definition. For SmartForms integration it must also prove that the declared Start and Task states exist, the Task state is not default, and the Start state's runtime default matches `makeStartStateDefault`.
 6. For a disposable workflow, run `cleanup ... --confirm --delete-deployed` and prove `inspect` no longer finds it.
 
 `deploy` explicitly releases the HTML5 designer lock with K2's resolved AD identity after every successful save/publish. If a prior tool/browser session left a workflow locked, run `unlock <manifest> --confirm`, then refresh the Designer page. Do not inspect through `GetUserProcessKprx` or `GetProcessJson`: on K2 Five 5.10 those reads check the process out again. The CLI's read commands use `GetProcessInfo` plus `GetProcessDefinitionPerVersion` instead.
+
+For an existing tool-owned SmartForms Start integration, `deploy` compares the runtime default flag with `makeStartStateDefault`. When they differ, it removes and recreates only that workflow-specific Start integration/state with the declared flag, then verification requires exactly one default state when Start is default. Review this planned change because manual edits inside that workflow-specific Start state are not preserved by reconciliation.
 
 ## Generated workflows
 
