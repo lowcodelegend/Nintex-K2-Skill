@@ -24,6 +24,8 @@ Prefer K2-friendly SQL types: `int`, `bigint`, `decimal`, `bit`, `uniqueidentifi
 
 Use `nvarchar` for user-entered text. Choose decimal precision deliberately; the SQL Service Instance has a configured maximum decimal mapping. Treat `rowversion` as SQL-managed concurrency data rather than a user-editable value.
 
+Do not assume a SQL `DEFAULT` constraint makes a generated SmartObject Create input optional. After generation, inspect the live method's required properties before designing a SmartForm. For database-managed audit values, prefer a SQL/SmartObject contract that does not require the UI to supply the value, such as an optional column with a server-side default or a purpose-built stored-procedure method. The SmartForms CLI rejects capture views that omit any required selected-method property.
+
 ## Deployment shape
 
 Use a dedicated application database when feasible. Organize objects in business schemas such as `app`, `ref`, and `reporting`. Keep schema scripts ordered and rerunnable:

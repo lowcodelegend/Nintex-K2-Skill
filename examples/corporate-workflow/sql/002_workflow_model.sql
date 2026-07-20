@@ -31,8 +31,8 @@ BEGIN
         Status nvarchar(30) NOT NULL CONSTRAINT DF_WorkflowRequest_Status DEFAULT (N'Draft'),
         SubmittedOn datetime2(0) NULL,
         CompletedOn datetime2(0) NULL,
-        CreatedOn datetime2(0) NOT NULL CONSTRAINT DF_WorkflowRequest_CreatedOn DEFAULT (SYSUTCDATETIME()),
-        ModifiedOn datetime2(0) NOT NULL CONSTRAINT DF_WorkflowRequest_ModifiedOn DEFAULT (SYSUTCDATETIME()),
+        CreatedOn datetime2(0) NULL CONSTRAINT DF_WorkflowRequest_CreatedOn DEFAULT (SYSUTCDATETIME()),
+        ModifiedOn datetime2(0) NULL CONSTRAINT DF_WorkflowRequest_ModifiedOn DEFAULT (SYSUTCDATETIME()),
         RowVersion rowversion NOT NULL,
         CONSTRAINT FK_WorkflowRequest_RequestType FOREIGN KEY (RequestTypeId) REFERENCES app.RequestType(RequestTypeId),
         CONSTRAINT FK_WorkflowRequest_Requestor FOREIGN KEY (RequestorEmployeeId) REFERENCES org.Employee(EmployeeId),
@@ -41,6 +41,28 @@ BEGIN
         CONSTRAINT CK_WorkflowRequest_Status CHECK (Status IN (N'Draft', N'Submitted', N'In Review', N'Approved', N'Rejected', N'Cancelled'))
     );
 END;
+GO
+
+IF EXISTS
+(
+    SELECT 1
+    FROM sys.columns
+    WHERE object_id = OBJECT_ID(N'app.WorkflowRequest')
+      AND name = N'CreatedOn'
+      AND is_nullable = 0
+)
+    ALTER TABLE app.WorkflowRequest ALTER COLUMN CreatedOn datetime2(0) NULL;
+GO
+
+IF EXISTS
+(
+    SELECT 1
+    FROM sys.columns
+    WHERE object_id = OBJECT_ID(N'app.WorkflowRequest')
+      AND name = N'ModifiedOn'
+      AND is_nullable = 0
+)
+    ALTER TABLE app.WorkflowRequest ALTER COLUMN ModifiedOn datetime2(0) NULL;
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'app.WorkflowRequest') AND name = N'IX_WorkflowRequest_Status_Requestor')
@@ -61,7 +83,7 @@ BEGIN
         DecisionComment nvarchar(1000) NULL,
         DueOn datetime2(0) NULL,
         ActedOn datetime2(0) NULL,
-        CreatedOn datetime2(0) NOT NULL CONSTRAINT DF_ApprovalTask_CreatedOn DEFAULT (SYSUTCDATETIME()),
+        CreatedOn datetime2(0) NULL CONSTRAINT DF_ApprovalTask_CreatedOn DEFAULT (SYSUTCDATETIME()),
         RowVersion rowversion NOT NULL,
         CONSTRAINT UQ_ApprovalTask_Request_Step UNIQUE (RequestId, StepNumber),
         CONSTRAINT FK_ApprovalTask_Request FOREIGN KEY (RequestId) REFERENCES app.WorkflowRequest(RequestId),
@@ -70,6 +92,17 @@ BEGIN
         CONSTRAINT CK_ApprovalTask_Decision CHECK (Decision IS NULL OR Decision IN (N'Approved', N'Rejected'))
     );
 END;
+GO
+
+IF EXISTS
+(
+    SELECT 1
+    FROM sys.columns
+    WHERE object_id = OBJECT_ID(N'app.ApprovalTask')
+      AND name = N'CreatedOn'
+      AND is_nullable = 0
+)
+    ALTER TABLE app.ApprovalTask ALTER COLUMN CreatedOn datetime2(0) NULL;
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'app.ApprovalTask') AND name = N'IX_ApprovalTask_Assignee_Status')
