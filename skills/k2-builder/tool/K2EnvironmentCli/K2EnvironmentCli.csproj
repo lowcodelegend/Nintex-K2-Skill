@@ -48,6 +48,7 @@
     <Compile Include="ProfileStore.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="RuntimeAssemblyResolver.cs" />
+    <Compile Include="ShortCodeRegistry.cs" />
     <Compile Include="Validator.cs" />
   </ItemGroup>
   <ItemGroup><None Include="App.config" /></ItemGroup>

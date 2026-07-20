@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace K2EnvironmentCli
 {
@@ -31,6 +33,11 @@ namespace K2EnvironmentCli
             var hasSmartFormsMetadata = profile.SmartForms != null && profile.SmartForms.Themes != null && profile.SmartForms.StyleProfiles != null;
             Check(checks, "smartforms-metadata", hasSmartFormsMetadata,
                 hasSmartFormsMetadata ? profile.SmartForms.Themes.Count + " theme(s), " + profile.SmartForms.StyleProfiles.Count + " style profile(s)" : "missing; refresh the environment profile");
+            var registrations = profile.SolutionCodes ?? new List<SolutionCodeRegistration>();
+            var validRegistrations = registrations.All(x => x != null && Regex.IsMatch(x.Code ?? string.Empty, "^[A-Z]{3,4}$") && !string.IsNullOrWhiteSpace(x.SolutionName)) &&
+                registrations.Select(x => x.Code).Distinct(StringComparer.OrdinalIgnoreCase).Count() == registrations.Count;
+            Check(checks, "solution-code-registry", validRegistrations,
+                validRegistrations ? registrations.Count + " unique reservation(s)" : "invalid or duplicate solution-code reservation(s)");
             if (hasSmartFormsMetadata && string.Equals(profile.SmartForms.StyleProfileSelection, "selected", StringComparison.OrdinalIgnoreCase))
             {
                 var selected = profile.SmartForms.DefaultStyleProfile;

@@ -10,10 +10,29 @@ namespace K2EnvironmentCli
         public K2Settings K2 { get; set; }
         public UrlSettings Urls { get; set; }
         public SmartFormsSettings SmartForms { get; set; }
+        public List<SolutionCodeRegistration> SolutionCodes { get; set; }
+        public List<ObservedSolutionCode> ObservedSolutionCodes { get; set; }
         public EnvironmentFingerprint Fingerprint { get; set; }
         public DiscoveryMetadata Discovery { get; set; }
         public string CreatedUtc { get; set; }
         public string LastValidatedUtc { get; set; }
+    }
+
+    public sealed class SolutionCodeRegistration
+    {
+        public string Code { get; set; }
+        public string SolutionName { get; set; }
+        public string RootCategoryPath { get; set; }
+        public string ManifestPath { get; set; }
+        public string RegisteredUtc { get; set; }
+        public string UpdatedUtc { get; set; }
+    }
+
+    public sealed class ObservedSolutionCode
+    {
+        public string Code { get; set; }
+        public int ArtifactCount { get; set; }
+        public List<string> Samples { get; set; }
     }
 
     public sealed class SmartFormsSettings

@@ -8,6 +8,7 @@ using System.Net.NetworkInformation;
 using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using SourceCode.Forms.Management;
 using SourceCode.Hosting.Client.BaseAPI;
@@ -34,7 +35,8 @@ namespace K2EnvironmentCli
             var host = string.IsNullOrWhiteSpace(hostOverride) ? "localhost" : hostOverride.Trim();
             var webBase = !string.IsNullOrWhiteSpace(baseUrlOverride) ? NormalizeBaseUrl(baseUrlOverride) :
                 iis != null ? iis.BaseUrl : "http://" + (string.IsNullOrWhiteSpace(domain) ? machine : machine + "." + domain);
-            var smartForms = DiscoverSmartForms(host, sources);
+            List<ObservedSolutionCode> observedSolutionCodes;
+            var smartForms = DiscoverSmartForms(host, sources, out observedSolutionCodes);
 
             return new EnvironmentProfile
             {
@@ -53,6 +55,8 @@ namespace K2EnvironmentCli
                     Management = CombineUrl(webBase, iis == null ? "/Management" : iis.ManagementPath)
                 },
                 SmartForms = smartForms,
+                SolutionCodes = new List<SolutionCodeRegistration>(),
+                ObservedSolutionCodes = observedSolutionCodes,
                 Fingerprint = new EnvironmentFingerprint
                 {
                     Machine = machine, Domain = domain, K2InstallId = Hash(machine + "|" + install.ToUpperInvariant() + "|" + version)
@@ -67,7 +71,7 @@ namespace K2EnvironmentCli
             };
         }
 
-        private static SmartFormsSettings DiscoverSmartForms(string host, List<string> sources)
+        private static SmartFormsSettings DiscoverSmartForms(string host, List<string> sources, out List<ObservedSolutionCode> observedSolutionCodes)
         {
             var builder = new SCConnectionStringBuilder
             {
@@ -97,11 +101,14 @@ namespace K2EnvironmentCli
                             IsInternal = x.IsInternal,
                             Version = x.Version
                         }).ToList();
-                    var headers = manager.GetViews().Views.Cast<ViewInfo>()
+                    var views = manager.GetViews().Views.Cast<ViewInfo>().ToList();
+                    var forms = manager.GetForms().Forms.Cast<FormInfo>().ToList();
+                    var headers = views
                         .Where(IsHeaderCandidate)
                         .OrderBy(x => x.IsSystem).ThenBy(x => x.CategoryPath).ThenBy(x => x.DisplayName)
                         .Select(x => ReadHeader(manager, x, false)).ToList();
-                    sources.Add("K2 FormsManager themes, style profiles, and common framework-view candidates");
+                    observedSolutionCodes = ObserveSolutionCodes(forms, views);
+                    sources.Add("K2 FormsManager themes, style profiles, common framework-view candidates, and solution-code candidates");
                     return new SmartFormsSettings
                     {
                         Themes = themes,
@@ -126,6 +133,42 @@ namespace K2EnvironmentCli
                     }
                 }
             }
+        }
+
+        private static List<ObservedSolutionCode> ObserveSolutionCodes(IEnumerable<FormInfo> forms, IEnumerable<ViewInfo> views)
+        {
+            var artifacts = forms.Select(x => new { Kind = "Form", x.Name, x.DisplayName, x.CategoryPath })
+                .Concat(views.Select(x => new { Kind = "View", x.Name, x.DisplayName, x.CategoryPath }));
+            var observations = new List<KeyValuePair<string, string>>();
+            foreach (var artifact in artifacts)
+            {
+                var code = ExtractSolutionCode(artifact.Name) ?? ExtractSolutionCode(artifact.DisplayName) ?? ExtractCategoryCode(artifact.CategoryPath);
+                if (code == null) continue;
+                observations.Add(new KeyValuePair<string, string>(code, artifact.Kind + ": " + (artifact.DisplayName ?? artifact.Name) + " @ " + (artifact.CategoryPath ?? "(no category)")));
+            }
+            return observations.GroupBy(x => x.Key, StringComparer.OrdinalIgnoreCase).OrderBy(x => x.Key)
+                .Select(x => new ObservedSolutionCode
+                {
+                    Code = x.Key.ToUpperInvariant(),
+                    ArtifactCount = x.Count(),
+                    Samples = x.Select(y => y.Value).Distinct(StringComparer.OrdinalIgnoreCase).Take(10).ToList()
+                }).ToList();
+        }
+
+        private static string ExtractSolutionCode(string value)
+        {
+            var match = Regex.Match(value ?? string.Empty, @"^([A-Z]{3,4})\.", RegexOptions.CultureInvariant);
+            return match.Success ? match.Groups[1].Value : null;
+        }
+
+        private static string ExtractCategoryCode(string path)
+        {
+            foreach (var segment in (path ?? string.Empty).Split(new[] { '\\' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                var code = ExtractSolutionCode(segment);
+                if (code != null) return code;
+            }
+            return null;
         }
 
         public static List<HeaderViewCandidate> InspectHeaders(K2Settings settings, string hint)

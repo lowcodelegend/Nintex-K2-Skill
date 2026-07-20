@@ -86,10 +86,10 @@ Claude: /k2-builder create an expense approval solution with code EXP. Plan,
 ### `k2env` and `k2build`
 
 - Discover, persist, list, show, validate, and refresh K2 environment profiles.
-- Inventory K2 version, management port, IIS Designer/Runtime URLs, themes, Style Profiles, and common framework views.
+- Inventory K2 version, endpoints, themes, Style Profiles, common framework views, and short-code use on existing Forms/Views.
 - Persist Style Profile and header/footer lifecycle choices, including rule calls, control transfers, titles, and ordering.
 - Validate and plan complete solution manifests with SQL → SmartObjects → SmartForms → workflow dependencies.
-- Enforce 3–4 letter solution codes, version-free names, shared categories, workflow states, approval-matrix/Admin UX, and end-to-end master-detail contracts.
+- Reserve unique 3–4 letter solution codes per environment; enforce version-free names, shared categories, workflow states, approval-matrix/Admin UX, and master-detail contracts.
 - Copy bundled `corporate-workflow`, `expense-claim`, and `request-management` examples into a project.
 
 ### `k2sql`

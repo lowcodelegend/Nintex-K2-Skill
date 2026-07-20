@@ -147,6 +147,8 @@ The disposable workflow proof published and removed both designer/runtime layers
 
 ## Important constraints
 
+- Solution codes need environment-level ownership, not merely a local format check. `k2env` now retains reservations across projects and refreshes a basic observed-use inventory from K2 Forms and Views. Existing pre-registry applications require explicit adoption; this prevents silently assigning their prefixes to unrelated new solutions while still allowing intentional continuation.
+
 - K2 documentation explicitly warns against direct access or modification of the K2 database. All K2 mutations must go through supported APIs.
 - Automatic generation currently targets all service objects discovered in the database. Use a dedicated application database or carefully control SQL visibility until selective generation is implemented.
 - Generated SmartObjects are convenient but provide less naming and method control than manually designed advanced SmartObjects.

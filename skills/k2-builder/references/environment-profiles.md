@@ -53,7 +53,19 @@ If validation passes, use the stored values and do not repeat full discovery. Ap
 
 `explicit user/manifest value → selected environment profile → tool default`
 
-The environment profile supplies K2 host, ports, integrated-authentication mode, security label, install directory, detected product build, Designer host token, public base URLs, installed SmartForms legacy themes/Style Profiles/framework candidates, the chosen default Style Profile, and the selected common-framework lifecycle/layout contract. For SmartForms use `explicit manifest value → selected environment default → deliberate exception`; stop and ask while either selection is `unselected`. `k2forms` automatically consumes the selected header/footer contract unless `application.commonHeader` explicitly selects/overrides it or disables it with a reason. The profile does not replace application-specific SQL database settings.
+The environment profile supplies K2 host, ports, integrated-authentication mode, security label, install directory, detected product build, Designer host token, public base URLs, installed SmartForms legacy themes/Style Profiles/framework candidates, the chosen default Style Profile, the selected common-framework lifecycle/layout contract, and a durable solution-code registry. For SmartForms use `explicit manifest value → selected environment default → deliberate exception`; stop and ask while either selection is `unselected`. `k2forms` automatically consumes the selected header/footer contract unless `application.commonHeader` explicitly selects/overrides it or disables it with a reason. The profile does not replace application-specific SQL database settings.
+
+## Solution short-code uniqueness
+
+Discovery and refresh inventory three- or four-letter prefixes already visible on K2 Forms and Views. Before creating any solution artifacts, check and reserve a code in the selected environment:
+
+```powershell
+& '<k2-builder-root>\scripts\k2env.ps1' check-short-code --name spk2-local --code EXP --solution 'EXP.Expense Claims'
+& '<k2-builder-root>\scripts\k2env.ps1' reserve-short-code --name spk2-local --code EXP --solution 'EXP.Expense Claims' --root-category 'K2 Skills\EXP.Expense Claims' --manifest '.\solution-manifest.json'
+& '<k2-builder-root>\scripts\k2env.ps1' list-short-codes --name spk2-local
+```
+
+A reservation is idempotent only for the same solution name and rejects another solution. An observed but unreserved code also fails: use `--adopt-existing` only after proving the artifacts are the same solution created before the registry existed. `release-short-code` requires the matching solution name and `--confirm`; live artifacts can keep a released code observed and therefore unavailable. This is a basic guard based on the durable registry plus Forms/Views inventory, not a substitute for inspecting every external database or non-SmartForms repository.
 
 ## Maintenance
 
