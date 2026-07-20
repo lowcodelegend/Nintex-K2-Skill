@@ -6,6 +6,7 @@ From the skill directory:
 & '.\scripts\k2wf.ps1' doctor
 & '.\scripts\k2wf.ps1' plan '<manifest.json>'
 & '.\scripts\k2wf.ps1' render '<manifest.json>' --output '<workflow.json>'
+& '.\scripts\k2wf.ps1' export '<manifest.json>' --output '<workflow.json>'
 & '.\scripts\k2wf.ps1' deploy '<manifest.json>' --confirm
 & '.\scripts\k2wf.ps1' inspect '<manifest.json>'
 & '.\scripts\k2wf.ps1' verify '<manifest.json>'
@@ -13,9 +14,9 @@ From the skill directory:
 & '.\scripts\k2wf.ps1' cleanup '<manifest.json>' --confirm --delete-deployed
 ```
 
-`render` does not mutate K2, but SmartForms-integrated rendering reads live SmartObject and form metadata. `deploy` uses the K2-qualified logged-on AD identity, publishes the JSON, invokes K2's own SmartForms integration providers, then explicitly unlocks and checks the saved process. `verify` checks unique connector geometry, required events, the primary item reference, Start/Task form rules, and the runtime definition. `cleanup --delete-deployed` removes CLI-owned Start/Task states before deleting an instance-free workflow.
+`render` does not mutate K2, but SmartForms-integrated rendering reads live SmartObject and form metadata. `export` copies the exact saved Designer JSON without locking it. `deploy` uses K2's resolved logged-on AD identity, publishes the JSON, invokes K2's own SmartForms integration providers, then explicitly unlocks the saved process. `verify` checks the six-node decision topology, unique connector geometry, required events, the primary item reference, Start/Task form rules, and the runtime definition. `cleanup --delete-deployed` removes CLI-owned Start/Task states before deleting an instance-free workflow.
 
-`unlock` is an idempotent recovery command for workflows left locked by an interrupted CLI or browser session. K2 locks are client-session-sensitive, so a workflow can appear locked by the same AD username when the browser has a different client identifier.
+`unlock` is an idempotent recovery command for workflows left locked by an interrupted CLI or browser session. K2 locks are client-session-sensitive, so a workflow can appear locked by the same AD username when the browser has a different client identifier. Do not follow the unlock with `GetUserProcessKprx` or use `GetProcessJson` for inspection; those calls reacquire the lock in this K2 build. `inspect`, `export`, and `verify` use the non-locking metadata/version-history path.
 
 Cleanup first refuses any workflow with runtime instances. It unsets the K2 default runtime version, deletes the exact runtime definitions without log deletion, then removes the exact designer JSON/category link. It does not remove the `Workflows` category.
 

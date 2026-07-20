@@ -16,11 +16,11 @@ Use `scripts/k2wf.ps1`; do not write to the K2 database or invoke legacy workflo
 5. Run `inspect` and `verify`. Verification must prove both the saved JSON and, when `publish=true`, the runtime process definition.
 6. For a disposable workflow, run `cleanup ... --confirm --delete-deployed` and prove `inspect` no longer finds it.
 
-`deploy` explicitly releases the HTML5 designer lock with the K2-qualified AD identity and verifies the lock is gone after every successful save/publish. If a prior tool/browser session left a workflow locked, run `unlock <manifest> --confirm`, then refresh the Designer page.
+`deploy` explicitly releases the HTML5 designer lock with K2's resolved AD identity after every successful save/publish. If a prior tool/browser session left a workflow locked, run `unlock <manifest> --confirm`, then refresh the Designer page. Do not inspect through `GetUserProcessKprx` or `GetProcessJson`: on K2 Five 5.10 those reads check the process out again. The CLI's read commands use `GetProcessInfo` plus `GetProcessDefinitionPerVersion` instead.
 
 ## Generated workflows
 
-Use `workflow.kind=request-approval` for the preferred 101 baseline: SmartForm Start → request SmartObject Update → Email Originator → User Task for Originator's Manager → End. Configure `workflow.smartForms.form`; the CLI discovers the form's primary Create reference, creates a primary workflow item reference, embeds a native SmartForm task reference, and uses K2's own integration providers to add workflow-specific Start and Task states/rules. Existing form states and rules are preserved. `deploy` is idempotent and `verify` proves both rules exist.
+Use `workflow.kind=request-approval` for the preferred 101 baseline: SmartForm Start → Pending status plus Originator email → SmartForms User Task for Originator's Manager → Decision → Approved or Rejected status plus Originator email. Configure exactly two task actions and the pending/approved/rejected status values. The CLI discovers the form's primary Create reference, creates a primary workflow item reference, embeds a native SmartForm task reference, and uses K2's own integration providers to add workflow-specific Start and Task states/rules. Existing form states and rules are preserved. `deploy` is idempotent and `verify` proves the six-node/five-link topology and both form rules exist.
 
 Use `$environment:From Address`, `$originator`, and `$originatorManager` for the standard dynamic fields. A literal `formUrl`/assignee/email remains available only as the lower-level fallback when `workflow.smartForms` is omitted. Prefer native SmartForms integration because it adds the StartProcess, LoadProcess, and ActionProcess rules required by K2's workflow wizard contract.
 

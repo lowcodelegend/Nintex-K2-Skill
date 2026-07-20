@@ -24,7 +24,9 @@
       "method": "Update",
       "identifierProperty": "RequestId",
       "statusProperty": "Status",
-      "statusValue": "Pending Approval"
+      "statusValue": "Pending Approval",
+      "approvedStatusValue": "Approved",
+      "rejectedStatusValue": "Rejected"
     },
     "email": {
       "name": "Send Approval Notification",
@@ -38,7 +40,7 @@
       "name": "Review Request",
       "assignees": ["$originatorManager"],
       "instructions": "Review the request and select an outcome.",
-      "actions": ["Approve", "Reject", "Rework"]
+      "actions": ["Approve", "Reject"]
     },
     "smartForms": {
       "form": "Request Management",
@@ -57,7 +59,7 @@
 Kinds:
 
 - `start-end`: generate the tested K2 Five schema-14 Start → End definition.
-- `request-approval`: generate SmartForm Start → SmartObject status Update → Email → User Task → End. The Update method and form must already exist. The form must expose the request SmartObject as its primary Create reference. The workflow maps that item reference's identifier into the Update method, adds workflow-specific Start/Task states, and passes `SerialNo` plus `_state` to the task form.
+- `request-approval`: generate the tested Human-example topology: SmartForm Start → pending status Update plus Originator Email → Originator Manager User Task → Decision → approved/rejected status Update plus Originator Email. SmartForms mode requires exactly two task actions. The Update method and form must already exist. The form must expose the request SmartObject as its primary Create reference. The workflow maps that item reference's identifier into all three Update events, adds workflow-specific Start/Task states, and passes `SerialNo` plus `_state` to the task form.
 - `json-file`: load `workflow.definitionFile` relative to the manifest. The JSON must have root `componentId=50001`, nodes, links, configuration, and an HTML5 start activity.
 
 `publish=false` saves an editable designer draft. `publish=true` compiles the JSON and deploys a runtime process version. `replaceExisting` must be true to update an existing JSON process.

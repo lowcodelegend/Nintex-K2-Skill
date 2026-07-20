@@ -68,6 +68,8 @@ namespace K2WorkflowCli
             Required(update.IdentifierProperty, "workflow.requestStatusUpdate.identifierProperty");
             Required(update.StatusProperty, "workflow.requestStatusUpdate.statusProperty");
             Required(update.StatusValue, "workflow.requestStatusUpdate.statusValue");
+            if (string.IsNullOrWhiteSpace(update.ApprovedStatusValue)) update.ApprovedStatusValue = "Approved";
+            if (string.IsNullOrWhiteSpace(update.RejectedStatusValue)) update.RejectedStatusValue = "Rejected";
             if (string.IsNullOrWhiteSpace(update.IdentifierDataField)) update.IdentifierDataField = update.IdentifierProperty;
 
             var email = Workflow.Email;
@@ -99,6 +101,8 @@ namespace K2WorkflowCli
                 if (string.IsNullOrWhiteSpace(Workflow.SmartForms.StartRuleContains)) Workflow.SmartForms.StartRuleContains = "Create Button";
                 ValidateNoVersion(Workflow.SmartForms.StartState, "workflow.smartForms.startState");
                 ValidateNoVersion(Workflow.SmartForms.TaskState, "workflow.smartForms.taskState");
+                if (task.Actions.Count != 2)
+                    throw new CliException("SmartForms request-approval requires exactly two actions for decision routing.");
             }
             else
             {
@@ -160,6 +164,8 @@ namespace K2WorkflowCli
         [JsonProperty("identifierDataField")] public string IdentifierDataField { get; set; }
         [JsonProperty("statusProperty")] public string StatusProperty { get; set; }
         [JsonProperty("statusValue")] public string StatusValue { get; set; }
+        [JsonProperty("approvedStatusValue")] public string ApprovedStatusValue { get; set; }
+        [JsonProperty("rejectedStatusValue")] public string RejectedStatusValue { get; set; }
     }
 
     internal sealed class EmailSettings

@@ -42,16 +42,16 @@ Next increments:
 - Add authenticated browser automation for visual, accessibility, and full CRUD tests.
 - Add workflow start/action rules after the workflow-builder contract exists.
 
-### 4. K2 workflow builder — v0.2 implemented
+### 4. K2 workflow builder — v0.4 implemented
 
-The builder creates, saves, publishes, inspects, verifies, and safely removes K2 Five HTML5 Workflow Designer JSON definitions. Its request-approval baseline now uses a primary SmartForms item reference, updates request status, emails the Originator, assigns a native SmartForms task to the Originator's Manager, and additively creates the form's Start/Task rules through the same providers as the browser wizard. Connector geometry and post-publish locks are verified. Next: decision routing and outcome-specific updates.
+The builder creates, exports, saves, publishes, inspects, verifies, and safely removes K2 Five HTML5 Workflow Designer JSON definitions. Its request-approval baseline now recreates the Human-example topology: a primary SmartForms item reference; Pending, Approved, and Rejected status updates; Originator emails; a native task for the Originator's Manager; Approved/Rejected decision routing; and additive Start/Task form rules through the same providers as the browser wizard. Exact connector geometry renders immediately. Post-publish unlock no longer performs the read that silently checked the process out again, and a fresh browser profile opens the generated workflow on the first attempt.
 
 Next increments:
 
-- Add decision/split/merge routing, outcome-specific status updates, and rework loops.
+- Add rework loops and general split/merge routing beyond the two-outcome approval template.
 - Add SmartObject item references and property-driven recipients/content.
 - Add task notifications, reminders, deadlines, and escalations.
-- Add subworkflows, exception paths, instance-start/task-action smoke tests, and rollback/export.
+- Add subworkflows, exception paths, instance-start/task-action smoke tests, and rollback/import.
 
 ### 5. K2 categories and packaging
 

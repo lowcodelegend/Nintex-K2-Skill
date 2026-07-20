@@ -23,8 +23,9 @@ namespace K2WorkflowCli
         {
             _manifest = manifest;
             var identity = WindowsIdentity.GetCurrent();
-            _userName = identity.Name.StartsWith("K2:", StringComparison.OrdinalIgnoreCase) ? identity.Name : "K2:" + identity.Name;
-            System.Threading.Thread.CurrentPrincipal = new WindowsPrincipal(identity);
+            var principal = new WindowsPrincipal(identity);
+            System.Threading.Thread.CurrentPrincipal = principal;
+            _userName = ResolveDesignerUser(principal);
             _client = CreateDesignerClient();
             _clientType = _client.GetType();
         }
@@ -95,10 +96,11 @@ namespace K2WorkflowCli
                 var property = info.GetType().GetProperty("JsonId");
                 if (property != null && property.GetValue(info, null) != null) jsonId = Convert.ToString(property.GetValue(info, null));
             }
+            var clientIdentifier = Guid.NewGuid();
             var response = Invoke("SaveKprx", _manifest.K2.DesignerHost, _userName, processId, jsonId,
                 _manifest.Workflow.ProcessFullName, Render(), categoryId.ToString(), true,
                 string.IsNullOrWhiteSpace(_manifest.Workflow.Comment) ? "Published by k2wf" : _manifest.Workflow.Comment,
-                _manifest.Workflow.Publish, true, Guid.NewGuid(), true, true);
+                _manifest.Workflow.Publish, true, clientIdentifier, true, true);
             var result = JObject.Parse(Convert.ToString(response));
             if ((bool?)result["Success"] != true)
             {
@@ -136,6 +138,8 @@ namespace K2WorkflowCli
             var json = GetStringProperty(info, "Json");
             var root = WorkflowJsonBuilder.ParseAndValidate(json, _manifest.Workflow.Name);
             Console.WriteLine("Workflow: " + _manifest.Workflow.ProcessFullName);
+            var category = FindCategory(_manifest.Application.WorkflowsCategoryPath);
+            if (category != null) Console.WriteLine("Category ID: " + Convert.ToString(category["id"]));
             Console.WriteLine("JSON process ID: " + id.Value);
             Console.WriteLine("Designer schema version: " + GetStringProperty(info, "DesignerVersion"));
             Console.WriteLine("JSON ID: " + GetStringProperty(info, "JsonId"));
@@ -146,6 +150,16 @@ namespace K2WorkflowCli
                 .Select(x => Convert.ToString(x["componentId"])).ToArray();
             if (eventTypes.Length > 0) Console.WriteLine("Event components: " + string.Join(", ", eventTypes));
             Console.WriteLine("JSON bytes: " + System.Text.Encoding.UTF8.GetByteCount(json));
+        }
+
+        public void Export(string outputPath)
+        {
+            var id = GetProcessId();
+            if (!id.HasValue) throw new CliException("Workflow not found: " + _manifest.Workflow.ProcessFullName);
+            var directory = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
+            File.WriteAllText(outputPath, GetStringProperty(GetProcessInfo(id.Value), "Json"));
+            Console.WriteLine("Exported workflow JSON: " + outputPath);
         }
 
         public void Verify()
@@ -178,6 +192,16 @@ namespace K2WorkflowCli
                 }
                 else
                 {
+                    var nodes = ((JArray)root["nodes"]).OfType<JObject>().ToArray();
+                    var links = ((JArray)root["links"]).OfType<JObject>().ToArray();
+                    if (nodes.Length != 6 || links.Length != 5 ||
+                        !nodes.Any(x => string.Equals(Convert.ToString(x["systemName"]), "Decision", StringComparison.Ordinal)))
+                        throw new CliException("Saved SmartForms request-approval workflow does not have the expected six-node decision topology.");
+                    if (components.Count(x => x == 30011) != 3 || components.Count(x => x == 30004) != 3 || components.Count(x => x == 30009) != 1)
+                        throw new CliException("Saved SmartForms request-approval workflow does not contain three status updates, three emails, and one task.");
+                    var branchTitles = links.Select(x => Convert.ToString(x["title"])).Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
+                    if (!branchTitles.Contains("Approved") || !branchTitles.Contains("Rejected"))
+                        throw new CliException("Saved SmartForms request-approval workflow is missing Approved/Rejected decision branches.");
                     var items = root["configuration"]["itemReferences"] as JArray;
                     if (items == null || !items.OfType<JObject>().Any(x => (bool?)x["primary"] == true))
                         throw new CliException("Saved workflow is missing its primary SmartForms item reference.");
@@ -281,15 +305,27 @@ namespace K2WorkflowCli
             return value == null ? (int?)null : Convert.ToInt32(value);
         }
 
-        private object GetProcessInfo(int id) { return Invoke("GetProcessJson", id); }
+        private object GetProcessInfo(int id)
+        {
+            object metadata;
+            try { metadata = _clientType.GetMethod("GetProcessInfo", new[] { typeof(int) }).Invoke(_client, new object[] { id }); }
+            catch (TargetInvocationException ex) { throw new CliException(ex.GetBaseException().Message); }
+            var version = GetStringProperty(metadata, "Version");
+            if (string.IsNullOrWhiteSpace(version))
+                version = GetStringProperty(metadata, "MajorNo") + "." + GetStringProperty(metadata, "MinorNo");
+            object definition;
+            try { definition = _clientType.GetMethod("GetProcessDefinitionPerVersion", new[] { typeof(int), typeof(string) }).Invoke(_client, new object[] { id, version }); }
+            catch (TargetInvocationException ex) { throw new CliException(ex.GetBaseException().Message); }
+            if (definition == null) throw new CliException("K2 did not return workflow version " + version + " for process " + id + ".");
+            return definition;
+        }
         private void Unlock(int processId)
         {
-            Invoke("ExecuteFrameworkMethod", _manifest.K2.DesignerHost, "Process", "Processdataservice", "UnlockProcess",
-                CultureInfo.CurrentUICulture.Name, new object[] { processId, _userName });
-            var userProcess = Invoke("GetUserProcessKprx", _manifest.K2.DesignerHost, processId, _userName);
-            var lockedBy = GetStringProperty(userProcess, "LockedBy");
-            if (!string.IsNullOrWhiteSpace(lockedBy))
-                throw new CliException("K2 still reports the workflow locked by " + lockedBy + " after unlock.");
+            var unlockResult = Convert.ToString(Invoke("ExecuteFrameworkMethod", _manifest.K2.DesignerHost, "Process", "Processdataservice", "UnlockProcess",
+                CultureInfo.CurrentUICulture.Name, new object[] { processId, _userName }));
+            int affected;
+            if (!int.TryParse(unlockResult, NumberStyles.Integer, CultureInfo.InvariantCulture, out affected))
+                throw new CliException("K2 rejected the workflow unlock: " + unlockResult);
         }
         private object Invoke(string name, params object[] args)
         {
@@ -310,6 +346,20 @@ namespace K2WorkflowCli
             var method = type.GetMethods(BindingFlags.Instance | BindingFlags.Public)
                 .Single(x => x.Name == "GetBaseApi" && !x.IsGenericMethod && x.GetParameters().Length == 0);
             return method.Invoke(context, null);
+        }
+
+        private static string ResolveDesignerUser(IPrincipal principal)
+        {
+            var assembly = Assembly.LoadFrom(Path.Combine(RuntimeAssemblyResolver.WorkflowDesignerBin, "SourceCode.K2Designer.dll"));
+            var type = assembly.GetType("SourceCode.K2Designer.ProcessBase.ConnectionClassContext", true);
+            var context = Activator.CreateInstance(type);
+            var value = Convert.ToString(type.GetMethod("GetUser").Invoke(context, new object[] { principal }));
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                var name = principal.Identity.Name;
+                return name.StartsWith("K2:", StringComparison.OrdinalIgnoreCase) ? name : "K2:" + name;
+            }
+            return value;
         }
 
         private static string GetStringProperty(object value, string propertyName)
