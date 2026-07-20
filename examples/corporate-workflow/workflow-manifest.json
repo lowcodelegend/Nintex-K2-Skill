@@ -20,25 +20,30 @@
       "smartObject": "K2Skills_CorporateWorkflow_Test_app_WorkflowRequest",
       "method": "Update",
       "identifierProperty": "RequestId",
-      "identifierDataField": "WorkflowRequestId",
       "statusProperty": "Status",
       "statusValue": "Pending Approval"
     },
     "email": {
       "name": "Send Approval Notification",
-      "from": "administrator@trials.demome.tech",
-      "to": ["administrator@trials.demome.tech"],
+      "from": "$environment:From Address",
+      "to": ["$originator"],
       "subject": "Corporate request awaiting approval",
       "body": "A corporate workflow request is awaiting your approval.",
       "html": false
     },
     "userTask": {
       "name": "Review Corporate Request",
-      "assignees": ["K2:TRIALS\\Administrator"],
+      "assignees": ["$originatorManager"],
       "instructions": "Review the corporate request and select an outcome.",
-      "actions": ["Approve", "Reject", "Rework"],
-      "formUrl": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/CW+Approval+Task+Management/",
-      "requestIdParameter": "RequestId"
+      "actions": ["Approve", "Reject", "Rework"]
+    },
+    "smartForms": {
+      "form": "CW Request Management",
+      "startState": "CW Request Approval Start",
+      "taskState": "CW Request Approval Task",
+      "startRuleContains": "Create Button",
+      "makeStartStateDefault": false,
+      "workflowStripLocation": "bottom"
     }
   }
 }

@@ -1,6 +1,6 @@
 ---
 name: k2-workflows
-description: Build, publish, inspect, verify, and clean up K2 Five HTML5 Workflow Designer JSON workflows using declarative manifests and the bundled k2wf .NET CLI. Use for modern JSON workflows, request SmartObject status updates, email events, user tasks/actions, SmartForms task URLs, K2 workflow categories, deployment/version verification, or repeatable workflow construction. Do not use for legacy K2 Studio/K2 Designer XML authoring, cloud Nintex Workflow, creating SmartForms/SmartObjects, or direct K2 database changes.
+description: Build, publish, inspect, verify, and clean up K2 Five HTML5 Workflow Designer JSON workflows using declarative manifests and the bundled k2wf .NET CLI. Use for modern JSON workflows, request SmartObject status updates, Originator email, user tasks/actions, Originator Manager assignment, native SmartForms Start/Task integration, K2 workflow categories, deployment/version verification, or repeatable workflow construction. Do not use for legacy K2 Studio/K2 Designer XML authoring, cloud Nintex Workflow, creating SmartForms/SmartObjects, or direct K2 database changes.
 ---
 
 # K2 Five workflows
@@ -16,11 +16,13 @@ Use `scripts/k2wf.ps1`; do not write to the K2 database or invoke legacy workflo
 5. Run `inspect` and `verify`. Verification must prove both the saved JSON and, when `publish=true`, the runtime process definition.
 6. For a disposable workflow, run `cleanup ... --confirm --delete-deployed` and prove `inspect` no longer finds it.
 
-`deploy` explicitly releases the HTML5 designer lock after every successful save/publish. If a prior tool/browser session left a workflow locked, run `unlock <manifest> --confirm`, then refresh the Designer page. Do not assume that matching the displayed lock owner makes a different browser client identifier editable.
+`deploy` explicitly releases the HTML5 designer lock with the K2-qualified AD identity and verifies the lock is gone after every successful save/publish. If a prior tool/browser session left a workflow locked, run `unlock <manifest> --confirm`, then refresh the Designer page.
 
 ## Generated workflows
 
-Use `workflow.kind=request-approval` for the typed baseline: Start → request SmartObject Update → Email → User Task → End. Supply an existing request SmartObject Update method, identifier/status inputs, literal email settings, K2 assignees/actions, and an absolute task-form URL. The CLI loads live SmartObject metadata, rejects missing/wrong inputs, creates a process identifier data field, maps it into the Update method, and verifies all three event components after deployment.
+Use `workflow.kind=request-approval` for the preferred 101 baseline: SmartForm Start → request SmartObject Update → Email Originator → User Task for Originator's Manager → End. Configure `workflow.smartForms.form`; the CLI discovers the form's primary Create reference, creates a primary workflow item reference, embeds a native SmartForm task reference, and uses K2's own integration providers to add workflow-specific Start and Task states/rules. Existing form states and rules are preserved. `deploy` is idempotent and `verify` proves both rules exist.
+
+Use `$environment:From Address`, `$originator`, and `$originatorManager` for the standard dynamic fields. A literal `formUrl`/assignee/email remains available only as the lower-level fallback when `workflow.smartForms` is omitted. Prefer native SmartForms integration because it adds the StartProcess, LoadProcess, and ActionProcess rules required by K2's workflow wizard contract.
 
 Use `workflow.kind=start-end` for the minimal smoke-test baseline. Use `json-file` only with a definition produced by this K2 Five HTML5 designer schema; the CLI rejects non-JSON/legacy roots and normalizes the root name.
 
@@ -34,5 +36,6 @@ Read [references/design.md](references/design.md) before extending generated ste
 - Treat `deploy` and `cleanup` as mutations requiring explicit confirmation.
 - Cleanup refuses workflows with runtime instances and never deletes workflow log/instance data.
 - Preserve an existing workflow unless replacement is explicitly requested and reviewed.
-- Review email recipients, task assignees, form URLs, status values, and the request identifier data-field contract before publication.
+- Review email recipients, task assignment, target form/states, selected Start rule, status values, and primary SmartObject reference before publication.
+- SmartForms integration mutates the selected form additively. Export or otherwise preserve business-critical forms before the first automated integration, and verify the generated workflow-specific states after deployment.
 - Do not confuse `SourceCode.WebDesigner.*` plus the modern designer client with legacy K2 Studio/K2 Designer authoring APIs.

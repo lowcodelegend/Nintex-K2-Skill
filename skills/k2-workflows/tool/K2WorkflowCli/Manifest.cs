@@ -72,25 +72,41 @@ namespace K2WorkflowCli
 
             var email = Workflow.Email;
             if (email == null) throw new CliException("workflow.email is required for request-approval.");
-            Required(email.Name, "workflow.email.name"); Required(email.From, "workflow.email.from");
+            Required(email.Name, "workflow.email.name");
+            if (string.IsNullOrWhiteSpace(email.From)) email.From = "$environment:From Address";
             Required(email.Subject, "workflow.email.subject"); Required(email.Body, "workflow.email.body");
-            if (email.To == null || email.To.Count == 0 || email.To.Any(string.IsNullOrWhiteSpace))
+            if (email.To == null || email.To.Count == 0) email.To = new List<string> { "$originator" };
+            if (email.To.Any(string.IsNullOrWhiteSpace))
                 throw new CliException("workflow.email.to must contain at least one recipient.");
 
             var task = Workflow.UserTask;
             if (task == null) throw new CliException("workflow.userTask is required for request-approval.");
             Required(task.Name, "workflow.userTask.name"); Required(task.Instructions, "workflow.userTask.instructions");
-            Required(task.FormUrl, "workflow.userTask.formUrl");
-            Uri uri;
-            if (!Uri.TryCreate(task.FormUrl, UriKind.Absolute, out uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
-                throw new CliException("workflow.userTask.formUrl must be an absolute HTTP(S) URL.");
-            if (task.Assignees == null || task.Assignees.Count == 0 || task.Assignees.Any(string.IsNullOrWhiteSpace))
+            if (task.Assignees == null || task.Assignees.Count == 0) task.Assignees = new List<string> { "$originatorManager" };
+            if (task.Assignees.Any(string.IsNullOrWhiteSpace))
                 throw new CliException("workflow.userTask.assignees must contain at least one K2 user/group identity.");
             if (task.Actions == null || task.Actions.Count == 0 || task.Actions.Any(string.IsNullOrWhiteSpace))
                 throw new CliException("workflow.userTask.actions must contain at least one action.");
             if (task.Actions.Distinct(StringComparer.OrdinalIgnoreCase).Count() != task.Actions.Count)
                 throw new CliException("workflow.userTask.actions must be unique.");
             if (string.IsNullOrWhiteSpace(task.RequestIdParameter)) task.RequestIdParameter = update.IdentifierDataField;
+
+            if (Workflow.SmartForms != null)
+            {
+                Required(Workflow.SmartForms.Form, "workflow.smartForms.form");
+                if (string.IsNullOrWhiteSpace(Workflow.SmartForms.StartState)) Workflow.SmartForms.StartState = Workflow.Name + " Start";
+                if (string.IsNullOrWhiteSpace(Workflow.SmartForms.TaskState)) Workflow.SmartForms.TaskState = Workflow.Name + " Task";
+                if (string.IsNullOrWhiteSpace(Workflow.SmartForms.StartRuleContains)) Workflow.SmartForms.StartRuleContains = "Create Button";
+                ValidateNoVersion(Workflow.SmartForms.StartState, "workflow.smartForms.startState");
+                ValidateNoVersion(Workflow.SmartForms.TaskState, "workflow.smartForms.taskState");
+            }
+            else
+            {
+                Required(task.FormUrl, "workflow.userTask.formUrl");
+                Uri uri;
+                if (!Uri.TryCreate(task.FormUrl, UriKind.Absolute, out uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+                    throw new CliException("workflow.userTask.formUrl must be an absolute HTTP(S) URL when workflow.smartForms is omitted.");
+            }
         }
 
         private static void Required(string value, string field)
@@ -131,6 +147,7 @@ namespace K2WorkflowCli
         [JsonProperty("requestStatusUpdate")] public RequestStatusUpdateSettings RequestStatusUpdate { get; set; }
         [JsonProperty("email")] public EmailSettings Email { get; set; }
         [JsonProperty("userTask")] public UserTaskSettings UserTask { get; set; }
+        [JsonProperty("smartForms")] public SmartFormsSettings SmartForms { get; set; }
         [JsonIgnore] public string ProcessFullName { get { return "Workflows\\" + Name; } }
     }
 
@@ -163,5 +180,15 @@ namespace K2WorkflowCli
         [JsonProperty("actions")] public List<string> Actions { get; set; }
         [JsonProperty("formUrl")] public string FormUrl { get; set; }
         [JsonProperty("requestIdParameter")] public string RequestIdParameter { get; set; }
+    }
+
+    internal sealed class SmartFormsSettings
+    {
+        [JsonProperty("form")] public string Form { get; set; }
+        [JsonProperty("startState")] public string StartState { get; set; }
+        [JsonProperty("taskState")] public string TaskState { get; set; }
+        [JsonProperty("startRuleContains")] public string StartRuleContains { get; set; }
+        [JsonProperty("makeStartStateDefault")] public bool MakeStartStateDefault { get; set; }
+        [JsonProperty("workflowStripLocation")] public string WorkflowStripLocation { get; set; }
     }
 }

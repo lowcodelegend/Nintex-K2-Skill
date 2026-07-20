@@ -17,6 +17,9 @@ namespace K2WorkflowCli
         public List<SmartObjectInputDescriptor> Inputs { get; set; }
         public SmartObjectInputDescriptor Identifier { get; set; }
         public SmartObjectInputDescriptor Status { get; set; }
+        public string ReadMethodSystemName { get; set; }
+        public string ReadMethodDisplayName { get; set; }
+        public List<SmartObjectInputDescriptor> ReadReturns { get; set; }
     }
 
     internal sealed class SmartObjectInputDescriptor
@@ -69,6 +72,9 @@ namespace K2WorkflowCli
                 var status = inputs.FirstOrDefault(x => string.Equals(x.SystemName, settings.StatusProperty, StringComparison.OrdinalIgnoreCase));
                 if (identifier == null) throw new CliException("Identifier property is not an input of " + settings.Method + ": " + settings.IdentifierProperty);
                 if (status == null) throw new CliException("Status property is not an input of " + settings.Method + ": " + settings.StatusProperty);
+                var readMethod = smartObject.AllMethods.FirstOrDefault(x => string.Equals(x.Type.ToString(), "read", StringComparison.OrdinalIgnoreCase));
+                var readReturns = readMethod == null ? new List<SmartObjectInputDescriptor>() :
+                    readMethod.ReturnProperties.Cast<SmartProperty>().Select((property, index) => Describe(property, index + 1, false)).ToList();
                 return new SmartObjectDescriptor
                 {
                     SystemName = smartObject.Name,
@@ -76,8 +82,10 @@ namespace K2WorkflowCli
                     MethodSystemName = method.Name,
                     MethodDisplayName = string.IsNullOrWhiteSpace(method.Metadata.DisplayName) ? method.Name : method.Metadata.DisplayName,
                     MethodType = method.Type.ToString().ToLowerInvariant(),
-                    DefaultLoadMethod = smartObject.AllMethods.Where(x => string.Equals(x.Type.ToString(), "read", StringComparison.OrdinalIgnoreCase))
-                        .Select(x => x.Name).FirstOrDefault() ?? string.Empty,
+                    DefaultLoadMethod = readMethod == null ? string.Empty : readMethod.Name,
+                    ReadMethodSystemName = readMethod == null ? string.Empty : readMethod.Name,
+                    ReadMethodDisplayName = readMethod == null || string.IsNullOrWhiteSpace(readMethod.Metadata.DisplayName) ? (readMethod == null ? string.Empty : readMethod.Name) : readMethod.Metadata.DisplayName,
+                    ReadReturns = readReturns,
                     Inputs = inputs,
                     Identifier = identifier,
                     Status = status
@@ -87,6 +95,19 @@ namespace K2WorkflowCli
             {
                 if (server.Connection != null) { server.Connection.Close(); server.DeleteConnection(); }
             }
+        }
+
+        private static SmartObjectInputDescriptor Describe(SmartProperty property, int internalId, bool required)
+        {
+            return new SmartObjectInputDescriptor
+            {
+                InternalId = internalId,
+                SystemName = property.Name,
+                DisplayName = string.IsNullOrWhiteSpace(property.Metadata.DisplayName) ? property.Name : property.Metadata.DisplayName,
+                Description = property.Metadata.Description,
+                Type = WorkflowType(property.Type),
+                IsRequired = required
+            };
         }
 
         private static string WorkflowType(PropertyType type)

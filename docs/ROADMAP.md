@@ -44,7 +44,7 @@ Next increments:
 
 ### 4. K2 workflow builder — v0.2 implemented
 
-The builder creates, saves, publishes, inspects, verifies, and safely removes K2 Five HTML5 Workflow Designer JSON definitions. Alongside Start → End and a schema-checked JSON-file escape hatch, its typed request-approval baseline resolves a live request SmartObject and generates status Update, Email, and User Task events with actions/outcomes and SmartForms task parameters. It keeps workflows in a stable `Workflows` subcategory and proves designer JSON plus compiled runtime deployment without legacy design-time authoring APIs.
+The builder creates, saves, publishes, inspects, verifies, and safely removes K2 Five HTML5 Workflow Designer JSON definitions. Its request-approval baseline now uses a primary SmartForms item reference, updates request status, emails the Originator, assigns a native SmartForms task to the Originator's Manager, and additively creates the form's Start/Task rules through the same providers as the browser wizard. Connector geometry and post-publish locks are verified. Next: decision routing and outcome-specific updates.
 
 Next increments:
 

@@ -16,12 +16,14 @@ namespace K2WorkflowCli
         private readonly object _client;
         private readonly Type _clientType;
         private readonly string _userName;
+        private SmartObjectDescriptor _smartObject;
+        private SmartFormsIntegrationDescriptor _smartForm;
 
         public WorkflowManager(WorkflowManifest manifest)
         {
             _manifest = manifest;
             var identity = WindowsIdentity.GetCurrent();
-            _userName = identity.Name;
+            _userName = identity.Name.StartsWith("K2:", StringComparison.OrdinalIgnoreCase) ? identity.Name : "K2:" + identity.Name;
             System.Threading.Thread.CurrentPrincipal = new WindowsPrincipal(identity);
             _client = CreateDesignerClient();
             _clientType = _client.GetType();
@@ -37,6 +39,7 @@ namespace K2WorkflowCli
             Console.WriteLine("K2 install: " + RuntimeAssemblyResolver.InstallDirectory);
             Console.WriteLine("Workflow designer: " + webBin);
             Console.WriteLine("Identity: " + WindowsIdentity.GetCurrent().Name);
+            Console.WriteLine("Designer identity: K2:" + WindowsIdentity.GetCurrent().Name);
             Console.WriteLine("Authoring model: K2 Five HTML5 Workflow Designer JSON");
             Console.WriteLine("Designer environment: smartforms");
         }
@@ -51,7 +54,12 @@ namespace K2WorkflowCli
                 json = File.ReadAllText(path);
             }
             else if (string.Equals(_manifest.Workflow.Kind, "request-approval", StringComparison.OrdinalIgnoreCase))
-                json = WorkflowJsonBuilder.BuildRequestApproval(_manifest.Workflow, SmartObjectMetadata.Load(_manifest.K2, _manifest.Workflow.RequestStatusUpdate));
+            {
+                if (_smartObject == null) _smartObject = SmartObjectMetadata.Load(_manifest.K2, _manifest.Workflow.RequestStatusUpdate);
+                if (_manifest.Workflow.SmartForms != null && _smartForm == null)
+                    _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost).Load(_manifest.Workflow);
+                json = WorkflowJsonBuilder.BuildRequestApproval(_manifest.Workflow, _smartObject, _smartForm);
+            }
             else json = WorkflowJsonBuilder.BuildStartEnd(_manifest.Workflow.Name);
             return WorkflowJsonBuilder.ParseAndValidate(json, _manifest.Workflow.Name).ToString(Formatting.None);
         }
@@ -64,6 +72,12 @@ namespace K2WorkflowCli
             Console.WriteLine("Definition: " + _manifest.Workflow.Kind);
             Console.WriteLine("Action: " + (existing.HasValue ? "update JSON process " + existing.Value : "create JSON process"));
             Console.WriteLine("Publish: " + _manifest.Workflow.Publish);
+            if (_manifest.Workflow.SmartForms != null)
+            {
+                Console.WriteLine("SmartForm: " + _manifest.Workflow.SmartForms.Form);
+                Console.WriteLine("Start state: " + _manifest.Workflow.SmartForms.StartState + " (default: " + _manifest.Workflow.SmartForms.MakeStartStateDefault + ")");
+                Console.WriteLine("Task state: " + _manifest.Workflow.SmartForms.TaskState);
+            }
             Console.WriteLine("Rendered JSON bytes: " + System.Text.Encoding.UTF8.GetByteCount(Render()));
         }
 
@@ -97,6 +111,11 @@ namespace K2WorkflowCli
             if (result["ProcID"] != null) Console.WriteLine("Runtime process ID: " + Convert.ToString(result["ProcID"]));
             if (result["VersionNumber"] != null) Console.WriteLine("Runtime version: " + Convert.ToString(result["VersionNumber"]));
             var savedId = Convert.ToInt32(result["SavedId"]);
+            if (_manifest.Workflow.SmartForms != null)
+            {
+                if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost).Load(_manifest.Workflow);
+                new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost).Integrate(_manifest.Workflow, _smartForm);
+            }
             Unlock(savedId);
             Console.WriteLine("Released designer lock: " + _manifest.Workflow.ProcessFullName);
         }
@@ -144,9 +163,28 @@ namespace K2WorkflowCli
                     .Select(x => (int?)x["componentId"]).ToArray();
                 foreach (var required in new[] { 30011, 30004, 30009 })
                     if (!components.Contains(required)) throw new CliException("Saved request-approval workflow is missing event component " + required + ".");
-                var fields = root["configuration"]["dataFields"] as JArray;
-                if (fields == null || !fields.OfType<JObject>().Any(x => string.Equals(Convert.ToString(x["title"]), _manifest.Workflow.RequestStatusUpdate.IdentifierDataField, StringComparison.Ordinal)))
-                    throw new CliException("Saved workflow is missing the request identifier data field.");
+                var linkPaths = ((JArray)root["links"]).OfType<JObject>().Select(x =>
+                {
+                    var ui = x["ui"] as JObject;
+                    return ui == null ? string.Empty : Convert.ToString(ui["path"]);
+                }).ToArray();
+                if (linkPaths.Any(string.IsNullOrWhiteSpace) || linkPaths.Distinct(StringComparer.Ordinal).Count() != linkPaths.Length)
+                    throw new CliException("Saved request-approval workflow has missing or reused connector geometry.");
+                if (_manifest.Workflow.SmartForms == null)
+                {
+                    var fields = root["configuration"]["dataFields"] as JArray;
+                    if (fields == null || !fields.OfType<JObject>().Any(x => string.Equals(Convert.ToString(x["title"]), _manifest.Workflow.RequestStatusUpdate.IdentifierDataField, StringComparison.Ordinal)))
+                        throw new CliException("Saved workflow is missing the request identifier data field.");
+                }
+                else
+                {
+                    var items = root["configuration"]["itemReferences"] as JArray;
+                    if (items == null || !items.OfType<JObject>().Any(x => (bool?)x["primary"] == true))
+                        throw new CliException("Saved workflow is missing its primary SmartForms item reference.");
+                    if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost).Load(_manifest.Workflow);
+                    new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost).Verify(_manifest.Workflow, _smartForm);
+                    Console.WriteLine("Verified SmartForms Start and Task rules: " + _smartForm.DisplayName);
+                }
                 var references = root["externalReferenceDefinitions"] as JArray;
                 if (references == null || !references.OfType<JObject>().Any(x => string.Equals(Convert.ToString(x["systemName"]), _manifest.Workflow.RequestStatusUpdate.SmartObject, StringComparison.OrdinalIgnoreCase)))
                     throw new CliException("Saved workflow is missing the request SmartObject reference.");
@@ -166,6 +204,16 @@ namespace K2WorkflowCli
             var id = GetProcessId();
             if (!deleteDeployed && _manifest.Workflow.Publish)
                 throw new CliException("Cleanup of a published workflow requires --delete-deployed.");
+            if (deleteDeployed && _manifest.Workflow.SmartForms != null)
+            {
+                using (var runtime = new RuntimeWorkflowManager())
+                {
+                    if (runtime.GetProcessSet(_manifest.Workflow.ProcessFullName) != null && runtime.GetInstanceCount(_manifest.Workflow.ProcessFullName) != 0)
+                        throw new CliException("Workflow has runtime instances; SmartForms integration and definitions were preserved.");
+                }
+                if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost).Load(_manifest.Workflow);
+                new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost).Remove(_manifest.Workflow, _smartForm);
+            }
             var runtimeExists = false;
             if (deleteDeployed)
             {
@@ -238,6 +286,10 @@ namespace K2WorkflowCli
         {
             Invoke("ExecuteFrameworkMethod", _manifest.K2.DesignerHost, "Process", "Processdataservice", "UnlockProcess",
                 CultureInfo.CurrentUICulture.Name, new object[] { processId, _userName });
+            var userProcess = Invoke("GetUserProcessKprx", _manifest.K2.DesignerHost, processId, _userName);
+            var lockedBy = GetStringProperty(userProcess, "LockedBy");
+            if (!string.IsNullOrWhiteSpace(lockedBy))
+                throw new CliException("K2 still reports the workflow locked by " + lockedBy + " after unlock.");
         }
         private object Invoke(string name, params object[] args)
         {

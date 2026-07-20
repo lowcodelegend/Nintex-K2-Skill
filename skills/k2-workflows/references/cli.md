@@ -13,7 +13,7 @@ From the skill directory:
 & '.\scripts\k2wf.ps1' cleanup '<manifest.json>' --confirm --delete-deployed
 ```
 
-`render` does not mutate K2, but `request-approval` rendering reads live SmartObject metadata over the management API to validate and map the configured Update method. `deploy` uses the logged-on Windows identity and the K2 designer BaseAPI connection on port 5555. After a successful save or publish it calls the designer's explicit `UnlockProcess` operation with the saved process ID and authenticated user. `verify` checks the stored JSON, required SmartObject/Email/User Task components, request field/reference, and the Workflow Management API when the manifest expects publication.
+`render` does not mutate K2, but SmartForms-integrated rendering reads live SmartObject and form metadata. `deploy` uses the K2-qualified logged-on AD identity, publishes the JSON, invokes K2's own SmartForms integration providers, then explicitly unlocks and checks the saved process. `verify` checks unique connector geometry, required events, the primary item reference, Start/Task form rules, and the runtime definition. `cleanup --delete-deployed` removes CLI-owned Start/Task states before deleting an instance-free workflow.
 
 `unlock` is an idempotent recovery command for workflows left locked by an interrupted CLI or browser session. K2 locks are client-session-sensitive, so a workflow can appear locked by the same AD username when the browser has a different client identifier.
 

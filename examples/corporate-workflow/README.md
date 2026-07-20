@@ -43,7 +43,7 @@ Example runtime URL:
 
 ## Workflow baseline
 
-`workflow-manifest.json` creates `CW Request Approval` in `K2 Skills\Corporate Workflow\Workflows` as Start → set `WorkflowRequest.Status` → email → assigned approval task → End. It maps the workflow `WorkflowRequestId` data field into the request SmartObject Update method and opens the version-free `CW Approval Task Management` form with `SN` and `RequestId` parameters.
+`workflow-manifest.json` creates `CW Request Approval` in `K2 Skills\Corporate Workflow\Workflows` as SmartForm Start → set `WorkflowRequest.Status` → email the Originator → task the Originator's Manager → End. It uses `CW Request Management` as the primary SmartForms item reference and additively creates `CW Request Approval Start` and `CW Request Approval Task` states with native StartProcess/LoadProcess/ActionProcess rules.
 
 ```powershell
 $workflowSkillRoot = Join-Path $env:USERPROFILE '.codex\skills\k2-workflows'
