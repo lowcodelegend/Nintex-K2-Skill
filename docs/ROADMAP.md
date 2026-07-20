@@ -12,9 +12,9 @@ The target solution flow is:
 
 The SQL SmartObjects, SmartForms, and workflow skills should evolve from repeatable full generation/replacement into safe iterative reconcilers. Each tool should be able to import or discover the current artifact state, compare it semantically with manifest intent, preview a dependency-aware patch, modify only tool-owned elements, preserve compatible unmanaged Designer work, detect drift and edit conflicts, verify the result, and retain an export/version checkpoint for rollback. This is a mid-horizon goal, not a capability of the current releases.
 
-## K2 solution builder — v0.10 approval matrices implemented
+## K2 solution builder — v0.12 common-header lifecycle contract implemented
 
-The `k2-builder` meta-skill defines a solution manifest, dependency-ordered specialist plan, cross-artifact contracts, workflow entry-state policy, lookup/administration policy, approval-matrix contract, end-to-end verification gates, and deployment-ledger shape. Its planner now validates matrix namespace, Admin maintenance UX, workflow matrix-code/dimension mappings, and designer-identity errata in addition to the existing category, theme, dependency, and default-state rules. Its `k2env` CLI persists non-secret machine/user-level K2 profiles under `CODEX_HOME`, including discovered Style Profiles and a user-confirmed common-header view/initialization contract.
+The `k2-builder` meta-skill defines a solution manifest, dependency-ordered specialist plan, cross-artifact contracts, workflow entry-state policy, lookup/administration policy, approval-matrix contract, end-to-end verification gates, and deployment-ledger shape. Its planner validates matrix namespace, Admin maintenance UX, workflow matrix-code/dimension mappings, and designer-identity errata in addition to the existing category, theme, dependency, and default-state rules. Its `k2env` CLI persists non-secret machine/user-level K2 profiles under `CODEX_HOME`, including discovered Style Profiles and a user-confirmed common-header contract containing initialization parameter mappings and the server-side View rules that Forms must call explicitly.
 
 Next increments should execute and aggregate structured specialist plans, capture a deployment ledger automatically, add authenticated browser scenarios, reconcile runtime form-state rules rather than only manifest intent, and coordinate safe reverse-order cleanup. Full semantic iterative reconciliation remains the mid-horizon goal shared with the three specialist skills.
 
@@ -39,9 +39,9 @@ Next increments:
 
 Create advanced/composite SmartObjects with controlled names, properties, methods, defaults, associations, and mappings to service objects. Cover cases where automatic generation is too coarse.
 
-### 3. K2 SmartForms builder — v0.5 view titles, tabs, Worklist, and Admin UX implemented
+### 3. K2 SmartForms builder — v0.7 common-header lifecycle rules implemented
 
-The tool creates checked-in capture/list/content/editable-list views and multi-view forms from declarative manifests using supported K2 generation APIs. It sets and verifies a visible title for every solution view instance, consumes and verifies a selected environment common header with templated Initialize bindings, converts declared capture fields into SmartObject-backed dropdowns, creates named tabs and a native K2 Worklist, separates ordinary artifacts from `Admin` CRUD UX, and verifies modern Style Profiles. The corporate fixture adds approval-matrix rule Admin views/form and uses the `PSF Nintex` Style Profile through system name `PSF UX v1`.
+The tool creates checked-in capture/list/content/editable-list views and multi-view forms from declarative manifests using supported K2 generation APIs. It sets and verifies a visible title for every solution view instance, consumes a selected environment common header, explicitly calls its user initialization rule with templated parameter values, and explicitly invokes configured View server rules from the Form's `When the server loads the Form` rule. It also converts declared capture fields into SmartObject-backed dropdowns, creates named tabs and a native K2 Worklist, separates ordinary artifacts from `Admin` CRUD UX, and verifies modern Style Profiles. The corporate fixture adds approval-matrix rule Admin views/form and uses the `PSF Nintex` Style Profile through system name `PSF UX v1`.
 
 Next increments:
 

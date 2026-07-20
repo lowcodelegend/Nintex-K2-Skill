@@ -57,12 +57,14 @@ namespace K2SmartFormsCli
             if (Application.CommonHeader != null)
             {
                 if (Application.CommonHeader.Parameters == null) Application.CommonHeader.Parameters = new Dictionary<string, string>();
+                if (Application.CommonHeader.ServerRules == null) Application.CommonHeader.ServerRules = new List<string>();
                 if (!Application.CommonHeader.Enabled && string.IsNullOrWhiteSpace(Application.CommonHeader.Reason))
                     throw new CliException("application.commonHeader.reason is required when the environment common header is disabled.");
                 if (Application.CommonHeader.Enabled && !string.IsNullOrWhiteSpace(Application.CommonHeader.View))
                 {
                     if (Application.CommonHeader.Parameters.Keys.Any(string.IsNullOrWhiteSpace))
                         throw new CliException("application.commonHeader.parameters contains an empty parameter name.");
+                    EnsureUniqueValues(Application.CommonHeader.ServerRules, "common header server rule", "application.commonHeader");
                 }
             }
             if (Verification.ExpectedViews == null) Verification.ExpectedViews = new List<string>();
@@ -394,12 +396,14 @@ namespace K2SmartFormsCli
         public Guid ViewGuid { get; set; }
         public string Title { get; set; }
         public string InitializeEvent { get; set; }
+        public List<string> ServerRules { get; set; }
         public Dictionary<string, string> Parameters { get; set; }
         public string Reason { get; set; }
 
         public CommonHeaderDefinition()
         {
             Enabled = true;
+            ServerRules = new List<string>();
             Parameters = new Dictionary<string, string>();
         }
     }

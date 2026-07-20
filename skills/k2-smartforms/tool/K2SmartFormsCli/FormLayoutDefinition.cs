@@ -109,31 +109,29 @@ namespace K2SmartFormsCli
             var control = controls.Elements().FirstOrDefault(x => x.Name.LocalName == "Control" && string.Equals((string)x.Attribute("ID"), instanceId, StringComparison.OrdinalIgnoreCase));
             if (control == null) throw new CliException("Generated form has no AreaItem control for common header '" + header.ViewName + "'.");
             SetProperty(control, "Title", header.Title ?? string.Empty);
-            if (parameters == null || parameters.Count == 0) return;
-            if (string.IsNullOrWhiteSpace(header.InitializeEvent))
-                throw new CliException("Common header '" + header.ViewName + "' has parameter bindings but no initialize event was configured.");
-            var action = form.Descendants().FirstOrDefault(x => x.Name.LocalName == "Action" &&
-                string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
-                string.Equals((string)x.Attribute("InstanceID"), instanceId, StringComparison.OrdinalIgnoreCase) &&
-                x.Descendants().Any(p => p.Name.LocalName == "Property" &&
-                    ((string.Equals(ChildValue(p, "Name"), "EventID", StringComparison.OrdinalIgnoreCase) && header.InitializeEventDefinitionId != Guid.Empty && string.Equals(ChildValue(p, "Value"), header.InitializeEventDefinitionId.ToString(), StringComparison.OrdinalIgnoreCase)) ||
-                     (string.Equals(ChildValue(p, "Name"), "Method", StringComparison.OrdinalIgnoreCase) && string.Equals(ChildValue(p, "Value"), header.InitializeEvent, StringComparison.OrdinalIgnoreCase)))));
-            if (action == null)
+            if (!string.IsNullOrWhiteSpace(header.InitializeEvent))
             {
-                var available = form.Descendants().Where(x => x.Name.LocalName == "Action" && string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase))
-                    .Select(x => "instance=" + ((string)x.Attribute("InstanceID") ?? "") + ", event=" + (x.Descendants().Where(p => p.Name.LocalName == "Property" && string.Equals(ChildValue(p, "Name"), "EventID", StringComparison.OrdinalIgnoreCase)).Select(p => ChildValue(p, "Value")).FirstOrDefault() ?? "") + ", method=" + (x.Descendants().Where(p => p.Name.LocalName == "Property" && string.Equals(ChildValue(p, "Name"), "Method", StringComparison.OrdinalIgnoreCase)).Select(p => ChildValue(p, "Value")).FirstOrDefault() ?? "")).ToArray();
-                throw new CliException("Generated form has no invocation of common header initialize event '" + header.InitializeEvent + "'. Execute actions: " + string.Join("; ", available));
+                if (header.InitializeEventDefinitionId == Guid.Empty)
+                    throw new CliException("Common header '" + header.ViewName + "' initialize rule has no definition ID.");
+                var initActions = EnsureFormLifecycleActions(form, "Init", "Init", "Initializing", "When the Form is Initializing");
+                foreach (var generatedMethodCall in initActions.Elements().Where(x =>
+                    string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals((string)x.Attribute("InstanceID"), instanceId, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(ReadActionProperty(x, "Method"), header.InitializeEvent, StringComparison.OrdinalIgnoreCase) &&
+                    string.IsNullOrWhiteSpace(ReadActionProperty(x, "EventID"))).ToList()) generatedMethodCall.Remove();
+                RemoveRuleCall(initActions, instanceId, header.InitializeEventDefinitionId);
+                initActions.AddFirst(BuildRuleCall(form.Name.Namespace, instanceId, header.InitializeEventDefinitionId,
+                    "When " + header.DisplayName + " executed Initialize", null, parameters));
             }
-            var actionParameters = action.Elements().FirstOrDefault(x => x.Name.LocalName == "Parameters");
-            if (actionParameters == null) { actionParameters = new XElement(action.Name.Namespace + "Parameters"); action.Add(actionParameters); }
-            foreach (var binding in parameters)
+            else if (parameters != null && parameters.Count > 0)
+                throw new CliException("Common header '" + header.ViewName + "' has parameter bindings but no initialize rule was configured.");
+
+            foreach (var serverRule in header.ServerRules ?? new List<ResolvedHeaderRule>())
             {
-                foreach (var duplicate in actionParameters.Elements().Where(x => x.Name.LocalName == "Parameter" && string.Equals((string)x.Attribute("TargetID"), binding.Key, StringComparison.OrdinalIgnoreCase)).ToList()) duplicate.Remove();
-                actionParameters.Add(new XElement(action.Name.Namespace + "Parameter",
-                    new XAttribute("SourceID", "Sources"), new XAttribute("SourceType", "Value"),
-                    new XAttribute("TargetInstanceID", instanceId), new XAttribute("TargetID", binding.Key),
-                    new XAttribute("TargetName", binding.Key), new XAttribute("TargetType", "ViewParameter"), new XAttribute("IsRequired", "True"),
-                    new XElement(action.Name.Namespace + "SourceValue", new XAttribute(XNamespace.Xml + "space", "preserve"), binding.Value ?? string.Empty)));
+                var serverActions = EnsureFormLifecycleActions(form, "ServerPreRender", "FormServerPreRenderEvent", "When the server loads the Form", "When the server loads the Form");
+                RemoveRuleCall(serverActions, instanceId, serverRule.DefinitionId);
+                serverActions.Add(BuildRuleCall(form.Name.Namespace, instanceId, serverRule.DefinitionId,
+                    "When the server loads " + header.DisplayName + " View", "ServerRuleExecute", null));
             }
         }
 
@@ -147,21 +145,119 @@ namespace K2SmartFormsCli
             var title = control == null ? null : ReadProperty(control, "Title") ?? string.Empty;
             if (!string.Equals(title, header.Title ?? string.Empty, StringComparison.Ordinal))
                 throw new CliException("K2 Form '" + formName + "' common header title does not match the environment configuration.");
-            if (parameters == null || parameters.Count == 0) return;
-            var action = form.Descendants().FirstOrDefault(x => x.Name.LocalName == "Action" &&
-                string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
-                string.Equals((string)x.Attribute("InstanceID"), instanceId, StringComparison.OrdinalIgnoreCase) &&
-                x.Descendants().Any(p => p.Name.LocalName == "Property" &&
-                    ((string.Equals(ChildValue(p, "Name"), "EventID", StringComparison.OrdinalIgnoreCase) && header.InitializeEventDefinitionId != Guid.Empty && string.Equals(ChildValue(p, "Value"), header.InitializeEventDefinitionId.ToString(), StringComparison.OrdinalIgnoreCase)) ||
-                     (string.Equals(ChildValue(p, "Name"), "Method", StringComparison.OrdinalIgnoreCase) && string.Equals(ChildValue(p, "Value"), header.InitializeEvent, StringComparison.OrdinalIgnoreCase)))));
-            if (action == null) throw new CliException("K2 Form '" + formName + "' does not invoke common header initialize event '" + header.InitializeEvent + "'.");
-            foreach (var binding in parameters)
+            if (!string.IsNullOrWhiteSpace(header.InitializeEvent))
             {
-                var parameter = action.Descendants().FirstOrDefault(x => x.Name.LocalName == "Parameter" && string.Equals((string)x.Attribute("TargetID"), binding.Key, StringComparison.OrdinalIgnoreCase));
-                var actual = parameter == null ? null : parameter.Elements().FirstOrDefault(x => x.Name.LocalName == "SourceValue");
-                if (actual == null || !string.Equals(actual.Value, binding.Value ?? string.Empty, StringComparison.Ordinal))
-                    throw new CliException("K2 Form '" + formName + "' common header parameter '" + binding.Key + "' is not configured as expected.");
+                var initEvent = FindFormLifecycleEvent(form, "Init");
+                var action = initEvent == null ? null : FindRuleCall(initEvent, instanceId, header.InitializeEventDefinitionId);
+                if (action == null) throw new CliException("K2 Form '" + formName + "' does not call common header initialize rule '" + header.InitializeEvent + "' from 'When the Form is Initializing'.");
+                foreach (var binding in parameters ?? new Dictionary<string, string>())
+                {
+                    var parameter = action.Descendants().FirstOrDefault(x => x.Name.LocalName == "Parameter" && string.Equals((string)x.Attribute("TargetID"), binding.Key, StringComparison.OrdinalIgnoreCase));
+                    var actual = parameter == null ? null : parameter.Elements().FirstOrDefault(x => x.Name.LocalName == "SourceValue");
+                    if (actual == null || !string.Equals(actual.Value, binding.Value ?? string.Empty, StringComparison.Ordinal))
+                        throw new CliException("K2 Form '" + formName + "' common header parameter '" + binding.Key + "' is not configured as expected.");
+                }
             }
+            foreach (var serverRule in header.ServerRules ?? new List<ResolvedHeaderRule>())
+            {
+                var inherited = form.Descendants().Any(x => x.Name.LocalName == "Event" &&
+                    string.Equals((string)x.Attribute("SourceType"), "View", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals((string)x.Attribute("InstanceID"), instanceId, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals((string)x.Attribute("DefinitionID"), serverRule.DefinitionId.ToString(), StringComparison.OrdinalIgnoreCase));
+                if (!inherited) throw new CliException("K2 Form '" + formName + "' does not contain inherited common header server rule '" + serverRule.Name + "'.");
+                var serverEvent = FindFormLifecycleEvent(form, "ServerPreRender");
+                var action = serverEvent == null ? null : FindRuleCall(serverEvent, instanceId, serverRule.DefinitionId);
+                if (action == null) throw new CliException("K2 Form '" + formName + "' does not call common header server rule '" + serverRule.Name + "' from 'When the server loads the Form'.");
+                if (!string.Equals(ReadActionProperty(action, "DesignTemplate"), "ServerRuleExecute", StringComparison.OrdinalIgnoreCase))
+                    throw new CliException("K2 Form '" + formName + "' common header server rule call is missing DesignTemplate=ServerRuleExecute.");
+            }
+        }
+
+        private static XElement EnsureFormLifecycleActions(XElement form, string eventName, string sourceName, string sourceDisplayName, string friendlyName)
+        {
+            var lifecycle = FindFormLifecycleEvent(form, eventName);
+            var ns = form.Name.Namespace;
+            if (lifecycle == null)
+            {
+                var state = RequiredChild(RequiredChild(form, "States"), "State");
+                var events = state.Elements().FirstOrDefault(x => x.Name.LocalName == "Events");
+                if (events == null) { events = new XElement(ns + "Events"); state.Add(events); }
+                lifecycle = new XElement(ns + "Event",
+                    new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()), new XAttribute("Type", "User"),
+                    new XAttribute("SourceID", (string)form.Attribute("ID")), new XAttribute("SourceType", "Form"),
+                    new XAttribute("SourceName", sourceName), new XAttribute("SourceDisplayName", sourceDisplayName),
+                    new XElement(ns + "Name", eventName),
+                    new XElement(ns + "Properties", Property(ns, "RuleFriendlyName", friendlyName, false), Property(ns, "Location", ChildValue(form, "Name") ?? (string)form.Attribute("Name") ?? string.Empty, false)),
+                    new XElement(ns + "Handlers",
+                        new XElement(ns + "Handler", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                            new XElement(ns + "Properties", Property(ns, "HandlerName", "IfLogicalHandler", false), Property(ns, "Location", "form", false)),
+                            new XElement(ns + "Actions"))));
+                events.Add(lifecycle);
+            }
+            var handlers = lifecycle.Elements().FirstOrDefault(x => x.Name.LocalName == "Handlers");
+            if (handlers == null) { handlers = new XElement(ns + "Handlers"); lifecycle.Add(handlers); }
+            var handler = handlers.Elements().FirstOrDefault(x => x.Name.LocalName == "Handler");
+            if (handler == null)
+            {
+                handler = new XElement(ns + "Handler", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                    new XElement(ns + "Properties", Property(ns, "HandlerName", "IfLogicalHandler", false), Property(ns, "Location", "form", false)));
+                handlers.Add(handler);
+            }
+            var actions = handler.Elements().FirstOrDefault(x => x.Name.LocalName == "Actions");
+            if (actions == null) { actions = new XElement(ns + "Actions"); handler.Add(actions); }
+            return actions;
+        }
+
+        private static XElement FindFormLifecycleEvent(XElement form, string eventName)
+        {
+            return form.Descendants().FirstOrDefault(x => x.Name.LocalName == "Event" &&
+                string.Equals((string)x.Attribute("Type"), "User", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("SourceType"), "Form", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(ChildValue(x, "Name"), eventName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static XElement BuildRuleCall(XNamespace ns, string instanceId, Guid eventDefinitionId, string displayValue, string designTemplate, IDictionary<string, string> parameters)
+        {
+            var properties = new XElement(ns + "Properties", Property(ns, "Location", "Form", false),
+                new XElement(ns + "Property", new XElement(ns + "Name", "EventID"), new XElement(ns + "DisplayValue", displayValue), new XElement(ns + "Value", eventDefinitionId.ToString())));
+            if (!string.IsNullOrWhiteSpace(designTemplate)) properties.Add(Property(ns, "DesignTemplate", designTemplate, false));
+            var action = new XElement(ns + "Action", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                new XAttribute("Type", "Execute"), new XAttribute("ExecutionType", "Synchronous"), new XAttribute("InstanceID", instanceId), properties);
+            if (parameters != null && parameters.Count > 0)
+            {
+                var bindings = new XElement(ns + "Parameters");
+                foreach (var binding in parameters)
+                    bindings.Add(new XElement(ns + "Parameter", new XAttribute("SourceID", "Sources"), new XAttribute("SourceType", "Value"),
+                        new XAttribute("TargetInstanceID", instanceId), new XAttribute("TargetID", binding.Key), new XAttribute("TargetName", binding.Key),
+                        new XAttribute("TargetType", "ViewParameter"), new XAttribute("IsRequired", "True"),
+                        new XElement(ns + "SourceValue", new XAttribute(XNamespace.Xml + "space", "preserve"), binding.Value ?? string.Empty)));
+                action.Add(bindings);
+            }
+            return action;
+        }
+
+        private static void RemoveRuleCall(XElement actions, string instanceId, Guid eventDefinitionId)
+        {
+            foreach (var action in actions.Elements().Where(x => IsRuleCall(x, instanceId, eventDefinitionId)).ToList()) action.Remove();
+        }
+
+        private static XElement FindRuleCall(XElement owner, string instanceId, Guid eventDefinitionId)
+        {
+            return owner.Descendants().FirstOrDefault(x => x.Name.LocalName == "Action" && IsRuleCall(x, instanceId, eventDefinitionId));
+        }
+
+        private static bool IsRuleCall(XElement action, string instanceId, Guid eventDefinitionId)
+        {
+            return string.Equals((string)action.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals((string)action.Attribute("InstanceID"), instanceId, StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals(ReadActionProperty(action, "EventID"), eventDefinitionId.ToString(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string ReadActionProperty(XElement action, string name)
+        {
+            return action.Elements().Where(x => x.Name.LocalName == "Properties").SelectMany(x => x.Elements())
+                .Where(x => x.Name.LocalName == "Property" && string.Equals(ChildValue(x, "Name"), name, StringComparison.OrdinalIgnoreCase))
+                .Select(x => ChildValue(x, "Value")).FirstOrDefault();
         }
 
         private static void ApplyViewTitles(XElement form, FormDefinition definition)

@@ -46,6 +46,7 @@ namespace K2SmartFormsCli
                 ViewGuid = selected.ViewGuid,
                 Title = selected.Title,
                 InitializeEvent = selected.InitializeEvent,
+                ServerRules = selected.ServerRules ?? new List<string>(),
                 Parameters = selected.Parameters ?? new Dictionary<string, string>()
             };
         }
@@ -79,6 +80,7 @@ namespace K2SmartFormsCli
             public string ViewName { get; set; }
             public string Title { get; set; }
             public string InitializeEvent { get; set; }
+            public List<string> ServerRules { get; set; }
             public Dictionary<string, string> Parameters { get; set; }
         }
     }
@@ -92,6 +94,13 @@ namespace K2SmartFormsCli
         public string Title { get; set; }
         public string InitializeEvent { get; set; }
         public Guid InitializeEventDefinitionId { get; set; }
+        public List<ResolvedHeaderRule> ServerRules { get; set; }
         public Dictionary<string, string> Parameters { get; set; }
+    }
+
+    internal sealed class ResolvedHeaderRule
+    {
+        public string Name { get; set; }
+        public Guid DefinitionId { get; set; }
     }
 }

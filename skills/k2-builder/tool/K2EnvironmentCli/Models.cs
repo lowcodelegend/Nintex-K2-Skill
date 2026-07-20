@@ -88,6 +88,7 @@ namespace K2EnvironmentCli
         public int ViewVersion { get; set; }
         public string Title { get; set; }
         public string InitializeEvent { get; set; }
+        public List<string> ServerRules { get; set; }
         public Dictionary<string, string> Parameters { get; set; }
         public HeaderViewCandidate Inspection { get; set; }
     }

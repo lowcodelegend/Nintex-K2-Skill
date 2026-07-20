@@ -28,15 +28,15 @@ After first discovery, inspect `smartForms.styleProfiles`. If `smartForms.styleP
 
 The selector accepts an unambiguous display name, system name, or GUID. `refresh` re-inventories the server and preserves a selected profile by GUID, or preserves an explicit `none`; if the selected profile disappeared, selection returns to `unselected`.
 
-Then resolve `smartForms.commonHeaderSelection`. Ask whether newly generated forms should use a shared environment header. If not, persist a deliberate `none`. If yes, ask for a hint, inspect live candidates and existing consumer mappings, and agree how parameter values should be initialized before persisting the contract:
+Then resolve `smartForms.commonHeaderSelection`. Ask whether newly generated forms should use a shared environment header. If not, persist a deliberate `none`. If yes, ask for a hint, inspect live candidates and existing consumer mappings, and agree which callable user initialization rule and server-side user rules the Form must invoke, plus how parameter values should be initialized, before persisting the contract:
 
 ```powershell
 & '<k2-builder-root>\scripts\k2env.ps1' inspect-header --name spk2-local --hint 'Corporate Header'
-& '<k2-builder-root>\scripts\k2env.ps1' set-common-header --name spk2-local --view '<exact-name-or-guid>' --initialize-event Init --title '' --parameter 'HeaderText={{form.name}}' --parameter 'SubheaderText={{application.name}}' --parameter 'AppId={{solution.code}}'
+& '<k2-builder-root>\scripts\k2env.ps1' set-common-header --name spk2-local --view '<exact-name-or-guid>' --initialize-event Init --server-rule ServerPreRender --title '' --parameter 'HeaderText={{form.name}}' --parameter 'SubheaderText={{application.name}}' --parameter 'AppId={{solution.code}}'
 & '<k2-builder-root>\scripts\k2env.ps1' set-common-header --name spk2-local --no-common-header
 ```
 
-Supported parameter templates are `{{form.name}}`, `{{application.name}}`, `{{application.rootCategoryPath}}`, and `{{solution.code}}`; literal values are also valid. `inspect-header` reports the header's parameters and events plus up to 25 forms that already consume it and the mappings those forms use. Do not guess required business values. The selected view is persisted by GUID, and refresh preserves its setup when that GUID still exists.
+Supported parameter templates are `{{form.name}}`, `{{application.name}}`, `{{application.rootCategoryPath}}`, and `{{solution.code}}`; literal values are also valid. Repeat `--server-rule` when more than one View server rule must be called. `inspect-header` reports the header's parameters and events plus up to 25 forms that already consume it and the mappings those forms use. Inspect representative form definitions to distinguish inherited View rule definitions from explicit Form lifecycle calls. Server-side rules on a View do not fire automatically: the SmartForms generator must call each configured rule from the Form's `When the server loads the Form` event. Do not guess required business values. The selected view is persisted by GUID, and refresh preserves its setup when that GUID still exists.
 
 ## Reuse
 

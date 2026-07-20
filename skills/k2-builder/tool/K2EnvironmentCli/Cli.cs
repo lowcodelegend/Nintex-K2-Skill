@@ -7,7 +7,7 @@ namespace K2EnvironmentCli
 {
     internal static class Cli
     {
-        public const string Version = "0.3.0";
+        public const string Version = "0.4.0";
 
         public static int Run(string[] args)
         {
@@ -181,11 +181,18 @@ namespace K2EnvironmentCli
                 var initializeEvent = options.Get("initialize-event");
                 if (string.IsNullOrWhiteSpace(initializeEvent))
                 {
-                    var init = selected.Events.FirstOrDefault(x => string.Equals(x.Name, "Init", StringComparison.OrdinalIgnoreCase) || string.Equals(x.Name, "Initialize", StringComparison.OrdinalIgnoreCase));
+                    var init = selected.Events.FirstOrDefault(x => string.Equals(x.Type, "User", StringComparison.OrdinalIgnoreCase) &&
+                        (string.Equals(x.Name, "Init", StringComparison.OrdinalIgnoreCase) || string.Equals(x.Name, "Initialize", StringComparison.OrdinalIgnoreCase)));
                     initializeEvent = init == null ? null : init.Name;
                 }
-                if (!string.IsNullOrWhiteSpace(initializeEvent) && !selected.Events.Any(x => string.Equals(x.Name, initializeEvent, StringComparison.OrdinalIgnoreCase)))
-                    throw new CliException("Header view has no event named '" + initializeEvent + "'. Available: " + string.Join(", ", selected.Events.Select(x => x.Name).ToArray()));
+                if (!string.IsNullOrWhiteSpace(initializeEvent) && !selected.Events.Any(x => string.Equals(x.Name, initializeEvent, StringComparison.OrdinalIgnoreCase) && string.Equals(x.Type, "User", StringComparison.OrdinalIgnoreCase)))
+                    throw new CliException("Header view has no callable user initialization rule named '" + initializeEvent + "'. Available user rules: " + string.Join(", ", selected.Events.Where(x => string.Equals(x.Type, "User", StringComparison.OrdinalIgnoreCase)).Select(x => x.Name).ToArray()));
+                var serverRules = options.GetAll("server-rule").ToList();
+                foreach (var serverRule in serverRules)
+                    if (!selected.Events.Any(x => string.Equals(x.Name, serverRule, StringComparison.OrdinalIgnoreCase) && string.Equals(x.Type, "User", StringComparison.OrdinalIgnoreCase)))
+                        throw new CliException("Header view has no callable user server rule named '" + serverRule + "'. Available user rules: " + string.Join(", ", selected.Events.Where(x => string.Equals(x.Type, "User", StringComparison.OrdinalIgnoreCase)).Select(x => x.Name).ToArray()));
+                if (serverRules.Distinct(StringComparer.OrdinalIgnoreCase).Count() != serverRules.Count)
+                    throw new CliException("Duplicate --server-rule values are not allowed.");
                 var parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var assignment in options.GetAll("parameter"))
                 {
@@ -203,13 +210,13 @@ namespace K2EnvironmentCli
                     ViewGuid = selected.Guid, ViewName = selected.Name, ViewDisplayName = selected.DisplayName,
                     CategoryPath = selected.CategoryPath, ViewVersion = selected.Version,
                     Title = options.Get("title") ?? string.Empty, InitializeEvent = initializeEvent,
-                    Parameters = parameters, Inspection = selected
+                    ServerRules = serverRules, Parameters = parameters, Inspection = selected
                 };
             }
             store.Write(profile, true);
             var header = profile.SmartForms.DefaultCommonHeader;
             Console.WriteLine("Default SmartForms common header: " + (header == null ? "(none)" : header.ViewDisplayName + " [" + header.ViewName + "]"));
-            if (header != null) Console.WriteLine("  Initialize event: " + (header.InitializeEvent ?? "(none)") + "; parameters: " + string.Join(", ", header.Parameters.Select(x => x.Key + "=" + x.Value).ToArray()));
+            if (header != null) Console.WriteLine("  Initialize event: " + (header.InitializeEvent ?? "(none)") + "; server rules: " + (header.ServerRules == null || header.ServerRules.Count == 0 ? "(none)" : string.Join(", ", header.ServerRules.ToArray())) + "; parameters: " + string.Join(", ", header.Parameters.Select(x => x.Key + "=" + x.Value).ToArray()));
             return 0;
         }
 
@@ -237,6 +244,7 @@ namespace K2EnvironmentCli
                 ViewGuid = refreshed.Guid, ViewName = refreshed.Name, ViewDisplayName = refreshed.DisplayName,
                 CategoryPath = refreshed.CategoryPath, ViewVersion = refreshed.Version,
                 Title = selected.Title, InitializeEvent = selected.InitializeEvent,
+                ServerRules = selected.ServerRules ?? new List<string>(),
                 Parameters = selected.Parameters ?? new Dictionary<string, string>(), Inspection = refreshed
             };
         }
@@ -297,7 +305,7 @@ namespace K2EnvironmentCli
             Console.WriteLine("  set-default --name NAME");
             Console.WriteLine("  set-style-profile [--name NAME] (--style-profile NAME_OR_GUID | --no-style-profile)");
             Console.WriteLine("  inspect-header [--name NAME] --hint TEXT [--output json]");
-            Console.WriteLine("  set-common-header [--name NAME] (--view NAME_OR_GUID [--initialize-event EVENT] [--title TEXT] [--parameter NAME=VALUE ...] | --no-common-header)");
+            Console.WriteLine("  set-common-header [--name NAME] (--view NAME_OR_GUID [--initialize-event EVENT] [--server-rule EVENT ...] [--title TEXT] [--parameter NAME=VALUE ...] | --no-common-header)");
             Console.WriteLine("Common: --root PATH overrides the default %CODEX_HOME%\\k2 store.");
         }
     }

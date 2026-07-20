@@ -549,21 +549,38 @@ namespace K2SmartFormsCli
                     throw new CliException("Configured common header parameter is not available on '" + info.Name + "': " + name);
 
             var initializeDefinitionId = Guid.Empty;
+            var serverRules = new List<ResolvedHeaderRule>();
+            XDocument viewDocument = null;
             if (!string.IsNullOrWhiteSpace(configured.InitializeEvent))
             {
-                var document = XDocument.Parse(manager.GetViewDefinition(info.Guid));
-                var events = document.Descendants().Where(x => x.Name.LocalName == "Event" &&
+                viewDocument = XDocument.Parse(manager.GetViewDefinition(info.Guid));
+                var events = viewDocument.Descendants().Where(x => x.Name.LocalName == "Event" &&
                     string.Equals((string)x.Attribute("SourceType"), "View", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals((string)x.Attribute("Type"), "User", StringComparison.OrdinalIgnoreCase) &&
                     string.Equals((string)x.Element(x.Name.Namespace + "Name"), configured.InitializeEvent, StringComparison.OrdinalIgnoreCase)).ToList();
-                var userEvent = events.FirstOrDefault(x => string.Equals((string)x.Attribute("Type"), "User", StringComparison.OrdinalIgnoreCase)) ?? events.FirstOrDefault();
-                if (userEvent == null) throw new CliException("Configured common header initialize event is not available on '" + info.Name + "': " + configured.InitializeEvent);
+                var userEvent = events.FirstOrDefault();
+                if (userEvent == null) throw new CliException("Configured common header user initialization rule is not available on '" + info.Name + "': " + configured.InitializeEvent);
                 Guid.TryParse((string)userEvent.Attribute("DefinitionID"), out initializeDefinitionId);
+            }
+            foreach (var serverRuleName in configured.ServerRules ?? new List<string>())
+            {
+                if (viewDocument == null) viewDocument = XDocument.Parse(manager.GetViewDefinition(info.Guid));
+                var rule = viewDocument.Descendants().FirstOrDefault(x => x.Name.LocalName == "Event" &&
+                    string.Equals((string)x.Attribute("SourceType"), "View", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals((string)x.Attribute("Type"), "User", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals((string)x.Element(x.Name.Namespace + "Name"), serverRuleName, StringComparison.OrdinalIgnoreCase));
+                if (rule == null) throw new CliException("Configured common header server rule is not available on '" + info.Name + "': " + serverRuleName);
+                Guid definitionId;
+                if (!Guid.TryParse((string)rule.Attribute("DefinitionID"), out definitionId))
+                    throw new CliException("Configured common header server rule has an invalid definition ID: " + serverRuleName);
+                serverRules.Add(new ResolvedHeaderRule { Name = serverRuleName, DefinitionId = definitionId });
             }
             return new ResolvedCommonHeader
             {
                 ViewGuid = info.Guid, ViewName = info.Name, DisplayName = info.DisplayName,
                 CategoryPath = info.CategoryPath, Title = configured.Title ?? string.Empty,
                 InitializeEvent = configured.InitializeEvent, InitializeEventDefinitionId = initializeDefinitionId,
+                ServerRules = serverRules,
                 Parameters = configured.Parameters ?? new Dictionary<string, string>()
             };
         }
