@@ -159,7 +159,7 @@ namespace K2SmartFormsCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2forms 0.1.2");
+            Console.WriteLine("k2forms 0.1.3");
         }
 
         private static void PrintHelp()

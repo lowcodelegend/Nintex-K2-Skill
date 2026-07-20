@@ -11,7 +11,7 @@ Build checked-in SmartForms through the supported K2 `FormsManager` and `AutoGen
 
 1. Confirm that the target is self-hosted K2 Five and the required SmartObjects already exist.
 2. Read [references/design.md](references/design.md) before selecting views, properties, methods, behaviors, and theme.
-3. Read [references/manifest.md](references/manifest.md), then create a manifest with stable, version-free view/form names and one application root category. The CLI places views under `Views` and forms under `Forms`.
+3. Read [references/manifest.md](references/manifest.md), then create a manifest with stable, version-free view/form names and one application root category. The CLI places views under `Views` and forms under `Forms`. Every capture view must expose all required properties for each selected SmartObject method. Do not assume a SQL `DEFAULT` makes the corresponding generated K2 Create input optional; `doctor` validates the live method contract.
 4. Keep passwords out of manifests. Name an environment variable only when integrated K2 authentication is unavailable.
 5. Build and diagnose the CLI:
 

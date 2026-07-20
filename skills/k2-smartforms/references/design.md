@@ -14,6 +14,8 @@ For capture views, select the SmartObject's Create, Read, Update, and Delete met
 
 Order fields by user task, not database column order. Include the stable key when generated Read/Update/Delete rules need it, but review whether it should be hidden or rendered as a data label in a later Designer pass. Exclude `rowversion`, audit fields users cannot edit, and large technical projections unless the screen needs them.
 
+For every method selected on a capture or capture-list view, include every property reported by that live SmartObject method's `RequiredProperties` collection. The CLI blocks `doctor`, `plan`, `deploy`, and `verify` when a required method input is absent. A SQL `DEFAULT` constraint does not necessarily make a generated SQL broker Create input optional. If a database-managed audit value is still required by K2, redesign the SQL/SmartObject contract—for example, make the broker input optional while applying the default in SQL, or expose a purpose-built create method—instead of placing a technical timestamp control on the user form.
+
 Version 0.1 does not convert foreign-key IDs into lookups. Treat numeric relationship controls as a development baseline and configure friendly SmartObject-backed lookups before production.
 
 ## Presentation

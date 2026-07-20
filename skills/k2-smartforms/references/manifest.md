@@ -62,6 +62,8 @@
 
 Each form's optional `useLegacyTheme` defaults to `false`. The CLI writes the K2 `UseLegacyTheme` property explicitly and verifies it after deployment. Keep the default for modern theme rendering; set it to `true` only when legacy compatibility is intentional. The configured theme name does not imply this mode.
 
+For capture and capture-list views, `properties` must contain every required input property reported by every method in `methods`. The `all-properties` option also satisfies this check. Validation uses live SmartObject metadata and fails before deployment with the view, method, and omitted property names. SQL column defaults are not treated as SmartObject input defaults.
+
 Supported view types are `capture`, `list`, `content`, and `capture-list`. Supported options are `display-controls`, `all-properties`, `all-methods`, `labels-left`, `colon-labels`, `toolbar`, and `editable`. Editable types require `editable`.
 
 Supported form options are `no-tabs`. Supported behaviors are `load-form-list-click`, `refresh-list-form-submit`, and `refresh-list-form-load`.

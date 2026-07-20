@@ -58,10 +58,41 @@ namespace K2SmartFormsCli
                     if (!string.IsNullOrWhiteSpace(view.DefaultListMethod) && !methods.Contains(view.DefaultListMethod))
                         throw new CliException("SmartObject '" + view.SmartObject + "' has no default List method '" + view.DefaultListMethod + "' requested by view '" + view.Name + "'.");
 
+                    ValidateRequiredMethodInputs(view, smartObject);
+
                     Console.WriteLine("SmartObject input: OK (" + view.SmartObject + ", " + properties.Count + " properties, " + methods.Count + " methods)");
                 }
                 return 0;
             });
+        }
+
+        private static void ValidateRequiredMethodInputs(ViewDefinition view, SmartObject smartObject)
+        {
+            if (view.Type != "capture" && view.Type != "capture-list") return;
+
+            var effectiveProperties = new HashSet<string>(view.Properties, StringComparer.OrdinalIgnoreCase);
+            if (view.Options.Contains("all-properties", StringComparer.OrdinalIgnoreCase))
+                effectiveProperties.UnionWith(smartObject.Properties.Cast<SmartProperty>().Select(x => x.Name));
+
+            var selectedMethods = view.Options.Contains("all-methods", StringComparer.OrdinalIgnoreCase)
+                ? smartObject.AllMethods.ToList()
+                : smartObject.AllMethods.Where(x => view.Methods.Contains(x.Name, StringComparer.OrdinalIgnoreCase)).ToList();
+
+            foreach (var method in selectedMethods)
+            {
+                var missing = method.RequiredProperties.Cast<SmartProperty>()
+                    .Select(x => x.Name)
+                    .Where(x => !effectiveProperties.Contains(x))
+                    .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                if (missing.Count == 0) continue;
+
+                throw new CliException(
+                    "View '" + view.Name + "' selects method '" + method.Name + "' on SmartObject '" + view.SmartObject +
+                    "' but omits required input properties: " + string.Join(", ", missing.ToArray()) +
+                    ". Add them to view.properties, use the all-properties option, or change the SmartObject method contract so those values are supplied outside the generated form. " +
+                    "SQL DEFAULT constraints do not make generated K2 method inputs optional.");
+            }
         }
 
         public IList<ArtifactState> GetArtifactStates()

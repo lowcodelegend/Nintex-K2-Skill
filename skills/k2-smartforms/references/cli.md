@@ -4,7 +4,7 @@
 
 | Command | Mutates K2 | Behavior |
 | --- | --- | --- |
-| `doctor --manifest` | No | Validate JSON, K2 connectivity, theme, SmartObjects, properties, and methods. |
+| `doctor --manifest` | No | Validate JSON, K2 connectivity, theme, SmartObjects, properties, methods, and required method-input coverage. |
 | `plan --manifest` | No | Show creates, replacements, collisions, external dependencies, and verification scope. |
 | `deploy --manifest --confirm` | Yes | Optionally replace exact declared artifacts, generate checked-in views/forms, and verify. |
 | `verify --manifest` | No | Validate definitions, GUID references, category, theme, explicit legacy-theme mode, check-in state, and runtime routes. |
