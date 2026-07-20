@@ -97,13 +97,20 @@ namespace K2EnvironmentCli
                             IsInternal = x.IsInternal,
                             Version = x.Version
                         }).ToList();
-                    sources.Add("K2 FormsManager themes and style profiles");
+                    var headers = manager.GetViews().Views.Cast<ViewInfo>()
+                        .Where(IsHeaderCandidate)
+                        .OrderBy(x => x.IsSystem).ThenBy(x => x.CategoryPath).ThenBy(x => x.DisplayName)
+                        .Select(x => ReadHeader(manager, x, false)).ToList();
+                    sources.Add("K2 FormsManager themes, style profiles, and header-view candidates");
                     return new SmartFormsSettings
                     {
                         Themes = themes,
                         StyleProfiles = profiles,
                         StyleProfileSelection = profiles.Count == 0 ? "none" : "unselected",
-                        DefaultStyleProfile = null
+                        DefaultStyleProfile = null,
+                        HeaderViewCandidates = headers,
+                        CommonHeaderSelection = headers.Count == 0 ? "none" : "unselected",
+                        DefaultCommonHeader = null
                     };
                 }
                 catch (Exception ex)
@@ -119,6 +126,132 @@ namespace K2EnvironmentCli
                     }
                 }
             }
+        }
+
+        public static List<HeaderViewCandidate> InspectHeaders(K2Settings settings, string hint)
+        {
+            if (settings == null) throw new CliException("Profile has no K2 connection settings.");
+            hint = (hint ?? string.Empty).Trim();
+            if (hint.Length == 0) throw new CliException("--hint must contain part of the header view name, display name, category path, or its GUID.");
+            using (var manager = OpenFormsManager(settings))
+            {
+                Guid guid;
+                var views = manager.GetViews().Views.Cast<ViewInfo>().Where(x =>
+                    (Guid.TryParse(hint, out guid) && x.Guid == guid) ||
+                    Contains(x.Name, hint) || Contains(x.DisplayName, hint) || Contains(x.CategoryPath, hint)).ToList();
+                return views.OrderBy(x => x.IsSystem).ThenBy(x => x.CategoryPath).ThenBy(x => x.DisplayName)
+                    .Select(x => ReadHeader(manager, x, true)).ToList();
+            }
+        }
+
+        private static FormsManager OpenFormsManager(K2Settings settings)
+        {
+            var builder = new SCConnectionStringBuilder
+            {
+                Authenticate = true,
+                Host = settings.Host,
+                Port = (uint)settings.ManagementPort,
+                Integrated = settings.IntegratedAuthentication,
+                IsPrimaryLogin = true,
+                SecurityLabelName = settings.SecurityLabel
+            };
+            var manager = new FormsManager();
+            manager.CreateConnection();
+            try { manager.Connection.Open(builder.ConnectionString); return manager; }
+            catch
+            {
+                manager.DeleteConnection();
+                manager.Dispose();
+                throw;
+            }
+        }
+
+        private static bool IsHeaderCandidate(ViewInfo view)
+        {
+            return Contains(view.Name, "header") || Contains(view.DisplayName, "header") ||
+                   Contains(view.Name, "banner") || Contains(view.DisplayName, "banner") ||
+                   Contains(view.Name, "masthead") || Contains(view.DisplayName, "masthead");
+        }
+
+        private static bool Contains(string value, string part)
+        {
+            return !string.IsNullOrWhiteSpace(value) && value.IndexOf(part, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static HeaderViewCandidate ReadHeader(FormsManager manager, ViewInfo view, bool detailed)
+        {
+            var definition = XDocument.Parse(manager.GetViewDefinition(view.Guid));
+            var events = definition.Descendants().Where(x => x.Name.LocalName == "Event" &&
+                string.Equals((string)x.Attribute("SourceType"), "View", StringComparison.OrdinalIgnoreCase))
+                .Select(x => new HeaderEventSettings
+                {
+                    Name = (string)x.Element(x.Name.Namespace + "Name") ?? (string)x.Attribute("SourceName"),
+                    DefinitionId = ParseGuid((string)x.Attribute("DefinitionID")),
+                    Type = (string)x.Attribute("Type"),
+                    HandlerCount = x.Descendants().Count(y => y.Name.LocalName == "Handler"),
+                    ActionCount = x.Descendants().Count(y => y.Name.LocalName == "Action")
+                }).ToList();
+            var consumers = detailed ? manager.GetFormsForView(view.Guid).Forms.Cast<FormInfo>()
+                .OrderBy(x => x.CategoryPath).ThenBy(x => x.DisplayName)
+                .Take(25).Select(x => ReadConsumer(manager, x, view.Guid)).ToList() : new List<HeaderConsumerSettings>();
+            return new HeaderViewCandidate
+            {
+                Guid = view.Guid,
+                Name = view.Name,
+                DisplayName = view.DisplayName,
+                CategoryPath = view.CategoryPath,
+                ViewType = view.Type.ToString(),
+                Version = view.Version,
+                IsSystem = view.IsSystem,
+                IsInternal = view.IsInternal,
+                Parameters = view.Parameters.Cast<ViewParameter>().Select(x => new HeaderParameterSettings
+                {
+                    Guid = x.Guid, Name = x.Name, DisplayName = x.DisplayName,
+                    DataType = x.DataType.ToString(), DefaultValue = x.DefaultValue
+                }).ToList(),
+                Events = events,
+                ConsumerFormCount = manager.GetFormsForView(view.Guid).Forms.Count,
+                Consumers = consumers
+            };
+        }
+
+        private static HeaderConsumerSettings ReadConsumer(FormsManager manager, FormInfo info, Guid viewGuid)
+        {
+            var document = XDocument.Parse(manager.GetFormDefinition(info.Guid));
+            var item = document.Descendants().FirstOrDefault(x => x.Name.LocalName == "Item" &&
+                string.Equals((string)x.Attribute("ViewID"), viewGuid.ToString(), StringComparison.OrdinalIgnoreCase));
+            var instanceId = item == null ? null : (string)item.Attribute("ID");
+            var bindings = new List<HeaderParameterBindingSettings>();
+            if (!string.IsNullOrWhiteSpace(instanceId))
+            {
+                var actions = document.Descendants().Where(x => x.Name.LocalName == "Action" &&
+                    string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals((string)x.Attribute("InstanceID"), instanceId, StringComparison.OrdinalIgnoreCase));
+                foreach (var parameter in actions.SelectMany(x => x.Descendants().Where(y => y.Name.LocalName == "Parameter" &&
+                    string.Equals((string)y.Attribute("TargetType"), "ViewParameter", StringComparison.OrdinalIgnoreCase))))
+                {
+                    var sourceValue = parameter.Elements().FirstOrDefault(x => x.Name.LocalName == "SourceValue");
+                    bindings.Add(new HeaderParameterBindingSettings
+                    {
+                        TargetParameter = (string)parameter.Attribute("TargetName") ?? (string)parameter.Attribute("TargetID"),
+                        SourceType = (string)parameter.Attribute("SourceType"),
+                        SourceName = (string)parameter.Attribute("SourceName"),
+                        Value = sourceValue == null ? null : sourceValue.Value
+                    });
+                }
+            }
+            return new HeaderConsumerSettings
+            {
+                FormGuid = info.Guid, FormName = info.Name, FormDisplayName = info.DisplayName,
+                CategoryPath = info.CategoryPath, InstanceId = instanceId,
+                InitializeBindings = bindings.GroupBy(x => x.TargetParameter, StringComparer.OrdinalIgnoreCase).Select(x => x.First()).ToList()
+            };
+        }
+
+        private static Guid ParseGuid(string value)
+        {
+            Guid result;
+            return Guid.TryParse(value, out result) ? result : Guid.Empty;
         }
 
         private static string ResolveInstallDirectory(string value, List<string> sources)

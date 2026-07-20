@@ -14,7 +14,7 @@ The SQL SmartObjects, SmartForms, and workflow skills should evolve from repeata
 
 ## K2 solution builder — v0.10 approval matrices implemented
 
-The `k2-builder` meta-skill defines a solution manifest, dependency-ordered specialist plan, cross-artifact contracts, workflow entry-state policy, lookup/administration policy, approval-matrix contract, end-to-end verification gates, and deployment-ledger shape. Its planner now validates matrix namespace, Admin maintenance UX, workflow matrix-code/dimension mappings, and designer-identity errata in addition to the existing category, theme, dependency, and default-state rules. Its `k2env` CLI persists non-secret machine/user-level K2 profiles under `CODEX_HOME`.
+The `k2-builder` meta-skill defines a solution manifest, dependency-ordered specialist plan, cross-artifact contracts, workflow entry-state policy, lookup/administration policy, approval-matrix contract, end-to-end verification gates, and deployment-ledger shape. Its planner now validates matrix namespace, Admin maintenance UX, workflow matrix-code/dimension mappings, and designer-identity errata in addition to the existing category, theme, dependency, and default-state rules. Its `k2env` CLI persists non-secret machine/user-level K2 profiles under `CODEX_HOME`, including discovered Style Profiles and a user-confirmed common-header view/initialization contract.
 
 Next increments should execute and aggregate structured specialist plans, capture a deployment ledger automatically, add authenticated browser scenarios, reconcile runtime form-state rules rather than only manifest intent, and coordinate safe reverse-order cleanup. Full semantic iterative reconciliation remains the mid-horizon goal shared with the three specialist skills.
 
@@ -41,7 +41,7 @@ Create advanced/composite SmartObjects with controlled names, properties, method
 
 ### 3. K2 SmartForms builder — v0.5 view titles, tabs, Worklist, and Admin UX implemented
 
-The tool creates checked-in capture/list/content/editable-list views and multi-view forms from declarative manifests using supported K2 generation APIs. It sets and verifies a visible title for every form view instance, with friendly overrides and reasoned suppression. It converts declared capture fields into SmartObject-backed dropdowns, creates named tabs and a native K2 Worklist, separates ordinary artifacts from `Admin` CRUD UX, and verifies modern Style Profiles. The corporate fixture adds approval-matrix rule Admin views/form and uses the `PSF Nintex` Style Profile through system name `PSF UX v1`.
+The tool creates checked-in capture/list/content/editable-list views and multi-view forms from declarative manifests using supported K2 generation APIs. It sets and verifies a visible title for every solution view instance, consumes and verifies a selected environment common header with templated Initialize bindings, converts declared capture fields into SmartObject-backed dropdowns, creates named tabs and a native K2 Worklist, separates ordinary artifacts from `Admin` CRUD UX, and verifies modern Style Profiles. The corporate fixture adds approval-matrix rule Admin views/form and uses the `PSF Nintex` Style Profile through system name `PSF UX v1`.
 
 Next increments:
 

@@ -7,11 +7,17 @@ namespace K2SmartFormsCli
 {
     internal static class FormLayoutDefinition
     {
-        public static string Apply(string xml, FormDefinition definition)
+        public static string Apply(string xml, FormDefinition definition, ResolvedCommonHeader header, IDictionary<string, string> headerParameters)
         {
             var document = Parse(xml);
             var form = FindForm(document);
             ApplyViewTitles(form, definition);
+            XElement headerArea = null;
+            if (header != null)
+            {
+                headerArea = FindHeaderArea(form, header, definition.Name);
+                ApplyHeader(form, header, headerParameters);
+            }
             if (definition.Tabs.Count == 0) return document.ToString(SaveOptions.DisableFormatting);
             form.SetAttributeValue("Layout", "TabControl");
             var controls = RequiredChild(form, "Controls");
@@ -45,6 +51,7 @@ namespace K2SmartFormsCli
                     new XElement(panels.Name.Namespace + "DisplayName", tab.Name));
                 var areas = new XElement(panels.Name.Namespace + "Areas");
                 panel.Add(areas);
+                if (headerArea != null && object.ReferenceEquals(tab, definition.Tabs[0])) areas.Add(new XElement(headerArea));
                 foreach (var viewName in tab.Views) areas.Add(new XElement(viewAreas[viewName]));
                 if (tab.Worklist != null) areas.Add(BuildWorklistArea(form, controls, tab, definition.Name));
                 panels.Add(panel);
@@ -52,11 +59,12 @@ namespace K2SmartFormsCli
             return document.ToString(SaveOptions.DisableFormatting);
         }
 
-        public static void Verify(string xml, FormDefinition definition)
+        public static void Verify(string xml, FormDefinition definition, ResolvedCommonHeader header, IDictionary<string, string> headerParameters)
         {
             var document = Parse(xml);
             var form = FindForm(document);
             VerifyViewTitles(form, definition);
+            if (header != null) VerifyHeader(form, header, headerParameters, definition.Name);
             if (definition.Tabs.Count == 0) return;
             if (!string.Equals((string)form.Attribute("Layout"), "TabControl", StringComparison.OrdinalIgnoreCase))
                 throw new CliException("K2 Form '" + definition.Name + "' has multiple tabs but Layout is '" + (string)form.Attribute("Layout") + "', expected 'TabControl'.");
@@ -71,10 +79,88 @@ namespace K2SmartFormsCli
                 var panel = panels[index];
                 if (!string.Equals(ChildValue(panel, "Name"), expected.Name, StringComparison.Ordinal))
                     throw new CliException("K2 Form '" + definition.Name + "' tab " + (index + 1) + " is '" + ChildValue(panel, "Name") + "', expected '" + expected.Name + "'.");
-                var actualViews = panel.Descendants().Where(x => x.Name.LocalName == "Item" && x.Attribute("ViewName") != null).Select(x => (string)x.Attribute("ViewName")).ToList();
+                var actualViews = panel.Descendants().Where(x => x.Name.LocalName == "Item" && x.Attribute("ViewID") != null)
+                    .Where(x => header == null || !string.Equals((string)x.Attribute("ViewID"), header.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase))
+                    .Select(x => (string)x.Attribute("ViewName") ?? ChildValue(x, "Name")).ToList();
                 if (!actualViews.SequenceEqual(expected.Views, StringComparer.OrdinalIgnoreCase))
                     throw new CliException("K2 Form '" + definition.Name + "' tab '" + expected.Name + "' has the wrong view layout.");
+                var headerCount = panel.Descendants().Count(x => x.Name.LocalName == "Item" && header != null && string.Equals((string)x.Attribute("ViewID"), header.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase));
+                if (header != null && headerCount != (index == 0 ? 1 : 0))
+                    throw new CliException("K2 Form '" + definition.Name + "' common header must occur once on the first tab only.");
                 if (expected.Worklist != null) VerifyWorklist(form, controls, panel, definition, expected);
+            }
+        }
+
+        private static XElement FindHeaderArea(XElement form, ResolvedCommonHeader header, string formName)
+        {
+            var item = form.Descendants().FirstOrDefault(x => x.Name.LocalName == "Item" &&
+                string.Equals((string)x.Attribute("ViewID"), header.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase));
+            if (item == null) throw new CliException("Generated form '" + formName + "' has no layout item for common header '" + header.ViewName + "'.");
+            var area = item.Ancestors().FirstOrDefault(x => x.Name.LocalName == "Area");
+            if (area == null) throw new CliException("Generated form '" + formName + "' common header has no containing area.");
+            return area;
+        }
+
+        private static void ApplyHeader(XElement form, ResolvedCommonHeader header, IDictionary<string, string> parameters)
+        {
+            var item = form.Descendants().First(x => x.Name.LocalName == "Item" && string.Equals((string)x.Attribute("ViewID"), header.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase));
+            var instanceId = (string)item.Attribute("ID");
+            var controls = RequiredChild(form, "Controls");
+            var control = controls.Elements().FirstOrDefault(x => x.Name.LocalName == "Control" && string.Equals((string)x.Attribute("ID"), instanceId, StringComparison.OrdinalIgnoreCase));
+            if (control == null) throw new CliException("Generated form has no AreaItem control for common header '" + header.ViewName + "'.");
+            SetProperty(control, "Title", header.Title ?? string.Empty);
+            if (parameters == null || parameters.Count == 0) return;
+            if (string.IsNullOrWhiteSpace(header.InitializeEvent))
+                throw new CliException("Common header '" + header.ViewName + "' has parameter bindings but no initialize event was configured.");
+            var action = form.Descendants().FirstOrDefault(x => x.Name.LocalName == "Action" &&
+                string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("InstanceID"), instanceId, StringComparison.OrdinalIgnoreCase) &&
+                x.Descendants().Any(p => p.Name.LocalName == "Property" &&
+                    ((string.Equals(ChildValue(p, "Name"), "EventID", StringComparison.OrdinalIgnoreCase) && header.InitializeEventDefinitionId != Guid.Empty && string.Equals(ChildValue(p, "Value"), header.InitializeEventDefinitionId.ToString(), StringComparison.OrdinalIgnoreCase)) ||
+                     (string.Equals(ChildValue(p, "Name"), "Method", StringComparison.OrdinalIgnoreCase) && string.Equals(ChildValue(p, "Value"), header.InitializeEvent, StringComparison.OrdinalIgnoreCase)))));
+            if (action == null)
+            {
+                var available = form.Descendants().Where(x => x.Name.LocalName == "Action" && string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase))
+                    .Select(x => "instance=" + ((string)x.Attribute("InstanceID") ?? "") + ", event=" + (x.Descendants().Where(p => p.Name.LocalName == "Property" && string.Equals(ChildValue(p, "Name"), "EventID", StringComparison.OrdinalIgnoreCase)).Select(p => ChildValue(p, "Value")).FirstOrDefault() ?? "") + ", method=" + (x.Descendants().Where(p => p.Name.LocalName == "Property" && string.Equals(ChildValue(p, "Name"), "Method", StringComparison.OrdinalIgnoreCase)).Select(p => ChildValue(p, "Value")).FirstOrDefault() ?? "")).ToArray();
+                throw new CliException("Generated form has no invocation of common header initialize event '" + header.InitializeEvent + "'. Execute actions: " + string.Join("; ", available));
+            }
+            var actionParameters = action.Elements().FirstOrDefault(x => x.Name.LocalName == "Parameters");
+            if (actionParameters == null) { actionParameters = new XElement(action.Name.Namespace + "Parameters"); action.Add(actionParameters); }
+            foreach (var binding in parameters)
+            {
+                foreach (var duplicate in actionParameters.Elements().Where(x => x.Name.LocalName == "Parameter" && string.Equals((string)x.Attribute("TargetID"), binding.Key, StringComparison.OrdinalIgnoreCase)).ToList()) duplicate.Remove();
+                actionParameters.Add(new XElement(action.Name.Namespace + "Parameter",
+                    new XAttribute("SourceID", "Sources"), new XAttribute("SourceType", "Value"),
+                    new XAttribute("TargetInstanceID", instanceId), new XAttribute("TargetID", binding.Key),
+                    new XAttribute("TargetName", binding.Key), new XAttribute("TargetType", "ViewParameter"), new XAttribute("IsRequired", "True"),
+                    new XElement(action.Name.Namespace + "SourceValue", new XAttribute(XNamespace.Xml + "space", "preserve"), binding.Value ?? string.Empty)));
+            }
+        }
+
+        private static void VerifyHeader(XElement form, ResolvedCommonHeader header, IDictionary<string, string> parameters, string formName)
+        {
+            var item = form.Descendants().FirstOrDefault(x => x.Name.LocalName == "Item" && string.Equals((string)x.Attribute("ViewID"), header.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase));
+            if (item == null) throw new CliException("K2 Form '" + formName + "' is missing common header '" + header.ViewName + "'.");
+            var instanceId = (string)item.Attribute("ID");
+            var controls = RequiredChild(form, "Controls");
+            var control = controls.Elements().FirstOrDefault(x => x.Name.LocalName == "Control" && string.Equals((string)x.Attribute("ID"), instanceId, StringComparison.OrdinalIgnoreCase));
+            var title = control == null ? null : ReadProperty(control, "Title") ?? string.Empty;
+            if (!string.Equals(title, header.Title ?? string.Empty, StringComparison.Ordinal))
+                throw new CliException("K2 Form '" + formName + "' common header title does not match the environment configuration.");
+            if (parameters == null || parameters.Count == 0) return;
+            var action = form.Descendants().FirstOrDefault(x => x.Name.LocalName == "Action" &&
+                string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("InstanceID"), instanceId, StringComparison.OrdinalIgnoreCase) &&
+                x.Descendants().Any(p => p.Name.LocalName == "Property" &&
+                    ((string.Equals(ChildValue(p, "Name"), "EventID", StringComparison.OrdinalIgnoreCase) && header.InitializeEventDefinitionId != Guid.Empty && string.Equals(ChildValue(p, "Value"), header.InitializeEventDefinitionId.ToString(), StringComparison.OrdinalIgnoreCase)) ||
+                     (string.Equals(ChildValue(p, "Name"), "Method", StringComparison.OrdinalIgnoreCase) && string.Equals(ChildValue(p, "Value"), header.InitializeEvent, StringComparison.OrdinalIgnoreCase)))));
+            if (action == null) throw new CliException("K2 Form '" + formName + "' does not invoke common header initialize event '" + header.InitializeEvent + "'.");
+            foreach (var binding in parameters)
+            {
+                var parameter = action.Descendants().FirstOrDefault(x => x.Name.LocalName == "Parameter" && string.Equals((string)x.Attribute("TargetID"), binding.Key, StringComparison.OrdinalIgnoreCase));
+                var actual = parameter == null ? null : parameter.Elements().FirstOrDefault(x => x.Name.LocalName == "SourceValue");
+                if (actual == null || !string.Equals(actual.Value, binding.Value ?? string.Empty, StringComparison.Ordinal))
+                    throw new CliException("K2 Form '" + formName + "' common header parameter '" + binding.Key + "' is not configured as expected.");
             }
         }
 

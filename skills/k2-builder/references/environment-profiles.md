@@ -17,7 +17,7 @@ Run discovery once on a self-hosted K2 machine. It reads the K2 installation reg
 & '<k2-builder-root>\scripts\k2env.ps1' discover --name spk2-local --default
 ```
 
-Discovery also queries the supported K2 `FormsManager` API for installed themes and style profiles; it does not query or modify K2 databases and never writes credentials. Supply `--install-dir`, `--host`, or `--base-url` only to override an incorrectly inferred value.
+Discovery also queries the supported K2 `FormsManager` API for installed themes, Style Profiles, and likely common header views. Header candidates include their parameters, view events/rule-action counts, version, category, and consumer-form count. It does not query or modify K2 databases and never writes credentials. Supply `--install-dir`, `--host`, or `--base-url` only to override an incorrectly inferred value.
 
 After first discovery, inspect `smartForms.styleProfiles`. If `smartForms.styleProfileSelection` is `unselected`, present each profile's display name, system name, category, and GUID and ask which should apply to newly generated forms by default. Persist either the exact selection or a deliberate opt-out:
 
@@ -27,6 +27,16 @@ After first discovery, inspect `smartForms.styleProfiles`. If `smartForms.styleP
 ```
 
 The selector accepts an unambiguous display name, system name, or GUID. `refresh` re-inventories the server and preserves a selected profile by GUID, or preserves an explicit `none`; if the selected profile disappeared, selection returns to `unselected`.
+
+Then resolve `smartForms.commonHeaderSelection`. Ask whether newly generated forms should use a shared environment header. If not, persist a deliberate `none`. If yes, ask for a hint, inspect live candidates and existing consumer mappings, and agree how parameter values should be initialized before persisting the contract:
+
+```powershell
+& '<k2-builder-root>\scripts\k2env.ps1' inspect-header --name spk2-local --hint 'Corporate Header'
+& '<k2-builder-root>\scripts\k2env.ps1' set-common-header --name spk2-local --view '<exact-name-or-guid>' --initialize-event Init --title '' --parameter 'HeaderText={{form.name}}' --parameter 'SubheaderText={{application.name}}' --parameter 'AppId={{solution.code}}'
+& '<k2-builder-root>\scripts\k2env.ps1' set-common-header --name spk2-local --no-common-header
+```
+
+Supported parameter templates are `{{form.name}}`, `{{application.name}}`, `{{application.rootCategoryPath}}`, and `{{solution.code}}`; literal values are also valid. `inspect-header` reports the header's parameters and events plus up to 25 forms that already consume it and the mappings those forms use. Do not guess required business values. The selected view is persisted by GUID, and refresh preserves its setup when that GUID still exists.
 
 ## Reuse
 
@@ -41,7 +51,7 @@ If validation passes, use the stored values and do not repeat full discovery. Ap
 
 `explicit user/manifest value → selected environment profile → tool default`
 
-The environment profile supplies K2 host, ports, integrated-authentication mode, security label, install directory, detected product build, Designer host token, public base URLs, installed SmartForms legacy themes/Style Profiles, and the chosen default Style Profile. For SmartForms use `explicit manifest styleProfile → selected environment default → legacy-compatibility exception`; stop and ask when selection is still `unselected`, and report an explicit `none` because Style Profiles are K2's modern styling path. It does not replace application-specific SQL database settings.
+The environment profile supplies K2 host, ports, integrated-authentication mode, security label, install directory, detected product build, Designer host token, public base URLs, installed SmartForms legacy themes/Style Profiles/header candidates, the chosen default Style Profile, and the selected common-header initialization contract. For SmartForms use `explicit manifest value → selected environment default → deliberate exception`; stop and ask while either selection is `unselected`. `k2forms` automatically consumes the selected header from the default profile unless `application.commonHeader` explicitly selects/overrides it or disables it with a reason. The profile does not replace application-specific SQL database settings.
 
 ## Maintenance
 

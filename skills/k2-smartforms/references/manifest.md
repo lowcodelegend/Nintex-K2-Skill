@@ -60,6 +60,29 @@
 
 `application.rootCategoryPath` is the stable application root. It must not contain a version segment or end in `Forms`, `Views`, or `Admin`. The CLI derives `<root>\Views`, `<root>\Forms`, `<root>\Admin\Views`, and `<root>\Admin\Forms`. Form and view names must not contain version tokens because K2 maintains internal artifact versions. `theme` must match an installed legacy K2 theme because `FormGenerator` requires it, but it is fallback/compatibility metadata rather than the modern styling choice. For new forms, set `styleProfile` to an unambiguous installed Style Profile system name, display name, or GUID; prefer the system name stored by `k2env`. The CLI writes the StyleProfile GUID/name into every generated form and verifies it independently from the legacy theme field. `checkIn` should normally remain true.
 
+Set `application.solutionCode` to the solution's three- or four-letter prefix. It is available to environment common-header templates as `{{solution.code}}`; when omitted, the CLI derives the text before the first dot in the form name.
+
+By default the CLI reads the selected common header from `%CODEX_HOME%\k2` (or `%USERPROFILE%\.codex\k2`). Use an explicit block only to select another environment, override the header for this solution, or opt out:
+
+```json
+"commonHeader": {
+  "enabled": true,
+  "environment": "spk2-local",
+  "view": "Corporate.FrameworkHeader",
+  "viewGuid": "00000000-0000-0000-0000-000000000000",
+  "title": "",
+  "initializeEvent": "Init",
+  "parameters": {
+    "HeaderText": "{{form.name}}",
+    "SubheaderText": "{{application.name}}",
+    "AppId": "{{solution.code}}",
+    "Debug": "false"
+  }
+}
+```
+
+Supported templates are `{{form.name}}`, `{{application.name}}`, `{{application.rootCategoryPath}}`, and `{{solution.code}}`; other text is literal. An explicit `view` takes precedence over the environment selection. To suppress the environment header use `{ "enabled": false, "reason": "..." }`; the reason is mandatory. The selected header is an existing external View and is not created, replaced, or removed by the manifest.
+
 ## Lookup sources and controls
 
 Declare each reusable lookup source once under `application.lookups`, then bind target properties in capture views:
@@ -165,4 +188,4 @@ The CLI validates that the installed environment registers the native `Worklist`
 
 Tabs must have stable, version-free names. Version 0.5 supports one Worklist tab per form. It loads the current K2 user's default worklist across processes; process-specific Worklist filters, workflow-specific SmartObjects, and fixed users are not configured.
 
-When expected artifacts are omitted, verification defaults to every declared view and form. Verification checks tab order/content, native Worklist properties, and its click-to-open-task rule. Runtime routes use `<runtimeBaseUrl>/Runtime/Form/<URL-encoded-form-name>/`; an unauthenticated CLI may verify the route up to the environment's interactive authentication redirect, which is not an interactive Worklist test.
+When expected artifacts are omitted, verification defaults to every declared view and form. Verification checks tab order/content, native Worklist properties, its click-to-open-task rule, and any resolved common header's GUID/title/first-tab placement/Initialize bindings. Runtime routes use `<runtimeBaseUrl>/Runtime/Form/<URL-encoded-form-name>/`; an unauthenticated CLI may verify the route up to the environment's interactive authentication redirect, which is not an interactive Worklist test.

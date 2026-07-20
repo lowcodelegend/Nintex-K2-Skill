@@ -22,6 +22,74 @@ namespace K2EnvironmentCli
         public List<StyleProfileSettings> StyleProfiles { get; set; }
         public string StyleProfileSelection { get; set; }
         public StyleProfileSettings DefaultStyleProfile { get; set; }
+        public List<HeaderViewCandidate> HeaderViewCandidates { get; set; }
+        public string CommonHeaderSelection { get; set; }
+        public CommonHeaderSettings DefaultCommonHeader { get; set; }
+    }
+
+    public sealed class HeaderViewCandidate
+    {
+        public Guid Guid { get; set; }
+        public string Name { get; set; }
+        public string DisplayName { get; set; }
+        public string CategoryPath { get; set; }
+        public string ViewType { get; set; }
+        public int Version { get; set; }
+        public bool IsSystem { get; set; }
+        public bool IsInternal { get; set; }
+        public List<HeaderParameterSettings> Parameters { get; set; }
+        public List<HeaderEventSettings> Events { get; set; }
+        public int ConsumerFormCount { get; set; }
+        public List<HeaderConsumerSettings> Consumers { get; set; }
+    }
+
+    public sealed class HeaderParameterSettings
+    {
+        public Guid Guid { get; set; }
+        public string Name { get; set; }
+        public string DisplayName { get; set; }
+        public string DataType { get; set; }
+        public string DefaultValue { get; set; }
+    }
+
+    public sealed class HeaderEventSettings
+    {
+        public string Name { get; set; }
+        public Guid DefinitionId { get; set; }
+        public string Type { get; set; }
+        public int HandlerCount { get; set; }
+        public int ActionCount { get; set; }
+    }
+
+    public sealed class HeaderConsumerSettings
+    {
+        public Guid FormGuid { get; set; }
+        public string FormName { get; set; }
+        public string FormDisplayName { get; set; }
+        public string CategoryPath { get; set; }
+        public string InstanceId { get; set; }
+        public List<HeaderParameterBindingSettings> InitializeBindings { get; set; }
+    }
+
+    public sealed class HeaderParameterBindingSettings
+    {
+        public string TargetParameter { get; set; }
+        public string SourceType { get; set; }
+        public string SourceName { get; set; }
+        public string Value { get; set; }
+    }
+
+    public sealed class CommonHeaderSettings
+    {
+        public Guid ViewGuid { get; set; }
+        public string ViewName { get; set; }
+        public string ViewDisplayName { get; set; }
+        public string CategoryPath { get; set; }
+        public int ViewVersion { get; set; }
+        public string Title { get; set; }
+        public string InitializeEvent { get; set; }
+        public Dictionary<string, string> Parameters { get; set; }
+        public HeaderViewCandidate Inspection { get; set; }
     }
 
     public sealed class StyleProfileSettings

@@ -37,6 +37,12 @@ namespace K2EnvironmentCli
                 var exists = selected != null && profile.SmartForms.StyleProfiles.Exists(x => x.Guid == selected.Guid);
                 Check(checks, "default-style-profile", exists, exists ? selected.DisplayName + " [" + selected.Name + "]" : "selected style profile is no longer available; refresh and select again");
             }
+            if (hasSmartFormsMetadata && string.Equals(profile.SmartForms.CommonHeaderSelection, "selected", StringComparison.OrdinalIgnoreCase))
+            {
+                var selected = profile.SmartForms.DefaultCommonHeader;
+                var exists = selected != null && profile.SmartForms.HeaderViewCandidates != null && profile.SmartForms.HeaderViewCandidates.Exists(x => x.Guid == selected.ViewGuid);
+                Check(checks, "default-common-header", exists, exists ? selected.ViewDisplayName + " [" + selected.ViewName + "]" : "selected common header is no longer available; refresh and select again");
+            }
             if (profile.Urls != null)
             {
                 CheckUrl(checks, "designer-url", profile.Urls.Designer);
@@ -74,7 +80,7 @@ namespace K2EnvironmentCli
                 if (!Uri.TryCreate(url, UriKind.Absolute, out parsed)) throw new Exception("invalid absolute URL");
                 var request = (HttpWebRequest)WebRequest.Create(parsed);
                 request.Method = "GET"; request.AllowAutoRedirect = false; request.Timeout = 5000;
-                request.UseDefaultCredentials = true; request.UserAgent = "k2env/0.2.0";
+                request.UseDefaultCredentials = true; request.UserAgent = "k2env/" + Cli.Version;
                 try
                 {
                     using (var response = (HttpWebResponse)request.GetResponse())

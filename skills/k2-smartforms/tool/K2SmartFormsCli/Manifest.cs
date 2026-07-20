@@ -54,6 +54,17 @@ namespace K2SmartFormsCli
             if (Application.Views == null) Application.Views = new List<ViewDefinition>();
             if (Application.Forms == null) Application.Forms = new List<FormDefinition>();
             if (Application.Lookups == null) Application.Lookups = new List<LookupSourceDefinition>();
+            if (Application.CommonHeader != null)
+            {
+                if (Application.CommonHeader.Parameters == null) Application.CommonHeader.Parameters = new Dictionary<string, string>();
+                if (!Application.CommonHeader.Enabled && string.IsNullOrWhiteSpace(Application.CommonHeader.Reason))
+                    throw new CliException("application.commonHeader.reason is required when the environment common header is disabled.");
+                if (Application.CommonHeader.Enabled && !string.IsNullOrWhiteSpace(Application.CommonHeader.View))
+                {
+                    if (Application.CommonHeader.Parameters.Keys.Any(string.IsNullOrWhiteSpace))
+                        throw new CliException("application.commonHeader.parameters contains an empty parameter name.");
+                }
+            }
             if (Verification.ExpectedViews == null) Verification.ExpectedViews = new List<string>();
             if (Verification.ExpectedForms == null) Verification.ExpectedForms = new List<string>();
 
@@ -342,6 +353,8 @@ namespace K2SmartFormsCli
         public string CategoryPath { get; set; }
         public string Theme { get; set; }
         public string StyleProfile { get; set; }
+        public string SolutionCode { get; set; }
+        public CommonHeaderDefinition CommonHeader { get; set; }
         public bool ReplaceExisting { get; set; }
         public bool CheckIn { get; set; }
         public List<ViewDefinition> Views { get; set; }
@@ -370,6 +383,24 @@ namespace K2SmartFormsCli
             Views = new List<ViewDefinition>();
             Forms = new List<FormDefinition>();
             Lookups = new List<LookupSourceDefinition>();
+        }
+    }
+
+    public sealed class CommonHeaderDefinition
+    {
+        public bool Enabled { get; set; }
+        public string Environment { get; set; }
+        public string View { get; set; }
+        public Guid ViewGuid { get; set; }
+        public string Title { get; set; }
+        public string InitializeEvent { get; set; }
+        public Dictionary<string, string> Parameters { get; set; }
+        public string Reason { get; set; }
+
+        public CommonHeaderDefinition()
+        {
+            Enabled = true;
+            Parameters = new Dictionary<string, string>();
         }
     }
 

@@ -40,6 +40,12 @@ Approval matrices are business-managed configuration and therefore require Admin
 
 Use an installed Style Profile for modern K2 presentation. K2's named themes—including `Lithium`—are the legacy theme system; the manifest still supplies one because `FormGenerator` requires it as fallback/compatibility metadata. New forms must normally set a Style Profile and explicitly write `UseLegacyTheme=false`. Set `useLegacyTheme=true`, or omit a Style Profile, only for an intentional legacy-compatible application and report that exception. Prefer the durable environment profile's selected default Style Profile unless the solution explicitly overrides it.
 
+## Environment common headers
+
+Treat a shared header as an environment contract, not a copied solution artifact. Initial `k2env` discovery inventories likely headers; the agent then asks whether one should be the default, uses a user hint to inspect the exact view, and reviews its view parameters, user/system events, inherited rules, and mappings used by existing forms. Persist the agreed view GUID, initialize event, title, and parameter templates outside projects.
+
+Unless a form has a concrete exception, `k2forms` reads the selected default environment and adds that existing view to every generated form. It places the header before solution content and on the first tab when the form is tabbed. K2's `FormGenerator` carries inherited view rules; the CLI binds configured literal/template values into the header Initialize action and verifies the exact header GUID, instance title, placement, action, and values. A solution override cannot safely reproduce arbitrary external form-level rules; use a reusable header view whose behavior is encapsulated in the view, or report the missing custom rule as errata.
+
 Capture-view options `editable`, `labels-left`, `colon-labels`, and `toolbar` produce a compact conventional editor. Use `toolbar` on list views.
 
 Automatic generation creates controls and standard SmartObject method rules. It does not replace visual review. Test keyboard navigation, focus order, labels, required-state messaging, contrast, phone/tablet layout, long values, empty states, and destructive actions.

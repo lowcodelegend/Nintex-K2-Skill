@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Xml.Linq;
 using SourceCode.Forms.Authoring;
 using SourceCode.Forms.Management;
 using SourceCode.Forms.Utilities;
@@ -31,6 +32,7 @@ namespace K2SmartFormsCli
                 if (!themes.Contains(_manifest.Application.Theme, StringComparer.OrdinalIgnoreCase))
                     throw new CliException("K2 theme not found: " + _manifest.Application.Theme + ". Available: " + string.Join(", ", themes.ToArray()));
                 var styleProfile = ResolveStyleProfile(manager);
+                var commonHeader = ResolveCommonHeader(manager);
                 var worklistForms = _manifest.Application.Forms.Where(x => x.Tabs.Any(t => t.Worklist != null)).ToList();
                 if (worklistForms.Count > 0)
                 {
@@ -40,6 +42,7 @@ namespace K2SmartFormsCli
                     Console.WriteLine("K2 control input: OK (Worklist, " + worklistControl.FullName + ")");
                 }
                 Console.WriteLine("K2 SmartForms connection: OK (" + elapsed.TotalMilliseconds.ToString("0") + " ms, theme " + _manifest.Application.Theme + ", styleProfile=" + (styleProfile == null ? "none" : styleProfile.DisplayName + " [" + styleProfile.Name + "]") + ")");
+                Console.WriteLine("K2 common header input: " + (commonHeader == null ? "none" : commonHeader.DisplayName + " [" + commonHeader.ViewName + "] from " + commonHeader.CategoryPath));
                 return 0;
             });
 
@@ -279,6 +282,7 @@ namespace K2SmartFormsCli
             WithFormsManager(delegate(FormsManager manager)
             {
                 var styleProfile = ResolveStyleProfile(manager);
+                var commonHeader = ResolveCommonHeader(manager);
                 if (existing.Count > 0)
                 {
                     foreach (var form in _manifest.Application.Forms)
@@ -320,13 +324,14 @@ namespace K2SmartFormsCli
                     foreach (var form in _manifest.Application.Forms)
                     {
                         var formGenerator = new FormGenerator(ParseFormOptions(form.Options), ParseFormBehaviors(form.Behaviors), _manifest.Application.Theme);
-                        var generated = generator.Generate(formGenerator, form.Views.ToArray(), form.Name);
+                        var formViews = commonHeader == null ? form.Views.ToArray() : new[] { commonHeader.ViewName }.Concat(form.Views).ToArray();
+                        var generated = generator.Generate(formGenerator, formViews, form.Name);
                         var definition = FormThemeDefinition.SetUseLegacyTheme(generated.ToXml(), form.UseLegacyTheme);
                         if (styleProfile != null) definition = FormThemeDefinition.SetStyleProfile(definition, styleProfile.Guid, styleProfile.Name);
-                        definition = FormLayoutDefinition.Apply(definition, form);
+                        definition = FormLayoutDefinition.Apply(definition, form, commonHeader, ResolveHeaderParameters(commonHeader, form));
                         manager.DeployForms(definition, _manifest.Application.GetFormCategoryPath(form), _manifest.Application.CheckIn);
                         var info = manager.GetForm(form.Name);
-                        Console.WriteLine("Form: deployed (" + form.Name + ", " + info.Guid + ", theme " + info.Theme.Name + ", styleProfile=" + (styleProfile == null ? "none" : styleProfile.Name) + ", legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant() + ", tabs=" + form.Tabs.Count + ", worklist=" + form.Tabs.Any(x => x.Worklist != null).ToString().ToLowerInvariant() + ")");
+                        Console.WriteLine("Form: deployed (" + form.Name + ", " + info.Guid + ", theme " + info.Theme.Name + ", styleProfile=" + (styleProfile == null ? "none" : styleProfile.Name) + ", legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant() + ", commonHeader=" + (commonHeader == null ? "none" : commonHeader.ViewName) + ", tabs=" + form.Tabs.Count + ", worklist=" + form.Tabs.Any(x => x.Worklist != null).ToString().ToLowerInvariant() + ")");
                     }
                 }
                 return 0;
@@ -340,6 +345,7 @@ namespace K2SmartFormsCli
             WithFormsManager(delegate(FormsManager manager)
             {
                 var expectedStyleProfile = ResolveStyleProfile(manager);
+                var commonHeader = ResolveCommonHeader(manager);
                 foreach (var expected in _manifest.Verification.ExpectedViews)
                 {
                     if (!manager.CheckViewExists(expected)) throw new CliException("Expected K2 View is missing: " + expected);
@@ -378,13 +384,15 @@ namespace K2SmartFormsCli
                         throw new CliException("K2 Form has style profile '" + actualStyleProfile.Name + "' but the manifest expects none: " + expected);
                     if (expectedStyleProfile != null && (actualStyleProfile == null || actualStyleProfile.Guid != expectedStyleProfile.Guid))
                         throw new CliException("K2 Form style profile does not match '" + expectedStyleProfile.DisplayName + "' [" + expectedStyleProfile.Name + "]: " + expected);
-                    FormLayoutDefinition.Verify(definition, declaredForm);
+                    FormLayoutDefinition.Verify(definition, declaredForm, commonHeader, ResolveHeaderParameters(commonHeader, declaredForm));
                     foreach (var viewName in declaredForm.Views)
                     {
                         var viewGuid = manager.GetView(viewName).Guid.ToString();
                         if (definition.IndexOf(viewGuid, StringComparison.OrdinalIgnoreCase) < 0)
                             throw new CliException("K2 Form '" + expected + "' does not reference expected view '" + viewName + "'.");
                     }
+                    if (commonHeader != null && definition.IndexOf(commonHeader.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase) < 0)
+                        throw new CliException("K2 Form '" + expected + "' does not reference environment common header '" + commonHeader.ViewName + "'.");
                     Console.WriteLine("Form verification: OK (" + expected + ", " + info.Guid + ", v" + info.Version + ", theme " + info.Theme.Name + ", styleProfile=" + (actualStyleProfile == null ? "none" : actualStyleProfile.Name) + ", legacyTheme=" + useLegacyTheme.Value.ToString().ToLowerInvariant() + ")");
                     runtimeForms.Add(expected);
                 }
@@ -521,6 +529,65 @@ namespace K2SmartFormsCli
             if (profiles.Count == 0) throw new CliException("K2 style profile not found: " + value + ". Available: " + string.Join(", ", manager.GetStyleProfiles().StyleProfiles.Cast<StyleProfileInfo>().Select(x => x.DisplayName + " [" + x.Name + "]").ToArray()));
             if (profiles.Count > 1) throw new CliException("K2 style profile is ambiguous; use its GUID: " + value);
             return profiles[0];
+        }
+
+        internal ResolvedCommonHeader ResolveCommonHeader(FormsManager manager)
+        {
+            var configured = EnvironmentCommonHeader.Resolve(_manifest.Application);
+            if (configured == null) return null;
+            ViewInfo info = null;
+            if (configured.ViewGuid != Guid.Empty && manager.CheckViewExists(configured.ViewGuid)) info = manager.GetView(configured.ViewGuid);
+            if (info == null && !string.IsNullOrWhiteSpace(configured.View) && manager.CheckViewExists(configured.View)) info = manager.GetView(configured.View);
+            if (info == null) throw new CliException("Configured common header view is not installed: " + configured.View);
+            if (configured.ViewGuid != Guid.Empty && info.Guid != configured.ViewGuid)
+                throw new CliException("Configured common header view GUID does not match K2: " + configured.View + " (profile=" + configured.ViewGuid + ", K2=" + info.Guid + ")");
+            if (_manifest.Application.Views.Any(x => string.Equals(x.Name, info.Name, StringComparison.OrdinalIgnoreCase)))
+                throw new CliException("The common header is an external reused view and must not also be declared in application.views: " + info.Name);
+            var availableParameters = info.Parameters.Cast<SourceCode.Forms.Management.ViewParameter>().Select(x => x.Name).ToList();
+            foreach (var name in configured.Parameters.Keys)
+                if (!availableParameters.Contains(name, StringComparer.OrdinalIgnoreCase))
+                    throw new CliException("Configured common header parameter is not available on '" + info.Name + "': " + name);
+
+            var initializeDefinitionId = Guid.Empty;
+            if (!string.IsNullOrWhiteSpace(configured.InitializeEvent))
+            {
+                var document = XDocument.Parse(manager.GetViewDefinition(info.Guid));
+                var events = document.Descendants().Where(x => x.Name.LocalName == "Event" &&
+                    string.Equals((string)x.Attribute("SourceType"), "View", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals((string)x.Element(x.Name.Namespace + "Name"), configured.InitializeEvent, StringComparison.OrdinalIgnoreCase)).ToList();
+                var userEvent = events.FirstOrDefault(x => string.Equals((string)x.Attribute("Type"), "User", StringComparison.OrdinalIgnoreCase)) ?? events.FirstOrDefault();
+                if (userEvent == null) throw new CliException("Configured common header initialize event is not available on '" + info.Name + "': " + configured.InitializeEvent);
+                Guid.TryParse((string)userEvent.Attribute("DefinitionID"), out initializeDefinitionId);
+            }
+            return new ResolvedCommonHeader
+            {
+                ViewGuid = info.Guid, ViewName = info.Name, DisplayName = info.DisplayName,
+                CategoryPath = info.CategoryPath, Title = configured.Title ?? string.Empty,
+                InitializeEvent = configured.InitializeEvent, InitializeEventDefinitionId = initializeDefinitionId,
+                Parameters = configured.Parameters ?? new Dictionary<string, string>()
+            };
+        }
+
+        private Dictionary<string, string> ResolveHeaderParameters(ResolvedCommonHeader header, FormDefinition form)
+        {
+            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (header == null) return result;
+            var solutionCode = _manifest.Application.SolutionCode;
+            if (string.IsNullOrWhiteSpace(solutionCode))
+            {
+                var separator = form.Name.IndexOf('.');
+                solutionCode = separator > 0 ? form.Name.Substring(0, separator) : form.Name;
+            }
+            foreach (var parameter in header.Parameters)
+            {
+                var value = parameter.Value ?? string.Empty;
+                value = value.Replace("{{form.name}}", form.Name)
+                    .Replace("{{application.name}}", _manifest.Name)
+                    .Replace("{{application.rootCategoryPath}}", _manifest.Application.RootCategoryPath)
+                    .Replace("{{solution.code}}", solutionCode);
+                result[parameter.Key] = value;
+            }
+            return result;
         }
 
         private T WithSmartObjectServer<T>(Func<SmartObjectClientServer, T> action)

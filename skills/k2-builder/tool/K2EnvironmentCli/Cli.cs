@@ -7,7 +7,7 @@ namespace K2EnvironmentCli
 {
     internal static class Cli
     {
-        public const string Version = "0.2.0";
+        public const string Version = "0.3.0";
 
         public static int Run(string[] args)
         {
@@ -23,6 +23,8 @@ namespace K2EnvironmentCli
             if (command == "validate") return Validate(store, options);
             if (command == "set-default") return SetDefault(store, options);
             if (command == "set-style-profile") return SetStyleProfile(store, options);
+            if (command == "inspect-header") return InspectHeader(store, options);
+            if (command == "set-common-header") return SetCommonHeader(store, options);
             throw new CliException("Unknown command: " + command);
         }
 
@@ -35,6 +37,7 @@ namespace K2EnvironmentCli
             if (overwrite && File.Exists(store.ProfilePath(name))) previous = store.Read(name);
             var profile = Discovery.Discover(name, options.Get("install-dir"), options.Get("host"), options.Get("base-url"));
             PreserveStyleProfileSelection(previous, profile);
+            PreserveCommonHeaderSelection(previous, profile);
             var validation = Validator.Validate(profile, store.ProfilePath(profile.Name));
             profile.LastValidatedUtc = validation.Valid ? validation.ValidatedUtc : null;
             if (options.IsJson) Console.WriteLine(PrettyJson.Serialize(new { profile = profile, validation = validation, persisted = validation.Valid }));
@@ -140,6 +143,104 @@ namespace K2EnvironmentCli
             current.SmartForms.DefaultStyleProfile = refreshed;
         }
 
+        private static int InspectHeader(ProfileStore store, Options options)
+        {
+            var name = store.ResolveName(options.Get("name"));
+            var matches = Discovery.InspectHeaders(store.Read(name).K2, options.Require("hint"));
+            if (options.IsJson) Console.WriteLine(PrettyJson.Serialize(new { environment = name, matches = matches }));
+            else
+            {
+                Console.WriteLine("Header view matches: " + matches.Count);
+                foreach (var item in matches) WriteHeader(item, true);
+            }
+            return matches.Count == 0 ? 1 : 0;
+        }
+
+        private static int SetCommonHeader(ProfileStore store, Options options)
+        {
+            var name = store.ResolveName(options.Get("name"));
+            var profile = store.Read(name);
+            if (profile.SmartForms == null) throw new CliException("Profile has no SmartForms metadata. Run refresh first: " + name);
+            if (options.Has("no-common-header"))
+            {
+                if (!string.IsNullOrWhiteSpace(options.Get("view"))) throw new CliException("Use either --view or --no-common-header, not both.");
+                profile.SmartForms.CommonHeaderSelection = "none";
+                profile.SmartForms.DefaultCommonHeader = null;
+            }
+            else
+            {
+                var value = options.Require("view");
+                var matches = Discovery.InspectHeaders(profile.K2, value);
+                var exact = matches.Where(x => string.Equals(x.Guid.ToString(), value, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(x.Name, value, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(x.DisplayName, value, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (exact.Count == 1) matches = exact;
+                if (matches.Count == 0) throw new CliException("Header view not found: " + value + ". Run inspect-header with a broader --hint.");
+                if (matches.Count > 1) throw new CliException("Header view selection is ambiguous; use its GUID. Matches: " + string.Join(", ", matches.Select(x => x.DisplayName + " [" + x.Name + "] " + x.Guid).ToArray()));
+                var selected = matches[0];
+                var initializeEvent = options.Get("initialize-event");
+                if (string.IsNullOrWhiteSpace(initializeEvent))
+                {
+                    var init = selected.Events.FirstOrDefault(x => string.Equals(x.Name, "Init", StringComparison.OrdinalIgnoreCase) || string.Equals(x.Name, "Initialize", StringComparison.OrdinalIgnoreCase));
+                    initializeEvent = init == null ? null : init.Name;
+                }
+                if (!string.IsNullOrWhiteSpace(initializeEvent) && !selected.Events.Any(x => string.Equals(x.Name, initializeEvent, StringComparison.OrdinalIgnoreCase)))
+                    throw new CliException("Header view has no event named '" + initializeEvent + "'. Available: " + string.Join(", ", selected.Events.Select(x => x.Name).ToArray()));
+                var parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var assignment in options.GetAll("parameter"))
+                {
+                    var separator = assignment.IndexOf('=');
+                    if (separator < 1) throw new CliException("--parameter must use NAME=VALUE: " + assignment);
+                    var parameterName = assignment.Substring(0, separator).Trim();
+                    var parameterValue = assignment.Substring(separator + 1);
+                    if (!selected.Parameters.Any(x => string.Equals(x.Name, parameterName, StringComparison.OrdinalIgnoreCase)))
+                        throw new CliException("Header view has no parameter named '" + parameterName + "'. Available: " + string.Join(", ", selected.Parameters.Select(x => x.Name).ToArray()));
+                    parameters[parameterName] = parameterValue;
+                }
+                profile.SmartForms.CommonHeaderSelection = "selected";
+                profile.SmartForms.DefaultCommonHeader = new CommonHeaderSettings
+                {
+                    ViewGuid = selected.Guid, ViewName = selected.Name, ViewDisplayName = selected.DisplayName,
+                    CategoryPath = selected.CategoryPath, ViewVersion = selected.Version,
+                    Title = options.Get("title") ?? string.Empty, InitializeEvent = initializeEvent,
+                    Parameters = parameters, Inspection = selected
+                };
+            }
+            store.Write(profile, true);
+            var header = profile.SmartForms.DefaultCommonHeader;
+            Console.WriteLine("Default SmartForms common header: " + (header == null ? "(none)" : header.ViewDisplayName + " [" + header.ViewName + "]"));
+            if (header != null) Console.WriteLine("  Initialize event: " + (header.InitializeEvent ?? "(none)") + "; parameters: " + string.Join(", ", header.Parameters.Select(x => x.Key + "=" + x.Value).ToArray()));
+            return 0;
+        }
+
+        private static void PreserveCommonHeaderSelection(EnvironmentProfile previous, EnvironmentProfile current)
+        {
+            if (previous == null || previous.SmartForms == null || current.SmartForms == null) return;
+            if (string.Equals(previous.SmartForms.CommonHeaderSelection, "none", StringComparison.OrdinalIgnoreCase))
+            {
+                current.SmartForms.CommonHeaderSelection = "none";
+                return;
+            }
+            var selected = previous.SmartForms.DefaultCommonHeader;
+            if (!string.Equals(previous.SmartForms.CommonHeaderSelection, "selected", StringComparison.OrdinalIgnoreCase) || selected == null) return;
+            var refreshed = current.SmartForms.HeaderViewCandidates == null ? null : current.SmartForms.HeaderViewCandidates.FirstOrDefault(x => x.Guid == selected.ViewGuid);
+            if (refreshed == null)
+            {
+                var live = Discovery.InspectHeaders(current.K2, selected.ViewGuid.ToString());
+                refreshed = live.Count == 1 ? live[0] : null;
+                if (refreshed != null && current.SmartForms.HeaderViewCandidates != null) current.SmartForms.HeaderViewCandidates.Add(refreshed);
+            }
+            if (refreshed == null) return;
+            current.SmartForms.CommonHeaderSelection = "selected";
+            current.SmartForms.DefaultCommonHeader = new CommonHeaderSettings
+            {
+                ViewGuid = refreshed.Guid, ViewName = refreshed.Name, ViewDisplayName = refreshed.DisplayName,
+                CategoryPath = refreshed.CategoryPath, ViewVersion = refreshed.Version,
+                Title = selected.Title, InitializeEvent = selected.InitializeEvent,
+                Parameters = selected.Parameters ?? new Dictionary<string, string>(), Inspection = refreshed
+            };
+        }
+
         private static void WriteProfile(EnvironmentProfile profile, string path, bool json)
         {
             if (json) { Console.WriteLine(PrettyJson.Serialize(profile)); return; }
@@ -158,7 +259,22 @@ namespace K2EnvironmentCli
                     Console.WriteLine("  " + item.DisplayName + " [" + item.Name + "] - " + item.CategoryPath + " (" + item.Guid + ")");
                 var selected = profile.SmartForms.DefaultStyleProfile;
                 Console.WriteLine("Default style profile: " + (profile.SmartForms.StyleProfileSelection == "unselected" ? "(selection required)" : selected == null ? "(none)" : selected.DisplayName + " [" + selected.Name + "]"));
+                Console.WriteLine("Header-view candidates:");
+                foreach (var item in profile.SmartForms.HeaderViewCandidates ?? new List<HeaderViewCandidate>()) WriteHeader(item, false);
+                var header = profile.SmartForms.DefaultCommonHeader;
+                Console.WriteLine("Default common header: " + (profile.SmartForms.CommonHeaderSelection == "unselected" ? "(selection required)" : header == null ? "(none)" : header.ViewDisplayName + " [" + header.ViewName + "]"));
             }
+        }
+
+        private static void WriteHeader(HeaderViewCandidate item, bool detailed)
+        {
+            Console.WriteLine("  " + item.DisplayName + " [" + item.Name + "] - " + item.CategoryPath + " (" + item.Guid + ", v" + item.Version + ", " + item.ConsumerFormCount + " consumer form(s))");
+            Console.WriteLine("    parameters: " + (item.Parameters.Count == 0 ? "(none)" : string.Join(", ", item.Parameters.Select(x => x.Name + ":" + x.DataType + (string.IsNullOrEmpty(x.DefaultValue) ? "" : "=" + x.DefaultValue)).ToArray())));
+            Console.WriteLine("    view events: " + (item.Events.Count == 0 ? "(none)" : string.Join(", ", item.Events.Select(x => x.Name + " [" + x.Type + ", " + x.ActionCount + " action(s)]").ToArray())));
+            if (!detailed) return;
+            foreach (var consumer in item.Consumers)
+                Console.WriteLine("    consumer: " + consumer.FormDisplayName + " [" + consumer.FormName + "] - " + consumer.CategoryPath + "; mappings=" +
+                    (consumer.InitializeBindings.Count == 0 ? "(none)" : string.Join(", ", consumer.InitializeBindings.Select(x => x.TargetParameter + "<-" + x.SourceType + ":" + (x.SourceName ?? x.Value ?? "")).ToArray())));
         }
 
         private static void WriteValidation(ValidationResult result, bool json)
@@ -180,16 +296,19 @@ namespace K2EnvironmentCli
             Console.WriteLine("  list [--output json]");
             Console.WriteLine("  set-default --name NAME");
             Console.WriteLine("  set-style-profile [--name NAME] (--style-profile NAME_OR_GUID | --no-style-profile)");
+            Console.WriteLine("  inspect-header [--name NAME] --hint TEXT [--output json]");
+            Console.WriteLine("  set-common-header [--name NAME] (--view NAME_OR_GUID [--initialize-event EVENT] [--title TEXT] [--parameter NAME=VALUE ...] | --no-common-header)");
             Console.WriteLine("Common: --root PATH overrides the default %CODEX_HOME%\\k2 store.");
         }
     }
 
     internal sealed class Options
     {
-        private readonly Dictionary<string, string> _values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, List<string>> _values = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _switches = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         public bool IsJson { get { return string.Equals(Get("output"), "json", StringComparison.OrdinalIgnoreCase); } }
-        public string Get(string name) { string value; return _values.TryGetValue(name, out value) ? value : null; }
+        public string Get(string name) { List<string> values; return _values.TryGetValue(name, out values) && values.Count > 0 ? values[values.Count - 1] : null; }
+        public IEnumerable<string> GetAll(string name) { List<string> values; return _values.TryGetValue(name, out values) ? values : Enumerable.Empty<string>(); }
         public bool Has(string name) { return _switches.Contains(name); }
         public string Require(string name) { var value = Get(name); if (string.IsNullOrWhiteSpace(value)) throw new CliException("--" + name + " is required."); return value; }
 
@@ -201,9 +320,11 @@ namespace K2EnvironmentCli
                 var token = args[i];
                 if (!token.StartsWith("--")) throw new CliException("Unexpected argument: " + token);
                 var name = token.Substring(2);
-                if (name == "default" || name == "no-style-profile") { result._switches.Add(name); continue; }
+                if (name == "default" || name == "no-style-profile" || name == "no-common-header") { result._switches.Add(name); continue; }
                 if (i + 1 >= args.Length || args[i + 1].StartsWith("--")) throw new CliException("Missing value for --" + name + ".");
-                result._values[name] = args[++i];
+                List<string> values;
+                if (!result._values.TryGetValue(name, out values)) { values = new List<string>(); result._values[name] = values; }
+                values.Add(args[++i]);
             }
             var output = result.Get("output");
             if (output != null && output != "text" && output != "json") throw new CliException("--output must be text or json.");
