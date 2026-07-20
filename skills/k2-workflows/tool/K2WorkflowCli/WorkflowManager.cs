@@ -68,7 +68,7 @@ namespace K2WorkflowCli
             {
                 if (_smartObject == null) _smartObject = SmartObjectMetadata.Load(_manifest.K2, _manifest.Workflow.RequestStatusUpdate);
                 if (_manifest.Workflow.SmartForms != null && _smartForm == null)
-                    _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost).Load(_manifest.Workflow);
+                    _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Load(_manifest.Workflow);
                 json = WorkflowJsonBuilder.BuildRequestApproval(_manifest.Workflow, _smartObject, _smartForm);
             }
             else json = WorkflowJsonBuilder.BuildStartEnd(_manifest.Workflow.Name);
@@ -104,8 +104,8 @@ namespace K2WorkflowCli
             // workflow's tool-owned integration first so the management provider does not race that lock.
             if (existing.HasValue && _manifest.Workflow.SmartForms != null)
             {
-                if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost).Load(_manifest.Workflow);
-                new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost).Integrate(_manifest.Workflow, _smartForm);
+                if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Load(_manifest.Workflow);
+                new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Integrate(_manifest.Workflow, _smartForm);
             }
 
             var jsonId = Guid.NewGuid().ToString();
@@ -134,8 +134,8 @@ namespace K2WorkflowCli
             var savedId = Convert.ToInt32(result["SavedId"]);
             if (_manifest.Workflow.SmartForms != null)
             {
-                if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost).Load(_manifest.Workflow);
-                new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost).Integrate(_manifest.Workflow, _smartForm);
+                if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Load(_manifest.Workflow);
+                new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Integrate(_manifest.Workflow, _smartForm);
             }
             Unlock(savedId);
             Console.WriteLine("Released designer lock: " + _manifest.Workflow.ProcessFullName);
@@ -266,8 +266,8 @@ namespace K2WorkflowCli
                     var items = root["configuration"]["itemReferences"] as JArray;
                     if (items == null || !items.OfType<JObject>().Any(x => (bool?)x["primary"] == true))
                         throw new CliException("Saved workflow is missing its primary SmartForms item reference.");
-                    if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost).Load(_manifest.Workflow);
-                    new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost).Verify(_manifest.Workflow, _smartForm);
+                    if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Load(_manifest.Workflow);
+                    new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Verify(_manifest.Workflow, _smartForm);
                     Console.WriteLine("Verified SmartForms Start and Task rules: " + _smartForm.DisplayName);
                 }
                 var references = root["externalReferenceDefinitions"] as JArray;
@@ -296,8 +296,8 @@ namespace K2WorkflowCli
                     if (runtime.GetProcessSet(_manifest.Workflow.ProcessFullName) != null && runtime.GetInstanceCount(_manifest.Workflow.ProcessFullName) != 0)
                         throw new CliException("Workflow has runtime instances; SmartForms integration and definitions were preserved.");
                 }
-                if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost).Load(_manifest.Workflow);
-                new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost).Remove(_manifest.Workflow, _smartForm);
+                if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Load(_manifest.Workflow);
+                new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Remove(_manifest.Workflow, _smartForm);
             }
             var runtimeExists = false;
             if (deleteDeployed)

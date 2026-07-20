@@ -79,4 +79,6 @@ When `smartForms` is omitted, `userTask.formUrl` is required and the CLI uses th
 
 Verification requires the runtime Start state's default flag to equal `makeStartStateDefault`, always rejects a default Task state, and requires exactly one default state when Start is declared default. This protects the ordinary form URL from silently using Base save behavior instead of the workflow-start rule.
 
+Default-state verification reads the authoritative `IsDefault` state attributes from the checked-in FormsManager definition. The workflow Designer's lightweight `GetFormStates` response omits that metadata and must not be used to infer the default.
+
 On deployment, an existing workflow-specific Start integration whose default flag differs from the manifest is updated in place before workflow publication with the declared flag. The tool reuses the existing state, rule, handler, action, and item-reference IDs so manual Start-state work is preserved. Reconciliation runs first because `SaveKprx` can check out the integrated form during publication.

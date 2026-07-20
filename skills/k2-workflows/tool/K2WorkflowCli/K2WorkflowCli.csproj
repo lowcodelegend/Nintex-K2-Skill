@@ -25,6 +25,11 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="SourceCode.Forms.Management">
+      <HintPath>$(K2InstallDir)\Bin\SourceCode.Forms.Management.dll</HintPath><Private>False</Private>
+    </Reference>
     <Reference Include="SourceCode.Framework">
       <HintPath>$(K2InstallDir)\Bin\SourceCode.Framework.dll</HintPath><Private>False</Private>
     </Reference>

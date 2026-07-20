@@ -1,8 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Xml.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using SourceCode.Forms.Management;
+using SourceCode.Hosting.Client.BaseAPI;
 
 namespace K2WorkflowCli
 {
@@ -20,11 +24,13 @@ namespace K2WorkflowCli
         private readonly string _host;
         private readonly Type _dataType;
         private readonly Type _managementType;
+        private readonly K2Settings _k2;
 
-        public SmartFormsIntegrationManager(object client, string host)
+        public SmartFormsIntegrationManager(object client, string host, K2Settings k2)
         {
             _client = client;
             _host = host;
+            _k2 = k2;
             var assembly = Assembly.LoadFrom(System.IO.Path.Combine(RuntimeAssemblyResolver.WorkflowDesignerBin, "SourceCode.K2Designer.dll"));
             _dataType = assembly.GetType("SourceCode.K2Designer.Providers.Legacy.SmartFormsDataProvider", true);
             _managementType = assembly.GetType("SourceCode.K2Designer.Providers.Legacy.SmartFormsManagementProvider", true);
@@ -69,18 +75,19 @@ namespace K2WorkflowCli
                 throw new CliException("SmartForm task integration was not found for " + workflow.ProcessFullName + "\\Task.");
 
             var states = JArray.Parse(InvokeData("GetFormStates", _host, form.FormId)).OfType<JObject>().ToList();
+            var defaultStateIds = GetDefaultStateIds(form.FormId);
             var startState = states.FirstOrDefault(x => string.Equals(Convert.ToString(x["name"]), workflow.SmartForms.StartState, StringComparison.Ordinal));
             if (startState == null) throw new CliException("SmartForm Start state was not found: " + workflow.SmartForms.StartState + ".");
             var taskState = states.FirstOrDefault(x => string.Equals(Convert.ToString(x["name"]), workflow.SmartForms.TaskState, StringComparison.Ordinal));
             if (taskState == null) throw new CliException("SmartForm task state was not found: " + workflow.SmartForms.TaskState + ".");
 
-            var startIsDefault = (bool?)startState["isDefault"] == true;
-            var taskIsDefault = (bool?)taskState["isDefault"] == true;
+            var startIsDefault = defaultStateIds.Contains(Convert.ToString(startState["id"]));
+            var taskIsDefault = defaultStateIds.Contains(Convert.ToString(taskState["id"]));
             if (taskIsDefault) throw new CliException("SmartForm task state must not be default: " + workflow.SmartForms.TaskState + ".");
             if (startIsDefault != workflow.SmartForms.MakeStartStateDefault)
                 throw new CliException("SmartForm Start state default mismatch for '" + workflow.SmartForms.StartState + "': manifest=" +
                     workflow.SmartForms.MakeStartStateDefault.ToString().ToLowerInvariant() + ", runtime=" + startIsDefault.ToString().ToLowerInvariant() + ".");
-            if (workflow.SmartForms.MakeStartStateDefault && states.Count(x => (bool?)x["isDefault"] == true) != 1)
+            if (workflow.SmartForms.MakeStartStateDefault && defaultStateIds.Count != 1)
                 throw new CliException("SmartForm must have exactly one default state when the workflow Start state is default: " + workflow.SmartForms.Form + ".");
 
             Console.WriteLine("Verified SmartForm states: Start default=" + startIsDefault.ToString().ToLowerInvariant() + ", Task default=false");
@@ -115,7 +122,7 @@ namespace K2WorkflowCli
                 var currentStates = JArray.Parse(InvokeData("GetFormStates", _host, form.FormId));
                 var currentState = currentStates.OfType<JObject>().FirstOrDefault(x =>
                     string.Equals(Convert.ToString(x["id"]), currentStateId, StringComparison.OrdinalIgnoreCase));
-                var currentIsDefault = currentState != null && (bool?)currentState["isDefault"] == true;
+                var currentIsDefault = currentState != null && GetDefaultStateIds(form.FormId).Contains(currentStateId);
                 if (currentIsDefault == workflow.SmartForms.MakeStartStateDefault) return;
 
                 Console.WriteLine("Reconciling SmartForm Start default state: " + currentIsDefault.ToString().ToLowerInvariant() +
@@ -165,6 +172,40 @@ namespace K2WorkflowCli
                 "folio", Expression(workflow.Name), "moveAction", false);
             InvokeManagement("UpdateForm", _host, payload.ToString(Formatting.None));
             Console.WriteLine("Updated SmartForm Start default state in place: " + workflow.SmartForms.StartState);
+        }
+
+        private HashSet<string> GetDefaultStateIds(string formId)
+        {
+            var manager = new FormsManager();
+            try
+            {
+                manager.CreateConnection();
+                var connection = new SCConnectionStringBuilder
+                {
+                    Authenticate = true,
+                    Host = _k2.Host,
+                    Port = (uint)_k2.Port,
+                    Integrated = _k2.Integrated,
+                    IsPrimaryLogin = true,
+                    SecurityLabelName = _k2.SecurityLabel
+                };
+                manager.Connection.Open(connection.ConnectionString);
+                var definition = XDocument.Parse(manager.GetFormDefinition(new Guid(formId)));
+                return new HashSet<string>(definition.Descendants()
+                    .Where(x => string.Equals(x.Name.LocalName, "State", StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals((string)x.Attribute("IsDefault"), "True", StringComparison.OrdinalIgnoreCase))
+                    .Select(x => (string)x.Attribute("ID"))
+                    .Where(x => !string.IsNullOrWhiteSpace(x)), StringComparer.OrdinalIgnoreCase);
+            }
+            finally
+            {
+                if (manager.Connection != null)
+                {
+                    manager.Connection.Close();
+                    manager.DeleteConnection();
+                }
+                manager.Dispose();
+            }
         }
 
         private void IntegrateTask(WorkflowSettings workflow, SmartFormsIntegrationDescriptor form)
