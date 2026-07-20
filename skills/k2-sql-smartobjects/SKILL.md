@@ -1,6 +1,6 @@
 ---
 name: k2-sql-smartobjects
-description: Build, update, inspect, verify, and clean up SQL Server-backed SmartObjects in self-hosted Nintex K2 Five using declarative JSON manifests and the bundled k2sql .NET CLI. Use for SQL data modeling, SQL tables/views/stored procedures, SQL Server Service Instances, generated SmartObjects, K2 SQL integration troubleshooting, or repeatable K2 database deployments. Do not use for SmartBox, SharePoint, REST, Oracle, SmartForms, or workflow construction.
+description: Build, update, inspect, verify, and clean up SQL Server-backed SmartObjects in self-hosted Nintex K2 Five using declarative JSON manifests and the bundled k2sql .NET CLI. Use for SQL data modeling, lookup/reference tables, constraints and foreign keys, SQL tables/views/stored procedures, SQL Server Service Instances, generated SmartObjects, K2 SQL integration troubleshooting, or repeatable database deployments. Do not use for SmartBox, SharePoint, REST, Oracle, SmartForms, or workflow construction.
 ---
 
 # K2 SQL SmartObjects
@@ -13,6 +13,7 @@ Deploy a SQL model and its K2 SQL Server Service Instance as one repeatable unit
 2. Read [references/sql-design.md](references/sql-design.md) before designing tables, views, or procedures.
 3. Read [references/manifest.md](references/manifest.md) and create a manifest plus ordered, idempotent SQL scripts. For a complete solution, set `application.rootCategoryPath` to the shared solution root; the CLI creates and uses the fixed `<root>\Data` category for generated SmartObjects.
    When this belongs to a complete solution, use its three- or four-letter uppercase short code as the `<CODE>.` prefix for the manifest, database, and Service Instance names. Use the code as the SQL schema so every fully qualified table, view, and procedure name begins `<CODE>.`; generated SmartObject names must retain the same prefix.
+   Prefer lookup tables plus foreign keys for user-selected controlled values. Keep code/text foreign keys for small applications unless normalization is requested; prefer surrogate lookup keys for complex applications. Coordinate lookup controls and administrative UX with `$k2-smartforms`.
 4. Keep passwords out of JSON and SQL. Name an environment variable in the manifest when explicit credentials are unavoidable.
 5. Build and diagnose the CLI:
 
@@ -50,6 +51,7 @@ Deploy a SQL model and its K2 SQL Server Service Instance as one repeatable unit
 - Never use `cleanup --drop-database` against shared or production data. The CLI blocks SQL system databases and the default `K2` database, but it cannot infer business criticality.
 - Prefer `service-account` SQL authentication with a least-privilege database user. Use `impersonate` only when delegation and per-user SQL authorization are intentional.
 - Require primary keys on tables that need generated Create, Read, Update, and Delete methods.
+- Do not pretend a SQL `CHECK` constraint can read lookup rows. Use foreign keys for dynamic/table-backed allowed values and checks for row-local invariants.
 - Make every SQL script rerunnable. Use guarded `CREATE TABLE` and `CREATE OR ALTER` for views and procedures.
 - Grant the discovery/runtime principal `VIEW DEFINITION` and only the DML/EXECUTE rights required by the solution.
 

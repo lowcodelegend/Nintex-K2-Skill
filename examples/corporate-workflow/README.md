@@ -3,7 +3,7 @@
 This disposable fixture models a generic corporate approval application with:
 
 - organization data: departments, employees, and manager relationships;
-- configurable request types and service-level targets;
+- configurable request types, priorities, and service-level targets;
 - workflow requests, approval tasks, and threaded request comments;
 - request-summary and approval-inbox read models;
 - submit, decide, and dashboard stored procedures.
@@ -28,7 +28,7 @@ Because this fixture is explicitly disposable, it can be removed with:
 
 ## SmartForms baseline
 
-`smartforms-manifest.json` generates three modern-mode Lithium CRUD screens over the deployed request, approval-task, and request-type SmartObjects. Modern mode is the default, so the omitted per-form `useLegacyTheme` setting resolves to `false`. It creates six `CWF.`-prefixed views in `K2 Skills\CWF.Corporate Workflow\Views` and three prefixed forms in `K2 Skills\CWF.Corporate Workflow\Forms`. K2 handles artifact versions internally, so names and folders remain version-free.
+`smartforms-manifest.json` generates modern-mode Lithium CRUD screens over the deployed request, approval-task, request-type, and request-priority SmartObjects. Request and task editors use SmartObject-backed dropdowns for eight controlled/foreign-key properties. Ordinary UX uses the solution's `Views` and `Forms` folders; request-type and request-priority administration uses `Admin\Views` and `Admin\Forms`. K2 handles artifact versions internally, so names and folders remain version-free.
 
 ```powershell
 $formsSkillRoot = Join-Path $env:USERPROFILE '.codex\skills\k2-smartforms'

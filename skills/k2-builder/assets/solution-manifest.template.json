@@ -22,6 +22,7 @@
     ]
   },
   "policies": {
+    "dataModelComplexity": "small",
     "versionFreeNames": true,
     "modernForms": true,
     "workflowEntries": [

@@ -58,7 +58,42 @@
 
 `k2` supports integrated authentication by default. For explicit AD authentication, set `integrated` false plus `domain`, `userName`, and `passwordEnvironmentVariable`; never store the password itself.
 
-`application.rootCategoryPath` is the stable application root. It must not contain a version segment or end in `Forms`/`Views`; the CLI derives `<root>\Views` and `<root>\Forms`. Form and view names must not contain version tokens because K2 maintains internal artifact versions. `theme` must match an installed K2 theme. `checkIn` should normally remain true.
+`application.rootCategoryPath` is the stable application root. It must not contain a version segment or end in `Forms`, `Views`, or `Admin`. The CLI derives `<root>\Views`, `<root>\Forms`, `<root>\Admin\Views`, and `<root>\Admin\Forms`. Form and view names must not contain version tokens because K2 maintains internal artifact versions. `theme` must match an installed K2 theme. `checkIn` should normally remain true.
+
+## Lookup sources and controls
+
+Declare each reusable lookup source once under `application.lookups`, then bind target properties in capture views:
+
+```json
+{
+  "lookups": [
+    {
+      "name": "Expense Category",
+      "smartObject": "EXP_ExpenseSql_EXP_ExpenseCategory",
+      "method": "List",
+      "valueProperty": "CategoryCode",
+      "displayProperty": "CategoryName",
+      "adminForm": "EXP.Expense Category Administration"
+    }
+  ],
+  "views": [
+    {
+      "name": "EXP.Expense Editor",
+      "type": "capture",
+      "properties": ["ExpenseId", "CategoryCode", "Title"],
+      "lookupControls": [
+        { "property": "CategoryCode", "lookup": "Expense Category", "allowEmptySelection": false }
+      ]
+    }
+  ]
+}
+```
+
+The lookup method must be a parameterless SmartObject List method. The target property and lookup `valueProperty` must have compatible K2 types (`Number`/`Autonumber` and `Guid`/`AutoGuid` are compatible pairs). `displayProperty` supplies the dropdown label. Version 0.2 supports one display property and no lookup filters; use a purpose-built lookup SmartObject when filtering or projection is required.
+
+`adminForm` is optional because external masters and fixed workflow vocabularies may not be application-administered. When present, it must reference a form with `area: "admin"` that contains CRUD capture and List views over the lookup SmartObject. Business-managed lookups should declare it by default.
+
+Set `area` on each view/form to `application` (the default) or `admin`. Admin artifacts deploy below `<root>\Admin`, while ordinary artifacts remain in the standard `Views` and `Forms` folders.
 
 Each form's optional `useLegacyTheme` defaults to `false`. The CLI writes the K2 `UseLegacyTheme` property explicitly and verifies it after deployment. Keep the default for modern theme rendering; set it to `true` only when legacy compatibility is intentional. The configured theme name does not imply this mode.
 

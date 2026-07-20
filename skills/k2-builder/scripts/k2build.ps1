@@ -13,7 +13,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if ($Command -eq 'version') {
-    Write-Output 'k2build 0.5.0'
+    Write-Output 'k2build 0.6.0'
     exit 0
 }
 
@@ -97,6 +97,15 @@ function Test-ShortCodeCategoryPath {
     if ($segments.Count -gt 0) { Test-ShortCodePrefix $segments[-1] $Label }
 }
 
+function Test-SmartObjectPrefix {
+    param([string]$Value, [string]$Label)
+
+    if ([string]::IsNullOrWhiteSpace($Value) -or [string]::IsNullOrWhiteSpace($script:shortCode)) { return }
+    if (-not ($Value.StartsWith($script:shortCode + '.', [StringComparison]::Ordinal) -or $Value.StartsWith($script:shortCode + '_', [StringComparison]::Ordinal))) {
+        Add-Issue "$Label must start with solution short-code prefix '$($script:shortCode).' or K2's generated '$($script:shortCode)_': $Value"
+    }
+}
+
 function Get-DependencyNames {
     param($Component)
     $value = Get-PropertyValue $Component 'dependsOn'
@@ -148,8 +157,13 @@ if ([string]::IsNullOrWhiteSpace($rootCategoryPath)) {
 $rootSegments = @($rootCategoryPath.Split([char[]]'\/', [StringSplitOptions]::RemoveEmptyEntries))
 $rootLeaf = if ($rootSegments.Count -gt 0) { $rootSegments[-1] } else { $null }
 $dataCategoryPath = if ([string]::IsNullOrWhiteSpace($rootCategoryPath)) { $null } else { $rootCategoryPath.TrimEnd([char[]]'\/') + '\Data' }
+$adminCategoryPath = if ([string]::IsNullOrWhiteSpace($rootCategoryPath)) { $null } else { $rootCategoryPath.TrimEnd([char[]]'\/') + '\Admin' }
 
 $policies = Get-PropertyValue $solution 'policies'
+$dataModelComplexity = ([string](Get-PropertyValue $policies 'dataModelComplexity')).ToLowerInvariant()
+if ($dataModelComplexity -notin @('small', 'complex')) {
+    Add-Issue 'policies.dataModelComplexity is required and must be small or complex.'
+}
 if ((Get-PropertyValue $policies 'versionFreeNames') -ne $false) {
     Test-VersionFreeName $solutionName 'Solution name'
     Test-VersionFreeName $rootCategoryPath 'Root category path'
@@ -233,10 +247,33 @@ if ($null -ne $formsManifest) {
         Add-Issue "SmartForms rootCategoryPath '$formsRoot' does not match solution root '$rootCategoryPath'."
     }
 
-    foreach ($form in @(Get-PropertyValue $formsApplication 'forms')) {
+    $declaredForms = @(Get-PropertyValue $formsApplication 'forms')
+    $declaredViews = @(Get-PropertyValue $formsApplication 'views')
+    $lookupSources = @(Get-PropertyValue $formsApplication 'lookups')
+    $lookupNames = @($lookupSources | ForEach-Object { [string](Get-PropertyValue $_ 'name') })
+
+    foreach ($lookup in $lookupSources) {
+        $lookupName = [string](Get-PropertyValue $lookup 'name')
+        Test-SmartObjectPrefix ([string](Get-PropertyValue $lookup 'smartObject')) "Lookup '$lookupName' SmartObject"
+        $adminForm = [string](Get-PropertyValue $lookup 'adminForm')
+        if (-not [string]::IsNullOrWhiteSpace($adminForm)) {
+            $adminDefinition = $declaredForms | Where-Object { [string](Get-PropertyValue $_ 'name') -eq $adminForm } | Select-Object -First 1
+            if ($null -eq $adminDefinition) {
+                Add-Issue "Lookup '$lookupName' adminForm is not declared: $adminForm"
+            } elseif ([string](Get-PropertyValue $adminDefinition 'area') -ne 'admin') {
+                Add-Issue "Lookup '$lookupName' adminForm must use area 'admin': $adminForm"
+            }
+        }
+    }
+
+    foreach ($form in $declaredForms) {
         $formName = [string](Get-PropertyValue $form 'name')
         if (-not [string]::IsNullOrWhiteSpace($formName)) { $formNames += $formName }
         Test-ShortCodePrefix $formName 'Form name'
+        $formArea = [string](Get-PropertyValue $form 'area')
+        if (-not [string]::IsNullOrWhiteSpace($formArea) -and $formArea -notin @('application', 'admin')) {
+            Add-Issue "Form '$formName' has unsupported area '$formArea'."
+        }
         if ((Get-PropertyValue $policies 'versionFreeNames') -ne $false) {
             Test-VersionFreeName $formName 'Form name'
         }
@@ -245,9 +282,20 @@ if ($null -ne $formsManifest) {
         }
     }
 
-    foreach ($view in @(Get-PropertyValue $formsApplication 'views')) {
+    foreach ($view in $declaredViews) {
         Test-ShortCodePrefix ([string](Get-PropertyValue $view 'name')) 'View name'
-        Test-ShortCodePrefix ([string](Get-PropertyValue $view 'smartObject')) 'View SmartObject system name'
+        Test-SmartObjectPrefix ([string](Get-PropertyValue $view 'smartObject')) 'View SmartObject system name'
+        $viewArea = [string](Get-PropertyValue $view 'area')
+        if (-not [string]::IsNullOrWhiteSpace($viewArea) -and $viewArea -notin @('application', 'admin')) {
+            Add-Issue "View '$([string](Get-PropertyValue $view 'name'))' has unsupported area '$viewArea'."
+        }
+        foreach ($control in @(Get-PropertyValue $view 'lookupControls')) {
+            if ($null -eq $control) { continue }
+            $lookupName = [string](Get-PropertyValue $control 'lookup')
+            if ($lookupNames -notcontains $lookupName) {
+                Add-Issue "View '$([string](Get-PropertyValue $view 'name'))' references undeclared lookup '$lookupName'."
+            }
+        }
         if ((Get-PropertyValue $policies 'versionFreeNames') -ne $false) {
             Test-VersionFreeName ([string](Get-PropertyValue $view 'name')) 'View name'
         }
@@ -320,7 +368,7 @@ foreach ($workflowComponent in $workflows) {
         $statusUpdate = Get-PropertyValue $workflowDefinition 'requestStatusUpdate'
         if ($null -ne $statusUpdate) {
             Test-ShortCodePrefix ([string](Get-PropertyValue $statusUpdate 'name')) 'Workflow status-update step name'
-            Test-ShortCodePrefix ([string](Get-PropertyValue $statusUpdate 'smartObject')) 'Workflow SmartObject system name'
+            Test-SmartObjectPrefix ([string](Get-PropertyValue $statusUpdate 'smartObject')) 'Workflow SmartObject system name'
         }
         $emailStep = Get-PropertyValue $workflowDefinition 'email'
         if ($null -ne $emailStep) { Test-ShortCodePrefix ([string](Get-PropertyValue $emailStep 'name')) 'Workflow email step name' }
@@ -394,6 +442,8 @@ $result = [pscustomobject]@{
     manifest = $manifestPath
     rootCategoryPath = $rootCategoryPath
     dataCategoryPath = $dataCategoryPath
+    adminCategoryPath = $adminCategoryPath
+    dataModelComplexity = $dataModelComplexity
     issues = @($issues)
     resolvedPolicies = @($resolvedPolicies)
     plan = @($planItems | Sort-Object order, component)
@@ -407,6 +457,8 @@ else {
     Write-Output "Short code: $shortCode"
     Write-Output "Root category: $rootCategoryPath"
     Write-Output "SmartObject category: $dataCategoryPath"
+    Write-Output "Administration category: $adminCategoryPath"
+    Write-Output "Data model complexity: $dataModelComplexity"
     if ($Command -eq 'plan') {
         Write-Output 'Dependency-ordered specialist plan:'
         foreach ($item in $result.plan) {

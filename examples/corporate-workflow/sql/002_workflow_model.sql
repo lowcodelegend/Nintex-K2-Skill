@@ -1,5 +1,85 @@
 SET NOCOUNT ON;
 
+IF OBJECT_ID(N'CWF.RequestPriority', N'U') IS NULL
+BEGIN
+    CREATE TABLE CWF.RequestPriority
+    (
+        PriorityCode nvarchar(20) NOT NULL CONSTRAINT PK_RequestPriority PRIMARY KEY,
+        PriorityName nvarchar(100) NOT NULL,
+        SortOrder int NOT NULL,
+        IsActive bit NOT NULL CONSTRAINT DF_RequestPriority_IsActive DEFAULT (1)
+    );
+END;
+GO
+
+MERGE CWF.RequestPriority AS target
+USING (VALUES
+    (N'Low', N'Low', 10), (N'Normal', N'Normal', 20),
+    (N'High', N'High', 30), (N'Critical', N'Critical', 40)
+) AS source (PriorityCode, PriorityName, SortOrder)
+ON target.PriorityCode = source.PriorityCode
+WHEN MATCHED THEN UPDATE SET PriorityName = source.PriorityName, SortOrder = source.SortOrder
+WHEN NOT MATCHED THEN INSERT (PriorityCode, PriorityName, SortOrder) VALUES (source.PriorityCode, source.PriorityName, source.SortOrder);
+GO
+
+IF OBJECT_ID(N'CWF.RequestStatus', N'U') IS NULL
+BEGIN
+    CREATE TABLE CWF.RequestStatus
+    (
+        StatusCode nvarchar(30) NOT NULL CONSTRAINT PK_RequestStatus PRIMARY KEY,
+        StatusName nvarchar(100) NOT NULL,
+        SortOrder int NOT NULL
+    );
+END;
+GO
+
+MERGE CWF.RequestStatus AS target
+USING (VALUES
+    (N'Draft', N'Draft', 10), (N'Submitted', N'Submitted', 20),
+    (N'In Review', N'In Review', 30), (N'Approved', N'Approved', 40),
+    (N'Rejected', N'Rejected', 50), (N'Cancelled', N'Cancelled', 60)
+) AS source (StatusCode, StatusName, SortOrder)
+ON target.StatusCode = source.StatusCode
+WHEN MATCHED THEN UPDATE SET StatusName = source.StatusName, SortOrder = source.SortOrder
+WHEN NOT MATCHED THEN INSERT (StatusCode, StatusName, SortOrder) VALUES (source.StatusCode, source.StatusName, source.SortOrder);
+GO
+
+IF OBJECT_ID(N'CWF.ApprovalTaskStatus', N'U') IS NULL
+BEGIN
+    CREATE TABLE CWF.ApprovalTaskStatus
+    (
+        StatusCode nvarchar(20) NOT NULL CONSTRAINT PK_ApprovalTaskStatus PRIMARY KEY,
+        StatusName nvarchar(100) NOT NULL,
+        SortOrder int NOT NULL
+    );
+END;
+GO
+
+MERGE CWF.ApprovalTaskStatus AS target
+USING (VALUES (N'Pending', N'Pending', 10), (N'Completed', N'Completed', 20), (N'Cancelled', N'Cancelled', 30)) AS source (StatusCode, StatusName, SortOrder)
+ON target.StatusCode = source.StatusCode
+WHEN MATCHED THEN UPDATE SET StatusName = source.StatusName, SortOrder = source.SortOrder
+WHEN NOT MATCHED THEN INSERT (StatusCode, StatusName, SortOrder) VALUES (source.StatusCode, source.StatusName, source.SortOrder);
+GO
+
+IF OBJECT_ID(N'CWF.ApprovalDecision', N'U') IS NULL
+BEGIN
+    CREATE TABLE CWF.ApprovalDecision
+    (
+        DecisionCode nvarchar(20) NOT NULL CONSTRAINT PK_ApprovalDecision PRIMARY KEY,
+        DecisionName nvarchar(100) NOT NULL,
+        SortOrder int NOT NULL
+    );
+END;
+GO
+
+MERGE CWF.ApprovalDecision AS target
+USING (VALUES (N'Approved', N'Approved', 10), (N'Rejected', N'Rejected', 20)) AS source (DecisionCode, DecisionName, SortOrder)
+ON target.DecisionCode = source.DecisionCode
+WHEN MATCHED THEN UPDATE SET DecisionName = source.DecisionName, SortOrder = source.SortOrder
+WHEN NOT MATCHED THEN INSERT (DecisionCode, DecisionName, SortOrder) VALUES (source.DecisionCode, source.DecisionName, source.SortOrder);
+GO
+
 IF OBJECT_ID(N'CWF.RequestType', N'U') IS NULL
 BEGIN
     CREATE TABLE CWF.RequestType
@@ -37,10 +117,20 @@ BEGIN
         CONSTRAINT FK_WorkflowRequest_RequestType FOREIGN KEY (RequestTypeId) REFERENCES CWF.RequestType(RequestTypeId),
         CONSTRAINT FK_WorkflowRequest_Requestor FOREIGN KEY (RequestorEmployeeId) REFERENCES CWF.Employee(EmployeeId),
         CONSTRAINT FK_WorkflowRequest_Department FOREIGN KEY (DepartmentId) REFERENCES CWF.Department(DepartmentId),
-        CONSTRAINT CK_WorkflowRequest_Priority CHECK (Priority IN (N'Low', N'Normal', N'High', N'Critical')),
-        CONSTRAINT CK_WorkflowRequest_Status CHECK (Status IN (N'Draft', N'Submitted', N'In Review', N'Approved', N'Rejected', N'Cancelled'))
+        CONSTRAINT FK_WorkflowRequest_Priority FOREIGN KEY (Priority) REFERENCES CWF.RequestPriority(PriorityCode),
+        CONSTRAINT FK_WorkflowRequest_Status FOREIGN KEY (Status) REFERENCES CWF.RequestStatus(StatusCode)
     );
 END;
+GO
+
+IF OBJECT_ID(N'CWF.CK_WorkflowRequest_Priority', N'C') IS NOT NULL
+    ALTER TABLE CWF.WorkflowRequest DROP CONSTRAINT CK_WorkflowRequest_Priority;
+IF OBJECT_ID(N'CWF.CK_WorkflowRequest_Status', N'C') IS NOT NULL
+    ALTER TABLE CWF.WorkflowRequest DROP CONSTRAINT CK_WorkflowRequest_Status;
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE parent_object_id = OBJECT_ID(N'CWF.WorkflowRequest') AND name = N'FK_WorkflowRequest_Priority')
+    ALTER TABLE CWF.WorkflowRequest WITH CHECK ADD CONSTRAINT FK_WorkflowRequest_Priority FOREIGN KEY (Priority) REFERENCES CWF.RequestPriority(PriorityCode);
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE parent_object_id = OBJECT_ID(N'CWF.WorkflowRequest') AND name = N'FK_WorkflowRequest_Status')
+    ALTER TABLE CWF.WorkflowRequest WITH CHECK ADD CONSTRAINT FK_WorkflowRequest_Status FOREIGN KEY (Status) REFERENCES CWF.RequestStatus(StatusCode);
 GO
 
 IF EXISTS
@@ -88,10 +178,20 @@ BEGIN
         CONSTRAINT UQ_ApprovalTask_Request_Step UNIQUE (RequestId, StepNumber),
         CONSTRAINT FK_ApprovalTask_Request FOREIGN KEY (RequestId) REFERENCES CWF.WorkflowRequest(RequestId),
         CONSTRAINT FK_ApprovalTask_AssignedEmployee FOREIGN KEY (AssignedEmployeeId) REFERENCES CWF.Employee(EmployeeId),
-        CONSTRAINT CK_ApprovalTask_Status CHECK (Status IN (N'Pending', N'Completed', N'Cancelled')),
-        CONSTRAINT CK_ApprovalTask_Decision CHECK (Decision IS NULL OR Decision IN (N'Approved', N'Rejected'))
+        CONSTRAINT FK_ApprovalTask_Status FOREIGN KEY (Status) REFERENCES CWF.ApprovalTaskStatus(StatusCode),
+        CONSTRAINT FK_ApprovalTask_Decision FOREIGN KEY (Decision) REFERENCES CWF.ApprovalDecision(DecisionCode)
     );
 END;
+GO
+
+IF OBJECT_ID(N'CWF.CK_ApprovalTask_Status', N'C') IS NOT NULL
+    ALTER TABLE CWF.ApprovalTask DROP CONSTRAINT CK_ApprovalTask_Status;
+IF OBJECT_ID(N'CWF.CK_ApprovalTask_Decision', N'C') IS NOT NULL
+    ALTER TABLE CWF.ApprovalTask DROP CONSTRAINT CK_ApprovalTask_Decision;
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE parent_object_id = OBJECT_ID(N'CWF.ApprovalTask') AND name = N'FK_ApprovalTask_Status')
+    ALTER TABLE CWF.ApprovalTask WITH CHECK ADD CONSTRAINT FK_ApprovalTask_Status FOREIGN KEY (Status) REFERENCES CWF.ApprovalTaskStatus(StatusCode);
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE parent_object_id = OBJECT_ID(N'CWF.ApprovalTask') AND name = N'FK_ApprovalTask_Decision')
+    ALTER TABLE CWF.ApprovalTask WITH CHECK ADD CONSTRAINT FK_ApprovalTask_Decision FOREIGN KEY (Decision) REFERENCES CWF.ApprovalDecision(DecisionCode);
 GO
 
 IF EXISTS

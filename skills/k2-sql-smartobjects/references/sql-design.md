@@ -26,6 +26,18 @@ Use `nvarchar` for user-entered text. Choose decimal precision deliberately; the
 
 Do not assume a SQL `DEFAULT` constraint makes a generated SmartObject Create input optional. After generation, inspect the live method's required properties before designing a SmartForm. For database-managed audit values, prefer a SQL/SmartObject contract that does not require the UI to supply the value, such as an optional column with a server-side default or a purpose-built stored-procedure method. The SmartForms CLI rejects capture views that omit any required selected-method property.
 
+## Controlled values and lookup tables
+
+Model user-selected business vocabularies as lookup tables so SmartForms can load friendly dropdown values from generated SmartObjects. SQL Server `CHECK` constraints cannot query another table, so do not duplicate an editable lookup list in `CHECK (Value IN (...))`. Enforce table-backed allowed values with a foreign key; retain checks for row-local invariants such as numeric ranges or valid combinations of columns.
+
+Avoid heavy normalization by default:
+
+- For a small application, normally keep a meaningful code or short text value on the business table and reference a lookup table whose code is the primary/unique key. This preserves readable rows and avoids surrogate IDs and joins while still centralizing allowed values.
+- Normalize to a surrogate lookup key when explicitly requested for a small application, or by default when the application is complex, values need localization/history/metadata, codes may change, or many tables share the vocabulary.
+- Keep lifecycle/status vocabularies that are workflow invariants seeded and non-administrative unless the workflow is designed for configurable transitions.
+
+Give each business-managed lookup a stable value property, friendly display property, active flag when retirement is needed, and deterministic sort order. Seed required values idempotently before adding foreign keys. Coordinate the corresponding SmartForm dropdown and Admin CRUD page with `$k2-smartforms`.
+
 ## Deployment shape
 
 Use a dedicated application database when feasible. Organize objects in business schemas such as `app`, `ref`, and `reporting`. Keep schema scripts ordered and rerunnable:

@@ -1,6 +1,6 @@
 ---
 name: k2-smartforms
-description: Generate, deploy, inspect, verify, replace, and clean up K2 Five SmartForms views and forms over existing SmartObjects using declarative JSON manifests and the bundled k2forms .NET CLI. Use for CRUD item/list UX, SmartObject-backed forms, K2 form categories, generated rules, themes, or repeatable SmartForms construction. Do not use for creating SmartObjects, workflows, custom controls, hand-authored XML definitions, or cloud Nintex Forms.
+description: Generate, deploy, inspect, verify, replace, and clean up K2 Five SmartForms views and forms over existing SmartObjects using declarative JSON manifests and the bundled k2forms .NET CLI. Use for CRUD item/list UX, SmartObject-backed dropdown lookups, administrative pages/categories, generated rules, modern themes, or repeatable SmartForms construction. Do not use for creating SmartObjects, workflows, arbitrary custom controls, general hand-authored XML definitions, or cloud Nintex Forms.
 ---
 
 # K2 SmartForms builder
@@ -11,8 +11,8 @@ Build checked-in SmartForms through the supported K2 `FormsManager` and `AutoGen
 
 1. Confirm that the target is self-hosted K2 Five and the required SmartObjects already exist. If the installed sibling `k2-builder` skill provides `scripts/k2env.ps1`, validate and load its selected/default environment profile before performing environment discovery; explicit requirements override profile values.
 2. Read [references/design.md](references/design.md) before selecting views, properties, methods, behaviors, and theme.
-3. Read [references/manifest.md](references/manifest.md), then create a manifest with stable, version-free view/form names and one application root category. The CLI places views under `Views` and forms under `Forms`. Every capture view must expose all required properties for each selected SmartObject method. Do not assume a SQL `DEFAULT` makes the corresponding generated K2 Create input optional; `doctor` validates the live method contract.
-   When this belongs to a complete solution, prefix the manifest, application category leaf, every view/form name, and referenced generated SmartObject with the solution's `<CODE>.` namespace. Leave the fixed `Views` and `Forms` subfolders unprefixed.
+3. Read [references/manifest.md](references/manifest.md), then create a manifest with stable, version-free view/form names and one application root category. The CLI places normal views/forms under `Views`/`Forms` and administrative artifacts under `Admin\Views`/`Admin\Forms`. Declare SmartObject-backed lookup sources once and bind capture-view properties through `lookupControls`. Every capture view must expose all required properties for each selected SmartObject method. Do not assume a SQL `DEFAULT` makes the corresponding generated K2 Create input optional; `doctor` validates the live method contract.
+   When this belongs to a complete solution, prefix the manifest, application category leaf, every view/form name, and referenced generated SmartObject with the solution's namespace. K2 may sanitize a Service Instance `<CODE>.` prefix to `<CODE>_` in generated SmartObject system names; preserve that generated name exactly. Leave fixed category leaves unprefixed.
 4. Keep passwords out of manifests. Name an environment variable only when integrated K2 authentication is unavailable.
 5. Build and diagnose the CLI:
 
@@ -53,6 +53,7 @@ If verification finds a manifest-declared form checked out after an intentional 
 - Use unique disposable names during development; do not reuse business-critical form names.
 - Never append release/version numbers to K2 form names, view names, or category paths. K2 maintains artifact versions internally; stable names preserve URLs and references.
 - Keep the application root business-oriented and let the CLI create its `Views` and `Forms` subcategories.
+- Put business-managed lookup CRUD views and forms in the `admin` area. The CLI deploys them below `<root>\Admin` and validates any lookup source that declares `adminForm` has capture/list administration UX.
 - Use modern theme mode for new forms. Leave `useLegacyTheme` omitted or set it to `false`; opt into `true` only for an application that depends on legacy-theme behavior. The CLI writes and verifies K2's `UseLegacyTheme` property explicitly because a theme name alone does not determine the rendering mode.
 - Check in runtime artifacts unless an intentional design-time draft is required.
 - Prefer one editor/list pair per CRUD screen. Exclude SQL-managed concurrency fields and unnecessary technical fields from visible layouts.
@@ -60,6 +61,6 @@ If verification finds a manifest-declared form checked out after an intentional 
 
 ## Boundary
 
-Version 0.1 generates capture, list, content, and editable-list views plus forms composed from those views. It supports standard generator options, modern theme mode by default, Lithium or another installed theme, list-click load, and list refresh behaviors. It does not yet hand-author controls/rules, configure lookup controls, preserve Designer customizations during replacement, export rollback packages, or automate authenticated browser interactions.
+Version 0.2 generates capture, list, content, and editable-list views plus forms composed from those views. It supports standard generator options, modern theme mode by default, SmartObject-backed dropdowns with one display property and a parameterless List method, application/Admin categories, list-click load, and list refresh behaviors. It does not yet support cascading/filtered lookups, multi-column display templates, arbitrary hand-authored controls/rules, preservation of Designer customizations during replacement, export rollback packages, or authenticated browser automation.
 
 Read [references/cli.md](references/cli.md) for commands and exit codes. Start from `examples/corporate-workflow/smartforms-manifest.json` for a tested CRUD pattern.

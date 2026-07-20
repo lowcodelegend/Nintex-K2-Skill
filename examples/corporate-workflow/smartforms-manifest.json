@@ -11,10 +11,63 @@
     "theme": "Lithium",
     "replaceExisting": true,
     "checkIn": true,
+    "lookups": [
+      {
+        "name": "Request Type",
+        "smartObject": "CWF_CorporateWorkflowTest_CWF_RequestType",
+        "method": "List",
+        "valueProperty": "RequestTypeId",
+        "displayProperty": "RequestTypeName",
+        "adminForm": "CWF.Request Type Administration"
+      },
+      {
+        "name": "Department",
+        "smartObject": "CWF_CorporateWorkflowTest_CWF_Department",
+        "method": "List",
+        "valueProperty": "DepartmentId",
+        "displayProperty": "DepartmentName"
+      },
+      {
+        "name": "Employee",
+        "smartObject": "CWF_CorporateWorkflowTest_CWF_Employee",
+        "method": "List",
+        "valueProperty": "EmployeeId",
+        "displayProperty": "DisplayName"
+      },
+      {
+        "name": "Request Priority",
+        "smartObject": "CWF_CorporateWorkflowTest_CWF_RequestPriority",
+        "method": "List",
+        "valueProperty": "PriorityCode",
+        "displayProperty": "PriorityName",
+        "adminForm": "CWF.Request Priority Administration"
+      },
+      {
+        "name": "Request Status",
+        "smartObject": "CWF_CorporateWorkflowTest_CWF_RequestStatus",
+        "method": "List",
+        "valueProperty": "StatusCode",
+        "displayProperty": "StatusName"
+      },
+      {
+        "name": "Approval Task Status",
+        "smartObject": "CWF_CorporateWorkflowTest_CWF_ApprovalTaskStatus",
+        "method": "List",
+        "valueProperty": "StatusCode",
+        "displayProperty": "StatusName"
+      },
+      {
+        "name": "Approval Decision",
+        "smartObject": "CWF_CorporateWorkflowTest_CWF_ApprovalDecision",
+        "method": "List",
+        "valueProperty": "DecisionCode",
+        "displayProperty": "DecisionName"
+      }
+    ],
     "views": [
       {
         "name": "CWF.Request Editor",
-        "smartObject": "CWF.CorporateWorkflowTest_CWF_WorkflowRequest",
+        "smartObject": "CWF_CorporateWorkflowTest_CWF_WorkflowRequest",
         "type": "capture",
         "properties": [
           "RequestId",
@@ -31,11 +84,18 @@
           "CompletedOn"
         ],
         "methods": ["Create", "Read", "Update", "Delete"],
+        "lookupControls": [
+          { "property": "RequestTypeId", "lookup": "Request Type" },
+          { "property": "RequestorEmployeeId", "lookup": "Employee" },
+          { "property": "DepartmentId", "lookup": "Department" },
+          { "property": "Priority", "lookup": "Request Priority" },
+          { "property": "Status", "lookup": "Request Status" }
+        ],
         "options": ["editable", "labels-left", "colon-labels", "toolbar"]
       },
       {
         "name": "CWF.Request List",
-        "smartObject": "CWF.CorporateWorkflowTest_CWF_WorkflowRequest",
+        "smartObject": "CWF_CorporateWorkflowTest_CWF_WorkflowRequest",
         "type": "list",
         "properties": [
           "RequestId",
@@ -53,7 +113,7 @@
       },
       {
         "name": "CWF.Approval Task Editor",
-        "smartObject": "CWF.CorporateWorkflowTest_CWF_ApprovalTask",
+        "smartObject": "CWF_CorporateWorkflowTest_CWF_ApprovalTask",
         "type": "capture",
         "properties": [
           "ApprovalTaskId",
@@ -68,11 +128,16 @@
           "ActedOn"
         ],
         "methods": ["Create", "Read", "Update", "Delete"],
+        "lookupControls": [
+          { "property": "AssignedEmployeeId", "lookup": "Employee" },
+          { "property": "Status", "lookup": "Approval Task Status" },
+          { "property": "Decision", "lookup": "Approval Decision", "allowEmptySelection": true }
+        ],
         "options": ["editable", "labels-left", "colon-labels", "toolbar"]
       },
       {
         "name": "CWF.Approval Task List",
-        "smartObject": "CWF.CorporateWorkflowTest_CWF_ApprovalTask",
+        "smartObject": "CWF_CorporateWorkflowTest_CWF_ApprovalTask",
         "type": "list",
         "properties": [
           "ApprovalTaskId",
@@ -90,7 +155,7 @@
       },
       {
         "name": "CWF.Request Type Editor",
-        "smartObject": "CWF.CorporateWorkflowTest_CWF_RequestType",
+        "smartObject": "CWF_CorporateWorkflowTest_CWF_RequestType",
         "type": "capture",
         "properties": [
           "RequestTypeId",
@@ -102,11 +167,12 @@
           "IsActive"
         ],
         "methods": ["Create", "Read", "Update", "Delete"],
+        "area": "admin",
         "options": ["editable", "labels-left", "colon-labels", "toolbar"]
       },
       {
         "name": "CWF.Request Type List",
-        "smartObject": "CWF.CorporateWorkflowTest_CWF_RequestType",
+        "smartObject": "CWF_CorporateWorkflowTest_CWF_RequestType",
         "type": "list",
         "properties": [
           "RequestTypeId",
@@ -118,6 +184,26 @@
         ],
         "methods": [],
         "defaultListMethod": "List",
+        "area": "admin",
+        "options": ["toolbar"]
+      },
+      {
+        "name": "CWF.Request Priority Editor",
+        "smartObject": "CWF_CorporateWorkflowTest_CWF_RequestPriority",
+        "type": "capture",
+        "properties": ["PriorityCode", "PriorityName", "SortOrder", "IsActive"],
+        "methods": ["Create", "Read", "Update", "Delete"],
+        "area": "admin",
+        "options": ["editable", "labels-left", "colon-labels", "toolbar"]
+      },
+      {
+        "name": "CWF.Request Priority List",
+        "smartObject": "CWF_CorporateWorkflowTest_CWF_RequestPriority",
+        "type": "list",
+        "properties": ["PriorityCode", "PriorityName", "SortOrder", "IsActive"],
+        "methods": [],
+        "defaultListMethod": "List",
+        "area": "admin",
         "options": ["toolbar"]
       }
     ],
@@ -137,6 +223,14 @@
       {
         "name": "CWF.Request Type Administration",
         "views": ["CWF.Request Type Editor", "CWF.Request Type List"],
+        "area": "admin",
+        "options": ["no-tabs"],
+        "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]
+      },
+      {
+        "name": "CWF.Request Priority Administration",
+        "views": ["CWF.Request Priority Editor", "CWF.Request Priority List"],
+        "area": "admin",
         "options": ["no-tabs"],
         "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]
       }
@@ -149,12 +243,15 @@
       "CWF.Approval Task Editor",
       "CWF.Approval Task List",
       "CWF.Request Type Editor",
-      "CWF.Request Type List"
+      "CWF.Request Type List",
+      "CWF.Request Priority Editor",
+      "CWF.Request Priority List"
     ],
     "expectedForms": [
       "CWF.Request Management",
       "CWF.Approval Task Management",
-      "CWF.Request Type Administration"
+      "CWF.Request Type Administration",
+      "CWF.Request Priority Administration"
     ],
     "smokeTestRuntime": true,
     "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime"

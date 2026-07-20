@@ -20,7 +20,7 @@
     "comment": "Request status, email, and approval task baseline",
     "requestStatusUpdate": {
       "name": "CWF.Set Pending Approval Status",
-      "smartObject": "CWF.CorporateWorkflowTest_CWF_WorkflowRequest",
+      "smartObject": "CWF_CorporateWorkflowTest_CWF_WorkflowRequest",
       "method": "Update",
       "identifierProperty": "RequestId",
       "statusProperty": "Status",

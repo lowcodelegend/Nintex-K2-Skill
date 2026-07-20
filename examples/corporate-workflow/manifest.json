@@ -43,6 +43,10 @@
       { "type": "table", "schema": "CWF", "name": "Department" },
       { "type": "table", "schema": "CWF", "name": "Employee" },
       { "type": "table", "schema": "CWF", "name": "RequestType" },
+      { "type": "table", "schema": "CWF", "name": "RequestPriority" },
+      { "type": "table", "schema": "CWF", "name": "RequestStatus" },
+      { "type": "table", "schema": "CWF", "name": "ApprovalTaskStatus" },
+      { "type": "table", "schema": "CWF", "name": "ApprovalDecision" },
       { "type": "table", "schema": "CWF", "name": "WorkflowRequest" },
       { "type": "table", "schema": "CWF", "name": "ApprovalTask" },
       { "type": "table", "schema": "CWF", "name": "RequestComment" },
@@ -67,13 +71,27 @@
         "name": "CWF.Pending approval exists",
         "sql": "SELECT COUNT(*) FROM CWF.ApprovalTask WHERE RequestId = (SELECT RequestId FROM CWF.WorkflowRequest WHERE RequestNumber = N'CWF-TEST-0001') AND Status = N'Pending'",
         "expectedScalar": "1"
+      },
+      {
+        "name": "CWF.Lookup values seeded",
+        "sql": "SELECT (SELECT COUNT(*) FROM CWF.RequestPriority) + (SELECT COUNT(*) FROM CWF.RequestStatus) + (SELECT COUNT(*) FROM CWF.ApprovalTaskStatus) + (SELECT COUNT(*) FROM CWF.ApprovalDecision)",
+        "expectedScalar": "15"
+      },
+      {
+        "name": "CWF.Lookup foreign keys enforced",
+        "sql": "SELECT COUNT(*) FROM sys.foreign_keys WHERE parent_object_id IN (OBJECT_ID(N'CWF.WorkflowRequest'), OBJECT_ID(N'CWF.ApprovalTask')) AND name IN (N'FK_WorkflowRequest_Priority', N'FK_WorkflowRequest_Status', N'FK_ApprovalTask_Status', N'FK_ApprovalTask_Decision')",
+        "expectedScalar": "4"
       }
     ],
-    "minimumGeneratedSmartObjects": 11,
+    "minimumGeneratedSmartObjects": 15,
     "smartObjectServiceObjects": [
       "CWF-Department",
       "CWF-Employee",
       "CWF-RequestType",
+      "CWF-RequestPriority",
+      "CWF-RequestStatus",
+      "CWF-ApprovalTaskStatus",
+      "CWF-ApprovalDecision",
       "CWF-WorkflowRequest",
       "CWF-ApprovalTask",
       "CWF-RequestComment",

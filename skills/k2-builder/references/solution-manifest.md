@@ -27,6 +27,7 @@ The solution manifest is the orchestration contract. It references specialist ma
     ]
   },
   "policies": {
+    "dataModelComplexity": "small",
     "versionFreeNames": true,
     "modernForms": true,
     "workflowEntries": [
@@ -64,7 +65,7 @@ The solution manifest is the orchestration contract. It references specialist ma
 - `schemaVersion` must be `1`.
 - `shortCode` is required and contains exactly three or four uppercase letters.
 - `name` is a human-readable solution name prefixed with `<shortCode>.`. Do not add a release number.
-- `application.rootCategoryPath` is the shared K2 application root. Every selected specialist manifest must match it. The SQL SmartObjects specialist derives `<root>\Data`; SmartForms derives `<root>\Views` and `<root>\Forms`.
+- `application.rootCategoryPath` is the shared K2 application root. Every selected specialist manifest must match it. SQL SmartObjects derives `<root>\Data`; SmartForms derives ordinary `<root>\Views`/`Forms` and administrative `<root>\Admin\Views`/`Forms`.
 - The category leaf and all solution-owned artifact names in referenced manifests must use the same `<shortCode>.` prefix. Fully qualified SQL objects normally satisfy this by using the short code as their schema.
 - `components.smartObjects.manifest` points to a `$k2-sql-smartobjects` manifest.
 - `components.forms.manifest` points to a `$k2-smartforms` manifest.
@@ -72,6 +73,7 @@ The solution manifest is the orchestration contract. It references specialist ma
 - Each referenced workflow manifest must set `application.workflowCategoryName` to `<application root leaf> WFs` (for example, `EXP.Expense Approval WFs`). Generic `Workflow` or `Workflows` category names are invalid.
 - Manifest paths are relative to the solution manifest.
 - `dependsOn` makes deployment order explicit. Forms normally depend on SmartObjects; SmartForms-integrated workflows normally depend on both.
+- `policies.dataModelComplexity` is required: use `small` to default lookups to stable code/text foreign keys, or `complex` to default them to normalized surrogate keys. Explicit per-lookup requirements may override that default.
 - `policies.versionFreeNames` and `policies.modernForms` should normally remain true.
 - Each `workflowEntries` item binds a workflow, a generated form, and the entry-state decision.
 - `formOwnership` is `dedicated` when the form belongs to this workflow solution, or `shared` when independently owned behavior must be preserved.

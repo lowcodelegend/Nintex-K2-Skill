@@ -14,7 +14,7 @@ Derive the code from the business solution name, check it against other applicat
 
 Apply it to the solution name, database, Service Instance system/display names, application category leaf, generated SmartObject system names, views, forms, workflows, workflow steps, and workflow-created form states. Make fully qualified SQL object names begin with the code, normally by using the code as the SQL schema (`FIN.Request`, `FIN.RequestSummary`, `FIN.Request_Submit`).
 
-Do not prefix fixed K2-generated `Views` and `Forms` subfolders or ordinary internal vocabulary such as property names, SmartObject method names, task actions, and status values. Name the workflow child category `<prefixed application root leaf> WFs`—for example, `FIN.Expense Approval WFs`. Never call a workflow category `Workflow` or `Workflows`; those generic names interact badly with K2's workflow folder system. Do not abbreviate the code differently in different layers.
+Do not prefix fixed K2-generated `Data`, `Views`, `Forms`, or `Admin` subfolders or ordinary internal vocabulary such as property names, SmartObject method names, task actions, and status values. Name the workflow child category `<prefixed application root leaf> WFs`—for example, `FIN.Expense Approval WFs`. Never call a workflow category `Workflow` or `Workflows`; those generic names interact badly with K2's workflow folder system. K2 may sanitize a Service Instance `<CODE>.` prefix to `<CODE>_` in generated SmartObject system names; treat that as the same namespace and reference the live system name exactly.
 
 Names shared across manifests must resolve to the same K2 artifacts:
 
@@ -22,6 +22,14 @@ Names shared across manifests must resolve to the same K2 artifacts:
 - Workflow SmartObject steps and references must use the same request SmartObject and identifier used by the entry form.
 - Workflow `smartForms.form` must name a form declared in the SmartForms manifest.
 - Every specialist `application.rootCategoryPath` must equal the solution root. The SQL SmartObjects CLI derives the fixed `<root>\Data` child from that value; do not configure a separate SmartObject root.
+
+## Lookup and administration contract
+
+- Use a lookup table and foreign key for user-selected controlled values. SQL Server checks cannot read lookup rows; keep checks for row-local invariants.
+- For a small application, prefer a meaningful code/text foreign key unless surrogate-key normalization is requested. For a complex application, prefer normalized surrogate lookup keys unless a stable code is the intentional domain key.
+- Every dropdown binds a target property to a generated lookup SmartObject, parameterless List method, value property, and friendly display property.
+- Every business-managed lookup declares an Admin form containing CRUD capture and List views under `<root>\Admin`; external masters and fixed workflow/system vocabularies omit Admin UX deliberately.
+- Verify the dropdown definition and execute the lookup List method. Browser-test that options load, the displayed label differs from an opaque key where appropriate, and create/update persists the selected value.
 
 ## Request workflow baseline
 

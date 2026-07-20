@@ -53,6 +53,7 @@ namespace K2SmartFormsCli
             if (Verification == null) Verification = new VerificationOptions();
             if (Application.Views == null) Application.Views = new List<ViewDefinition>();
             if (Application.Forms == null) Application.Forms = new List<FormDefinition>();
+            if (Application.Lookups == null) Application.Lookups = new List<LookupSourceDefinition>();
             if (Verification.ExpectedViews == null) Verification.ExpectedViews = new List<string>();
             if (Verification.ExpectedForms == null) Verification.ExpectedForms = new List<string>();
 
@@ -74,6 +75,18 @@ namespace K2SmartFormsCli
 
             EnsureUnique(Application.Views.Select(x => x == null ? null : x.Name), "view");
             EnsureUnique(Application.Forms.Select(x => x == null ? null : x.Name), "form");
+            EnsureUnique(Application.Lookups.Select(x => x == null ? null : x.Name), "lookup");
+
+            foreach (var lookup in Application.Lookups)
+            {
+                if (lookup == null) throw new CliException("application.lookups cannot contain null entries.");
+                Require(lookup.SmartObject, "lookup.smartObject");
+                Require(lookup.Method, "lookup.method");
+                Require(lookup.ValueProperty, "lookup.valueProperty");
+                Require(lookup.DisplayProperty, "lookup.displayProperty");
+            }
+
+            var lookupNames = new HashSet<string>(Application.Lookups.Select(x => x.Name), StringComparer.OrdinalIgnoreCase);
 
             foreach (var view in Application.Views)
             {
@@ -81,6 +94,7 @@ namespace K2SmartFormsCli
                 if (view.Properties == null) view.Properties = new List<string>();
                 if (view.Methods == null) view.Methods = new List<string>();
                 if (view.Options == null) view.Options = new List<string>();
+                if (view.LookupControls == null) view.LookupControls = new List<LookupControlDefinition>();
                 RequireArtifactName(view.Name, "view.name");
                 RejectVersionToken(view.Name, "view.name");
                 Require(view.SmartObject, "view.smartObject");
@@ -92,6 +106,19 @@ namespace K2SmartFormsCli
                 EnsureUniqueValues(view.Methods, "method", view.Name);
                 if ((view.Type == "list" || view.Type == "content") && string.IsNullOrWhiteSpace(view.DefaultListMethod))
                     view.DefaultListMethod = "List";
+                view.Area = NormalizeArea(view.Area, "view", view.Name);
+                EnsureUniqueValues(view.LookupControls.Select(x => x == null ? null : x.Property), "lookup control property", view.Name);
+                foreach (var control in view.LookupControls)
+                {
+                    if (control == null) throw new CliException("View '" + view.Name + "' lookupControls cannot contain null entries.");
+                    Require(control.Lookup, "view.lookupControls.lookup");
+                    if (!lookupNames.Contains(control.Lookup))
+                        throw new CliException("View '" + view.Name + "' references undeclared lookup '" + control.Lookup + "'.");
+                    if (!view.Properties.Contains(control.Property, StringComparer.OrdinalIgnoreCase))
+                        throw new CliException("View '" + view.Name + "' lookup property is not selected in view.properties: " + control.Property);
+                    if (view.Type != "capture" && view.Type != "capture-list")
+                        throw new CliException("Lookup controls are supported only on capture or capture-list views: " + view.Name);
+                }
             }
 
             var viewNames = new HashSet<string>(Application.Views.Select(x => x.Name), StringComparer.OrdinalIgnoreCase);
@@ -109,6 +136,20 @@ namespace K2SmartFormsCli
                     if (!viewNames.Contains(viewName)) throw new CliException("Form '" + form.Name + "' references undeclared view '" + viewName + "'.");
                 ValidateValues(form.Options, AllowedFormOptions, "form option", form.Name);
                 ValidateValues(form.Behaviors, AllowedFormBehaviors, "form behavior", form.Name);
+                form.Area = NormalizeArea(form.Area, "form", form.Name);
+            }
+
+            foreach (var lookup in Application.Lookups.Where(x => !string.IsNullOrWhiteSpace(x.AdminForm)))
+            {
+                var form = Application.Forms.SingleOrDefault(x => string.Equals(x.Name, lookup.AdminForm, StringComparison.OrdinalIgnoreCase));
+                if (form == null) throw new CliException("Lookup '" + lookup.Name + "' adminForm is not declared: " + lookup.AdminForm);
+                if (!string.Equals(form.Area, "admin", StringComparison.OrdinalIgnoreCase))
+                    throw new CliException("Lookup '" + lookup.Name + "' adminForm must use area 'admin': " + lookup.AdminForm);
+                var adminViews = Application.Views.Where(x => form.Views.Contains(x.Name, StringComparer.OrdinalIgnoreCase) && string.Equals(x.SmartObject, lookup.SmartObject, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (!adminViews.Any(x => (x.Type == "capture" || x.Type == "capture-list") && (x.Options.Contains("all-methods", StringComparer.OrdinalIgnoreCase) || new[] { "Create", "Update", "Delete" }.All(m => x.Methods.Contains(m, StringComparer.OrdinalIgnoreCase)))))
+                    throw new CliException("Lookup '" + lookup.Name + "' adminForm must contain a CRUD capture view over " + lookup.SmartObject + ".");
+                if (!adminViews.Any(x => x.Type == "capture-list" || ((x.Type == "list" || x.Type == "content") && !string.IsNullOrWhiteSpace(x.DefaultListMethod))))
+                    throw new CliException("Lookup '" + lookup.Name + "' adminForm must contain a List view over " + lookup.SmartObject + ".");
             }
 
             if (Verification.ExpectedViews.Count == 0)
@@ -127,6 +168,14 @@ namespace K2SmartFormsCli
         private static readonly HashSet<string> AllowedViewOptions = NewSet("display-controls", "all-properties", "all-methods", "labels-left", "colon-labels", "toolbar", "editable");
         private static readonly HashSet<string> AllowedFormOptions = NewSet("no-tabs");
         private static readonly HashSet<string> AllowedFormBehaviors = NewSet("load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load");
+        private static readonly HashSet<string> AllowedAreas = NewSet("application", "admin");
+
+        private static string NormalizeArea(string value, string kind, string owner)
+        {
+            var area = string.IsNullOrWhiteSpace(value) ? "application" : value.Trim().ToLowerInvariant();
+            if (!AllowedAreas.Contains(area)) throw new CliException("Unsupported " + kind + " area '" + value + "' for " + owner + ".");
+            return area;
+        }
 
         private static HashSet<string> NewSet(params string[] values)
         {
@@ -176,8 +225,8 @@ namespace K2SmartFormsCli
             if (segments.Any(IsVersionSegment))
                 throw new CliException("application.rootCategoryPath must not contain version folders. K2 versions artifacts internally.");
             var leaf = segments[segments.Length - 1];
-            if (leaf.Equals("Forms", StringComparison.OrdinalIgnoreCase) || leaf.Equals("Views", StringComparison.OrdinalIgnoreCase))
-                throw new CliException("application.rootCategoryPath must be the application root; the CLI appends Forms and Views subcategories.");
+            if (leaf.Equals("Forms", StringComparison.OrdinalIgnoreCase) || leaf.Equals("Views", StringComparison.OrdinalIgnoreCase) || leaf.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+                throw new CliException("application.rootCategoryPath must be the application root; the CLI appends Forms, Views, and Admin subcategories.");
         }
 
         private static bool IsVersionSegment(string value)
@@ -225,6 +274,7 @@ namespace K2SmartFormsCli
         public bool CheckIn { get; set; }
         public List<ViewDefinition> Views { get; set; }
         public List<FormDefinition> Forms { get; set; }
+        public List<LookupSourceDefinition> Lookups { get; set; }
 
         [ScriptIgnore]
         public string ViewsCategoryPath { get { return RootCategoryPath.TrimEnd('\\') + "\\Views"; } }
@@ -232,12 +282,22 @@ namespace K2SmartFormsCli
         [ScriptIgnore]
         public string FormsCategoryPath { get { return RootCategoryPath.TrimEnd('\\') + "\\Forms"; } }
 
+        [ScriptIgnore]
+        public string AdminViewsCategoryPath { get { return RootCategoryPath.TrimEnd('\\') + "\\Admin\\Views"; } }
+
+        [ScriptIgnore]
+        public string AdminFormsCategoryPath { get { return RootCategoryPath.TrimEnd('\\') + "\\Admin\\Forms"; } }
+
+        public string GetViewCategoryPath(ViewDefinition view) { return view.Area == "admin" ? AdminViewsCategoryPath : ViewsCategoryPath; }
+        public string GetFormCategoryPath(FormDefinition form) { return form.Area == "admin" ? AdminFormsCategoryPath : FormsCategoryPath; }
+
         public ApplicationOptions()
         {
             Theme = "Lithium";
             CheckIn = true;
             Views = new List<ViewDefinition>();
             Forms = new List<FormDefinition>();
+            Lookups = new List<LookupSourceDefinition>();
         }
     }
 
@@ -250,6 +310,8 @@ namespace K2SmartFormsCli
         public List<string> Methods { get; set; }
         public string DefaultListMethod { get; set; }
         public List<string> Options { get; set; }
+        public string Area { get; set; }
+        public List<LookupControlDefinition> LookupControls { get; set; }
 
         public ViewDefinition()
         {
@@ -257,6 +319,8 @@ namespace K2SmartFormsCli
             Properties = new List<string>();
             Methods = new List<string>();
             Options = new List<string>();
+            Area = "application";
+            LookupControls = new List<LookupControlDefinition>();
         }
     }
 
@@ -267,13 +331,34 @@ namespace K2SmartFormsCli
         public List<string> Views { get; set; }
         public List<string> Options { get; set; }
         public List<string> Behaviors { get; set; }
+        public string Area { get; set; }
 
         public FormDefinition()
         {
             Views = new List<string>();
             Options = new List<string>();
             Behaviors = new List<string>();
+            Area = "application";
         }
+    }
+
+    public sealed class LookupSourceDefinition
+    {
+        public string Name { get; set; }
+        public string SmartObject { get; set; }
+        public string Method { get; set; }
+        public string ValueProperty { get; set; }
+        public string DisplayProperty { get; set; }
+        public string AdminForm { get; set; }
+
+        public LookupSourceDefinition() { Method = "List"; }
+    }
+
+    public sealed class LookupControlDefinition
+    {
+        public string Property { get; set; }
+        public string Lookup { get; set; }
+        public bool AllowEmptySelection { get; set; }
     }
 
     public sealed class VerificationOptions

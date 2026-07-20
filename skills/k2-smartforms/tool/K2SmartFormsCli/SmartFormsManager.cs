@@ -34,6 +34,7 @@ namespace K2SmartFormsCli
                 return 0;
             });
 
+            var lookupSources = LoadLookupRuntimeSources();
             WithSmartObjectServer(delegate(SmartObjectClientServer server)
             {
                 foreach (var view in _manifest.Application.Views)
@@ -59,10 +60,65 @@ namespace K2SmartFormsCli
                         throw new CliException("SmartObject '" + view.SmartObject + "' has no default List method '" + view.DefaultListMethod + "' requested by view '" + view.Name + "'.");
 
                     ValidateRequiredMethodInputs(view, smartObject);
+                    foreach (var binding in view.LookupControls)
+                    {
+                        var targetProperty = smartObject.Properties.Cast<SmartProperty>().Single(x => string.Equals(x.Name, binding.Property, StringComparison.OrdinalIgnoreCase));
+                        var source = lookupSources[binding.Lookup];
+                        if (!AreLookupTypesCompatible(targetProperty.Type.ToString(), source.ValuePropertyType))
+                            throw new CliException("View '" + view.Name + "' lookup property '" + binding.Property + "' type " + targetProperty.Type + " does not match lookup '" + binding.Lookup + "' value property type " + source.ValuePropertyType + ".");
+                    }
 
-                    Console.WriteLine("SmartObject input: OK (" + view.SmartObject + ", " + properties.Count + " properties, " + methods.Count + " methods)");
+                    Console.WriteLine("SmartObject input: OK (" + view.SmartObject + ", " + properties.Count + " properties, " + methods.Count + " methods, " + view.LookupControls.Count + " lookup control(s))");
                 }
                 return 0;
+            });
+        }
+
+        private static bool AreLookupTypesCompatible(string target, string source)
+        {
+            if (string.Equals(target, source, StringComparison.OrdinalIgnoreCase)) return true;
+            var pair = new HashSet<string>(new[] { target, source }, StringComparer.OrdinalIgnoreCase);
+            return pair.SetEquals(new[] { "Number", "Autonumber" }) || pair.SetEquals(new[] { "Guid", "AutoGuid" });
+        }
+
+        private IDictionary<string, LookupRuntimeSource> LoadLookupRuntimeSources()
+        {
+            return WithSmartObjectServer(delegate(SmartObjectClientServer server)
+            {
+                var result = new Dictionary<string, LookupRuntimeSource>(StringComparer.OrdinalIgnoreCase);
+                foreach (var source in _manifest.Application.Lookups)
+                {
+                    SmartObject smartObject;
+                    try { smartObject = server.GetSmartObject(source.SmartObject); }
+                    catch (Exception ex) { throw new CliException("Lookup SmartObject '" + source.SmartObject + "' is unavailable: " + ex.Message); }
+
+                    var method = smartObject.ListMethods.Cast<SmartListMethod>().FirstOrDefault(x => string.Equals(x.Name, source.Method, StringComparison.OrdinalIgnoreCase));
+                    if (method == null) throw new CliException("Lookup '" + source.Name + "' SmartObject has no List method '" + source.Method + "'.");
+                    if (method.RequiredProperties.Count > 0 || method.Parameters.Count > 0)
+                        throw new CliException("Lookup '" + source.Name + "' method '" + source.Method + "' must be parameterless for automatic dropdown loading.");
+                    var valueProperty = smartObject.Properties.Cast<SmartProperty>().FirstOrDefault(x => string.Equals(x.Name, source.ValueProperty, StringComparison.OrdinalIgnoreCase));
+                    if (valueProperty == null) throw new CliException("Lookup '" + source.Name + "' has no value property '" + source.ValueProperty + "'.");
+                    var displayProperty = smartObject.Properties.Cast<SmartProperty>().FirstOrDefault(x => string.Equals(x.Name, source.DisplayProperty, StringComparison.OrdinalIgnoreCase));
+                    if (displayProperty == null) throw new CliException("Lookup '" + source.Name + "' has no display property '" + source.DisplayProperty + "'.");
+
+                    result[source.Name] = new LookupRuntimeSource
+                    {
+                        Name = source.Name,
+                        SmartObjectGuid = smartObject.Guid,
+                        SmartObjectSystemName = smartObject.Name,
+                        SmartObjectDisplayName = smartObject.Metadata == null ? smartObject.Name : smartObject.Metadata.DisplayName,
+                        MethodName = method.Name,
+                        MethodDisplayName = method.Metadata == null ? method.Name : method.Metadata.DisplayName,
+                        ValuePropertyName = valueProperty.Name,
+                        ValuePropertyDisplayName = valueProperty.Metadata == null ? valueProperty.Name : valueProperty.Metadata.DisplayName,
+                        ValuePropertyType = valueProperty.Type.ToString(),
+                        DisplayPropertyName = displayProperty.Name,
+                        DisplayPropertyDisplayName = displayProperty.Metadata == null ? displayProperty.Name : displayProperty.Metadata.DisplayName,
+                        DisplayPropertyType = displayProperty.Type.ToString()
+                    };
+                    Console.WriteLine("Lookup source: OK (" + source.Name + " <= " + smartObject.Name + "." + method.Name + ", value=" + valueProperty.Name + ", display=" + displayProperty.Name + ")");
+                }
+                return result;
             });
         }
 
@@ -195,6 +251,7 @@ namespace K2SmartFormsCli
         public void Deploy()
         {
             CheckConnectionAndInputs();
+            var lookupSources = LoadLookupRuntimeSources();
             var states = GetArtifactStates();
             var existing = states.Where(x => x.Exists).ToList();
             if (existing.Count > 0 && !_manifest.Application.ReplaceExisting)
@@ -241,9 +298,10 @@ namespace K2SmartFormsCli
                             viewGenerator.DefaultListMethod = view.DefaultListMethod;
 
                         var generated = generator.Generate(viewGenerator, view.SmartObject, view.Name);
-                        manager.DeployViews(generated.ToXml(), _manifest.Application.ViewsCategoryPath, _manifest.Application.CheckIn);
+                        var definition = ViewLookupDefinition.Apply(generated.ToXml(), view, lookupSources);
+                        manager.DeployViews(definition, _manifest.Application.GetViewCategoryPath(view), _manifest.Application.CheckIn);
                         var info = manager.GetView(view.Name);
-                        Console.WriteLine("View: deployed (" + view.Name + ", " + info.Guid + ", " + info.Type + ")");
+                        Console.WriteLine("View: deployed (" + view.Name + ", " + info.Guid + ", " + info.Type + ", category " + info.CategoryPath + ", " + view.LookupControls.Count + " lookup control(s))");
                     }
 
                     foreach (var form in _manifest.Application.Forms)
@@ -251,7 +309,7 @@ namespace K2SmartFormsCli
                         var formGenerator = new FormGenerator(ParseFormOptions(form.Options), ParseFormBehaviors(form.Behaviors), _manifest.Application.Theme);
                         var generated = generator.Generate(formGenerator, form.Views.ToArray(), form.Name);
                         var definition = FormThemeDefinition.SetUseLegacyTheme(generated.ToXml(), form.UseLegacyTheme);
-                        manager.DeployForms(definition, _manifest.Application.FormsCategoryPath, _manifest.Application.CheckIn);
+                        manager.DeployForms(definition, _manifest.Application.GetFormCategoryPath(form), _manifest.Application.CheckIn);
                         var info = manager.GetForm(form.Name);
                         Console.WriteLine("Form: deployed (" + form.Name + ", " + info.Guid + ", theme " + info.Theme.Name + ", legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant() + ")");
                     }
@@ -263,6 +321,7 @@ namespace K2SmartFormsCli
         public void Verify()
         {
             var runtimeForms = new List<string>();
+            var lookupSources = LoadLookupRuntimeSources();
             WithFormsManager(delegate(FormsManager manager)
             {
                 foreach (var expected in _manifest.Verification.ExpectedViews)
@@ -271,9 +330,13 @@ namespace K2SmartFormsCli
                     var info = manager.GetView(expected);
                     var definition = manager.GetViewDefinition(info.Guid);
                     if (string.IsNullOrWhiteSpace(definition)) throw new CliException("K2 View has an empty definition: " + expected);
-                    if (!string.Equals(info.CategoryPath, _manifest.Application.ViewsCategoryPath, StringComparison.OrdinalIgnoreCase))
-                        throw new CliException("K2 View is in category '" + info.CategoryPath + "', expected '" + _manifest.Application.ViewsCategoryPath + "': " + expected);
+                    var declaredView = _manifest.Application.Views.SingleOrDefault(x => string.Equals(x.Name, expected, StringComparison.OrdinalIgnoreCase));
+                    if (declaredView == null) throw new CliException("Expected K2 View is not declared in application.views: " + expected);
+                    var expectedCategory = _manifest.Application.GetViewCategoryPath(declaredView);
+                    if (!string.Equals(info.CategoryPath, expectedCategory, StringComparison.OrdinalIgnoreCase))
+                        throw new CliException("K2 View is in category '" + info.CategoryPath + "', expected '" + expectedCategory + "': " + expected);
                     if (_manifest.Application.CheckIn && info.IsCheckedOut) throw new CliException("K2 View remains checked out: " + expected);
+                    ViewLookupDefinition.Verify(definition, declaredView, lookupSources);
                     Console.WriteLine("View verification: OK (" + expected + ", " + info.Guid + ", v" + info.Version + ", " + info.Type + ")");
                 }
 
@@ -283,11 +346,12 @@ namespace K2SmartFormsCli
                     var info = manager.GetForm(expected);
                     var definition = manager.GetFormDefinition(info.Guid);
                     if (string.IsNullOrWhiteSpace(definition)) throw new CliException("K2 Form has an empty definition: " + expected);
-                    if (!string.Equals(info.CategoryPath, _manifest.Application.FormsCategoryPath, StringComparison.OrdinalIgnoreCase))
-                        throw new CliException("K2 Form is in category '" + info.CategoryPath + "', expected '" + _manifest.Application.FormsCategoryPath + "': " + expected);
-                    if (_manifest.Application.CheckIn && info.IsCheckedOut) throw new CliException("K2 Form remains checked out: " + expected);
                     var declaredForm = _manifest.Application.Forms.SingleOrDefault(x => string.Equals(x.Name, expected, StringComparison.OrdinalIgnoreCase));
                     if (declaredForm == null) throw new CliException("Expected K2 Form is not declared in application.forms: " + expected);
+                    var expectedCategory = _manifest.Application.GetFormCategoryPath(declaredForm);
+                    if (!string.Equals(info.CategoryPath, expectedCategory, StringComparison.OrdinalIgnoreCase))
+                        throw new CliException("K2 Form is in category '" + info.CategoryPath + "', expected '" + expectedCategory + "': " + expected);
+                    if (_manifest.Application.CheckIn && info.IsCheckedOut) throw new CliException("K2 Form remains checked out: " + expected);
                     var useLegacyTheme = FormThemeDefinition.ReadUseLegacyTheme(definition);
                     if (!useLegacyTheme.HasValue)
                         throw new CliException("K2 Form does not explicitly set UseLegacyTheme: " + expected);
@@ -360,7 +424,7 @@ namespace K2SmartFormsCli
             request.AllowAutoRedirect = false;
             request.Timeout = 30000;
             request.ReadWriteTimeout = 30000;
-            request.UserAgent = "k2forms/0.1.2";
+            request.UserAgent = "k2forms/0.2.0";
             try
             {
                 using (var response = (HttpWebResponse)request.GetResponse())

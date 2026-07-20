@@ -82,6 +82,11 @@ namespace K2SmartFormsCli
             Console.WriteLine("  Application category: " + manifest.Application.RootCategoryPath);
             Console.WriteLine("  Views category: " + manifest.Application.ViewsCategoryPath);
             Console.WriteLine("  Forms category: " + manifest.Application.FormsCategoryPath);
+            if (manifest.Application.Views.Any(x => x.Area == "admin") || manifest.Application.Forms.Any(x => x.Area == "admin"))
+            {
+                Console.WriteLine("  Admin views category: " + manifest.Application.AdminViewsCategoryPath);
+                Console.WriteLine("  Admin forms category: " + manifest.Application.AdminFormsCategoryPath);
+            }
             Console.WriteLine("  Theme: " + manifest.Application.Theme);
             foreach (var state in states)
             {
@@ -93,11 +98,11 @@ namespace K2SmartFormsCli
             }
             foreach (var view in manifest.Application.Views)
             {
-                Console.WriteLine("    " + view.Type + " <= " + view.SmartObject + " [" + string.Join(",", view.Properties.ToArray()) + "]");
+                Console.WriteLine("    " + view.Type + " <= " + view.SmartObject + " [" + string.Join(",", view.Properties.ToArray()) + "], category=" + manifest.Application.GetViewCategoryPath(view) + ", lookups=" + view.LookupControls.Count);
             }
             foreach (var form in manifest.Application.Forms)
             {
-                Console.WriteLine("    form views: " + form.Name + " <= [" + string.Join(", ", form.Views.ToArray()) + "], legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant());
+                Console.WriteLine("    form views: " + form.Name + " <= [" + string.Join(", ", form.Views.ToArray()) + "], category=" + manifest.Application.GetFormCategoryPath(form) + ", legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant());
             }
             if (dependencies.Count > 0)
             {
@@ -165,7 +170,7 @@ namespace K2SmartFormsCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2forms 0.1.6");
+            Console.WriteLine("k2forms 0.2.0");
         }
 
         private static void PrintHelp()

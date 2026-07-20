@@ -18,7 +18,9 @@ Complete solutions use one uppercase three- or four-letter short code as a names
 
 Do not use the generic category names `Workflow` or `Workflows` for HTML5 workflows. K2's workflow folder/process naming behavior makes those names troublesome. Use a solution-specific child named `<prefixed application root leaf> WFs`; the workflow runtime full name then becomes `<category name>\<workflow name>`.
 
-Complete solutions should share one main K2 solution category. Generated SQL SmartObjects belong in its fixed `Data` child, alongside the sibling `Views`, `Forms`, and solution-specific `WFs` categories. `SourceCode.Categories.Client.CategoryServer.FindCategoryIdByPathName(..., create: true)` creates the hierarchy through supported APIs, while `AddCategoryData(..., dataMove: true)` relocates generated SmartObject category links without editing K2 databases.
+Complete solutions should share one main K2 solution category. Generated SQL SmartObjects belong in its fixed `Data` child, alongside ordinary `Views`/`Forms`, administrative `Admin\Views`/`Admin\Forms`, and the solution-specific `WFs` category. `SourceCode.Categories.Client.CategoryServer.FindCategoryIdByPathName(..., create: true)` creates the hierarchy through supported APIs, while `AddCategoryData(..., dataMove: true)` relocates generated SmartObject category links without editing K2 databases.
+
+SQL Server `CHECK` constraints cannot query lookup tables. For dynamic or business-managed allowed values, use a lookup table plus foreign key and reserve checks for row-local invariants. A small app can avoid heavy normalization by retaining a meaningful code/text value as the foreign key; complex apps should normally use surrogate lookup keys when values have metadata, localization, history, or broad reuse.
 
 ## Supported K2 API path
 
@@ -77,8 +79,11 @@ The `examples/request-management` fixture was deployed twice:
 - Generated artifacts use new GUIDs. Repeatable replacement therefore requires deleting forms before their dependent views; it cannot preserve manual Designer edits or GUID-based external references.
 - Dependency inspection through `FormsManager.GetFormsForView` can block replacement/cleanup when a managed view is used by a form outside the manifest.
 - Runtime vanity URLs use `https://spk2.trials.demome.tech/Runtime/Runtime/Form/<URL-encoded-form-name>/`. A non-browser request reaches the Windows STS redirect but cannot complete interactive WIF authentication; authoritative CLI verification uses the management API definitions and GUID references, with final rendering/CRUD checked in a browser.
+- A SmartObject-backed dropdown is represented by a `DropDown` control whose `DataSourceType`, `AssociationSO`, `AssociationMethod`, `ValueProperty`, and `DisplayTemplate` properties bind a parameterless List method. Retaining the generated control/field IDs preserves standard Create/Read/Update rules while changing the editor control type.
+- Lookup key compatibility must treat K2 `Number`/`Autonumber` and `Guid`/`AutoGuid` pairs as compatible. Exact string equality incorrectly rejects ordinary SQL identity and uniqueidentifier lookup keys.
+- K2 sanitizes a Service Instance name such as `CWF.CorporateWorkflowTest` to the generated SmartObject prefix `CWF_CorporateWorkflowTest`; cross-skill namespace checks must accept that live generated form while preserving dotted names for human-owned artifacts.
 
-The corporate workflow proof generated six checked-in views under `K2 Skills\Corporate Workflow\Views` and three forms under `K2 Skills\Corporate Workflow\Forms`, then verified their definitions, categories, theme, view references, and runtime routes. Form/view names and categories remain stable and version-free.
+The current corporate workflow proof generated four ordinary views/two forms plus four administrative views/two forms. Eight editor properties use verified SmartObject-backed dropdown definitions, and the administrative forms are isolated under `K2 Skills\CWF.Corporate Workflow\Admin\Forms`. Form/view names and categories remain stable and version-free.
 
 ## HTML5 Workflow Designer findings
 

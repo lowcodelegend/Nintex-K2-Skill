@@ -16,7 +16,9 @@ Order fields by user task, not database column order. Include the stable key whe
 
 For every method selected on a capture or capture-list view, include every property reported by that live SmartObject method's `RequiredProperties` collection. The CLI blocks `doctor`, `plan`, `deploy`, and `verify` when a required method input is absent. A SQL `DEFAULT` constraint does not necessarily make a generated SQL broker Create input optional. If a database-managed audit value is still required by K2, redesign the SQL/SmartObject contract—for example, make the broker input optional while applying the default in SQL, or expose a purpose-built create method—instead of placing a technical timestamp control on the user form.
 
-Version 0.1 does not convert foreign-key IDs into lookups. Treat numeric relationship controls as a development baseline and configure friendly SmartObject-backed lookups before production.
+Convert user-selected foreign keys and controlled codes into SmartObject-backed dropdowns. Use a parameterless List method, bind the stored value to a stable key/code, and show a friendly name. Do not turn workflow-managed status properties into user-editable controls merely because a lookup exists; control editability remains a business-rule decision.
+
+For every business-managed lookup, generate capture/list administration UX and set those views/forms to the `admin` area. External masters such as enterprise employees and fixed system/workflow vocabularies may omit administration deliberately.
 
 ## Presentation
 
@@ -30,7 +32,7 @@ Automatic generation creates controls and standard SmartObject method rules. It 
 
 Use stable business names such as `Expense Editor`, `Expense List`, and `Expense Management`. Do not add `v1`, `v0.2`, release numbers, dates used as releases, or similar suffixes. K2 assigns and increments its own artifact versions, while stable names preserve form URLs and dependencies.
 
-Set `rootCategoryPath` to the application root, such as `K2 Skills\Expense`. The CLI always deploys views to `<root>\Views` and forms to `<root>\Forms`; do not create version folders or include `Forms`/`Views` in the configured root.
+Set `rootCategoryPath` to the application root, such as `K2 Skills\Expense`. The CLI deploys ordinary artifacts to `<root>\Views` and `<root>\Forms`; artifacts with `area: "admin"` go to `<root>\Admin\Views` and `<root>\Admin\Forms`. Do not create version folders or include these fixed leaves in the configured root.
 
 ## Replacement and dependencies
 
