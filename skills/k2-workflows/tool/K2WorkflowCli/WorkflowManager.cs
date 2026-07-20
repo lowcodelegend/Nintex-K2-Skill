@@ -83,6 +83,7 @@ namespace K2WorkflowCli
             Console.WriteLine("Definition: " + _manifest.Workflow.Kind);
             Console.WriteLine("Action: " + (existing.HasValue ? "update JSON process " + existing.Value : "create JSON process"));
             Console.WriteLine("Publish: " + _manifest.Workflow.Publish);
+            ReportTaskAssignmentPolicy();
             if (_manifest.Workflow.SmartForms != null)
             {
                 Console.WriteLine("SmartForm: " + _manifest.Workflow.SmartForms.Form);
@@ -94,6 +95,7 @@ namespace K2WorkflowCli
 
         public void Deploy()
         {
+            ReportTaskAssignmentPolicy();
             var categoryId = EnsureWorkflowCategory();
             var existing = GetProcessId();
             if (existing.HasValue && !_manifest.Workflow.ReplaceExisting)
@@ -196,6 +198,7 @@ namespace K2WorkflowCli
                     .Select(x => (int?)x["componentId"]).ToArray();
                 foreach (var required in new[] { 30011, 30004, 30009 })
                     if (!components.Contains(required)) throw new CliException("Saved request-approval workflow is missing event component " + required + ".");
+                VerifyOriginatorTaskAssignment(root);
                 var linkPaths = ((JArray)root["links"]).OfType<JObject>().Select(x =>
                 {
                     var ui = x["ui"] as JObject;
@@ -282,6 +285,32 @@ namespace K2WorkflowCli
             }
             Console.WriteLine("Verified JSON workflow: " + _manifest.Workflow.ProcessFullName + " (ID " + id.Value + ")");
             if (_manifest.Workflow.Publish) Console.WriteLine("Verified published runtime definition.");
+            ReportTaskAssignmentPolicy();
+        }
+
+        public void ReportTaskAssignmentPolicy()
+        {
+            if (!string.Equals(_manifest.Workflow.Kind, "request-approval", StringComparison.OrdinalIgnoreCase) || _manifest.Workflow.UserTask == null) return;
+            var requested = _manifest.Workflow.UserTask.Assignees == null ? new string[0] : _manifest.Workflow.UserTask.Assignees.ToArray();
+            Console.WriteLine("User Task requested assignees: " + (requested.Length == 0 ? "(not supplied)" : string.Join(", ", requested)));
+            Console.WriteLine("User Task effective assignee: $originator (ProcessOriginatorFQN)");
+            Console.WriteLine("ERRATA [test-demo-routing]: Human task assignment is forced to the workflow Originator for testing/demo; requested production routing is not applied.");
+        }
+
+        private static void VerifyOriginatorTaskAssignment(JObject root)
+        {
+            var task = ((JArray)root["nodes"]).OfType<JObject>()
+                .SelectMany(x => (x["children"] as JArray) == null ? Enumerable.Empty<JObject>() : ((JArray)x["children"]).OfType<JObject>())
+                .Single(x => (int?)x["componentId"] == 30009);
+            var destinations = At(task, "configuration", "destinationSets") as JArray;
+            var firstSet = destinations == null ? null : destinations.OfType<JObject>().SingleOrDefault();
+            var items = firstSet == null ? null : firstSet["destinationItems"] as JArray;
+            var item = items == null ? null : items.OfType<JObject>().SingleOrDefault();
+            if (firstSet == null || item == null ||
+                !string.Equals(Convert.ToString(firstSet["title"]), "Originator", StringComparison.Ordinal) ||
+                !string.Equals(Convert.ToString(At(item, "smartFields", 0, "fieldName")), "ProcessOriginatorFQN", StringComparison.Ordinal))
+                throw new CliException("The generated User Task is not assigned exclusively to the workflow Originator test/demo identity.");
+            Console.WriteLine("Verified User Task effective assignee: Originator (ProcessOriginatorFQN)");
         }
 
         public void Cleanup(bool deleteDeployed)

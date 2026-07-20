@@ -96,7 +96,7 @@ namespace K2WorkflowCli
             var task = Workflow.UserTask;
             if (task == null) throw new CliException("workflow.userTask is required for request-approval.");
             Required(task.Name, "workflow.userTask.name"); Required(task.Instructions, "workflow.userTask.instructions");
-            if (task.Assignees == null || task.Assignees.Count == 0) task.Assignees = new List<string> { "$originatorManager" };
+            if (task.Assignees == null || task.Assignees.Count == 0) task.Assignees = new List<string> { "$originator" };
             if (task.Assignees.Any(string.IsNullOrWhiteSpace))
                 throw new CliException("workflow.userTask.assignees must contain at least one K2 user/group identity.");
             if (task.Actions == null || task.Actions.Count == 0 || task.Actions.Any(string.IsNullOrWhiteSpace))

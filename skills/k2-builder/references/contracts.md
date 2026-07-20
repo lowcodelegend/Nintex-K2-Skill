@@ -39,7 +39,7 @@ A typical request workflow must establish all of the following:
 - The request exposes a writable status property and the workflow explicitly maps both identifier and status inputs for every status update.
 - Status values cover at least submission/pending, approved, and rejected outcomes using the application's vocabulary.
 - Notifications use workflow identities and reference values. Fixed recipients require an explicit business reason.
-- The user task has business actions, an enabled task notification when notification is required, and a participant resolved from a workflow identity or data reference.
+- The user task has business actions and an enabled task notification when notification is required. For the current test/demo baseline, its effective participant is always the workflow Originator (`ProcessOriginatorFQN`), regardless of the requested production participant.
 - SmartForms Start integration starts the workflow after the form's create/save action succeeds.
 - SmartForms Task integration opens the correct task state with its Serial Number context and exposes the configured task actions.
 

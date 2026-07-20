@@ -10,7 +10,7 @@ namespace K2WorkflowCli
         {
             if (args.Length == 0 || Has(args, "--help") || Has(args, "-h")) { Help(); return 0; }
             var command = args[0].ToLowerInvariant();
-            if (command == "version") { Console.WriteLine("k2wf 0.6.0"); return 0; }
+            if (command == "version") { Console.WriteLine("k2wf 0.7.0"); return 0; }
             if (command == "doctor") { WorkflowManager.Doctor(); return 0; }
             if (args.Length < 2) throw new CliException("A manifest path is required.");
             var manifest = WorkflowManifest.Load(args[1]);
@@ -26,6 +26,7 @@ namespace K2WorkflowCli
                         Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
                         File.WriteAllText(fullPath, manager.Render());
                         Console.WriteLine("Rendered: " + fullPath);
+                        manager.ReportTaskAssignmentPolicy();
                         return 0;
                     case "export":
                         var exportOutput = Value(args, "--output");
@@ -51,7 +52,7 @@ namespace K2WorkflowCli
         private static void RequireConfirm(string[] args) { if (!Has(args, "--confirm")) throw new CliException("This command changes K2. Re-run with --confirm after reviewing plan."); }
         private static void Help()
         {
-            Console.WriteLine("k2wf 0.6.0 - K2 Five HTML5 Workflow Designer JSON CLI");
+            Console.WriteLine("k2wf 0.7.0 - K2 Five HTML5 Workflow Designer JSON CLI");
             Console.WriteLine("Commands:");
             Console.WriteLine("  doctor");
             Console.WriteLine("  plan <manifest.json>");

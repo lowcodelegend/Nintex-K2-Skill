@@ -279,17 +279,10 @@ namespace K2WorkflowCli
                 actions.Add(Obj("alwaysVisible", true, "continueWorkflow", true, "actionTitle", task.Actions[i],
                     "originalTitle", task.Actions[i], "internalId", i + 1, "componentId", 30019, "oldReference", reference));
             }
-            var destinationItems = new JArray();
-            for (var i = 0; i < task.Assignees.Count; i++)
-            {
-                var expression = string.Equals(task.Assignees[i], "$originatorManager", StringComparison.OrdinalIgnoreCase)
-                    ? OriginatorManagerExpression() : LiteralExpression(task.Assignees[i]);
-                expression["type"] = "User"; expression["isDynamic"] = true; expression["internalId"] = i + 1;
-                destinationItems.Add(expression);
-            }
-            var destinationTitle = task.Assignees.Count == 1 && string.Equals(task.Assignees[0], "$originatorManager", StringComparison.OrdinalIgnoreCase)
-                ? "Originator's Manager" : string.Join(", ", task.Assignees.ToArray());
-            var destinations = Arr(Obj("title", destinationTitle, "destinationItems", destinationItems,
+            var originator = OriginatorUserExpression();
+            originator["isDynamic"] = true;
+            originator["internalId"] = 1;
+            var destinations = Arr(Obj("title", "Originator", "destinationItems", Arr(originator),
                 "isRecipient", true, "internalId", 1, "componentId", 80010));
             var parameters = smartForm == null ? Arr(
                     Obj("name", TaskParameterName("SN", true), "value", TaskSerialNumber(), "internalId", 1, "componentId", 30018),
@@ -600,7 +593,7 @@ namespace K2WorkflowCli
         }
         private static JObject EnvironmentExpression(string name, int id) { return Obj("smartFields", Arr(Obj("environmentFieldReference", "root.externalReferenceDefinitions[{\"internalId\":" + id + "}]", "title", name, "internalId", 1, "componentId", 10001)), "componentId", 10008); }
         private static JObject OriginatorExpression() { var value = Obj("smartFields", Arr(Obj("fieldName", "ProcessOriginatorEmail", "parentName", "Originator's", "title", "Email", "customTitle", "Originator", "internalId", 1, "componentId", 10009)), "type", "Originator", "componentId", 10008); return value; }
-        private static JObject OriginatorManagerExpression() { return Obj("smartFields", Arr(Obj("fieldName", "ProcessOriginatorManager", "parentName", "Originator's", "title", "Manager", "customTitle", "Originator's Manager", "internalId", 1, "componentId", 10009)), "type", "User", "componentId", 10008); }
+        private static JObject OriginatorUserExpression() { return Obj("smartFields", Arr(Obj("fieldName", "ProcessOriginatorFQN", "parentName", "Originator's", "title", "FQN", "customTitle", "Originator", "internalId", 1, "componentId", 10009)), "type", "User", "componentId", 10008); }
         private static JObject SmartFormExpression(int id) { return Obj("smartFields", Arr(Obj("smartFormFieldReference", "root.externalReferenceDefinitions[{\"internalId\":" + id + "}]", "internalId", 1, "componentId", 10006)), "componentId", 10008); }
         private static JObject ExternalExpression(string reference, string title) { return Obj("smartFields", Arr(Obj("id", reference, "title", title, "internalId", 1, "componentId", 10018)), "componentId", 10008); }
         private static JObject NumberExpression(int value) { return Obj("smartFields", Arr(Obj("value", value, "internalId", 1, "componentId", 10021)), "componentId", 10008); }

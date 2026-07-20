@@ -13,7 +13,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if ($Command -eq 'version') {
-    Write-Output 'k2build 0.8.1'
+    Write-Output 'k2build 0.9.0'
     exit 0
 }
 
@@ -116,6 +116,7 @@ function Get-DependencyNames {
 $issues = [System.Collections.Generic.List[string]]::new()
 $resolvedPolicies = [System.Collections.Generic.List[object]]::new()
 $planItems = [System.Collections.Generic.List[object]]::new()
+$errata = [System.Collections.Generic.List[object]]::new()
 
 try {
     $manifestPath = (Resolve-Path -LiteralPath $Manifest).Path
@@ -373,7 +374,23 @@ foreach ($workflowComponent in $workflows) {
         $emailStep = Get-PropertyValue $workflowDefinition 'email'
         if ($null -ne $emailStep) { Test-ShortCodePrefix ([string](Get-PropertyValue $emailStep 'name')) 'Workflow email step name' }
         $userTask = Get-PropertyValue $workflowDefinition 'userTask'
-        if ($null -ne $userTask) { Test-ShortCodePrefix ([string](Get-PropertyValue $userTask 'name')) 'Workflow user-task name' }
+        if ($null -ne $userTask) {
+            Test-ShortCodePrefix ([string](Get-PropertyValue $userTask 'name')) 'Workflow user-task name'
+            $requestedAssignees = @(Get-PropertyValue $userTask 'assignees')
+            if ($requestedAssignees.Count -eq 0 -or ($requestedAssignees.Count -eq 1 -and $null -eq $requestedAssignees[0])) {
+                $requestedAssignees = @('$originator')
+            }
+            $errata.Add([pscustomobject]@{
+                id = 'workflow-test-demo-originator-routing'
+                category = 'placeholder'
+                severity = 'warning'
+                artifact = $actualWorkflowName
+                requestedAssignees = @($requestedAssignees)
+                effectiveAssignee = '$originator'
+                description = 'Human task assignment is forced to the workflow Originator for testing/demo; requested production routing is not applied.'
+                status = 'open'
+            })
+        }
         $workflowSmartForms = Get-PropertyValue $workflowDefinition 'smartForms'
         if ($null -ne $workflowSmartForms) {
             Test-ShortCodePrefix ([string](Get-PropertyValue $workflowSmartForms 'form')) 'Workflow SmartForm name'
@@ -446,6 +463,7 @@ $result = [pscustomobject]@{
     dataModelComplexity = $dataModelComplexity
     issues = @($issues)
     resolvedPolicies = @($resolvedPolicies)
+    errata = @($errata)
     plan = @($planItems | Sort-Object order, component)
 }
 
@@ -468,6 +486,12 @@ else {
             Write-Output 'Resolved workflow entry policies:'
             foreach ($policy in $result.resolvedPolicies) {
                 Write-Output ("  {0}: form={1}, ownership={2}, startDefault={3}, taskDefault=false" -f $policy.workflow, $policy.form, $policy.formOwnership, $policy.resolvedStartStateDefault)
+            }
+        }
+        if ($result.errata.Count -gt 0) {
+            Write-Output 'Errata preview:'
+            foreach ($item in $result.errata) {
+                Write-Output ("  [{0}] {1}: requested={2}; effective={3}" -f $item.category, $item.artifact, ($item.requestedAssignees -join ', '), $item.effectiveAssignee)
             }
         }
     }

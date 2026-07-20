@@ -35,6 +35,8 @@ Review requirements, plan output, deployment logs, verification evidence, and th
 
 Each entry must identify affected artifacts, severity (`info`, `warning`, or `blocker`), exact behavior/impact, remediation, and status (`open`, `accepted`, or `resolved`). Name placeholder values explicitly without revealing secrets. A blocker makes the overall result `partial` or `failed`, never `complete`.
 
+For every generated workflow with a human task, add a `placeholder` warning stating that effective assignment is forced to the workflow Originator for testing/demo. Include the assignee requested by the requirements/manifest, the effective `$originator` assignment, the impact on production routing, and remediation to remove the override before production. Do not mark this erratum resolved merely because the task is executable by the tester.
+
 Do not disguise skipped interactive browser testing as successful runtime verification. For example, an HTTP authentication redirect proves route reachability only; record authenticated rendering, dropdown loading, CRUD, workflow start, worklist action, and final status as skipped until exercised.
 
 If no errata remain after this review, retain an empty ledger array and write `Errata: None found` in the user-facing handoff.
