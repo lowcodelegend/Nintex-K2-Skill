@@ -64,7 +64,7 @@ The solution manifest is the orchestration contract. It references specialist ma
 - `schemaVersion` must be `1`.
 - `shortCode` is required and contains exactly three or four uppercase letters.
 - `name` is a human-readable solution name prefixed with `<shortCode>.`. Do not add a release number.
-- `application.rootCategoryPath` is the shared K2 application root. Specialist manifests that declare a root category must match it.
+- `application.rootCategoryPath` is the shared K2 application root. Every selected specialist manifest must match it. The SQL SmartObjects specialist derives `<root>\Data`; SmartForms derives `<root>\Views` and `<root>\Forms`.
 - The category leaf and all solution-owned artifact names in referenced manifests must use the same `<shortCode>.` prefix. Fully qualified SQL objects normally satisfy this by using the short code as their schema.
 - `components.smartObjects.manifest` points to a `$k2-sql-smartobjects` manifest.
 - `components.forms.manifest` points to a `$k2-smartforms` manifest.

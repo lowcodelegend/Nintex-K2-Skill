@@ -1,5 +1,8 @@
 {
   "name": "CWF.Corporate workflow application test model",
+  "application": {
+    "rootCategoryPath": "K2 Skills\\CWF.Corporate Workflow"
+  },
   "database": {
     "server": "localhost",
     "name": "CWF.CorporateWorkflowTest",

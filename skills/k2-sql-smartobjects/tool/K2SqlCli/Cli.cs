@@ -97,6 +97,7 @@ namespace K2SqlCli
             }
             Console.WriteLine("  K2 Service Instance: " + serviceState + " " + manifest.K2.ServiceInstance.SystemName);
             Console.WriteLine(string.Format("  SmartObjects: generate createNew={0}, updateExisting={1}, deleteRemoved={2}", manifest.K2.SmartObjects.CreateNew, manifest.K2.SmartObjects.UpdateExisting, manifest.K2.SmartObjects.DeleteRemoved));
+            Console.WriteLine("  SmartObject category: " + (manifest.Application.DataCategoryPath ?? "unchanged (no solution root configured)"));
             Console.WriteLine("  Verify: " + manifest.Verification.SqlObjects.Count + " SQL object(s), " + manifest.Verification.Queries.Count + " query assertion(s), minimum " + manifest.Verification.MinimumGeneratedSmartObjects + " SmartObject(s)");
         }
 
@@ -111,7 +112,7 @@ namespace K2SqlCli
             Console.WriteLine("K2 Service Instance: " + instance.SystemName + " (" + instance.Guid + ")");
             foreach (var item in k2.GetGeneratedSmartObjects(instance.Guid).OrderBy(x => x.SystemName))
             {
-                Console.WriteLine("  " + item.SystemName + " <= " + item.ServiceObjectName + " [" + string.Join(",", item.MethodNames.ToArray()) + "]");
+                Console.WriteLine("  " + item.SystemName + " <= " + item.ServiceObjectName + " [" + string.Join(",", item.MethodNames.ToArray()) + "] category=" + (item.CategoryPaths.Count == 0 ? "<none>" : string.Join(";", item.CategoryPaths.ToArray())));
             }
         }
 
@@ -165,7 +166,7 @@ namespace K2SqlCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2sql 0.1.3");
+            Console.WriteLine("k2sql 0.2.0");
         }
 
         private static void PrintHelp()

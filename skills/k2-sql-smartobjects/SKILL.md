@@ -11,7 +11,7 @@ Deploy a SQL model and its K2 SQL Server Service Instance as one repeatable unit
 
 1. Confirm the target is self-hosted K2 Five and the data source is Microsoft SQL Server. If the installed sibling `k2-builder` skill provides `scripts/k2env.ps1`, validate and load its selected/default environment profile before performing environment discovery; explicit requirements override profile values.
 2. Read [references/sql-design.md](references/sql-design.md) before designing tables, views, or procedures.
-3. Read [references/manifest.md](references/manifest.md) and create a manifest plus ordered, idempotent SQL scripts.
+3. Read [references/manifest.md](references/manifest.md) and create a manifest plus ordered, idempotent SQL scripts. For a complete solution, set `application.rootCategoryPath` to the shared solution root; the CLI creates and uses the fixed `<root>\Data` category for generated SmartObjects.
    When this belongs to a complete solution, use its three- or four-letter uppercase short code as the `<CODE>.` prefix for the manifest, database, and Service Instance names. Use the code as the SQL schema so every fully qualified table, view, and procedure name begins `<CODE>.`; generated SmartObject names must retain the same prefix.
 4. Keep passwords out of JSON and SQL. Name an environment variable in the manifest when explicit credentials are unavoidable.
 5. Build and diagnose the CLI:
@@ -40,7 +40,7 @@ Deploy a SQL model and its K2 SQL Server Service Instance as one repeatable unit
    & '<skill-root>\scripts\k2sql.ps1' inspect --manifest '<manifest.json>'
    ```
 
-9. Report the created database objects, Service Instance GUID, generated SmartObject names and methods, runtime smoke-test results, and any skipped tests.
+9. Report the created database objects, Service Instance GUID, generated SmartObject names, methods and category paths, runtime smoke-test results, and any skipped tests.
 
 ## Safety rules
 
@@ -57,7 +57,7 @@ Deploy a SQL model and its K2 SQL Server Service Instance as one repeatable unit
 
 The CLI performs deployment in this order:
 
-`create database → apply SQL scripts → grant optional runtime access → create/update and refresh Service Instance → generate/update SmartObjects → verify SQL → verify and smoke-test K2`
+`create database → apply SQL scripts → grant optional runtime access → create/update and refresh Service Instance → generate/update SmartObjects → place them in <root>\Data → verify SQL → verify categories and smoke-test K2`
 
 It discovers K2 from `K2_INSTALL_DIR`, the SourceCode registry key, or `C:\Program Files\K2`. It builds as a 64-bit .NET Framework executable and resolves the installed K2 client assemblies at runtime.
 

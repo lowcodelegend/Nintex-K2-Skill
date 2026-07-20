@@ -13,7 +13,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if ($Command -eq 'version') {
-    Write-Output 'k2build 0.4.0'
+    Write-Output 'k2build 0.5.0'
     exit 0
 }
 
@@ -147,6 +147,7 @@ if ([string]::IsNullOrWhiteSpace($rootCategoryPath)) {
 }
 $rootSegments = @($rootCategoryPath.Split([char[]]'\/', [StringSplitOptions]::RemoveEmptyEntries))
 $rootLeaf = if ($rootSegments.Count -gt 0) { $rootSegments[-1] } else { $null }
+$dataCategoryPath = if ([string]::IsNullOrWhiteSpace($rootCategoryPath)) { $null } else { $rootCategoryPath.TrimEnd([char[]]'\/') + '\Data' }
 
 $policies = Get-PropertyValue $solution 'policies'
 if ((Get-PropertyValue $policies 'versionFreeNames') -ne $false) {
@@ -184,6 +185,13 @@ if ($null -ne $smartObjects) {
 
 if ($null -ne $smartObjectsManifest) {
     Test-ShortCodePrefix ([string](Get-PropertyValue $smartObjectsManifest 'name')) 'SmartObjects manifest name'
+    $smartObjectsApplication = Get-PropertyValue $smartObjectsManifest 'application'
+    $smartObjectsRoot = [string](Get-PropertyValue $smartObjectsApplication 'rootCategoryPath')
+    if ([string]::IsNullOrWhiteSpace($smartObjectsRoot)) {
+        Add-Issue 'SmartObjects application.rootCategoryPath is required for a complete solution.'
+    } elseif ($smartObjectsRoot -ne $rootCategoryPath) {
+        Add-Issue "SmartObjects rootCategoryPath '$smartObjectsRoot' does not match solution root '$rootCategoryPath'."
+    }
     $database = Get-PropertyValue $smartObjectsManifest 'database'
     Test-ShortCodePrefix ([string](Get-PropertyValue $database 'name')) 'Database name'
     $smartObjectK2 = Get-PropertyValue $smartObjectsManifest 'k2'
@@ -385,6 +393,7 @@ $result = [pscustomobject]@{
     shortCode = $shortCode
     manifest = $manifestPath
     rootCategoryPath = $rootCategoryPath
+    dataCategoryPath = $dataCategoryPath
     issues = @($issues)
     resolvedPolicies = @($resolvedPolicies)
     plan = @($planItems | Sort-Object order, component)
@@ -397,6 +406,7 @@ else {
     Write-Output "K2 solution: $solutionName"
     Write-Output "Short code: $shortCode"
     Write-Output "Root category: $rootCategoryPath"
+    Write-Output "SmartObject category: $dataCategoryPath"
     if ($Command -eq 'plan') {
         Write-Output 'Dependency-ordered specialist plan:'
         foreach ($item in $result.plan) {

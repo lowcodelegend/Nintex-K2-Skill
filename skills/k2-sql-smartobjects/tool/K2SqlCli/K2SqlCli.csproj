@@ -35,11 +35,16 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Transactions" />
     <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="SourceCode.Framework">
       <HintPath>$(K2InstallDir)\Bin\SourceCode.Framework.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="SourceCode.Categories.Client">
+      <HintPath>$(K2InstallDir)\Bin\SourceCode.Categories.Client.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="SourceCode.HostClientAPI">

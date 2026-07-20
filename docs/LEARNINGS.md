@@ -18,6 +18,8 @@ Complete solutions use one uppercase three- or four-letter short code as a names
 
 Do not use the generic category names `Workflow` or `Workflows` for HTML5 workflows. K2's workflow folder/process naming behavior makes those names troublesome. Use a solution-specific child named `<prefixed application root leaf> WFs`; the workflow runtime full name then becomes `<category name>\<workflow name>`.
 
+Complete solutions should share one main K2 solution category. Generated SQL SmartObjects belong in its fixed `Data` child, alongside the sibling `Views`, `Forms`, and solution-specific `WFs` categories. `SourceCode.Categories.Client.CategoryServer.FindCategoryIdByPathName(..., create: true)` creates the hierarchy through supported APIs, while `AddCategoryData(..., dataMove: true)` relocates generated SmartObject category links without editing K2 databases.
+
 ## Supported K2 API path
 
 The tool uses supported client/management APIs on port 5555 rather than altering the K2 database:
@@ -34,6 +36,9 @@ The tool uses supported client/management APIs on port 5555 rather than altering
   - Delete generated test SmartObjects during explicit cleanup.
 - `SourceCode.SmartObjects.Client.SmartObjectClientServer`
   - Execute generated SmartObject List methods for runtime smoke testing.
+- `SourceCode.Categories.Client.CategoryServer`
+  - Create the shared solution category hierarchy and its fixed `Data` child.
+  - Move generated SmartObject category links into `Data` and inspect their effective full paths.
 
 The installed SQL Server Service type GUID is `f393f637-d443-4dab-8497-4e77830c527d`. It should still be discovered/validated at runtime rather than treated as the only product compatibility signal.
 

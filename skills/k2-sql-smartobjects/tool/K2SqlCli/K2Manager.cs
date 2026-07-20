@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Xml.Linq;
+using SourceCode.Categories.Client;
 using SourceCode.Hosting.Client.BaseAPI;
 using SourceCode.SmartObjects.Client;
 using SourceCode.SmartObjects.Management;
@@ -85,6 +86,8 @@ namespace K2SqlCli
                 Console.WriteLine("K2 SmartObjects: generation complete");
                 return 0;
             });
+
+            PlaceGeneratedSmartObjects(serviceInstanceGuid);
         }
 
         public IList<SmartObjectState> GetGeneratedSmartObjects(Guid serviceInstanceGuid)
@@ -104,8 +107,89 @@ namespace K2SqlCli
                         MethodNames = item.Methods.Cast<SmartMethodInfo>().Select(m => m.Name).ToList()
                     });
                 }
+                PopulateCategoryPaths(result);
                 return result;
             });
+        }
+
+        private void PlaceGeneratedSmartObjects(Guid serviceInstanceGuid)
+        {
+            var targetPath = _manifest.Application.DataCategoryPath;
+            if (string.IsNullOrWhiteSpace(targetPath))
+            {
+                Console.WriteLine("K2 SmartObject category: unchanged (application.rootCategoryPath not configured)");
+                return;
+            }
+
+            var smartObjects = GetGeneratedSmartObjects(serviceInstanceGuid);
+            WithCategoryServer(delegate(CategoryServer server)
+            {
+                var manager = server.GetCategoryManager(1, true, true);
+                server.FindCategoryIdByPathName(manager, targetPath, "\\", true);
+                manager = server.GetCategoryManager(1, true, true);
+                var categoryId = server.FindCategoryIdByPathName(manager, targetPath, "\\", false);
+                var target = manager.Categories.Cast<Category>().FirstOrDefault(x => x != null && x.Id == categoryId);
+                if (target == null)
+                {
+                    throw new CliException("K2 created the SmartObject category but did not return it: " + targetPath);
+                }
+
+                foreach (var smartObject in smartObjects)
+                {
+                    var links = FindSmartObjectCategoryLinks(manager, smartObject.Guid).ToList();
+                    if (links.Any(x => PathsEqual(GetCategoryFullPath(x.Category), targetPath)))
+                    {
+                        Console.WriteLine("SmartObject category: already placed (" + smartObject.SystemName + " -> " + targetPath + ")");
+                        continue;
+                    }
+
+                    var source = links.FirstOrDefault();
+                    if (source == null)
+                    {
+                        server.AddCategoryData(target, smartObject.Guid.ToString(), CategoryServer.dataType.SmartObject, smartObject.DisplayName);
+                    }
+                    else
+                    {
+                        server.AddCategoryData(target, smartObject.Guid.ToString(), CategoryServer.dataType.SmartObject, smartObject.DisplayName, GetCategoryFullPath(source.Category), true);
+                    }
+                    Console.WriteLine("SmartObject category: placed (" + smartObject.SystemName + " -> " + targetPath + ")");
+                }
+                return 0;
+            });
+        }
+
+        private void PopulateCategoryPaths(IList<SmartObjectState> states)
+        {
+            if (states.Count == 0) return;
+            WithCategoryServer(delegate(CategoryServer server)
+            {
+                var manager = server.GetCategoryManager(1, true, true);
+                foreach (var state in states)
+                {
+                    state.CategoryPaths = FindSmartObjectCategoryLinks(manager, state.Guid)
+                        .Select(x => GetCategoryFullPath(x.Category))
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+                }
+                return 0;
+            });
+        }
+
+        private static IEnumerable<SmartObjectCategoryLink> FindSmartObjectCategoryLinks(CategoryManager manager, Guid smartObjectGuid)
+        {
+            foreach (Category category in manager.Categories)
+            {
+                if (category == null || category.DataList == null) continue;
+                foreach (CategoryData data in category.DataList)
+                {
+                    if (data.DataType == CategoryServer.dataType.SmartObject && data.Guid == smartObjectGuid)
+                    {
+                        yield return new SmartObjectCategoryLink { Category = category, Data = data };
+                    }
+                }
+            }
         }
 
         public void Verify()
@@ -126,7 +210,19 @@ namespace K2SqlCli
             }
             foreach (var smartObject in smartObjects.OrderBy(x => x.SystemName))
             {
-                Console.WriteLine("SmartObject: " + smartObject.SystemName + " <= " + smartObject.ServiceObjectName + " [" + string.Join(",", smartObject.MethodNames.ToArray()) + "]");
+                Console.WriteLine("SmartObject: " + smartObject.SystemName + " <= " + smartObject.ServiceObjectName + " [" + string.Join(",", smartObject.MethodNames.ToArray()) + "] category=" + FormatCategoryPaths(smartObject.CategoryPaths));
+            }
+            var expectedCategory = _manifest.Application.DataCategoryPath;
+            if (!string.IsNullOrWhiteSpace(expectedCategory))
+            {
+                foreach (var smartObject in smartObjects)
+                {
+                    if (!smartObject.CategoryPaths.Any(x => PathsEqual(x, expectedCategory)))
+                    {
+                        throw new CliException("Generated SmartObject is not in the solution Data category: " + smartObject.SystemName + " (expected " + expectedCategory + ")");
+                    }
+                }
+                Console.WriteLine("SmartObject category verification: OK (" + expectedCategory + ")");
             }
             if (_manifest.Verification.SmokeTestListMethods)
             {
@@ -282,6 +378,21 @@ namespace K2SqlCli
             }
         }
 
+        private T WithCategoryServer<T>(Func<CategoryServer, T> action)
+        {
+            var server = new CategoryServer();
+            try
+            {
+                server.CreateConnection();
+                server.Connection.Open(BuildConnectionString());
+                return action(server);
+            }
+            finally
+            {
+                Close(server);
+            }
+        }
+
         private static void Close(SourceCode.Hosting.Client.BaseAPI.BaseAPI server)
         {
             if (server.Connection != null)
@@ -300,6 +411,24 @@ namespace K2SqlCli
         }
 
         private static string Bool(bool value) { return value ? "true" : "false"; }
+
+        private static bool PathsEqual(string left, string right)
+        {
+            return string.Equals((left ?? string.Empty).Trim('\\', '/'), (right ?? string.Empty).Trim('\\', '/'), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string FormatCategoryPaths(IList<string> paths)
+        {
+            return paths == null || paths.Count == 0 ? "<none>" : string.Join(";", paths.ToArray());
+        }
+
+        private static string GetCategoryFullPath(Category category)
+        {
+            if (category == null) return null;
+            if (string.IsNullOrWhiteSpace(category.Path)) return category.Name;
+            if (string.IsNullOrWhiteSpace(category.Name)) return category.Path;
+            return category.Path.TrimEnd('\\', '/') + "\\" + category.Name;
+        }
 
         private static string ReadRequiredEnvironmentVariable(string name)
         {
@@ -323,5 +452,12 @@ namespace K2SqlCli
         public string DisplayName { get; set; }
         public string ServiceObjectName { get; set; }
         public List<string> MethodNames { get; set; }
+        public List<string> CategoryPaths { get; set; }
+    }
+
+    internal sealed class SmartObjectCategoryLink
+    {
+        public Category Category { get; set; }
+        public CategoryData Data { get; set; }
     }
 }

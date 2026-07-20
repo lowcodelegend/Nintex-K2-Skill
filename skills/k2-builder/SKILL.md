@@ -33,7 +33,7 @@ Stop on the first failed layer. Do not deploy dependent layers. Preserve success
 
 - Create an uppercase three- or four-letter solution short code before naming artifacts. Prefix every solution-owned deployable or Designer-visible name with `<CODE>.`; enforce the same code across SQL, SmartObjects, SmartForms, workflows, and the application category leaf. Do not prefix fixed `Views` or `Forms` subfolders or standard property/method/action/status vocabulary.
 - Keep release/version numbers out of K2 category, view, form, and workflow names. K2 owns artifact versions internally.
-- Put views under `<root>\Views` and forms under `<root>\Forms`. Put workflows under `<root>\<root-leaf> WFs`; never use a workflow category named `Workflow` or `Workflows` because those generic names interact badly with K2's workflow folder system.
+- Use the same main solution folder for every K2 layer. Put generated SmartObjects under `<root>\Data`, views under `<root>\Views`, forms under `<root>\Forms`, and workflows under `<root>\<root-leaf> WFs`. Never use a workflow category named `Workflow` or `Workflows` because those generic names interact badly with K2's workflow folder system.
 - Generate SmartForms with `useLegacyTheme=false` unless legacy compatibility is an explicit requirement.
 - Use dynamic workflow identities such as Originator and Originator Manager instead of fixed users or email addresses unless the requirement is explicitly fixed.
 - For a dedicated request-entry form, resolve `startStateDefault=auto` to true. The Start state must be the only default state, and the Task state must never be default.

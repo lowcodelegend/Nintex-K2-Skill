@@ -9,12 +9,14 @@ namespace K2SqlCli
     public sealed class DeploymentManifest
     {
         public string Name { get; set; }
+        public ApplicationOptions Application { get; set; }
         public DatabaseOptions Database { get; set; }
         public K2Options K2 { get; set; }
         public VerificationOptions Verification { get; set; }
 
         public DeploymentManifest()
         {
+            Application = new ApplicationOptions();
             Database = new DatabaseOptions();
             K2 = new K2Options();
             Verification = new VerificationOptions();
@@ -58,6 +60,7 @@ namespace K2SqlCli
 
         private void NormalizeAndValidate()
         {
+            if (Application == null) Application = new ApplicationOptions();
             if (Database == null) Database = new DatabaseOptions();
             if (K2 == null) K2 = new K2Options();
             if (Verification == null) Verification = new VerificationOptions();
@@ -69,6 +72,20 @@ namespace K2SqlCli
             if (Verification.SmartObjectServiceObjects == null) Verification.SmartObjectServiceObjects = new List<string>();
 
             Require(Name, "name");
+            if (!string.IsNullOrWhiteSpace(Application.RootCategoryPath))
+            {
+                Application.RootCategoryPath = Application.RootCategoryPath.Trim().TrimEnd('\\', '/');
+                if (Application.RootCategoryPath.Length == 0)
+                {
+                    throw new CliException("application.rootCategoryPath must contain at least one category name.");
+                }
+                var segments = Application.RootCategoryPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+                var leaf = segments[segments.Length - 1];
+                if (string.Equals(leaf, "Data", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new CliException("application.rootCategoryPath must be the solution root, not its Data subfolder.");
+                }
+            }
             Require(Database.Server, "database.server");
             Require(Database.Name, "database.name");
             Require(K2.Host, "k2.host");
@@ -125,6 +142,22 @@ namespace K2SqlCli
         private static void Require(string value, string field)
         {
             if (string.IsNullOrWhiteSpace(value)) throw new CliException("Manifest field '" + field + "' is required.");
+        }
+    }
+
+    public sealed class ApplicationOptions
+    {
+        public string RootCategoryPath { get; set; }
+
+        [ScriptIgnore]
+        public string DataCategoryPath
+        {
+            get
+            {
+                return string.IsNullOrWhiteSpace(RootCategoryPath)
+                    ? null
+                    : RootCategoryPath + "\\Data";
+            }
         }
     }
 
