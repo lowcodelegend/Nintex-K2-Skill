@@ -74,15 +74,22 @@ By default the CLI reads the selected common header from `%CODEX_HOME%\k2` (or `
   "initializeEvent": "Init",
   "serverRules": ["ServerPreRender"],
   "parameters": {
-    "HeaderText": "{{form.name}}",
-    "SubheaderText": "{{application.name}}",
     "AppId": "{{solution.code}}",
     "Debug": "false"
+  },
+  "serverLoadControlTransfers": {
+    "Main Header Data Label": "{{form.name}}",
+    "Sub Header Data Label": "{{application.name}}"
+  },
+  "footer": {
+    "view": "Corporate.FrameworkFooter",
+    "viewGuid": "00000000-0000-0000-0000-000000000000",
+    "title": ""
   }
 }
 ```
 
-Supported templates are `{{form.name}}`, `{{application.name}}`, `{{application.rootCategoryPath}}`, and `{{solution.code}}`; other text is literal. `initializeEvent` must name a callable user rule on the header View. The CLI calls it explicitly from the Form's initialization rule and passes `parameters` as View parameters. Each `serverRules` entry must name a callable user rule on the header View; the CLI calls it explicitly from a Form-level `When the server loads the Form` rule. Do not assume a server-side View rule fires merely because its definition is inherited into the Form. An explicit `view` takes precedence over the environment selection. To suppress the environment header use `{ "enabled": false, "reason": "..." }`; the reason is mandatory. The selected header is an existing external View and is not created, replaced, or removed by the manifest.
+Supported templates are `{{form.name}}`, `{{application.name}}`, `{{application.rootCategoryPath}}`, and `{{solution.code}}`; other text is literal. `initializeEvent` must name a callable user rule on the header View; `parameters` are passed as View parameters. `serverLoadControlTransfers` maps exact header control names to literal/template values and writes them with a Form-level `ServerDataTransfer` action. Each `serverRules` entry names a callable header rule. The CLI runs control transfers first and rule calls second in Form server load. `footer` selects an optional paired external View that is always kept in the final form view position. An explicit `view` takes precedence over the environment selection. To suppress the framework use `{ "enabled": false, "reason": "..." }`; the reason is mandatory. External framework Views are never created, replaced, or removed by the manifest.
 
 ## Lookup sources and controls
 
@@ -189,4 +196,4 @@ The CLI validates that the installed environment registers the native `Worklist`
 
 Tabs must have stable, version-free names. Version 0.5 supports one Worklist tab per form. It loads the current K2 user's default worklist across processes; process-specific Worklist filters, workflow-specific SmartObjects, and fixed users are not configured.
 
-When expected artifacts are omitted, verification defaults to every declared view and form. Verification checks tab order/content, native Worklist properties, its click-to-open-task rule, and any resolved common header's GUID/title/first-tab placement, explicit initialization call/bindings, and explicit form-server rule calls. Runtime routes use `<runtimeBaseUrl>/Runtime/Form/<URL-encoded-form-name>/`; an unauthenticated CLI may verify the route up to the environment's interactive authentication redirect, which is not an interactive Worklist test.
+When expected artifacts are omitted, verification defaults to every declared view and form. Verification checks tab order/content, native Worklist properties, its click-to-open-task rule, and any resolved common framework's header-first/footer-last placement and titles, initialization bindings, server-load control targets/values/order, and explicit server-rule calls. Runtime routes use `<runtimeBaseUrl>/Runtime/Form/<URL-encoded-form-name>/`; an unauthenticated CLI may verify the route up to the environment's interactive authentication redirect, which is not an interactive Worklist test.

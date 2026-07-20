@@ -101,7 +101,7 @@ namespace K2EnvironmentCli
                         .Where(IsHeaderCandidate)
                         .OrderBy(x => x.IsSystem).ThenBy(x => x.CategoryPath).ThenBy(x => x.DisplayName)
                         .Select(x => ReadHeader(manager, x, false)).ToList();
-                    sources.Add("K2 FormsManager themes, style profiles, and header-view candidates");
+                    sources.Add("K2 FormsManager themes, style profiles, and common framework-view candidates");
                     return new SmartFormsSettings
                     {
                         Themes = themes,
@@ -169,6 +169,7 @@ namespace K2EnvironmentCli
         private static bool IsHeaderCandidate(ViewInfo view)
         {
             return Contains(view.Name, "header") || Contains(view.DisplayName, "header") ||
+                   Contains(view.Name, "footer") || Contains(view.DisplayName, "footer") ||
                    Contains(view.Name, "banner") || Contains(view.DisplayName, "banner") ||
                    Contains(view.Name, "masthead") || Contains(view.DisplayName, "masthead");
         }
@@ -210,6 +211,15 @@ namespace K2EnvironmentCli
                     DataType = x.DataType.ToString(), DefaultValue = x.DefaultValue
                 }).ToList(),
                 Events = events,
+                Controls = definition.Descendants().Where(x => x.Name.LocalName == "Control" && x.Attribute("ID") != null)
+                    .GroupBy(x => (string)x.Attribute("ID"), StringComparer.OrdinalIgnoreCase).Select(x => x.First())
+                    .Select(x => new HeaderControlSettings
+                    {
+                        Guid = ParseGuid((string)x.Attribute("ID")),
+                        Name = (string)x.Element(x.Name.Namespace + "Name"),
+                        DisplayName = (string)x.Element(x.Name.Namespace + "DisplayName"),
+                        Type = (string)x.Attribute("Type")
+                    }).Where(x => x.Guid != Guid.Empty && !string.IsNullOrWhiteSpace(x.Name)).ToList(),
                 ConsumerFormCount = manager.GetFormsForView(view.Guid).Forms.Count,
                 Consumers = consumers
             };

@@ -7,18 +7,25 @@ namespace K2SmartFormsCli
 {
     internal static class FormLayoutDefinition
     {
-        public static string Apply(string xml, FormDefinition definition, ResolvedCommonHeader header, IDictionary<string, string> headerParameters)
+        public static string Apply(string xml, FormDefinition definition, ResolvedCommonHeader header, IDictionary<string, string> headerParameters, IDictionary<Guid, ResolvedHeaderControlTransfer> headerControlTransfers)
         {
             var document = Parse(xml);
             var form = FindForm(document);
             ApplyViewTitles(form, definition);
             XElement headerArea = null;
+            XElement footerArea = null;
             if (header != null)
             {
                 headerArea = FindHeaderArea(form, header, definition.Name);
-                ApplyHeader(form, header, headerParameters);
+                if (header.Footer != null) footerArea = FindFooterArea(form, header.Footer, definition.Name);
+                ApplyHeader(form, header, headerParameters, headerControlTransfers);
+                if (header.Footer != null) ApplyFooter(form, header.Footer);
             }
-            if (definition.Tabs.Count == 0) return document.ToString(SaveOptions.DisableFormatting);
+            if (definition.Tabs.Count == 0)
+            {
+                ReorderFrameworkAreas(form, headerArea, footerArea, definition.Name);
+                return document.ToString(SaveOptions.DisableFormatting);
+            }
             form.SetAttributeValue("Layout", "TabControl");
             var controls = RequiredChild(form, "Controls");
             var panels = RequiredChild(form, "Panels");
@@ -54,17 +61,18 @@ namespace K2SmartFormsCli
                 if (headerArea != null && object.ReferenceEquals(tab, definition.Tabs[0])) areas.Add(new XElement(headerArea));
                 foreach (var viewName in tab.Views) areas.Add(new XElement(viewAreas[viewName]));
                 if (tab.Worklist != null) areas.Add(BuildWorklistArea(form, controls, tab, definition.Name));
+                if (footerArea != null && object.ReferenceEquals(tab, definition.Tabs[definition.Tabs.Count - 1])) areas.Add(new XElement(footerArea));
                 panels.Add(panel);
             }
             return document.ToString(SaveOptions.DisableFormatting);
         }
 
-        public static void Verify(string xml, FormDefinition definition, ResolvedCommonHeader header, IDictionary<string, string> headerParameters)
+        public static void Verify(string xml, FormDefinition definition, ResolvedCommonHeader header, IDictionary<string, string> headerParameters, IDictionary<Guid, ResolvedHeaderControlTransfer> headerControlTransfers)
         {
             var document = Parse(xml);
             var form = FindForm(document);
             VerifyViewTitles(form, definition);
-            if (header != null) VerifyHeader(form, header, headerParameters, definition.Name);
+            if (header != null) VerifyHeader(form, header, headerParameters, headerControlTransfers, definition.Name);
             if (definition.Tabs.Count == 0) return;
             if (!string.Equals((string)form.Attribute("Layout"), "TabControl", StringComparison.OrdinalIgnoreCase))
                 throw new CliException("K2 Form '" + definition.Name + "' has multiple tabs but Layout is '" + (string)form.Attribute("Layout") + "', expected 'TabControl'.");
@@ -81,14 +89,19 @@ namespace K2SmartFormsCli
                     throw new CliException("K2 Form '" + definition.Name + "' tab " + (index + 1) + " is '" + ChildValue(panel, "Name") + "', expected '" + expected.Name + "'.");
                 var actualViews = panel.Descendants().Where(x => x.Name.LocalName == "Item" && x.Attribute("ViewID") != null)
                     .Where(x => header == null || !string.Equals((string)x.Attribute("ViewID"), header.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase))
+                    .Where(x => header == null || header.Footer == null || !string.Equals((string)x.Attribute("ViewID"), header.Footer.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase))
                     .Select(x => (string)x.Attribute("ViewName") ?? ChildValue(x, "Name")).ToList();
                 if (!actualViews.SequenceEqual(expected.Views, StringComparer.OrdinalIgnoreCase))
                     throw new CliException("K2 Form '" + definition.Name + "' tab '" + expected.Name + "' has the wrong view layout.");
                 var headerCount = panel.Descendants().Count(x => x.Name.LocalName == "Item" && header != null && string.Equals((string)x.Attribute("ViewID"), header.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase));
                 if (header != null && headerCount != (index == 0 ? 1 : 0))
                     throw new CliException("K2 Form '" + definition.Name + "' common header must occur once on the first tab only.");
+                var footerCount = panel.Descendants().Count(x => x.Name.LocalName == "Item" && header != null && header.Footer != null && string.Equals((string)x.Attribute("ViewID"), header.Footer.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase));
+                if (header != null && header.Footer != null && footerCount != (index == definition.Tabs.Count - 1 ? 1 : 0))
+                    throw new CliException("K2 Form '" + definition.Name + "' common footer must occur once on the last tab only.");
                 if (expected.Worklist != null) VerifyWorklist(form, controls, panel, definition, expected);
             }
+            VerifyFrameworkPositions(form, header, definition.Name);
         }
 
         private static XElement FindHeaderArea(XElement form, ResolvedCommonHeader header, string formName)
@@ -101,7 +114,32 @@ namespace K2SmartFormsCli
             return area;
         }
 
-        private static void ApplyHeader(XElement form, ResolvedCommonHeader header, IDictionary<string, string> parameters)
+        private static XElement FindFooterArea(XElement form, ResolvedCommonFooter footer, string formName)
+        {
+            var item = form.Descendants().FirstOrDefault(x => x.Name.LocalName == "Item" &&
+                string.Equals((string)x.Attribute("ViewID"), footer.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase));
+            if (item == null) throw new CliException("Generated form '" + formName + "' has no layout item for common footer '" + footer.ViewName + "'.");
+            var area = item.Ancestors().FirstOrDefault(x => x.Name.LocalName == "Area");
+            if (area == null) throw new CliException("Generated form '" + formName + "' common footer has no containing area.");
+            return area;
+        }
+
+        private static void ReorderFrameworkAreas(XElement form, XElement headerArea, XElement footerArea, string formName)
+        {
+            if (headerArea == null) return;
+            var panels = RequiredChild(form, "Panels").Elements().Where(x => x.Name.LocalName == "Panel").ToList();
+            if (panels.Count == 0) throw new CliException("Generated form '" + formName + "' has no layout panels.");
+            var firstAreas = panels[0].Elements().FirstOrDefault(x => x.Name.LocalName == "Areas");
+            var lastAreas = panels[panels.Count - 1].Elements().FirstOrDefault(x => x.Name.LocalName == "Areas");
+            if (firstAreas == null || lastAreas == null) throw new CliException("Generated form '" + formName + "' has a panel without Areas.");
+            headerArea.Remove();
+            firstAreas.AddFirst(headerArea);
+            if (footerArea == null) return;
+            footerArea.Remove();
+            lastAreas.Add(footerArea);
+        }
+
+        private static void ApplyHeader(XElement form, ResolvedCommonHeader header, IDictionary<string, string> parameters, IDictionary<Guid, ResolvedHeaderControlTransfer> controlTransfers)
         {
             var item = form.Descendants().First(x => x.Name.LocalName == "Item" && string.Equals((string)x.Attribute("ViewID"), header.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase));
             var instanceId = (string)item.Attribute("ID");
@@ -126,16 +164,32 @@ namespace K2SmartFormsCli
             else if (parameters != null && parameters.Count > 0)
                 throw new CliException("Common header '" + header.ViewName + "' has parameter bindings but no initialize rule was configured.");
 
+            XElement serverActions = null;
+            if ((controlTransfers != null && controlTransfers.Count > 0) || (header.ServerRules != null && header.ServerRules.Count > 0))
+                serverActions = EnsureFormLifecycleActions(form, "ServerPreRender", "FormServerPreRenderEvent", "When the server loads the Form", "When the server loads the Form");
+            foreach (var transfer in controlTransfers == null ? new List<ResolvedHeaderControlTransfer>() : controlTransfers.Values)
+            {
+                foreach (var existing in serverActions.Elements().Where(x => IsControlTransfer(x, instanceId, transfer.ControlGuid)).ToList()) existing.Remove();
+                serverActions.Add(BuildControlTransfer(form, instanceId, transfer));
+            }
             foreach (var serverRule in header.ServerRules ?? new List<ResolvedHeaderRule>())
             {
-                var serverActions = EnsureFormLifecycleActions(form, "ServerPreRender", "FormServerPreRenderEvent", "When the server loads the Form", "When the server loads the Form");
                 RemoveRuleCall(serverActions, instanceId, serverRule.DefinitionId);
                 serverActions.Add(BuildRuleCall(form.Name.Namespace, instanceId, serverRule.DefinitionId,
                     "When the server loads " + header.DisplayName + " View", "ServerRuleExecute", null));
             }
         }
 
-        private static void VerifyHeader(XElement form, ResolvedCommonHeader header, IDictionary<string, string> parameters, string formName)
+        private static void ApplyFooter(XElement form, ResolvedCommonFooter footer)
+        {
+            var item = form.Descendants().First(x => x.Name.LocalName == "Item" && string.Equals((string)x.Attribute("ViewID"), footer.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase));
+            var instanceId = (string)item.Attribute("ID");
+            var control = RequiredChild(form, "Controls").Elements().FirstOrDefault(x => x.Name.LocalName == "Control" && string.Equals((string)x.Attribute("ID"), instanceId, StringComparison.OrdinalIgnoreCase));
+            if (control == null) throw new CliException("Generated form has no AreaItem control for common footer '" + footer.ViewName + "'.");
+            SetProperty(control, "Title", footer.Title ?? string.Empty);
+        }
+
+        private static void VerifyHeader(XElement form, ResolvedCommonHeader header, IDictionary<string, string> parameters, IDictionary<Guid, ResolvedHeaderControlTransfer> controlTransfers, string formName)
         {
             var item = form.Descendants().FirstOrDefault(x => x.Name.LocalName == "Item" && string.Equals((string)x.Attribute("ViewID"), header.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase));
             if (item == null) throw new CliException("K2 Form '" + formName + "' is missing common header '" + header.ViewName + "'.");
@@ -145,6 +199,7 @@ namespace K2SmartFormsCli
             var title = control == null ? null : ReadProperty(control, "Title") ?? string.Empty;
             if (!string.Equals(title, header.Title ?? string.Empty, StringComparison.Ordinal))
                 throw new CliException("K2 Form '" + formName + "' common header title does not match the environment configuration.");
+            VerifyFrameworkPositions(form, header, formName);
             if (!string.IsNullOrWhiteSpace(header.InitializeEvent))
             {
                 var initEvent = FindFormLifecycleEvent(form, "Init");
@@ -158,6 +213,16 @@ namespace K2SmartFormsCli
                         throw new CliException("K2 Form '" + formName + "' common header parameter '" + binding.Key + "' is not configured as expected.");
                 }
             }
+            var serverEventForTransfers = FindFormLifecycleEvent(form, "ServerPreRender");
+            foreach (var transfer in controlTransfers == null ? new List<ResolvedHeaderControlTransfer>() : controlTransfers.Values)
+            {
+                var action = serverEventForTransfers == null ? null : serverEventForTransfers.Descendants().FirstOrDefault(x => x.Name.LocalName == "Action" && IsControlTransfer(x, instanceId, transfer.ControlGuid));
+                if (action == null) throw new CliException("K2 Form '" + formName + "' does not transfer '" + transfer.ControlName + "' from 'When the server loads the Form'.");
+                var parameter = action.Descendants().First(x => x.Name.LocalName == "Parameter" && string.Equals((string)x.Attribute("TargetID"), transfer.ControlGuid.ToString(), StringComparison.OrdinalIgnoreCase));
+                var source = parameter.Elements().FirstOrDefault(x => x.Name.LocalName == "SourceValue");
+                if (source == null || !string.Equals(source.Value, transfer.ValueTemplate ?? string.Empty, StringComparison.Ordinal))
+                    throw new CliException("K2 Form '" + formName + "' common header control '" + transfer.ControlName + "' does not receive the configured value.");
+            }
             foreach (var serverRule in header.ServerRules ?? new List<ResolvedHeaderRule>())
             {
                 var inherited = form.Descendants().Any(x => x.Name.LocalName == "Event" &&
@@ -170,7 +235,52 @@ namespace K2SmartFormsCli
                 if (action == null) throw new CliException("K2 Form '" + formName + "' does not call common header server rule '" + serverRule.Name + "' from 'When the server loads the Form'.");
                 if (!string.Equals(ReadActionProperty(action, "DesignTemplate"), "ServerRuleExecute", StringComparison.OrdinalIgnoreCase))
                     throw new CliException("K2 Form '" + formName + "' common header server rule call is missing DesignTemplate=ServerRuleExecute.");
+                if (controlTransfers != null && controlTransfers.Count > 0 && serverEvent.Descendants().Where(x => x.Name.LocalName == "Action").ToList().IndexOf(action) <=
+                    serverEvent.Descendants().Where(x => x.Name.LocalName == "Action" && controlTransfers.Values.Any(t => IsControlTransfer(x, instanceId, t.ControlGuid))).Select(x => serverEvent.Descendants().Where(y => y.Name.LocalName == "Action").ToList().IndexOf(x)).DefaultIfEmpty(-1).Max())
+                    throw new CliException("K2 Form '" + formName + "' must transfer common-header control values before calling server rule '" + serverRule.Name + "'.");
             }
+        }
+
+        private static void VerifyFrameworkPositions(XElement form, ResolvedCommonHeader header, string formName)
+        {
+            var items = form.Descendants().Where(x => x.Name.LocalName == "Item" && x.Attribute("ViewID") != null).ToList();
+            var headerIndex = items.FindIndex(x => string.Equals((string)x.Attribute("ViewID"), header.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase));
+            if (headerIndex != 0) throw new CliException("K2 Form '" + formName + "' common header must be the first view position.");
+            if (header.Footer == null) return;
+            var footerIndex = items.FindIndex(x => string.Equals((string)x.Attribute("ViewID"), header.Footer.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase));
+            if (footerIndex != items.Count - 1) throw new CliException("K2 Form '" + formName + "' common footer must be the last view position.");
+            var footerItem = items[footerIndex];
+            var footerControl = RequiredChild(form, "Controls").Elements().FirstOrDefault(x => x.Name.LocalName == "Control" && string.Equals((string)x.Attribute("ID"), (string)footerItem.Attribute("ID"), StringComparison.OrdinalIgnoreCase));
+            if (footerControl == null || !string.Equals(ReadProperty(footerControl, "Title") ?? string.Empty, header.Footer.Title ?? string.Empty, StringComparison.Ordinal))
+                throw new CliException("K2 Form '" + formName + "' common footer title does not match the environment configuration.");
+        }
+
+        private static XElement BuildControlTransfer(XElement form, string instanceId, ResolvedHeaderControlTransfer transfer)
+        {
+            var ns = form.Name.Namespace;
+            var formName = ChildValue(form, "Name") ?? (string)form.Attribute("Name") ?? string.Empty;
+            var properties = new XElement(ns + "Properties",
+                Property(ns, "Location", "Form", false),
+                Property(ns, "DesignTemplate", "ServerDataTransfer", false),
+                new XElement(ns + "Property", new XElement(ns + "Name", "FormID"), new XElement(ns + "DisplayValue", formName), new XElement(ns + "NameValue", formName), new XElement(ns + "Value", (string)form.Attribute("ID"))));
+            return new XElement(ns + "Action", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                new XAttribute("Type", "Transfer"), new XAttribute("ExecutionType", "Synchronous"), properties,
+                new XElement(ns + "Parameters",
+                    new XElement(ns + "Parameter", new XAttribute("SourceID", "Sources"), new XAttribute("SourceType", "Value"),
+                        new XAttribute("TargetInstanceID", instanceId), new XAttribute("TargetID", transfer.ControlGuid.ToString()),
+                        new XAttribute("TargetName", transfer.ControlName), new XAttribute("TargetDisplayName", transfer.ControlName),
+                        new XAttribute("TargetType", "Control"),
+                        new XElement(ns + "SourceValue", new XAttribute(XNamespace.Xml + "space", "preserve"), transfer.ValueTemplate ?? string.Empty))));
+        }
+
+        private static bool IsControlTransfer(XElement action, string instanceId, Guid controlGuid)
+        {
+            return string.Equals((string)action.Attribute("Type"), "Transfer", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(ReadActionProperty(action, "DesignTemplate"), "ServerDataTransfer", StringComparison.OrdinalIgnoreCase) &&
+                action.Descendants().Any(x => x.Name.LocalName == "Parameter" &&
+                    string.Equals((string)x.Attribute("TargetInstanceID"), instanceId, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals((string)x.Attribute("TargetID"), controlGuid.ToString(), StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals((string)x.Attribute("TargetType"), "Control", StringComparison.OrdinalIgnoreCase));
         }
 
         private static XElement EnsureFormLifecycleActions(XElement form, string eventName, string sourceName, string sourceDisplayName, string friendlyName)

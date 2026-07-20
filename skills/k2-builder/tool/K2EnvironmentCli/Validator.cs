@@ -42,6 +42,11 @@ namespace K2EnvironmentCli
                 var selected = profile.SmartForms.DefaultCommonHeader;
                 var exists = selected != null && profile.SmartForms.HeaderViewCandidates != null && profile.SmartForms.HeaderViewCandidates.Exists(x => x.Guid == selected.ViewGuid);
                 Check(checks, "default-common-header", exists, exists ? selected.ViewDisplayName + " [" + selected.ViewName + "]" : "selected common header is no longer available; refresh and select again");
+                if (exists && selected.Footer != null)
+                {
+                    var footerExists = profile.SmartForms.HeaderViewCandidates.Exists(x => x.Guid == selected.Footer.ViewGuid);
+                    Check(checks, "default-common-footer", footerExists, footerExists ? selected.Footer.ViewDisplayName + " [" + selected.Footer.ViewName + "]" : "selected common footer is no longer available; refresh and select again");
+                }
             }
             if (profile.Urls != null)
             {

@@ -7,7 +7,7 @@ namespace K2EnvironmentCli
 {
     internal static class Cli
     {
-        public const string Version = "0.4.0";
+        public const string Version = "0.5.0";
 
         public static int Run(string[] args)
         {
@@ -24,6 +24,7 @@ namespace K2EnvironmentCli
             if (command == "set-default") return SetDefault(store, options);
             if (command == "set-style-profile") return SetStyleProfile(store, options);
             if (command == "inspect-header") return InspectHeader(store, options);
+            if (command == "inspect-framework") return InspectHeader(store, options);
             if (command == "set-common-header") return SetCommonHeader(store, options);
             throw new CliException("Unknown command: " + command);
         }
@@ -150,7 +151,7 @@ namespace K2EnvironmentCli
             if (options.IsJson) Console.WriteLine(PrettyJson.Serialize(new { environment = name, matches = matches }));
             else
             {
-                Console.WriteLine("Header view matches: " + matches.Count);
+                Console.WriteLine("Common framework view matches: " + matches.Count);
                 foreach (var item in matches) WriteHeader(item, true);
             }
             return matches.Count == 0 ? 1 : 0;
@@ -204,19 +205,49 @@ namespace K2EnvironmentCli
                         throw new CliException("Header view has no parameter named '" + parameterName + "'. Available: " + string.Join(", ", selected.Parameters.Select(x => x.Name).ToArray()));
                     parameters[parameterName] = parameterValue;
                 }
+                var transfers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var assignment in options.GetAll("control-transfer"))
+                {
+                    var separator = assignment.IndexOf('=');
+                    if (separator < 1) throw new CliException("--control-transfer must use CONTROL=VALUE: " + assignment);
+                    var controlName = assignment.Substring(0, separator).Trim();
+                    var controlValue = assignment.Substring(separator + 1);
+                    if (!selected.Controls.Any(x => string.Equals(x.Name, controlName, StringComparison.OrdinalIgnoreCase) || string.Equals(x.DisplayName, controlName, StringComparison.OrdinalIgnoreCase)))
+                        throw new CliException("Header view has no control named '" + controlName + "'. Available: " + string.Join(", ", selected.Controls.Select(x => x.Name).ToArray()));
+                    transfers[controlName] = controlValue;
+                }
+                CommonFooterSettings footer = null;
+                var footerValue = options.Get("footer");
+                if (!string.IsNullOrWhiteSpace(footerValue))
+                {
+                    var footerMatches = Discovery.InspectHeaders(profile.K2, footerValue);
+                    var footerExact = footerMatches.Where(x => string.Equals(x.Guid.ToString(), footerValue, StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(x.Name, footerValue, StringComparison.OrdinalIgnoreCase) || string.Equals(x.DisplayName, footerValue, StringComparison.OrdinalIgnoreCase)).ToList();
+                    if (footerExact.Count == 1) footerMatches = footerExact;
+                    if (footerMatches.Count == 0) throw new CliException("Common footer view not found: " + footerValue + ". Run inspect-framework with a broader --hint.");
+                    if (footerMatches.Count > 1) throw new CliException("Common footer selection is ambiguous; use its GUID.");
+                    var selectedFooter = footerMatches[0];
+                    footer = new CommonFooterSettings
+                    {
+                        ViewGuid = selectedFooter.Guid, ViewName = selectedFooter.Name, ViewDisplayName = selectedFooter.DisplayName,
+                        CategoryPath = selectedFooter.CategoryPath, ViewVersion = selectedFooter.Version,
+                        Title = options.Get("footer-title") ?? string.Empty, Inspection = selectedFooter
+                    };
+                }
                 profile.SmartForms.CommonHeaderSelection = "selected";
                 profile.SmartForms.DefaultCommonHeader = new CommonHeaderSettings
                 {
                     ViewGuid = selected.Guid, ViewName = selected.Name, ViewDisplayName = selected.DisplayName,
                     CategoryPath = selected.CategoryPath, ViewVersion = selected.Version,
                     Title = options.Get("title") ?? string.Empty, InitializeEvent = initializeEvent,
-                    ServerRules = serverRules, Parameters = parameters, Inspection = selected
+                    ServerRules = serverRules, Parameters = parameters, ServerLoadControlTransfers = transfers,
+                    Footer = footer, Inspection = selected
                 };
             }
             store.Write(profile, true);
             var header = profile.SmartForms.DefaultCommonHeader;
             Console.WriteLine("Default SmartForms common header: " + (header == null ? "(none)" : header.ViewDisplayName + " [" + header.ViewName + "]"));
-            if (header != null) Console.WriteLine("  Initialize event: " + (header.InitializeEvent ?? "(none)") + "; server rules: " + (header.ServerRules == null || header.ServerRules.Count == 0 ? "(none)" : string.Join(", ", header.ServerRules.ToArray())) + "; parameters: " + string.Join(", ", header.Parameters.Select(x => x.Key + "=" + x.Value).ToArray()));
+            if (header != null) Console.WriteLine("  Initialize event: " + (header.InitializeEvent ?? "(none)") + "; server rules: " + (header.ServerRules == null || header.ServerRules.Count == 0 ? "(none)" : string.Join(", ", header.ServerRules.ToArray())) + "; parameters: " + string.Join(", ", header.Parameters.Select(x => x.Key + "=" + x.Value).ToArray()) + "; server-load transfers: " + string.Join(", ", (header.ServerLoadControlTransfers ?? new Dictionary<string, string>()).Select(x => x.Key + "=" + x.Value).ToArray()) + "; footer: " + (header.Footer == null ? "(none)" : header.Footer.ViewName));
             return 0;
         }
 
@@ -238,6 +269,20 @@ namespace K2EnvironmentCli
                 if (refreshed != null && current.SmartForms.HeaderViewCandidates != null) current.SmartForms.HeaderViewCandidates.Add(refreshed);
             }
             if (refreshed == null) return;
+            CommonFooterSettings footer = null;
+            if (selected.Footer != null)
+            {
+                var liveFooter = Discovery.InspectHeaders(current.K2, selected.Footer.ViewGuid.ToString());
+                var refreshedFooter = liveFooter.Count == 1 ? liveFooter[0] : null;
+                if (refreshedFooter == null) return;
+                if (current.SmartForms.HeaderViewCandidates != null && !current.SmartForms.HeaderViewCandidates.Any(x => x.Guid == refreshedFooter.Guid)) current.SmartForms.HeaderViewCandidates.Add(refreshedFooter);
+                footer = new CommonFooterSettings
+                {
+                    ViewGuid = refreshedFooter.Guid, ViewName = refreshedFooter.Name, ViewDisplayName = refreshedFooter.DisplayName,
+                    CategoryPath = refreshedFooter.CategoryPath, ViewVersion = refreshedFooter.Version,
+                    Title = selected.Footer.Title, Inspection = refreshedFooter
+                };
+            }
             current.SmartForms.CommonHeaderSelection = "selected";
             current.SmartForms.DefaultCommonHeader = new CommonHeaderSettings
             {
@@ -245,7 +290,9 @@ namespace K2EnvironmentCli
                 CategoryPath = refreshed.CategoryPath, ViewVersion = refreshed.Version,
                 Title = selected.Title, InitializeEvent = selected.InitializeEvent,
                 ServerRules = selected.ServerRules ?? new List<string>(),
-                Parameters = selected.Parameters ?? new Dictionary<string, string>(), Inspection = refreshed
+                Parameters = selected.Parameters ?? new Dictionary<string, string>(),
+                ServerLoadControlTransfers = selected.ServerLoadControlTransfers ?? new Dictionary<string, string>(),
+                Footer = footer, Inspection = refreshed
             };
         }
 
@@ -279,6 +326,7 @@ namespace K2EnvironmentCli
             Console.WriteLine("  " + item.DisplayName + " [" + item.Name + "] - " + item.CategoryPath + " (" + item.Guid + ", v" + item.Version + ", " + item.ConsumerFormCount + " consumer form(s))");
             Console.WriteLine("    parameters: " + (item.Parameters.Count == 0 ? "(none)" : string.Join(", ", item.Parameters.Select(x => x.Name + ":" + x.DataType + (string.IsNullOrEmpty(x.DefaultValue) ? "" : "=" + x.DefaultValue)).ToArray())));
             Console.WriteLine("    view events: " + (item.Events.Count == 0 ? "(none)" : string.Join(", ", item.Events.Select(x => x.Name + " [" + x.Type + ", " + x.ActionCount + " action(s)]").ToArray())));
+            Console.WriteLine("    controls: " + (item.Controls == null || item.Controls.Count == 0 ? "(none)" : string.Join(", ", item.Controls.Select(x => x.Name + ":" + x.Type).ToArray())));
             if (!detailed) return;
             foreach (var consumer in item.Consumers)
                 Console.WriteLine("    consumer: " + consumer.FormDisplayName + " [" + consumer.FormName + "] - " + consumer.CategoryPath + "; mappings=" +
@@ -305,7 +353,8 @@ namespace K2EnvironmentCli
             Console.WriteLine("  set-default --name NAME");
             Console.WriteLine("  set-style-profile [--name NAME] (--style-profile NAME_OR_GUID | --no-style-profile)");
             Console.WriteLine("  inspect-header [--name NAME] --hint TEXT [--output json]");
-            Console.WriteLine("  set-common-header [--name NAME] (--view NAME_OR_GUID [--initialize-event EVENT] [--server-rule EVENT ...] [--title TEXT] [--parameter NAME=VALUE ...] | --no-common-header)");
+            Console.WriteLine("  inspect-framework [--name NAME] --hint TEXT [--output json]");
+            Console.WriteLine("  set-common-header [--name NAME] (--view NAME_OR_GUID [--footer NAME_OR_GUID] [--initialize-event EVENT] [--server-rule EVENT ...] [--title TEXT] [--footer-title TEXT] [--parameter NAME=VALUE ...] [--control-transfer CONTROL=VALUE ...] | --no-common-header)");
             Console.WriteLine("Common: --root PATH overrides the default %CODEX_HOME%\\k2 store.");
         }
     }

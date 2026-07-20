@@ -47,7 +47,14 @@ namespace K2SmartFormsCli
                 Title = selected.Title,
                 InitializeEvent = selected.InitializeEvent,
                 ServerRules = selected.ServerRules ?? new List<string>(),
-                Parameters = selected.Parameters ?? new Dictionary<string, string>()
+                Parameters = selected.Parameters ?? new Dictionary<string, string>(),
+                ServerLoadControlTransfers = selected.ServerLoadControlTransfers ?? new Dictionary<string, string>(),
+                Footer = selected.Footer == null ? null : new CommonFooterDefinition
+                {
+                    View = selected.Footer.ViewName,
+                    ViewGuid = selected.Footer.ViewGuid,
+                    Title = selected.Footer.Title
+                }
             };
         }
 
@@ -82,6 +89,14 @@ namespace K2SmartFormsCli
             public string InitializeEvent { get; set; }
             public List<string> ServerRules { get; set; }
             public Dictionary<string, string> Parameters { get; set; }
+            public Dictionary<string, string> ServerLoadControlTransfers { get; set; }
+            public EnvironmentFooter Footer { get; set; }
+        }
+        private sealed class EnvironmentFooter
+        {
+            public Guid ViewGuid { get; set; }
+            public string ViewName { get; set; }
+            public string Title { get; set; }
         }
     }
 
@@ -96,6 +111,24 @@ namespace K2SmartFormsCli
         public Guid InitializeEventDefinitionId { get; set; }
         public List<ResolvedHeaderRule> ServerRules { get; set; }
         public Dictionary<string, string> Parameters { get; set; }
+        public List<ResolvedHeaderControlTransfer> ServerLoadControlTransfers { get; set; }
+        public ResolvedCommonFooter Footer { get; set; }
+    }
+
+    internal sealed class ResolvedHeaderControlTransfer
+    {
+        public Guid ControlGuid { get; set; }
+        public string ControlName { get; set; }
+        public string ValueTemplate { get; set; }
+    }
+
+    internal sealed class ResolvedCommonFooter
+    {
+        public Guid ViewGuid { get; set; }
+        public string ViewName { get; set; }
+        public string DisplayName { get; set; }
+        public string CategoryPath { get; set; }
+        public string Title { get; set; }
     }
 
     internal sealed class ResolvedHeaderRule

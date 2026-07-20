@@ -17,7 +17,7 @@ Run discovery once on a self-hosted K2 machine. It reads the K2 installation reg
 & '<k2-builder-root>\scripts\k2env.ps1' discover --name spk2-local --default
 ```
 
-Discovery also queries the supported K2 `FormsManager` API for installed themes, Style Profiles, and likely common header views. Header candidates include their parameters, view events/rule-action counts, version, category, and consumer-form count. It does not query or modify K2 databases and never writes credentials. Supply `--install-dir`, `--host`, or `--base-url` only to override an incorrectly inferred value.
+Discovery also queries the supported K2 `FormsManager` API for installed themes, Style Profiles, and likely common framework views, including headers and footers. Candidates include their parameters, controls, view events/rule-action counts, version, category, and consumer-form count. It does not query or modify K2 databases and never writes credentials. Supply `--install-dir`, `--host`, or `--base-url` only to override an incorrectly inferred value.
 
 After first discovery, inspect `smartForms.styleProfiles`. If `smartForms.styleProfileSelection` is `unselected`, present each profile's display name, system name, category, and GUID and ask which should apply to newly generated forms by default. Persist either the exact selection or a deliberate opt-out:
 
@@ -28,15 +28,17 @@ After first discovery, inspect `smartForms.styleProfiles`. If `smartForms.styleP
 
 The selector accepts an unambiguous display name, system name, or GUID. `refresh` re-inventories the server and preserves a selected profile by GUID, or preserves an explicit `none`; if the selected profile disappeared, selection returns to `unselected`.
 
-Then resolve `smartForms.commonHeaderSelection`. Ask whether newly generated forms should use a shared environment header. If not, persist a deliberate `none`. If yes, ask for a hint, inspect live candidates and existing consumer mappings, and agree which callable user initialization rule and server-side user rules the Form must invoke, plus how parameter values should be initialized, before persisting the contract:
+Then resolve `smartForms.commonHeaderSelection`. Start with `inspect-framework --hint psf`. If the live results contain a PSF-named Style Profile/header/footer, ask whether newly generated forms should use that discovered bundle; do not assume PSF exists or select it without agreement. Otherwise ask for a hint. Inspect live candidates and existing consumer mappings, and agree which callable user initialization/server rules the Form must invoke, how parameter values should be initialized, whether values must instead be transferred to controls on server load, and whether a paired footer has an ordering rule. If no shared framework is wanted, persist a deliberate `none`:
 
 ```powershell
-& '<k2-builder-root>\scripts\k2env.ps1' inspect-header --name spk2-local --hint 'Corporate Header'
-& '<k2-builder-root>\scripts\k2env.ps1' set-common-header --name spk2-local --view '<exact-name-or-guid>' --initialize-event Init --server-rule ServerPreRender --title '' --parameter 'HeaderText={{form.name}}' --parameter 'SubheaderText={{application.name}}' --parameter 'AppId={{solution.code}}'
+& '<k2-builder-root>\scripts\k2env.ps1' inspect-framework --name spk2-local --hint 'psf'
+& '<k2-builder-root>\scripts\k2env.ps1' set-common-header --name spk2-local --view '<exact-name-or-guid>' --footer '<exact-name-or-guid>' --initialize-event Init --server-rule ServerPreRender --title Header --parameter 'AppId={{solution.code}}' --control-transfer 'Main Header Data Label={{form.name}}' --control-transfer 'Sub Header Data Label={{application.name}}'
 & '<k2-builder-root>\scripts\k2env.ps1' set-common-header --name spk2-local --no-common-header
 ```
 
-Supported parameter templates are `{{form.name}}`, `{{application.name}}`, `{{application.rootCategoryPath}}`, and `{{solution.code}}`; literal values are also valid. Repeat `--server-rule` when more than one View server rule must be called. `inspect-header` reports the header's parameters and events plus up to 25 forms that already consume it and the mappings those forms use. Inspect representative form definitions to distinguish inherited View rule definitions from explicit Form lifecycle calls. Server-side rules on a View do not fire automatically: the SmartForms generator must call each configured rule from the Form's `When the server loads the Form` event. Do not guess required business values. The selected view is persisted by GUID, and refresh preserves its setup when that GUID still exists.
+Supported parameter/control-transfer templates are `{{form.name}}`, `{{application.name}}`, `{{application.rootCategoryPath}}`, and `{{solution.code}}`; literal values are also valid. Repeat `--server-rule` when more than one View server rule must be called. `inspect-framework` (and its compatibility alias `inspect-header`) reports parameters, controls, and events plus up to 25 consumer forms. Inspect representative definitions to distinguish inherited View rules from explicit Form lifecycle calls. Server-side View rules do not fire automatically: the generator must call each configured rule from Form server load. Server-load control transfers execute before those calls. The selected header and optional footer are persisted by GUID, and refresh preserves the contract only while both still exist.
+
+On this environment, the user-approved PSF contract is: Style Profile `PSF UX v1`; header `PSF.FrameworkHeader` titled exactly `Header`; footer `PSF.FrameworkFooter` in the last view position; header `Init` called from Form initialization with `AppId={{solution.code}}` and `Debug=false`; then Form server load transfers `{{form.name}}` to `Main Header Data Label` and `{{application.name}}` to `Sub Header Data Label` before calling header `ServerPreRender`. Do not pass title/subtitle through the header's `HeaderText` and `SubheaderText` parameters. This paragraph records a discovered environment example, not a portable assumption.
 
 ## Reuse
 
@@ -51,7 +53,7 @@ If validation passes, use the stored values and do not repeat full discovery. Ap
 
 `explicit user/manifest value → selected environment profile → tool default`
 
-The environment profile supplies K2 host, ports, integrated-authentication mode, security label, install directory, detected product build, Designer host token, public base URLs, installed SmartForms legacy themes/Style Profiles/header candidates, the chosen default Style Profile, and the selected common-header initialization contract. For SmartForms use `explicit manifest value → selected environment default → deliberate exception`; stop and ask while either selection is `unselected`. `k2forms` automatically consumes the selected header from the default profile unless `application.commonHeader` explicitly selects/overrides it or disables it with a reason. The profile does not replace application-specific SQL database settings.
+The environment profile supplies K2 host, ports, integrated-authentication mode, security label, install directory, detected product build, Designer host token, public base URLs, installed SmartForms legacy themes/Style Profiles/framework candidates, the chosen default Style Profile, and the selected common-framework lifecycle/layout contract. For SmartForms use `explicit manifest value → selected environment default → deliberate exception`; stop and ask while either selection is `unselected`. `k2forms` automatically consumes the selected header/footer contract unless `application.commonHeader` explicitly selects/overrides it or disables it with a reason. The profile does not replace application-specific SQL database settings.
 
 ## Maintenance
 

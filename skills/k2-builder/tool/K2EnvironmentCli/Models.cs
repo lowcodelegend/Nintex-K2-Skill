@@ -39,8 +39,17 @@ namespace K2EnvironmentCli
         public bool IsInternal { get; set; }
         public List<HeaderParameterSettings> Parameters { get; set; }
         public List<HeaderEventSettings> Events { get; set; }
+        public List<HeaderControlSettings> Controls { get; set; }
         public int ConsumerFormCount { get; set; }
         public List<HeaderConsumerSettings> Consumers { get; set; }
+    }
+
+    public sealed class HeaderControlSettings
+    {
+        public Guid Guid { get; set; }
+        public string Name { get; set; }
+        public string DisplayName { get; set; }
+        public string Type { get; set; }
     }
 
     public sealed class HeaderParameterSettings
@@ -90,6 +99,19 @@ namespace K2EnvironmentCli
         public string InitializeEvent { get; set; }
         public List<string> ServerRules { get; set; }
         public Dictionary<string, string> Parameters { get; set; }
+        public Dictionary<string, string> ServerLoadControlTransfers { get; set; }
+        public CommonFooterSettings Footer { get; set; }
+        public HeaderViewCandidate Inspection { get; set; }
+    }
+
+    public sealed class CommonFooterSettings
+    {
+        public Guid ViewGuid { get; set; }
+        public string ViewName { get; set; }
+        public string ViewDisplayName { get; set; }
+        public string CategoryPath { get; set; }
+        public int ViewVersion { get; set; }
+        public string Title { get; set; }
         public HeaderViewCandidate Inspection { get; set; }
     }
 

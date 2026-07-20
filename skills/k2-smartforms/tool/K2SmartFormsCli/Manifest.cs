@@ -57,6 +57,7 @@ namespace K2SmartFormsCli
             if (Application.CommonHeader != null)
             {
                 if (Application.CommonHeader.Parameters == null) Application.CommonHeader.Parameters = new Dictionary<string, string>();
+                if (Application.CommonHeader.ServerLoadControlTransfers == null) Application.CommonHeader.ServerLoadControlTransfers = new Dictionary<string, string>();
                 if (Application.CommonHeader.ServerRules == null) Application.CommonHeader.ServerRules = new List<string>();
                 if (!Application.CommonHeader.Enabled && string.IsNullOrWhiteSpace(Application.CommonHeader.Reason))
                     throw new CliException("application.commonHeader.reason is required when the environment common header is disabled.");
@@ -64,6 +65,8 @@ namespace K2SmartFormsCli
                 {
                     if (Application.CommonHeader.Parameters.Keys.Any(string.IsNullOrWhiteSpace))
                         throw new CliException("application.commonHeader.parameters contains an empty parameter name.");
+                    if (Application.CommonHeader.ServerLoadControlTransfers.Keys.Any(string.IsNullOrWhiteSpace))
+                        throw new CliException("application.commonHeader.serverLoadControlTransfers contains an empty control name.");
                     EnsureUniqueValues(Application.CommonHeader.ServerRules, "common header server rule", "application.commonHeader");
                 }
             }
@@ -398,6 +401,8 @@ namespace K2SmartFormsCli
         public string InitializeEvent { get; set; }
         public List<string> ServerRules { get; set; }
         public Dictionary<string, string> Parameters { get; set; }
+        public Dictionary<string, string> ServerLoadControlTransfers { get; set; }
+        public CommonFooterDefinition Footer { get; set; }
         public string Reason { get; set; }
 
         public CommonHeaderDefinition()
@@ -405,7 +410,15 @@ namespace K2SmartFormsCli
             Enabled = true;
             ServerRules = new List<string>();
             Parameters = new Dictionary<string, string>();
+            ServerLoadControlTransfers = new Dictionary<string, string>();
         }
+    }
+
+    public sealed class CommonFooterDefinition
+    {
+        public string View { get; set; }
+        public Guid ViewGuid { get; set; }
+        public string Title { get; set; }
     }
 
     public sealed class ViewDefinition

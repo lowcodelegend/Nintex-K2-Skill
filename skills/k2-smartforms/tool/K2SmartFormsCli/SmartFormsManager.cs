@@ -42,7 +42,7 @@ namespace K2SmartFormsCli
                     Console.WriteLine("K2 control input: OK (Worklist, " + worklistControl.FullName + ")");
                 }
                 Console.WriteLine("K2 SmartForms connection: OK (" + elapsed.TotalMilliseconds.ToString("0") + " ms, theme " + _manifest.Application.Theme + ", styleProfile=" + (styleProfile == null ? "none" : styleProfile.DisplayName + " [" + styleProfile.Name + "]") + ")");
-                Console.WriteLine("K2 common header input: " + (commonHeader == null ? "none" : commonHeader.DisplayName + " [" + commonHeader.ViewName + "] from " + commonHeader.CategoryPath));
+                Console.WriteLine("K2 common framework input: " + (commonHeader == null ? "none" : commonHeader.DisplayName + " [" + commonHeader.ViewName + "] from " + commonHeader.CategoryPath + "; footer=" + (commonHeader.Footer == null ? "none" : commonHeader.Footer.ViewName) + "; server-load transfers=" + commonHeader.ServerLoadControlTransfers.Count));
                 return 0;
             });
 
@@ -324,14 +324,15 @@ namespace K2SmartFormsCli
                     foreach (var form in _manifest.Application.Forms)
                     {
                         var formGenerator = new FormGenerator(ParseFormOptions(form.Options), ParseFormBehaviors(form.Behaviors), _manifest.Application.Theme);
-                        var formViews = commonHeader == null ? form.Views.ToArray() : new[] { commonHeader.ViewName }.Concat(form.Views).ToArray();
+                        var formViews = commonHeader == null ? form.Views.ToArray() :
+                            new[] { commonHeader.ViewName }.Concat(form.Views).Concat(commonHeader.Footer == null ? new string[0] : new[] { commonHeader.Footer.ViewName }).ToArray();
                         var generated = generator.Generate(formGenerator, formViews, form.Name);
                         var definition = FormThemeDefinition.SetUseLegacyTheme(generated.ToXml(), form.UseLegacyTheme);
                         if (styleProfile != null) definition = FormThemeDefinition.SetStyleProfile(definition, styleProfile.Guid, styleProfile.Name);
-                        definition = FormLayoutDefinition.Apply(definition, form, commonHeader, ResolveHeaderParameters(commonHeader, form));
+                        definition = FormLayoutDefinition.Apply(definition, form, commonHeader, ResolveHeaderParameters(commonHeader, form), ResolveHeaderControlTransfers(commonHeader, form));
                         manager.DeployForms(definition, _manifest.Application.GetFormCategoryPath(form), _manifest.Application.CheckIn);
                         var info = manager.GetForm(form.Name);
-                        Console.WriteLine("Form: deployed (" + form.Name + ", " + info.Guid + ", theme " + info.Theme.Name + ", styleProfile=" + (styleProfile == null ? "none" : styleProfile.Name) + ", legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant() + ", commonHeader=" + (commonHeader == null ? "none" : commonHeader.ViewName) + ", tabs=" + form.Tabs.Count + ", worklist=" + form.Tabs.Any(x => x.Worklist != null).ToString().ToLowerInvariant() + ")");
+                        Console.WriteLine("Form: deployed (" + form.Name + ", " + info.Guid + ", theme " + info.Theme.Name + ", styleProfile=" + (styleProfile == null ? "none" : styleProfile.Name) + ", legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant() + ", commonHeader=" + (commonHeader == null ? "none" : commonHeader.ViewName) + ", commonFooter=" + (commonHeader == null || commonHeader.Footer == null ? "none" : commonHeader.Footer.ViewName) + ", tabs=" + form.Tabs.Count + ", worklist=" + form.Tabs.Any(x => x.Worklist != null).ToString().ToLowerInvariant() + ")");
                     }
                 }
                 return 0;
@@ -384,7 +385,7 @@ namespace K2SmartFormsCli
                         throw new CliException("K2 Form has style profile '" + actualStyleProfile.Name + "' but the manifest expects none: " + expected);
                     if (expectedStyleProfile != null && (actualStyleProfile == null || actualStyleProfile.Guid != expectedStyleProfile.Guid))
                         throw new CliException("K2 Form style profile does not match '" + expectedStyleProfile.DisplayName + "' [" + expectedStyleProfile.Name + "]: " + expected);
-                    FormLayoutDefinition.Verify(definition, declaredForm, commonHeader, ResolveHeaderParameters(commonHeader, declaredForm));
+                    FormLayoutDefinition.Verify(definition, declaredForm, commonHeader, ResolveHeaderParameters(commonHeader, declaredForm), ResolveHeaderControlTransfers(commonHeader, declaredForm));
                     foreach (var viewName in declaredForm.Views)
                     {
                         var viewGuid = manager.GetView(viewName).Guid.ToString();
@@ -393,6 +394,8 @@ namespace K2SmartFormsCli
                     }
                     if (commonHeader != null && definition.IndexOf(commonHeader.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase) < 0)
                         throw new CliException("K2 Form '" + expected + "' does not reference environment common header '" + commonHeader.ViewName + "'.");
+                    if (commonHeader != null && commonHeader.Footer != null && definition.IndexOf(commonHeader.Footer.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase) < 0)
+                        throw new CliException("K2 Form '" + expected + "' does not reference environment common footer '" + commonHeader.Footer.ViewName + "'.");
                     Console.WriteLine("Form verification: OK (" + expected + ", " + info.Guid + ", v" + info.Version + ", theme " + info.Theme.Name + ", styleProfile=" + (actualStyleProfile == null ? "none" : actualStyleProfile.Name) + ", legacyTheme=" + useLegacyTheme.Value.ToString().ToLowerInvariant() + ")");
                     runtimeForms.Add(expected);
                 }
@@ -551,6 +554,26 @@ namespace K2SmartFormsCli
             var initializeDefinitionId = Guid.Empty;
             var serverRules = new List<ResolvedHeaderRule>();
             XDocument viewDocument = null;
+            var controlTransfers = new List<ResolvedHeaderControlTransfer>();
+            if (configured.ServerLoadControlTransfers != null && configured.ServerLoadControlTransfers.Count > 0)
+            {
+                viewDocument = XDocument.Parse(manager.GetViewDefinition(info.Guid));
+                foreach (var configuredTransfer in configured.ServerLoadControlTransfers)
+                {
+                    var control = viewDocument.Descendants().FirstOrDefault(x => x.Name.LocalName == "Control" && x.Attribute("ID") != null &&
+                        (string.Equals((string)x.Element(x.Name.Namespace + "Name"), configuredTransfer.Key, StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals((string)x.Element(x.Name.Namespace + "DisplayName"), configuredTransfer.Key, StringComparison.OrdinalIgnoreCase)));
+                    Guid controlGuid;
+                    if (control == null || !Guid.TryParse((string)control.Attribute("ID"), out controlGuid))
+                        throw new CliException("Configured common header server-load transfer control is not available on '" + info.Name + "': " + configuredTransfer.Key);
+                    controlTransfers.Add(new ResolvedHeaderControlTransfer
+                    {
+                        ControlGuid = controlGuid,
+                        ControlName = (string)control.Element(control.Name.Namespace + "Name") ?? configuredTransfer.Key,
+                        ValueTemplate = configuredTransfer.Value
+                    });
+                }
+            }
             if (!string.IsNullOrWhiteSpace(configured.InitializeEvent))
             {
                 viewDocument = XDocument.Parse(manager.GetViewDefinition(info.Guid));
@@ -575,13 +598,32 @@ namespace K2SmartFormsCli
                     throw new CliException("Configured common header server rule has an invalid definition ID: " + serverRuleName);
                 serverRules.Add(new ResolvedHeaderRule { Name = serverRuleName, DefinitionId = definitionId });
             }
+            ResolvedCommonFooter footer = null;
+            if (configured.Footer != null)
+            {
+                ViewInfo footerInfo = null;
+                if (configured.Footer.ViewGuid != Guid.Empty && manager.CheckViewExists(configured.Footer.ViewGuid)) footerInfo = manager.GetView(configured.Footer.ViewGuid);
+                if (footerInfo == null && !string.IsNullOrWhiteSpace(configured.Footer.View) && manager.CheckViewExists(configured.Footer.View)) footerInfo = manager.GetView(configured.Footer.View);
+                if (footerInfo == null) throw new CliException("Configured common footer view is not installed: " + configured.Footer.View);
+                if (configured.Footer.ViewGuid != Guid.Empty && footerInfo.Guid != configured.Footer.ViewGuid)
+                    throw new CliException("Configured common footer view GUID does not match K2: " + configured.Footer.View);
+                if (_manifest.Application.Views.Any(x => string.Equals(x.Name, footerInfo.Name, StringComparison.OrdinalIgnoreCase)))
+                    throw new CliException("The common footer is an external reused view and must not also be declared in application.views: " + footerInfo.Name);
+                footer = new ResolvedCommonFooter
+                {
+                    ViewGuid = footerInfo.Guid, ViewName = footerInfo.Name, DisplayName = footerInfo.DisplayName,
+                    CategoryPath = footerInfo.CategoryPath, Title = configured.Footer.Title ?? string.Empty
+                };
+            }
             return new ResolvedCommonHeader
             {
                 ViewGuid = info.Guid, ViewName = info.Name, DisplayName = info.DisplayName,
                 CategoryPath = info.CategoryPath, Title = configured.Title ?? string.Empty,
                 InitializeEvent = configured.InitializeEvent, InitializeEventDefinitionId = initializeDefinitionId,
                 ServerRules = serverRules,
-                Parameters = configured.Parameters ?? new Dictionary<string, string>()
+                Parameters = configured.Parameters ?? new Dictionary<string, string>(),
+                ServerLoadControlTransfers = controlTransfers,
+                Footer = footer
             };
         }
 
@@ -597,14 +639,37 @@ namespace K2SmartFormsCli
             }
             foreach (var parameter in header.Parameters)
             {
-                var value = parameter.Value ?? string.Empty;
-                value = value.Replace("{{form.name}}", form.Name)
-                    .Replace("{{application.name}}", _manifest.Name)
-                    .Replace("{{application.rootCategoryPath}}", _manifest.Application.RootCategoryPath)
-                    .Replace("{{solution.code}}", solutionCode);
-                result[parameter.Key] = value;
+                result[parameter.Key] = ResolveHeaderTemplate(parameter.Value, form, solutionCode);
             }
             return result;
+        }
+
+        private Dictionary<Guid, ResolvedHeaderControlTransfer> ResolveHeaderControlTransfers(ResolvedCommonHeader header, FormDefinition form)
+        {
+            var result = new Dictionary<Guid, ResolvedHeaderControlTransfer>();
+            if (header == null) return result;
+            var solutionCode = _manifest.Application.SolutionCode;
+            if (string.IsNullOrWhiteSpace(solutionCode))
+            {
+                var separator = form.Name.IndexOf('.');
+                solutionCode = separator > 0 ? form.Name.Substring(0, separator) : form.Name;
+            }
+            foreach (var transfer in header.ServerLoadControlTransfers ?? new List<ResolvedHeaderControlTransfer>())
+                result[transfer.ControlGuid] = new ResolvedHeaderControlTransfer
+                {
+                    ControlGuid = transfer.ControlGuid,
+                    ControlName = transfer.ControlName,
+                    ValueTemplate = ResolveHeaderTemplate(transfer.ValueTemplate, form, solutionCode)
+                };
+            return result;
+        }
+
+        private string ResolveHeaderTemplate(string template, FormDefinition form, string solutionCode)
+        {
+            return (template ?? string.Empty).Replace("{{form.name}}", form.Name)
+                .Replace("{{application.name}}", _manifest.Name)
+                .Replace("{{application.rootCategoryPath}}", _manifest.Application.RootCategoryPath)
+                .Replace("{{solution.code}}", solutionCode);
         }
 
         private T WithSmartObjectServer<T>(Func<SmartObjectClientServer, T> action)
