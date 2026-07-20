@@ -75,6 +75,7 @@ The solution manifest is the orchestration contract. It references specialist ma
 - `dependsOn` makes deployment order explicit. Forms normally depend on SmartObjects; SmartForms-integrated workflows normally depend on both.
 - `policies.dataModelComplexity` is required: use `small` to default lookups to stable code/text foreign keys, or `complex` to default them to normalized surrogate keys. Explicit per-lookup requirements may override that default.
 - `policies.versionFreeNames` and `policies.modernForms` should normally remain true.
+- Approval matrices live in the referenced SmartObjects manifest's root `approvalMatrices` array. The builder validates their namespace, requires Admin maintenance UX in the referenced Forms manifest, validates workflow matrix codes/dimension inputs, previews stages/rule counts, and emits `$designer` seed errata.
 - Each `workflowEntries` item binds a workflow, a generated form, and the entry-state decision.
 - `formOwnership` is `dedicated` when the form belongs to this workflow solution, or `shared` when independently owned behavior must be preserved.
 - `startStateDefault` accepts `auto`, `true`, or `false`. Use strings so intent is reviewable across JSON tooling.

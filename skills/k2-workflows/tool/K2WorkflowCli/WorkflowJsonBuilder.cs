@@ -21,10 +21,11 @@ namespace K2WorkflowCli
             return root.ToString(Formatting.None);
         }
 
-        public static string BuildRequestApproval(WorkflowSettings workflow, SmartObjectDescriptor smartObject, SmartFormsIntegrationDescriptor smartForm)
+        public static string BuildRequestApproval(WorkflowSettings workflow, SmartObjectDescriptor smartObject, SmartFormsIntegrationDescriptor smartForm, SmartObjectMethodDescriptor approvalMatrix)
         {
             var update = workflow.RequestStatusUpdate;
             var integrated = smartForm != null;
+            if (workflow.ApprovalMatrix != null) return BuildSmartFormsMatrixApproval(workflow, smartObject, smartForm, approvalMatrix);
             if (integrated) return BuildSmartFormsApproval(workflow, smartObject, smartForm);
             var smartObjectExternalId = integrated ? 1 : 2;
             var environmentExternalId = 3;
@@ -47,6 +48,47 @@ namespace K2WorkflowCli
                     ? Arr(ExternalSmartObject(smartObject, true, 1), SmartObjectServiceFunctions(2), EnvironmentField(EnvironmentFieldName(workflow.Email.From), 3), SmartFormReference(smartForm, 4))
                     : Arr(SmartObjectServiceFunctions(1), ExternalSmartObject(smartObject, false, 2), EnvironmentField(EnvironmentFieldName(workflow.Email.From), 3)),
                 "trackedReferences", Arr(), "systemName", workflow.Name, "title", workflow.Name, "componentId", 50001);
+            return root.ToString(Formatting.None);
+        }
+
+        private static string BuildSmartFormsMatrixApproval(WorkflowSettings workflow, SmartObjectDescriptor smartObject, SmartFormsIntegrationDescriptor smartForm, SmartObjectMethodDescriptor matrixMethod)
+        {
+            if (smartForm == null || matrixMethod == null) throw new CliException("Approval-matrix workflows require SmartForms and resolver SmartObject metadata.");
+            var update = workflow.RequestStatusUpdate;
+            var approved = CopyStatus(update, Default(update.ApprovedStatusValue, "Approved"), "Status Update - Approved");
+            var rejected = CopyStatus(update, Default(update.RejectedStatusValue, "Rejected"), "Status Update - Rejected");
+            var resolver = Activity(workflow.ApprovalMatrix.Name, 3, 336, "SmartWizardStep", "smartObjectWizardStep", false, false,
+                LinkReference(2), LinkReference(3), ApprovalMatrixEvent(workflow.ApprovalMatrix, smartObject, matrixMethod, 5), null);
+            ((JObject)((JArray)resolver["ui"]["leftPorts"])[1])["incomingLinkReferences"] = Arr(LinkReference(7));
+            var nodes = Arr(
+                Activity("Start", 1, 56, "StartStep", null, true, false, null, LinkReference(1), null, null),
+                MultiStepActivity("Status Update - Pending", 2, null, 168, LinkReference(1), LinkReference(2),
+                    SmartObjectEvent(Default(update.Name, "Status Update - Pending"), update, smartObject, 1, true),
+                    EmailEvent(workflow.Email, 3)),
+                resolver,
+                MatrixDecisionActivity(4, 504),
+                Activity(workflow.UserTask.Name, 5, 672, "DefaultStep", "userTaskStep", false, false,
+                    LinkReference(4), LinkReference(6), UserTaskEvent(workflow.UserTask, update.IdentifierDataField, 5, smartObject, smartForm, 4, workflow.SmartForms.TaskState, 3, 3), UserTaskActivityConfiguration(workflow.UserTask, 5, true)),
+                DecisionActivity(5, 6, 840, 7, 8),
+                MatrixBranchActivity("Status Update - Approved", 7, 252, 504, "leftPorts", LinkReference(5),
+                    SmartObjectEvent(approved.Name, approved, smartObject, 1, true), EmailEvent(OutcomeEmail(workflow.Email, "Approved"), 3)),
+                MatrixBranchActivity("Status Update - Rejected", 8, 252, 840, "leftPorts", LinkReference(8),
+                    SmartObjectEvent(rejected.Name, rejected, smartObject, 1, true), EmailEvent(OutcomeEmail(workflow.Email, "Rejected"), 3)));
+            var root = Obj(
+                "nodes", nodes,
+                "links", Arr(
+                    Link(1, 1, 56, 2, 168), Link(2, 2, 168, 3, 336), Link(3, 3, 336, 4, 504), Link(4, 4, 504, 5, 672),
+                    HorizontalOutcomeLink(5, 4, 7, 504, "No More Approvers", 2), Link(6, 5, 672, 6, 840),
+                    LoopOutcomeLink(7, 6, 3, 840, 336, "Approved", 1), HorizontalOutcomeLink(8, 6, 8, 840, "Rejected", 2)),
+                "configuration", ProcessConfiguration(Arr(
+                    DataField("Approval Matrix Stage", 1, false, 0, 4),
+                    DataField("Approval Matrix Has Approver", 2, true, 0, 0),
+                    DataField("Approval Matrix Approver", 3, true, 0, 6),
+                    DataField("Approval Matrix Approver Type", 4, true, 0, 6)), Arr(ItemReference(smartObject, smartForm))),
+                "ui", Component(50004),
+                "externalReferenceDefinitions", Arr(ExternalSmartObject(smartObject, true, 1), SmartObjectServiceFunctions(2), EnvironmentField(EnvironmentFieldName(workflow.Email.From), 3), SmartFormReference(smartForm, 4), ExternalApprovalMatrix(matrixMethod, 5)),
+                "trackedReferences", DecisionTrackedReferences(5, 6, 7, 8),
+                "systemName", workflow.Name, "title", workflow.Name, "componentId", 50001);
             return root.ToString(Formatting.None);
         }
 
@@ -142,6 +184,104 @@ namespace K2WorkflowCli
                 "ui", Obj("icon", "smartObjectWizardStep", "template", "SmartWizardStep", "componentId", 30027),
                 "configuration", Obj("controlValues", controls, "exceptionSettings", Obj("logException", true, "componentId", 50012), "componentId", 30012),
                 "systemName", title, "title", title, "internalId", 1, "componentId", 30011);
+        }
+
+        private static JObject ApprovalMatrixEvent(ApprovalMatrixSettings settings, SmartObjectDescriptor request, SmartObjectMethodDescriptor resolver, int externalId)
+        {
+            var objectReference = "root.externalReferenceDefinitions[{\"internalId\":" + externalId + "}]";
+            var methodReference = objectReference + ".methods[{\"internalId\":1}]";
+            var values = new JObject();
+            AddInput(values, resolver, settings.MatrixCodeInput, LiteralExpression(settings.MatrixCode), methodReference);
+            AddInput(values, resolver, settings.AmountInput, RequestPropertyExpression(request, settings.AmountProperty), methodReference);
+            AddInput(values, resolver, settings.CurrentStageInput, DataFieldExpression(1), methodReference);
+            foreach (var dimension in settings.Dimensions)
+                AddInput(values, resolver, dimension.InputProperty, RequestPropertyExpression(request, dimension.RequestProperty), methodReference);
+
+            var outputs = new JObject();
+            AddOutput(outputs, resolver, settings.StageProperty, DataFieldExpression(1), methodReference);
+            AddOutput(outputs, resolver, settings.HasApproverProperty, DataFieldExpression(2), methodReference);
+            AddOutput(outputs, resolver, settings.ApproverProperty, DataFieldExpression(3), methodReference);
+            AddOutput(outputs, resolver, settings.ApproverTypeProperty, DataFieldExpression(4), methodReference);
+
+            var wizardObject = MatrixWizardDescriptor(resolver);
+            var controls = new JObject();
+            AddControl(controls, "spSmartObject", ExternalExpression(objectReference, resolver.DisplayName));
+            AddControl(controls, "cbbMethods", ExternalExpression(methodReference, resolver.MethodDisplayName));
+            if (resolver.Returns.Count > 0) AddControl(controls, "cbbMethodProperties", ExternalExpression(methodReference + ".returns[{\"internalId\":" + resolver.Returns[0].InternalId + "}]", resolver.Returns[0].DisplayName));
+            controls["pmFilterInputs"] = Obj("filterValue", Obj("expressions", Arr(), "componentId", 80016), "componentId", 60000);
+            controls["pmInputs"] = Obj("values", values, "componentId", 60000);
+            controls["pmOutputs"] = Obj("values", outputs, "componentId", 60000);
+            AddControl(controls, "radReference", Component(10008));
+            AddControl(controls, "radOutputs", LiteralExpression("radOutputs"));
+            AddControl(controls, "radNoOutputs", Component(10008));
+            controls["loOptions"] = Obj("listOptions", Obj("filterOption", "all", "direction", "ascending", "componentId", 50011), "componentId", 60000);
+            AddControl(controls, "cbxExternalSystem", LiteralExpression("false"));
+            AddControl(controls, "cbxContinueOnError", LiteralExpression("false"));
+            AddControl(controls, "cbxEnableRequiredFieldsValidation", LiteralExpression("true"));
+            AddControl(controls, "SmartObject", LiteralExpression("radOutputs"));
+            AddControl(controls, "btnLearnMore", Component(10008));
+            AddControl(controls, "DefaultLoad", LiteralExpression(string.Empty));
+            AddControl(controls, "kdDefaultLoad", LiteralExpression(string.Empty));
+            AddControl(controls, "Empty", Component(10008));
+            AddControl(controls, "kdMethodPropertiesType", LiteralExpression("return"));
+            AddControl(controls, "kdReturnDefaultLoadProperties", LiteralExpression("true"));
+            AddControl(controls, "kdReturnOnlyKeys", LiteralExpression("true"));
+            AddControl(controls, "kdMethodType", LiteralExpression(resolver.MethodType));
+            AddControl(controls, "kdCreate", LiteralExpression("create"));
+            AddControl(controls, "kdRead", LiteralExpression("read"));
+            AddControl(controls, "kdList", LiteralExpression("list"));
+            AddControl(controls, "kdDelete", LiteralExpression("delete"));
+            AddControl(controls, "kdExecute", LiteralExpression("execute"));
+            AddControl(controls, "kdDefaultMethodType", LiteralExpression("read"));
+            AddControl(controls, "kdEmpty", Component(10008));
+            AddControl(controls, "kdTrue", LiteralExpression("true"));
+            return Obj(
+                "wizardId", 3176,
+                "wizardDefinition", SmartObjectWizardDefinition(wizardObject, 2),
+                "ui", Obj("icon", "smartObjectWizardStep", "template", "SmartWizardStep", "componentId", 30027),
+                "configuration", Obj("controlValues", controls, "exceptionSettings", Obj("logException", true, "componentId", 50012), "componentId", 30012),
+                "systemName", settings.Name, "title", settings.Name, "internalId", 1, "componentId", 30011);
+        }
+
+        private static void AddInput(JObject values, SmartObjectMethodDescriptor resolver, string propertyName, JObject value, string methodReference)
+        {
+            var property = FindProperty(resolver.Inputs, propertyName, "input");
+            values[property.SystemName] = Mapping(value, methodReference + ".inputs[{\"internalId\":" + property.InternalId + "}]");
+        }
+
+        private static void AddOutput(JObject values, SmartObjectMethodDescriptor resolver, string propertyName, JObject value, string methodReference)
+        {
+            var property = FindProperty(resolver.Returns, propertyName, "return");
+            values[property.SystemName] = Mapping(value, methodReference + ".returns[{\"internalId\":" + property.InternalId + "}]");
+        }
+
+        private static SmartObjectInputDescriptor FindProperty(System.Collections.Generic.IEnumerable<SmartObjectInputDescriptor> properties, string name, string direction)
+        {
+            var property = properties.FirstOrDefault(x => string.Equals(x.SystemName, name, StringComparison.OrdinalIgnoreCase));
+            if (property == null) throw new CliException("Approval matrix resolver " + direction + " property was not found: " + name + ". Available: " + string.Join(", ", properties.Select(x => x.SystemName).ToArray()));
+            return property;
+        }
+
+        private static JObject RequestPropertyExpression(SmartObjectDescriptor request, string propertyName)
+        {
+            var property = request.ReadReturns.FirstOrDefault(x => string.Equals(x.SystemName, propertyName, StringComparison.OrdinalIgnoreCase));
+            if (property == null) throw new CliException("Approval matrix request property is not returned by the request SmartObject Read method: " + propertyName);
+            return ItemReferencePropertyExpression(1, request.DisplayName, property.DisplayName, property.InternalId);
+        }
+
+        private static SmartObjectDescriptor MatrixWizardDescriptor(SmartObjectMethodDescriptor resolver)
+        {
+            return new SmartObjectDescriptor
+            {
+                SystemName = resolver.SystemName,
+                DisplayName = resolver.DisplayName,
+                MethodSystemName = resolver.MethodSystemName,
+                MethodDisplayName = resolver.MethodDisplayName,
+                MethodType = resolver.MethodType,
+                DefaultLoadMethod = string.Empty,
+                Inputs = resolver.Inputs,
+                ReadReturns = resolver.Returns
+            };
         }
 
         private static JObject SmartObjectWizardDefinition(SmartObjectDescriptor smartObject, int serviceFunctionsExternalId)
@@ -270,7 +410,7 @@ namespace K2WorkflowCli
                 "internalId", internalId, "componentId", 10002);
         }
 
-        private static JObject UserTaskEvent(UserTaskSettings task, string identifierDataField, int nodeId, SmartObjectDescriptor smartObject, SmartFormsIntegrationDescriptor smartForm, int formExternalId, string taskState, int environmentExternalId)
+        private static JObject UserTaskEvent(UserTaskSettings task, string identifierDataField, int nodeId, SmartObjectDescriptor smartObject, SmartFormsIntegrationDescriptor smartForm, int formExternalId, string taskState, int environmentExternalId, int? approvalMatrixAssigneeDataFieldId = null)
         {
             var actions = new JArray();
             for (var i = 0; i < task.Actions.Count; i++)
@@ -279,10 +419,12 @@ namespace K2WorkflowCli
                 actions.Add(Obj("alwaysVisible", true, "continueWorkflow", true, "actionTitle", task.Actions[i],
                     "originalTitle", task.Actions[i], "internalId", i + 1, "componentId", 30019, "oldReference", reference));
             }
-            var originator = OriginatorUserExpression();
-            originator["isDynamic"] = true;
-            originator["internalId"] = 1;
-            var destinations = Arr(Obj("title", "Originator", "destinationItems", Arr(originator),
+            var effectiveAssignee = approvalMatrixAssigneeDataFieldId.HasValue ? DataFieldExpression(approvalMatrixAssigneeDataFieldId.Value) : OriginatorUserExpression();
+            effectiveAssignee["type"] = "User";
+            effectiveAssignee["isDynamic"] = true;
+            effectiveAssignee["internalId"] = 1;
+            var destinationTitle = approvalMatrixAssigneeDataFieldId.HasValue ? "Approval Matrix Approver" : "Originator";
+            var destinations = Arr(Obj("title", destinationTitle, "destinationItems", Arr(effectiveAssignee),
                 "isRecipient", true, "internalId", 1, "componentId", 80010));
             var parameters = smartForm == null ? Arr(
                     Obj("name", TaskParameterName("SN", true), "value", TaskSerialNumber(), "internalId", 1, "componentId", 30018),
@@ -373,23 +515,33 @@ namespace K2WorkflowCli
                 "internalId", id, "componentId", 40000);
         }
 
+        private static JObject MatrixBranchActivity(string title, int id, int x, int y, string incomingPort, string incomingReference, JObject first, JObject second)
+        {
+            return BranchActivity(title, id, x, y, incomingPort, incomingReference, first, second);
+        }
+
         private static JObject DecisionActivity(int id, int y)
         {
-            var left = Ports("leftPorts", LinkReference(4), false);
+            return DecisionActivity(3, id, y, 4, 5);
+        }
+
+        private static JObject DecisionActivity(int taskId, int id, int y, int approvedLinkId, int rejectedLinkId)
+        {
+            var left = Ports("leftPorts", LinkReference(approvedLinkId), false);
             var leftPort = (JObject)left[1];
             leftPort["labelX"] = -36; leftPort["labelRightAligned"] = true;
-            leftPort["outcomeReference"] = "root.nodes[{\"internalId\":4}].configuration.outcomes[{\"internalId\":1}]";
-            var right = Ports("rightPorts", LinkReference(5), false);
+            leftPort["outcomeReference"] = "root.nodes[{\"internalId\":" + id + "}].configuration.outcomes[{\"internalId\":1}]";
+            var right = Ports("rightPorts", LinkReference(rejectedLinkId), false);
             var rightPort = (JObject)right[1];
             rightPort["labelX"] = 36;
-            rightPort["outcomeReference"] = "root.nodes[{\"internalId\":4}].configuration.outcomes[{\"internalId\":2}]";
-            var ui = Obj("y", y, "icon", "decisionStep", "topPorts", Ports("topPorts", LinkReference(3), true),
+            rightPort["outcomeReference"] = "root.nodes[{\"internalId\":" + id + "}].configuration.outcomes[{\"internalId\":2}]";
+            var ui = Obj("y", y, "icon", "decisionStep", "topPorts", Ports("topPorts", LinkReference(approvedLinkId - 1), true),
                 "leftPorts", left, "bottomPorts", Ports("bottomPorts", null, false), "rightPorts", right,
                 "template", "DecisionStep", "componentId", 40009);
-            var taskOne = "root.nodes[{\"internalId\":3}].configuration.outcomes[{\"internalId\":1}]";
-            var taskTwo = "root.nodes[{\"internalId\":3}].configuration.outcomes[{\"internalId\":2}]";
-            var decisionOne = "root.nodes[{\"internalId\":4}].configuration.outcomes[{\"internalId\":1}]";
-            var decisionTwo = "root.nodes[{\"internalId\":4}].configuration.outcomes[{\"internalId\":2}]";
+            var taskOne = "root.nodes[{\"internalId\":" + taskId + "}].configuration.outcomes[{\"internalId\":1}]";
+            var taskTwo = "root.nodes[{\"internalId\":" + taskId + "}].configuration.outcomes[{\"internalId\":2}]";
+            var decisionOne = "root.nodes[{\"internalId\":" + id + "}].configuration.outcomes[{\"internalId\":1}]";
+            var decisionTwo = "root.nodes[{\"internalId\":" + id + "}].configuration.outcomes[{\"internalId\":2}]";
             var firstExpression = Obj("outcomeReference", taskOne, "activityReference", "root.nodes[{\"internalId\":3}]",
                 "directive", "k2-task-expression", "internalId", 1, "componentId", 80009);
             var secondExpression = Obj("outcomeReference", taskTwo, "activityReference", "root.nodes[{\"internalId\":3}]",
@@ -405,10 +557,40 @@ namespace K2WorkflowCli
                     Obj("title", "Approved", "originalTitle", "Approved", "linkedOutcomeReference", taskOne, "internalId", 1, "componentId", 30020),
                     Obj("title", "Rejected", "originalTitle", "Rejected", "linkedOutcomeReference", taskTwo, "internalId", 2, "componentId", 30020)),
                 "outcomeRule", Obj("statements", Arr(statement), "componentId", 80101),
-                "outcomesEventReference", "root.nodes[{\"internalId\":3}].children[{\"internalId\":1}]",
+                "outcomesEventReference", "root.nodes[{\"internalId\":" + taskId + "}].children[{\"internalId\":1}]",
                 "deadline", Deadline(), "priority", 1, "decisionOptionType", 1, "isDecisionOutcomeCheckBoxChecked", true,
                 "exceptionSettings", Obj("logException", true, "componentId", 50012), "componentId", 40014);
             return Obj("ui", ui, "configuration", configuration, "systemName", "Decision", "title", "Decision", "internalId", id, "componentId", 40000);
+        }
+
+        private static JObject MatrixDecisionActivity(int id, int y)
+        {
+            var bottom = Ports("bottomPorts", LinkReference(4), false);
+            ((JObject)bottom[1])["labelY"] = 72;
+            ((JObject)bottom[1])["outcomeReference"] = "root.nodes[{\"internalId\":" + id + "}].configuration.outcomes[{\"internalId\":1}]";
+            var right = Ports("rightPorts", LinkReference(5), false);
+            ((JObject)right[1])["labelX"] = 36;
+            ((JObject)right[1])["outcomeReference"] = "root.nodes[{\"internalId\":" + id + "}].configuration.outcomes[{\"internalId\":2}]";
+            var first = "root.nodes[{\"internalId\":" + id + "}].configuration.outcomes[{\"internalId\":1}]";
+            var second = "root.nodes[{\"internalId\":" + id + "}].configuration.outcomes[{\"internalId\":2}]";
+            var expression = Obj(
+                "leftExpression", Endpoint(DataFieldExpression(2)), "logicalOperator", "equals", "rightExpression", Endpoint(LiteralExpression("true")),
+                "directive", "k2-simple-expression", "internalId", 1, "componentId", 80000);
+            var statement = Obj(
+                "IfExpressions", Arr(Obj("expressions", Arr(expression), "directive", "k2-group-expression", "internalId", 1, "componentId", 80004)),
+                "thenStatements", Arr(Obj("linkedOutcomeReferences", Arr(first), "directive", "k2-outcome-statement", "internalId", 1, "componentId", 80006)),
+                "elseStatements", Arr(Obj("linkedOutcomeReferences", Arr(second), "directive", "k2-outcome-statement", "internalId", 1, "componentId", 80006)),
+                "directive", "k2-if-then-else-statement", "internalId", 1, "componentId", 80002);
+            var configuration = Obj(
+                "outcomes", Arr(
+                    Obj("title", "Approver Found", "originalTitle", "Approver Found", "internalId", 1, "componentId", 30020),
+                    Obj("title", "No More Approvers", "originalTitle", "No More Approvers", "internalId", 2, "componentId", 30020)),
+                "outcomeRule", Obj("statements", Arr(statement), "componentId", 80101),
+                "deadline", Deadline(), "priority", 1, "decisionOptionType", 1, "isDecisionOutcomeCheckBoxChecked", true,
+                "exceptionSettings", Obj("logException", true, "componentId", 50012), "componentId", 40014);
+            return Obj("ui", Obj("y", y, "icon", "decisionStep", "topPorts", Ports("topPorts", LinkReference(3), true),
+                    "leftPorts", Ports("leftPorts", null, true), "bottomPorts", bottom, "rightPorts", right, "template", "DecisionStep", "componentId", 40009),
+                "configuration", configuration, "systemName", "Approval Matrix Decision", "title", "Approval Matrix Decision", "customTitle", true, "internalId", id, "componentId", 40000);
         }
 
         private static JObject Link(int id, int from, int fromY, int to, int toY)
@@ -430,6 +612,24 @@ namespace K2WorkflowCli
             return Obj("fromInternalId", from, "toInternalId", to,
                 "ui", Obj("fromPortId", left ? "leftPorts_1" : "rightPorts_1", "toPortId", left ? "rightPorts_1" : "leftPorts_1", "path", path, "showLabel", true),
                 "configuration", Obj("associatedOutcomeReference", "root.nodes[{\"internalId\":4}].configuration.outcomes[{\"internalId\":" + outcomeId + "}]", "componentId", 40013),
+                "systemName", "DefaultLine " + (id - 1), "title", title, "customTitle", true, "internalId", id, "componentId", 50002);
+        }
+
+        private static JObject HorizontalOutcomeLink(int id, int from, int to, int y, string title, int outcomeId)
+        {
+            var path = "28," + y + ",48," + y + ",126," + y + ",126," + y + ",204," + y + ",224," + y;
+            return Obj("fromInternalId", from, "toInternalId", to,
+                "ui", Obj("fromPortId", "rightPorts_1", "toPortId", "leftPorts_1", "path", path, "showLabel", true),
+                "configuration", Obj("associatedOutcomeReference", "root.nodes[{\"internalId\":" + from + "}].configuration.outcomes[{\"internalId\":" + outcomeId + "}]", "componentId", 40013),
+                "systemName", "DefaultLine " + (id - 1), "title", title, "customTitle", true, "internalId", id, "componentId", 50002);
+        }
+
+        private static JObject LoopOutcomeLink(int id, int from, int to, int fromY, int toY, string title, int outcomeId)
+        {
+            var path = "-28," + fromY + ",-48," + fromY + ",-140," + fromY + ",-140," + toY + ",-48," + toY + ",-28," + toY;
+            return Obj("fromInternalId", from, "toInternalId", to,
+                "ui", Obj("fromPortId", "leftPorts_1", "toPortId", "leftPorts_1", "path", path, "showLabel", true),
+                "configuration", Obj("associatedOutcomeReference", "root.nodes[{\"internalId\":" + from + "}].configuration.outcomes[{\"internalId\":" + outcomeId + "}]", "componentId", 40013),
                 "systemName", "DefaultLine " + (id - 1), "title", title, "customTitle", true, "internalId", id, "componentId", 50002);
         }
 
@@ -496,6 +696,19 @@ namespace K2WorkflowCli
                 "state", 1, "internalId", includeRead ? 2 : 1, "componentId", 70005);
             var methods = includeRead ? Arr(ReadMethod(smartObject), method) : Arr(method);
             return Obj("methods", methods, "systemName", smartObject.SystemName, "displayName", smartObject.DisplayName,
+                "state", 1, "internalId", externalId, "componentId", 70002);
+        }
+
+        private static JObject ExternalApprovalMatrix(SmartObjectMethodDescriptor resolver, int externalId)
+        {
+            var inputs = new JArray();
+            foreach (var input in resolver.Inputs) inputs.Add(Property(input));
+            var returns = new JArray();
+            foreach (var property in resolver.Returns) returns.Add(Property(property));
+            var method = Obj("inputs", inputs, "returns", returns, "systemName", resolver.MethodSystemName,
+                "type", resolver.MethodType, "displayName", resolver.MethodDisplayName,
+                "state", 1, "internalId", 1, "componentId", 70005);
+            return Obj("methods", Arr(method), "systemName", resolver.SystemName, "displayName", resolver.DisplayName,
                 "state", 1, "internalId", externalId, "componentId", 70002);
         }
 
@@ -566,7 +779,12 @@ namespace K2WorkflowCli
 
         private static JObject DataField(string title, int internalId, bool hidden, int scope)
         {
-            var result = Obj("type", 6, "title", title, "isEmptyValue", true);
+            return DataField(title, internalId, hidden, scope, 6);
+        }
+
+        private static JObject DataField(string title, int internalId, bool hidden, int scope, int type)
+        {
+            var result = Obj("type", type, "title", title, "isEmptyValue", true);
             if (hidden) result["hidden"] = true;
             if (scope != 0) result["scope"] = scope;
             result["internalId"] = internalId; result["componentId"] = 50000;
@@ -632,26 +850,31 @@ namespace K2WorkflowCli
         }
         private static JArray DecisionTrackedReferences()
         {
+            return DecisionTrackedReferences(3, 4, 4, 5);
+        }
+
+        private static JArray DecisionTrackedReferences(int taskId, int decisionId, int approvedLinkId, int rejectedLinkId)
+        {
+            var task = "root.nodes[{\"internalId\":" + taskId + "}]";
+            var decision = "root.nodes[{\"internalId\":" + decisionId + "}]";
             return Arr(
-                Tracked(1, "root.nodes[{\"internalId\":3}].children[{\"internalId\":1}].configuration.actions[{\"internalId\":1}]",
-                    "root.nodes[{\"internalId\":3}].configuration.outcomes[{\"internalId\":1}].linkedActionReference"),
-                Tracked(2, "root.nodes[{\"internalId\":3}].children[{\"internalId\":1}].configuration.actions[{\"internalId\":2}]",
-                    "root.nodes[{\"internalId\":3}].configuration.outcomes[{\"internalId\":2}].linkedActionReference"),
-                Tracked(3, "root.nodes[{\"internalId\":3}].configuration.outcomes[{\"internalId\":1}]",
-                    "root.nodes[{\"internalId\":3}].children[{\"internalId\":1}].configuration.votingRuleConsensusSelectedOutcomeReference",
-                    "root.nodes[{\"internalId\":4}].configuration.outcomes[{\"internalId\":1}].linkedOutcomeReference",
-                    "root.nodes[{\"internalId\":4}].configuration.outcomeRule.statements[{\"internalId\":1}].IfExpressions[{\"internalId\":1}].expressions[{\"internalId\":1}].outcomeReference"),
-                Tracked(4, "root.nodes[{\"internalId\":3}].children[{\"internalId\":1}]", "root.nodes[{\"internalId\":4}].configuration.outcomesEventReference"),
-                Tracked(5, "root.nodes[{\"internalId\":4}].configuration.outcomes[{\"internalId\":1}]",
-                    "root.links[{\"internalId\":4}].configuration.associatedOutcomeReference", "root.nodes[{\"internalId\":4}].ui.leftPorts[{\"internalId\":2}].outcomeReference"),
-                Tracked(6, "root.nodes[{\"internalId\":3}].configuration.outcomes[{\"internalId\":2}]",
-                    "root.nodes[{\"internalId\":4}].configuration.outcomes[{\"internalId\":2}].linkedOutcomeReference",
-                    "root.nodes[{\"internalId\":4}].configuration.outcomeRule.statements[{\"internalId\":1}].elseStatements[{\"internalId\":1}].IfExpressions[{\"internalId\":1}].expressions[{\"internalId\":1}].outcomeReference"),
-                Tracked(7, "root.nodes[{\"internalId\":4}].configuration.outcomes[{\"internalId\":2}]",
-                    "root.links[{\"internalId\":5}].configuration.associatedOutcomeReference", "root.nodes[{\"internalId\":4}].ui.rightPorts[{\"internalId\":2}].outcomeReference"),
-                Tracked(8, "root.nodes[{\"internalId\":3}]",
-                    "root.nodes[{\"internalId\":4}].configuration.outcomeRule.statements[{\"internalId\":1}].IfExpressions[{\"internalId\":1}].expressions[{\"internalId\":1}].activityReference",
-                    "root.nodes[{\"internalId\":4}].configuration.outcomeRule.statements[{\"internalId\":1}].elseStatements[{\"internalId\":1}].IfExpressions[{\"internalId\":1}].expressions[{\"internalId\":1}].activityReference"));
+                Tracked(1, task + ".children[{\"internalId\":1}].configuration.actions[{\"internalId\":1}]", task + ".configuration.outcomes[{\"internalId\":1}].linkedActionReference"),
+                Tracked(2, task + ".children[{\"internalId\":1}].configuration.actions[{\"internalId\":2}]", task + ".configuration.outcomes[{\"internalId\":2}].linkedActionReference"),
+                Tracked(3, task + ".configuration.outcomes[{\"internalId\":1}]",
+                    task + ".children[{\"internalId\":1}].configuration.votingRuleConsensusSelectedOutcomeReference",
+                    decision + ".configuration.outcomes[{\"internalId\":1}].linkedOutcomeReference",
+                    decision + ".configuration.outcomeRule.statements[{\"internalId\":1}].IfExpressions[{\"internalId\":1}].expressions[{\"internalId\":1}].outcomeReference"),
+                Tracked(4, task + ".children[{\"internalId\":1}]", decision + ".configuration.outcomesEventReference"),
+                Tracked(5, decision + ".configuration.outcomes[{\"internalId\":1}]",
+                    "root.links[{\"internalId\":" + approvedLinkId + "}].configuration.associatedOutcomeReference", decision + ".ui.leftPorts[{\"internalId\":2}].outcomeReference"),
+                Tracked(6, task + ".configuration.outcomes[{\"internalId\":2}]",
+                    decision + ".configuration.outcomes[{\"internalId\":2}].linkedOutcomeReference",
+                    decision + ".configuration.outcomeRule.statements[{\"internalId\":1}].elseStatements[{\"internalId\":1}].IfExpressions[{\"internalId\":1}].expressions[{\"internalId\":1}].outcomeReference"),
+                Tracked(7, decision + ".configuration.outcomes[{\"internalId\":2}]",
+                    "root.links[{\"internalId\":" + rejectedLinkId + "}].configuration.associatedOutcomeReference", decision + ".ui.rightPorts[{\"internalId\":2}].outcomeReference"),
+                Tracked(8, task,
+                    decision + ".configuration.outcomeRule.statements[{\"internalId\":1}].IfExpressions[{\"internalId\":1}].expressions[{\"internalId\":1}].activityReference",
+                    decision + ".configuration.outcomeRule.statements[{\"internalId\":1}].elseStatements[{\"internalId\":1}].IfExpressions[{\"internalId\":1}].expressions[{\"internalId\":1}].activityReference"));
         }
         private static JObject Tracked(int id, string definitionPath, params string[] references)
         {
@@ -670,7 +893,8 @@ namespace K2WorkflowCli
             }
         }
         private static string Default(string value, string fallback) { return string.IsNullOrWhiteSpace(value) ? fallback : value; }
-        private static JObject Endpoint() { return Obj("value", Component(10008), "directive", "k2-endpoint", "componentId", 80003); }
+        private static JObject Endpoint() { return Endpoint(Component(10008)); }
+        private static JObject Endpoint(JObject value) { return Obj("value", value, "directive", "k2-endpoint", "componentId", 80003); }
         private static JObject OutcomeStatement(int id) { return Obj("linkedOutcomeReferences", Arr("root.configuration.outcomes[{\"internalId\":" + id + "}]"), "directive", "k2-outcome-statement", "internalId", 1, "componentId", 80006); }
         private static JObject Component(int id) { return Obj("componentId", id); }
 

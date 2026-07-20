@@ -65,6 +65,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ApprovalMatrixSql.cs" />
     <Compile Include="Cli.cs" />
     <Compile Include="K2Manager.cs" />
     <Compile Include="Manifest.cs" />

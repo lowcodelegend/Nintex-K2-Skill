@@ -133,6 +133,34 @@ namespace K2WorkflowCli
                 if (!Uri.TryCreate(task.FormUrl, UriKind.Absolute, out uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
                     throw new CliException("workflow.userTask.formUrl must be an absolute HTTP(S) URL when workflow.smartForms is omitted.");
             }
+
+            if (Workflow.ApprovalMatrix != null) ValidateApprovalMatrix(Workflow.ApprovalMatrix);
+        }
+
+        private void ValidateApprovalMatrix(ApprovalMatrixSettings matrix)
+        {
+            if (Workflow.SmartForms == null) throw new CliException("workflow.approvalMatrix requires workflow.smartForms so request properties can be mapped into the resolver.");
+            if (string.IsNullOrWhiteSpace(matrix.Name)) matrix.Name = Workflow.Name + " Resolve Approval Matrix";
+            Required(matrix.SmartObject, "workflow.approvalMatrix.smartObject");
+            if (string.IsNullOrWhiteSpace(matrix.Method)) matrix.Method = "List";
+            Required(matrix.MatrixCode, "workflow.approvalMatrix.matrixCode");
+            if (string.IsNullOrWhiteSpace(matrix.MatrixCodeInput)) matrix.MatrixCodeInput = "MatrixCodeInput";
+            Required(matrix.AmountProperty, "workflow.approvalMatrix.amountProperty");
+            if (string.IsNullOrWhiteSpace(matrix.AmountInput)) matrix.AmountInput = "AmountInput";
+            if (string.IsNullOrWhiteSpace(matrix.CurrentStageInput)) matrix.CurrentStageInput = "CurrentStageInput";
+            if (string.IsNullOrWhiteSpace(matrix.HasApproverProperty)) matrix.HasApproverProperty = "HasApprover";
+            if (string.IsNullOrWhiteSpace(matrix.StageProperty)) matrix.StageProperty = "StageNumber";
+            if (string.IsNullOrWhiteSpace(matrix.ApproverProperty)) matrix.ApproverProperty = "ApproverValue";
+            if (string.IsNullOrWhiteSpace(matrix.ApproverTypeProperty)) matrix.ApproverTypeProperty = "ApproverType";
+            if (matrix.Dimensions == null) matrix.Dimensions = new List<ApprovalMatrixInputMapping>();
+            var inputNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var dimension in matrix.Dimensions)
+            {
+                if (dimension == null) throw new CliException("workflow.approvalMatrix.dimensions entries cannot be null.");
+                Required(dimension.RequestProperty, "workflow.approvalMatrix.dimensions.requestProperty");
+                Required(dimension.InputProperty, "workflow.approvalMatrix.dimensions.inputProperty");
+                if (!inputNames.Add(dimension.InputProperty)) throw new CliException("workflow.approvalMatrix dimension inputProperty values must be unique: " + dimension.InputProperty);
+            }
         }
 
         private static void Required(string value, string field)
@@ -175,6 +203,7 @@ namespace K2WorkflowCli
         [JsonProperty("requestStatusUpdate")] public RequestStatusUpdateSettings RequestStatusUpdate { get; set; }
         [JsonProperty("email")] public EmailSettings Email { get; set; }
         [JsonProperty("userTask")] public UserTaskSettings UserTask { get; set; }
+        [JsonProperty("approvalMatrix")] public ApprovalMatrixSettings ApprovalMatrix { get; set; }
         [JsonProperty("smartForms")] public SmartFormsSettings SmartForms { get; set; }
         [JsonIgnore] public string ProcessFolderName { get; set; }
         [JsonIgnore] public string ProcessFullName { get { return ProcessFolderName + "\\" + Name; } }
@@ -221,6 +250,29 @@ namespace K2WorkflowCli
         [JsonProperty("subject")] public string Subject { get; set; }
         [JsonProperty("body")] public string Body { get; set; }
         [JsonProperty("richText")] public bool RichText { get; set; }
+    }
+
+    internal sealed class ApprovalMatrixSettings
+    {
+        [JsonProperty("name")] public string Name { get; set; }
+        [JsonProperty("smartObject")] public string SmartObject { get; set; }
+        [JsonProperty("method")] public string Method { get; set; }
+        [JsonProperty("matrixCode")] public string MatrixCode { get; set; }
+        [JsonProperty("matrixCodeInput")] public string MatrixCodeInput { get; set; }
+        [JsonProperty("amountProperty")] public string AmountProperty { get; set; }
+        [JsonProperty("amountInput")] public string AmountInput { get; set; }
+        [JsonProperty("currentStageInput")] public string CurrentStageInput { get; set; }
+        [JsonProperty("hasApproverProperty")] public string HasApproverProperty { get; set; }
+        [JsonProperty("stageProperty")] public string StageProperty { get; set; }
+        [JsonProperty("approverProperty")] public string ApproverProperty { get; set; }
+        [JsonProperty("approverTypeProperty")] public string ApproverTypeProperty { get; set; }
+        [JsonProperty("dimensions")] public List<ApprovalMatrixInputMapping> Dimensions { get; set; }
+    }
+
+    internal sealed class ApprovalMatrixInputMapping
+    {
+        [JsonProperty("requestProperty")] public string RequestProperty { get; set; }
+        [JsonProperty("inputProperty")] public string InputProperty { get; set; }
     }
 
     internal sealed class SmartFormsSettings

@@ -45,6 +45,7 @@ namespace K2SqlCli
                     RequireConfirmation(options, "deploy");
                     sql.EnsureDatabase();
                     sql.RunScripts();
+                    sql.ApplyApprovalMatrices();
                     sql.EnsureRuntimeAccess();
                     var instanceGuid = k2.EnsureServiceInstance();
                     k2.GenerateSmartObjects(instanceGuid);
@@ -60,6 +61,7 @@ namespace K2SqlCli
                     return 0;
 
                 case "inspect":
+                    sql.InspectApprovalMatrices();
                     Inspect(k2);
                     return 0;
 
@@ -91,6 +93,7 @@ namespace K2SqlCli
             {
                 Console.WriteLine("  SQL script: apply " + manifest.ResolvePath(script));
             }
+            new ApprovalMatrixSql(manifest).PrintPlan();
             if (!string.IsNullOrWhiteSpace(manifest.Database.RuntimePrincipal))
             {
                 Console.WriteLine("  SQL runtime access: grant DML, EXECUTE, and VIEW DEFINITION to " + manifest.Database.RuntimePrincipal);
@@ -166,7 +169,7 @@ namespace K2SqlCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2sql 0.2.1");
+            Console.WriteLine("k2sql 0.3.0");
         }
 
         private static void PrintHelp()

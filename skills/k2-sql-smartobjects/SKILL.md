@@ -1,6 +1,6 @@
 ---
 name: k2-sql-smartobjects
-description: Build, update, inspect, verify, and clean up SQL Server-backed SmartObjects in self-hosted Nintex K2 Five using declarative JSON manifests and the bundled k2sql .NET CLI. Use for SQL data modeling, lookup/reference tables, constraints and foreign keys, SQL tables/views/stored procedures, SQL Server Service Instances, generated SmartObjects, K2 SQL integration troubleshooting, or repeatable database deployments. Do not use for SmartBox, SharePoint, REST, Oracle, SmartForms, or workflow construction.
+description: Build, update, inspect, verify, and clean up SQL Server-backed SmartObjects in self-hosted Nintex K2 Five using declarative JSON manifests and the bundled k2sql .NET CLI. Use for SQL data modeling, generic threshold/dimensional/multi-stage approval matrices, lookup/reference tables, constraints and foreign keys, SQL tables/views/stored procedures, SQL Server Service Instances, generated SmartObjects, K2 SQL integration troubleshooting, or repeatable database deployments. Do not use for SmartBox, SharePoint, REST, Oracle, SmartForms, or workflow construction.
 ---
 
 # K2 SQL SmartObjects
@@ -11,7 +11,8 @@ Deploy a SQL model and its K2 SQL Server Service Instance as one repeatable unit
 
 1. Confirm the target is self-hosted K2 Five and the data source is Microsoft SQL Server. If the installed sibling `k2-builder` skill provides `scripts/k2env.ps1`, validate and load its selected/default environment profile before performing environment discovery; explicit requirements override profile values.
 2. Read [references/sql-design.md](references/sql-design.md) before designing tables, views, or procedures.
-3. Read [references/manifest.md](references/manifest.md) and create a manifest plus ordered, idempotent SQL scripts. For a complete solution, set `application.rootCategoryPath` to the shared solution root; the CLI creates and uses the fixed `<root>\Data` category for generated SmartObjects.
+3. Read [references/manifest.md](references/manifest.md) and create a manifest plus ordered, idempotent SQL scripts. When approval routing depends on amount, dimensions, or stages, also read [references/approval-matrices.md](references/approval-matrices.md) and declare it under `approvalMatrices`; do not bury maintainable routing rules in workflow branches.
+   For a complete solution, set `application.rootCategoryPath` to the shared solution root; the CLI creates and uses the fixed `<root>\Data` category for generated SmartObjects.
    When this belongs to a complete solution, use its three- or four-letter uppercase short code as the `<CODE>.` prefix for the manifest, database, and Service Instance names. Use the code as the SQL schema so every fully qualified table, view, and procedure name begins `<CODE>.`; generated SmartObject names must retain the same prefix.
    Prefer lookup tables plus foreign keys for user-selected controlled values. Keep code/text foreign keys for small applications unless normalization is requested; prefer surrogate lookup keys for complex applications. Coordinate lookup controls and administrative UX with `$k2-smartforms`.
 4. Keep passwords out of JSON and SQL. Name an environment variable in the manifest when explicit credentials are unavoidable.
@@ -59,7 +60,7 @@ Deploy a SQL model and its K2 SQL Server Service Instance as one repeatable unit
 
 The CLI performs deployment in this order:
 
-`create database → apply SQL scripts → grant optional runtime access → create/update and refresh Service Instance → generate/update SmartObjects → place them in <root>\Data → verify SQL → verify categories and smoke-test K2`
+`create database → apply SQL scripts → create/update approval-matrix tables/procedures and seeds → grant optional runtime access → create/update and refresh Service Instance → generate/update SmartObjects → place them in <root>\Data → verify SQL/matrix terminal behavior → verify categories and smoke-test K2`
 
 It discovers K2 from `K2_INSTALL_DIR`, the SourceCode registry key, or `C:\Program Files\K2`. It builds as a 64-bit .NET Framework executable and resolves the installed K2 client assemblies at runtime.
 

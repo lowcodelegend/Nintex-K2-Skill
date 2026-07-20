@@ -17,6 +17,7 @@ namespace K2WorkflowCli
         private readonly Type _clientType;
         private readonly string _userName;
         private SmartObjectDescriptor _smartObject;
+        private SmartObjectMethodDescriptor _approvalMatrix;
         private SmartFormsIntegrationDescriptor _smartForm;
 
         private static JToken At(JToken token, params object[] path)
@@ -67,9 +68,11 @@ namespace K2WorkflowCli
             else if (string.Equals(_manifest.Workflow.Kind, "request-approval", StringComparison.OrdinalIgnoreCase))
             {
                 if (_smartObject == null) _smartObject = SmartObjectMetadata.Load(_manifest.K2, _manifest.Workflow.RequestStatusUpdate);
+                if (_manifest.Workflow.ApprovalMatrix != null && _approvalMatrix == null)
+                    _approvalMatrix = SmartObjectMetadata.LoadMethod(_manifest.K2, _manifest.Workflow.ApprovalMatrix.SmartObject, _manifest.Workflow.ApprovalMatrix.Method);
                 if (_manifest.Workflow.SmartForms != null && _smartForm == null)
                     _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Load(_manifest.Workflow);
-                json = WorkflowJsonBuilder.BuildRequestApproval(_manifest.Workflow, _smartObject, _smartForm);
+                json = WorkflowJsonBuilder.BuildRequestApproval(_manifest.Workflow, _smartObject, _smartForm, _approvalMatrix);
             }
             else json = WorkflowJsonBuilder.BuildStartEnd(_manifest.Workflow.Name);
             return WorkflowJsonBuilder.ParseAndValidate(json, _manifest.Workflow.Name).ToString(Formatting.None);
@@ -84,6 +87,13 @@ namespace K2WorkflowCli
             Console.WriteLine("Action: " + (existing.HasValue ? "update JSON process " + existing.Value : "create JSON process"));
             Console.WriteLine("Publish: " + _manifest.Workflow.Publish);
             ReportTaskAssignmentPolicy();
+            if (_manifest.Workflow.ApprovalMatrix != null)
+            {
+                Console.WriteLine("Approval matrix: " + _manifest.Workflow.ApprovalMatrix.MatrixCode + " via " + _manifest.Workflow.ApprovalMatrix.SmartObject + "." + _manifest.Workflow.ApprovalMatrix.Method);
+                Console.WriteLine("Approval matrix amount: request." + _manifest.Workflow.ApprovalMatrix.AmountProperty);
+                foreach (var dimension in _manifest.Workflow.ApprovalMatrix.Dimensions)
+                    Console.WriteLine("Approval matrix dimension: request." + dimension.RequestProperty + " -> " + dimension.InputProperty);
+            }
             if (_manifest.Workflow.SmartForms != null)
             {
                 Console.WriteLine("SmartForm: " + _manifest.Workflow.SmartForms.Form);
@@ -198,7 +208,8 @@ namespace K2WorkflowCli
                     .Select(x => (int?)x["componentId"]).ToArray();
                 foreach (var required in new[] { 30011, 30004, 30009 })
                     if (!components.Contains(required)) throw new CliException("Saved request-approval workflow is missing event component " + required + ".");
-                VerifyOriginatorTaskAssignment(root);
+                if (_manifest.Workflow.ApprovalMatrix == null) VerifyOriginatorTaskAssignment(root);
+                else VerifyApprovalMatrixTaskAssignment(root);
                 var linkPaths = ((JArray)root["links"]).OfType<JObject>().Select(x =>
                 {
                     var ui = x["ui"] as JObject;
@@ -216,14 +227,15 @@ namespace K2WorkflowCli
                 {
                     var nodes = ((JArray)root["nodes"]).OfType<JObject>().ToArray();
                     var links = ((JArray)root["links"]).OfType<JObject>().ToArray();
-                    if (nodes.Length != 6 || links.Length != 5 ||
+                    var matrixEnabled = _manifest.Workflow.ApprovalMatrix != null;
+                    if ((!matrixEnabled && (nodes.Length != 6 || links.Length != 5)) || (matrixEnabled && (nodes.Length != 8 || links.Length != 8)) ||
                         !nodes.Any(x => string.Equals(Convert.ToString(x["systemName"]), "Decision", StringComparison.Ordinal)))
-                        throw new CliException("Saved SmartForms request-approval workflow does not have the expected six-node decision topology.");
-                    if (components.Count(x => x == 30011) != 3 || components.Count(x => x == 30004) != 3 || components.Count(x => x == 30009) != 1)
-                        throw new CliException("Saved SmartForms request-approval workflow does not contain three status updates, three emails, and one task.");
+                        throw new CliException("Saved SmartForms request-approval workflow does not have the expected decision topology.");
+                    if (components.Count(x => x == 30011) != (matrixEnabled ? 4 : 3) || components.Count(x => x == 30004) != 3 || components.Count(x => x == 30009) != 1)
+                        throw new CliException("Saved SmartForms request-approval workflow does not contain the expected status, resolver, email, and task events.");
                     if (_smartObject == null) _smartObject = SmartObjectMetadata.Load(_manifest.K2, _manifest.Workflow.RequestStatusUpdate);
                     var statusEvents = nodes.SelectMany(x => (x["children"] as JArray) == null ? Enumerable.Empty<JObject>() : ((JArray)x["children"]).OfType<JObject>())
-                        .Where(x => (int?)x["componentId"] == 30011).ToArray();
+                        .Where(x => (int?)x["componentId"] == 30011 && (_manifest.Workflow.ApprovalMatrix == null || !string.Equals(Convert.ToString(x["title"]), _manifest.Workflow.ApprovalMatrix.Name, StringComparison.Ordinal))).ToArray();
                     foreach (var statusEvent in statusEvents)
                     {
                         var controls = At(statusEvent, "configuration", "controlValues") as JObject;
@@ -249,6 +261,7 @@ namespace K2WorkflowCli
                         if (serviceMappings.Length != 4 || serviceMappings.Any(x => !string.Equals(Convert.ToString(x["smartObjectName"]), serviceReference, StringComparison.Ordinal)))
                             throw new CliException("A status update wizard does not target the SmartObject Service Functions reference, so the Designer cannot load input properties.");
                     }
+                    if (matrixEnabled) VerifyApprovalMatrixResolver(root);
                     var taskEvent = nodes.SelectMany(x => (x["children"] as JArray) == null ? Enumerable.Empty<JObject>() : ((JArray)x["children"]).OfType<JObject>())
                         .Single(x => (int?)x["componentId"] == 30009);
                     if (_manifest.Workflow.UserTask.Notification != null && _manifest.Workflow.UserTask.Notification.Enabled)
@@ -276,6 +289,8 @@ namespace K2WorkflowCli
                 var references = root["externalReferenceDefinitions"] as JArray;
                 if (references == null || !references.OfType<JObject>().Any(x => string.Equals(Convert.ToString(x["systemName"]), _manifest.Workflow.RequestStatusUpdate.SmartObject, StringComparison.OrdinalIgnoreCase)))
                     throw new CliException("Saved workflow is missing the request SmartObject reference.");
+                if (_manifest.Workflow.ApprovalMatrix != null && !references.OfType<JObject>().Any(x => string.Equals(Convert.ToString(x["systemName"]), _manifest.Workflow.ApprovalMatrix.SmartObject, StringComparison.OrdinalIgnoreCase)))
+                    throw new CliException("Saved workflow is missing the approval matrix resolver SmartObject reference.");
             }
             if (_manifest.Workflow.Publish)
             {
@@ -293,6 +308,12 @@ namespace K2WorkflowCli
             if (!string.Equals(_manifest.Workflow.Kind, "request-approval", StringComparison.OrdinalIgnoreCase) || _manifest.Workflow.UserTask == null) return;
             var requested = _manifest.Workflow.UserTask.Assignees == null ? new string[0] : _manifest.Workflow.UserTask.Assignees.ToArray();
             Console.WriteLine("User Task requested assignees: " + (requested.Length == 0 ? "(not supplied)" : string.Join(", ", requested)));
+            if (_manifest.Workflow.ApprovalMatrix != null)
+            {
+                Console.WriteLine("User Task effective assignee: approval matrix " + _manifest.Workflow.ApprovalMatrix.MatrixCode + "." + _manifest.Workflow.ApprovalMatrix.ApproverProperty);
+                Console.WriteLine("ERRATA [approval-matrix-demo-identities]: Generated matrix rows use the designing K2 identity for testing/demo and must be reviewed before production.");
+                return;
+            }
             Console.WriteLine("User Task effective assignee: $originator (ProcessOriginatorFQN)");
             Console.WriteLine("ERRATA [test-demo-routing]: Human task assignment is forced to the workflow Originator for testing/demo; requested production routing is not applied.");
         }
@@ -311,6 +332,38 @@ namespace K2WorkflowCli
                 !string.Equals(Convert.ToString(At(item, "smartFields", 0, "fieldName")), "ProcessOriginatorFQN", StringComparison.Ordinal))
                 throw new CliException("The generated User Task is not assigned exclusively to the workflow Originator test/demo identity.");
             Console.WriteLine("Verified User Task effective assignee: Originator (ProcessOriginatorFQN)");
+        }
+
+        private static void VerifyApprovalMatrixTaskAssignment(JObject root)
+        {
+            var task = ((JArray)root["nodes"]).OfType<JObject>()
+                .SelectMany(x => (x["children"] as JArray) == null ? Enumerable.Empty<JObject>() : ((JArray)x["children"]).OfType<JObject>())
+                .Single(x => (int?)x["componentId"] == 30009);
+            var destination = At(task, "configuration", "destinationSets", 0) as JObject;
+            var item = At(destination, "destinationItems", 0) as JObject;
+            if (destination == null || item == null ||
+                !string.Equals(Convert.ToString(destination["title"]), "Approval Matrix Approver", StringComparison.Ordinal) ||
+                !Convert.ToString(At(item, "smartFields", 0, "dataFieldReference")).EndsWith("[{\"internalId\":3}]", StringComparison.Ordinal))
+                throw new CliException("The generated User Task is not assigned to the approval matrix Approver data field.");
+            Console.WriteLine("Verified User Task effective assignee: approval matrix Approver data field");
+        }
+
+        private void VerifyApprovalMatrixResolver(JObject root)
+        {
+            if (_approvalMatrix == null) _approvalMatrix = SmartObjectMetadata.LoadMethod(_manifest.K2, _manifest.Workflow.ApprovalMatrix.SmartObject, _manifest.Workflow.ApprovalMatrix.Method);
+            var resolver = ((JArray)root["nodes"]).OfType<JObject>()
+                .SelectMany(x => (x["children"] as JArray) == null ? Enumerable.Empty<JObject>() : ((JArray)x["children"]).OfType<JObject>())
+                .Single(x => (int?)x["componentId"] == 30011 && string.Equals(Convert.ToString(x["title"]), _manifest.Workflow.ApprovalMatrix.Name, StringComparison.Ordinal));
+            var outputs = At(resolver, "configuration", "controlValues", "pmOutputs", "values") as JObject;
+            if (outputs == null) throw new CliException("Approval matrix resolver has no output mappings.");
+            foreach (var propertyName in new[] { _manifest.Workflow.ApprovalMatrix.HasApproverProperty, _manifest.Workflow.ApprovalMatrix.StageProperty, _manifest.Workflow.ApprovalMatrix.ApproverProperty, _manifest.Workflow.ApprovalMatrix.ApproverTypeProperty })
+            {
+                var property = _approvalMatrix.Returns.Single(x => string.Equals(x.SystemName, propertyName, StringComparison.OrdinalIgnoreCase));
+                var mapping = outputs[property.SystemName] as JObject;
+                if (mapping == null || !Convert.ToString(mapping["tokenReference"]).EndsWith("[{\"internalId\":" + property.InternalId + "}]", StringComparison.Ordinal))
+                    throw new CliException("Approval matrix resolver output is not mapped: " + propertyName);
+            }
+            Console.WriteLine("Verified approval matrix resolver mappings and multi-stage loop: " + _manifest.Workflow.ApprovalMatrix.MatrixCode);
         }
 
         public void Cleanup(bool deleteDeployed)

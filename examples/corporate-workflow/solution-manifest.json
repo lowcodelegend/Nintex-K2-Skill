@@ -45,8 +45,8 @@
           "create a valid corporate request",
           "prove the request was saved and capture RequestId",
           "prove one CWF.Request Approval instance started for RequestId",
-          "prove Originator Manager received the Review Corporate Request task notification",
-          "select Approve or Reject",
+          "prove CWF.REQUEST selected the expected amount/department rule and assigned its K2 approver value",
+          "select Approve and prove a second-stage rule is resolved when the threshold requires it, or select Reject",
           "prove WorkflowRequest.Status matches the selected outcome"
         ]
       }

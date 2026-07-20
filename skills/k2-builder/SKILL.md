@@ -1,6 +1,6 @@
 ---
 name: k2-builder
-description: Orchestrate complete self-hosted Nintex K2 Five solutions across SQL-backed SmartObjects, modern SmartForms, and HTML5 workflows, with durable K2 environment profiles. Use when turning requirements into an ordered artifact graph, coordinating specialist skills, designing lookup/normalization and Admin UX contracts, enforcing cross-artifact defaults such as categories and workflow form states, or verifying an end-to-end K2 application. Do not use as a replacement for the specialist skills or for unsupported K2 artifact types.
+description: Orchestrate complete self-hosted Nintex K2 Five solutions across SQL-backed SmartObjects, modern SmartForms, and HTML5 workflows, with durable K2 environment profiles. Use when turning requirements into an ordered artifact graph, coordinating specialist skills, designing lookup/normalization and generic approval-matrix/Admin UX contracts, enforcing cross-artifact defaults such as categories and workflow form states, or verifying an end-to-end K2 application. Do not use as a replacement for the specialist skills or for unsupported K2 artifact types.
 ---
 
 # K2 Solution Builder
@@ -20,7 +20,7 @@ Before investigating K2, read [environment-profiles.md](references/environment-p
 ## Build workflow
 
 1. Resolve and validate the durable K2 environment profile, then read [solution-manifest.md](references/solution-manifest.md) and create or update a solution manifest beside the specialist manifests. Copy [solution-manifest.template.json](assets/solution-manifest.template.json) when starting from scratch.
-2. Read [contracts.md](references/contracts.md) and resolve every cross-artifact decision before mutation.
+2. Read [contracts.md](references/contracts.md) and resolve every cross-artifact decision—including threshold, dimensional, or multi-stage approval routing—before mutation.
 3. Run `scripts/k2build.ps1 validate -Manifest <solution-manifest.json>`.
 4. Run `scripts/k2build.ps1 plan -Manifest <solution-manifest.json>` and present the non-mutating, dependency-ordered plan.
 5. Invoke each selected specialist skill and its CLI in this order: SmartObjects, SmartForms, workflows. Run the specialist `plan` first, deploy only after the plan is coherent, then verify before proceeding to dependants.

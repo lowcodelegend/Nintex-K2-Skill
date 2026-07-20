@@ -38,6 +38,59 @@
       "deleteRemoved": false
     }
   },
+  "approvalMatrices": [
+    {
+      "name": "CWF.Request approval matrix",
+      "schema": "CWF",
+      "table": "RequestApprovalMatrix",
+      "resolverProcedure": "ResolveRequestApproval",
+      "matrixCode": "CWF.REQUEST",
+      "dimensions": [
+        { "name": "DepartmentId", "type": "number" }
+      ],
+      "rules": [
+        {
+          "key": "DEFAULT-STAGE-1",
+          "stage": 1,
+          "minAmount": 0,
+          "priority": 100,
+          "approverType": "User",
+          "approver": "$designer",
+          "approverLabel": "Default Manager"
+        },
+        {
+          "key": "HR-MANAGER",
+          "stage": 1,
+          "minAmount": 0,
+          "maxAmount": 1000,
+          "priority": 10,
+          "conditions": { "DepartmentId": 1 },
+          "approverType": "User",
+          "approver": "$designer",
+          "approverLabel": "HR Manager"
+        },
+        {
+          "key": "HR-DIRECTOR",
+          "stage": 1,
+          "minAmount": 1000,
+          "priority": 10,
+          "conditions": { "DepartmentId": 1 },
+          "approverType": "User",
+          "approver": "$designer",
+          "approverLabel": "HR Director"
+        },
+        {
+          "key": "EXECUTIVE-STAGE-2",
+          "stage": 2,
+          "minAmount": 5000,
+          "priority": 10,
+          "approverType": "User",
+          "approver": "$designer",
+          "approverLabel": "Executive Approver"
+        }
+      ]
+    }
+  ],
   "verification": {
     "sqlObjects": [
       { "type": "table", "schema": "CWF", "name": "Department" },

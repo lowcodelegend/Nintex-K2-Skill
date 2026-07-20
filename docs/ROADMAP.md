@@ -12,17 +12,17 @@ The target solution flow is:
 
 The SQL SmartObjects, SmartForms, and workflow skills should evolve from repeatable full generation/replacement into safe iterative reconcilers. Each tool should be able to import or discover the current artifact state, compare it semantically with manifest intent, preview a dependency-aware patch, modify only tool-owned elements, preserve compatible unmanaged Designer work, detect drift and edit conflicts, verify the result, and retain an export/version checkpoint for rollback. This is a mid-horizon goal, not a capability of the current releases.
 
-## K2 solution builder — v0.7 workflow application shell implemented
+## K2 solution builder — v0.10 approval matrices implemented
 
-The `k2-builder` meta-skill defines a solution manifest, dependency-ordered specialist plan, cross-artifact contracts, workflow entry-state policy, lookup/administration policy, end-to-end verification gates, and deployment-ledger shape. Its workflow application shell now prefers separate list/details tabs and an optional native K2 Worklist/My Tasks tab while preserving SmartForms Start/Task integration. Its PowerShell planner validates manifest references, the required solution namespace, shared category structure, lookup declarations/bindings, modern-theme policy, dependencies, and default-state decisions. Its `k2env` CLI persists non-secret machine/user-level K2 profiles under `CODEX_HOME`. The v2 deployment ledger and mandatory user handoff itemize artifacts and expose manual intervention, custom-code gaps, placeholders, partial configuration, unsupported requirements, known limitations, and skipped verification as explicit errata.
+The `k2-builder` meta-skill defines a solution manifest, dependency-ordered specialist plan, cross-artifact contracts, workflow entry-state policy, lookup/administration policy, approval-matrix contract, end-to-end verification gates, and deployment-ledger shape. Its planner now validates matrix namespace, Admin maintenance UX, workflow matrix-code/dimension mappings, and designer-identity errata in addition to the existing category, theme, dependency, and default-state rules. Its `k2env` CLI persists non-secret machine/user-level K2 profiles under `CODEX_HOME`.
 
 Next increments should execute and aggregate structured specialist plans, capture a deployment ledger automatically, add authenticated browser scenarios, reconcile runtime form-state rules rather than only manifest intent, and coordinate safe reverse-order cleanup. Full semantic iterative reconciliation remains the mid-horizon goal shared with the three specialist skills.
 
 ## Sub-skills
 
-### 1. K2 SQL SmartObjects — implemented baseline
+### 1. K2 SQL SmartObjects — v0.3 approval matrices implemented
 
-Own SQL data modeling, scripts, SQL Server Service Instances, generated SQL SmartObjects, metadata verification, and runtime List smoke tests.
+Own SQL data modeling, scripts, generic threshold/dimensional/multi-stage approval rule tables and resolver procedures, SQL Server Service Instances, generated SQL SmartObjects, metadata verification, and runtime List smoke tests.
 
 Next increments:
 
@@ -39,9 +39,9 @@ Next increments:
 
 Create advanced/composite SmartObjects with controlled names, properties, methods, defaults, associations, and mappings to service objects. Cover cases where automatic generation is too coarse.
 
-### 3. K2 SmartForms builder — v0.3 tabs and native Worklist implemented
+### 3. K2 SmartForms builder — v0.4.1 tabs, Worklist, and Admin UX implemented
 
-The tool creates checked-in capture/list/content/editable-list views and multi-view forms from declarative manifests using supported K2 generation APIs. It validates SmartObjects, properties, methods, themes, explicit modern/legacy theme mode, stable version-free naming, collisions, and dependencies; converts declared capture fields into SmartObject-backed dropdowns; creates named tabs and a native K2 Worklist with click-to-open-task behavior; separates ordinary artifacts from `Admin` CRUD UX; and supports safe planning, exact replacement/cleanup, definition verification, and runtime-route probes. The corporate fixture proves eight views, four modern-mode Lithium forms, eight dropdown bindings, two tabbed workflow screens, one Worklist tab, and two Admin pages.
+The tool creates checked-in capture/list/content/editable-list views and multi-view forms from declarative manifests using supported K2 generation APIs. It converts declared capture fields into SmartObject-backed dropdowns, creates named tabs and a native K2 Worklist, separates ordinary artifacts from `Admin` CRUD UX, and verifies modern Style Profiles. The corporate fixture adds approval-matrix rule Admin views/form and uses the `PSF Nintex` Style Profile through system name `PSF UX v1`.
 
 Next increments:
 
@@ -56,9 +56,9 @@ Next increments:
 - Add declarative process/activity filters for native Worklist tabs.
 - **Mid-horizon iterative improvement:** import existing form/view definitions with stable artifact, control, and rule identities; track tool ownership; patch only declared layout, control, method, and rule changes; preserve unmanaged Designer customizations; surface merge conflicts before deployment; and support export-backed rollback.
 
-### 4. K2 workflow builder — v0.6 implemented
+### 4. K2 workflow builder — v0.8 approval matrices implemented
 
-The builder creates, exports, saves, publishes, inspects, verifies, and safely removes K2 Five HTML5 Workflow Designer JSON definitions. It creates solution-specific `<application root leaf> WFs` categories and rejects the problematic generic `Workflow`/`Workflows` names. Its request-approval baseline recreates the Human-example topology: a primary SmartForms item reference; Designer-visible Pending, Approved, and Rejected status mappings; Originator emails; a native task for the Originator's Manager with an optional customized built-in notification; Approved/Rejected decision routing; and additive Start/Task form rules through the same providers as the browser wizard. Exact connector geometry renders immediately. Post-publish unlock no longer performs the read that silently checked the process out again, and a fresh browser profile opens it on the first attempt.
+The builder creates, exports, saves, publishes, inspects, verifies, and safely removes K2 Five HTML5 Workflow Designer JSON definitions. Its direct request-approval path retains the Human-example baseline. The new matrix path adds a native resolver SmartObject event, typed output data fields, a has-approver decision, data-driven User Task assignment, and an Approve loop for multi-stage routing; Reject exits immediately and no-more-stages completes approval. SmartForms Start/Task integration and customized task notification remain native.
 
 Next increments:
 

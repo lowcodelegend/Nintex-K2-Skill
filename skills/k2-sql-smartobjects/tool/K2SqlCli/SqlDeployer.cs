@@ -105,6 +105,13 @@ namespace K2SqlCli
             }
         }
 
+        public void ApplyApprovalMatrices()
+        {
+            if (_manifest.ApprovalMatrices.Count == 0) return;
+            using (var connection = OpenConnection(_manifest.Database.Name))
+                new ApprovalMatrixSql(_manifest).Apply(connection, _manifest.Database.CommandTimeoutSeconds);
+        }
+
         public void EnsureRuntimeAccess()
         {
             var principal = _manifest.Database.RuntimePrincipal;
@@ -139,8 +146,16 @@ namespace K2SqlCli
                 {
                     VerifyQuery(connection, query);
                 }
+                new ApprovalMatrixSql(_manifest).Verify(connection, _manifest.Database.CommandTimeoutSeconds);
             }
             Console.WriteLine("SQL verification: OK");
+        }
+
+        public void InspectApprovalMatrices()
+        {
+            if (_manifest.ApprovalMatrices.Count == 0) return;
+            using (var connection = OpenConnection(_manifest.Database.Name))
+                new ApprovalMatrixSql(_manifest).Inspect(connection, _manifest.Database.CommandTimeoutSeconds);
         }
 
         public void DropDatabase()

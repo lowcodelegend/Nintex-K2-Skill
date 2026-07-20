@@ -32,24 +32,49 @@ namespace K2WorkflowCli
         public bool IsRequired { get; set; }
     }
 
+    internal sealed class SmartObjectMethodDescriptor
+    {
+        public string SystemName { get; set; }
+        public string DisplayName { get; set; }
+        public string MethodSystemName { get; set; }
+        public string MethodDisplayName { get; set; }
+        public string MethodType { get; set; }
+        public List<SmartObjectInputDescriptor> Inputs { get; set; }
+        public List<SmartObjectInputDescriptor> Returns { get; set; }
+    }
+
     internal static class SmartObjectMetadata
     {
-        public static SmartObjectDescriptor Load(K2Settings k2, RequestStatusUpdateSettings settings)
+        public static SmartObjectMethodDescriptor LoadMethod(K2Settings k2, string smartObjectName, string methodName)
         {
-            var server = new SmartObjectClientServer();
+            var server = Open(k2);
             try
             {
-                server.CreateConnection();
-                var connection = new SCConnectionStringBuilder
+                SmartObject smartObject;
+                try { smartObject = server.GetSmartObject(smartObjectName); }
+                catch (Exception ex) { throw new CliException("Unable to load SmartObject '" + smartObjectName + "': " + ex.Message); }
+                var method = smartObject.AllMethods.FirstOrDefault(x => string.Equals(x.Name, methodName, StringComparison.OrdinalIgnoreCase));
+                if (method == null) throw new CliException("SmartObject method was not found: " + smartObjectName + "." + methodName);
+                var required = new HashSet<string>(method.RequiredProperties.Cast<SmartProperty>().Select(x => x.Name), StringComparer.OrdinalIgnoreCase);
+                return new SmartObjectMethodDescriptor
                 {
-                    Authenticate = true,
-                    Host = k2.Host,
-                    Port = (uint)k2.Port,
-                    Integrated = true,
-                    IsPrimaryLogin = true,
-                    SecurityLabelName = k2.SecurityLabel
+                    SystemName = smartObject.Name,
+                    DisplayName = string.IsNullOrWhiteSpace(smartObject.Metadata.DisplayName) ? smartObject.Name : smartObject.Metadata.DisplayName,
+                    MethodSystemName = method.Name,
+                    MethodDisplayName = string.IsNullOrWhiteSpace(method.Metadata.DisplayName) ? method.Name : method.Metadata.DisplayName,
+                    MethodType = method.Type.ToString().ToLowerInvariant(),
+                    Inputs = method.InputProperties.Cast<SmartProperty>().Select((property, index) => Describe(property, index + 1, required.Contains(property.Name))).ToList(),
+                    Returns = method.ReturnProperties.Cast<SmartProperty>().Select((property, index) => Describe(property, index + 1, false)).ToList()
                 };
-                server.Connection.Open(connection.ConnectionString);
+            }
+            finally { Close(server); }
+        }
+
+        public static SmartObjectDescriptor Load(K2Settings k2, RequestStatusUpdateSettings settings)
+        {
+            var server = Open(k2);
+            try
+            {
                 SmartObject smartObject;
                 try { smartObject = server.GetSmartObject(settings.SmartObject); }
                 catch (Exception ex) { throw new CliException("Unable to load request SmartObject '" + settings.SmartObject + "': " + ex.Message); }
@@ -93,8 +118,30 @@ namespace K2WorkflowCli
             }
             finally
             {
-                if (server.Connection != null) { server.Connection.Close(); server.DeleteConnection(); }
+                Close(server);
             }
+        }
+
+        private static SmartObjectClientServer Open(K2Settings k2)
+        {
+            var server = new SmartObjectClientServer();
+            server.CreateConnection();
+            var connection = new SCConnectionStringBuilder
+            {
+                Authenticate = true,
+                Host = k2.Host,
+                Port = (uint)k2.Port,
+                Integrated = true,
+                IsPrimaryLogin = true,
+                SecurityLabelName = k2.SecurityLabel
+            };
+            server.Connection.Open(connection.ConnectionString);
+            return server;
+        }
+
+        private static void Close(SmartObjectClientServer server)
+        {
+            if (server != null && server.Connection != null) { server.Connection.Close(); server.DeleteConnection(); }
         }
 
         private static SmartObjectInputDescriptor Describe(SmartProperty property, int internalId, bool required)

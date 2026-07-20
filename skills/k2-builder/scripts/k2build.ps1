@@ -13,7 +13,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if ($Command -eq 'version') {
-    Write-Output 'k2build 0.9.0'
+    Write-Output 'k2build 0.10.0'
     exit 0
 }
 
@@ -185,6 +185,7 @@ $smartObjectsPath = $null
 $formsPath = $null
 $smartObjectsManifest = $null
 $formsManifest = $null
+$approvalMatrices = @()
 
 if ($null -ne $smartObjects) {
     $smartObjectsPath = Resolve-ComponentManifest $smartObjects 'components.smartObjects'
@@ -217,6 +218,31 @@ if ($null -ne $smartObjectsManifest) {
     foreach ($sqlObject in @(Get-PropertyValue $sqlVerification 'sqlObjects')) {
         $qualifiedName = ([string](Get-PropertyValue $sqlObject 'schema')) + '.' + ([string](Get-PropertyValue $sqlObject 'name'))
         Test-ShortCodePrefix $qualifiedName 'Fully qualified SQL object name'
+    }
+
+    $approvalMatrices = @(Get-PropertyValue $smartObjectsManifest 'approvalMatrices')
+    if ($approvalMatrices.Count -eq 1 -and $null -eq $approvalMatrices[0]) { $approvalMatrices = @() }
+    foreach ($matrix in $approvalMatrices) {
+        $matrixCode = [string](Get-PropertyValue $matrix 'matrixCode')
+        $matrixName = [string](Get-PropertyValue $matrix 'name')
+        $matrixSchema = [string](Get-PropertyValue $matrix 'schema')
+        Test-ShortCodePrefix $matrixName 'Approval matrix name'
+        Test-ShortCodePrefix $matrixCode 'Approval matrix code'
+        Test-ShortCodePrefix ($matrixSchema + '.' + [string](Get-PropertyValue $matrix 'table')) 'Approval matrix table'
+        Test-ShortCodePrefix ($matrixSchema + '.' + [string](Get-PropertyValue $matrix 'resolverProcedure')) 'Approval matrix resolver procedure'
+        $designerRules = @((Get-PropertyValue $matrix 'rules') | Where-Object { [string](Get-PropertyValue $_ 'approver') -eq '$designer' })
+        if ($designerRules.Count -gt 0) {
+            $errata.Add([pscustomobject]@{
+                id = 'approval-matrix-demo-identities'
+                category = 'placeholder'
+                severity = 'warning'
+                artifact = $matrixName
+                requestedAssignees = @($designerRules | ForEach-Object { [string](Get-PropertyValue $_ 'key') })
+                effectiveAssignee = '$designer (resolved to the deploying AD user as a K2 identity)'
+                description = 'Approval matrix seed rules use the designer identity for test/demo and must be reviewed before production.'
+                status = 'open'
+            })
+        }
     }
 }
 
@@ -301,6 +327,28 @@ if ($null -ne $formsManifest) {
             Test-VersionFreeName ([string](Get-PropertyValue $view 'name')) 'View name'
         }
     }
+
+
+    foreach ($matrix in $approvalMatrices) {
+        $matrixSchema = [string](Get-PropertyValue $matrix 'schema')
+        $matrixTable = [string](Get-PropertyValue $matrix 'table')
+        $matrixSuffix = '_' + $matrixSchema + '_' + $matrixTable
+        $matrixAdminViews = @($declaredViews | Where-Object {
+            ([string](Get-PropertyValue $_ 'smartObject')).EndsWith($matrixSuffix, [StringComparison]::OrdinalIgnoreCase) -and
+            [string](Get-PropertyValue $_ 'area') -eq 'admin'
+        })
+        if ($matrixAdminViews.Count -lt 2) {
+            Add-Issue "Approval matrix '$([string](Get-PropertyValue $matrix 'matrixCode'))' requires Admin capture/list views over its generated table SmartObject."
+        }
+        $matrixAdminViewNames = @($matrixAdminViews | ForEach-Object { [string](Get-PropertyValue $_ 'name') })
+        $matrixAdminForms = @($declaredForms | Where-Object {
+            [string](Get-PropertyValue $_ 'area') -eq 'admin' -and
+            @((Get-PropertyValue $_ 'views') | Where-Object { $matrixAdminViewNames -contains [string]$_ }).Count -gt 0
+        })
+        if ($matrixAdminForms.Count -eq 0) {
+            Add-Issue "Approval matrix '$([string](Get-PropertyValue $matrix 'matrixCode'))' requires an Admin maintenance form."
+        }
+    }
 }
 
 $workflowManifests = @{}
@@ -380,16 +428,36 @@ foreach ($workflowComponent in $workflows) {
             if ($requestedAssignees.Count -eq 0 -or ($requestedAssignees.Count -eq 1 -and $null -eq $requestedAssignees[0])) {
                 $requestedAssignees = @('$originator')
             }
-            $errata.Add([pscustomobject]@{
-                id = 'workflow-test-demo-originator-routing'
-                category = 'placeholder'
-                severity = 'warning'
-                artifact = $actualWorkflowName
-                requestedAssignees = @($requestedAssignees)
-                effectiveAssignee = '$originator'
-                description = 'Human task assignment is forced to the workflow Originator for testing/demo; requested production routing is not applied.'
-                status = 'open'
-            })
+            $approvalMatrix = Get-PropertyValue $workflowDefinition 'approvalMatrix'
+            if ($null -eq $approvalMatrix) {
+                $errata.Add([pscustomobject]@{
+                    id = 'workflow-test-demo-originator-routing'
+                    category = 'placeholder'
+                    severity = 'warning'
+                    artifact = $actualWorkflowName
+                    requestedAssignees = @($requestedAssignees)
+                    effectiveAssignee = '$originator'
+                    description = 'Human task assignment is forced to the workflow Originator for testing/demo; requested production routing is not applied.'
+                    status = 'open'
+                })
+            }
+            else {
+                $matrixCode = [string](Get-PropertyValue $approvalMatrix 'matrixCode')
+                Test-SmartObjectPrefix ([string](Get-PropertyValue $approvalMatrix 'smartObject')) 'Workflow approval-matrix resolver SmartObject'
+                $matchingMatrix = @($approvalMatrices | Where-Object { [string](Get-PropertyValue $_ 'matrixCode') -eq $matrixCode })
+                if ($matchingMatrix.Count -ne 1) {
+                    Add-Issue "Workflow '$actualWorkflowName' references approval matrix '$matrixCode', but the SmartObjects manifest does not declare it exactly once."
+                }
+                elseif ($null -ne $smartObjectsManifest) {
+                    $sqlDimensions = @((Get-PropertyValue $matchingMatrix[0] 'dimensions') | ForEach-Object { [string](Get-PropertyValue $_ 'name') + 'Input' })
+                    foreach ($mapping in @(Get-PropertyValue $approvalMatrix 'dimensions')) {
+                        $inputProperty = [string](Get-PropertyValue $mapping 'inputProperty')
+                        if ($sqlDimensions -notcontains $inputProperty) {
+                            Add-Issue "Workflow '$actualWorkflowName' maps unknown approval-matrix resolver input '$inputProperty'."
+                        }
+                    }
+                }
+            }
         }
         $workflowSmartForms = Get-PropertyValue $workflowDefinition 'smartForms'
         if ($null -ne $workflowSmartForms) {
@@ -461,6 +529,15 @@ $result = [pscustomobject]@{
     dataCategoryPath = $dataCategoryPath
     adminCategoryPath = $adminCategoryPath
     dataModelComplexity = $dataModelComplexity
+    approvalMatrices = @($approvalMatrices | ForEach-Object {
+        [pscustomobject]@{
+            name = [string](Get-PropertyValue $_ 'name')
+            matrixCode = [string](Get-PropertyValue $_ 'matrixCode')
+            dimensions = @((Get-PropertyValue $_ 'dimensions') | ForEach-Object { [string](Get-PropertyValue $_ 'name') })
+            stages = @((Get-PropertyValue $_ 'rules') | ForEach-Object { [int](Get-PropertyValue $_ 'stage') } | Sort-Object -Unique)
+            seededRules = @((Get-PropertyValue $_ 'rules')).Count
+        }
+    })
     issues = @($issues)
     resolvedPolicies = @($resolvedPolicies)
     errata = @($errata)
@@ -477,6 +554,9 @@ else {
     Write-Output "SmartObject category: $dataCategoryPath"
     Write-Output "Administration category: $adminCategoryPath"
     Write-Output "Data model complexity: $dataModelComplexity"
+    foreach ($matrix in $result.approvalMatrices) {
+        Write-Output ("Approval matrix: {0} ({1} rule(s), stages={2}, dimensions={3})" -f $matrix.matrixCode, $matrix.seededRules, ($matrix.stages -join ','), (($matrix.dimensions + @('Amount')) -join ','))
+    }
     if ($Command -eq 'plan') {
         Write-Output 'Dependency-ordered specialist plan:'
         foreach ($item in $result.plan) {

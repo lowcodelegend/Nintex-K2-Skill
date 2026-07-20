@@ -9,6 +9,7 @@
   "application": {
     "rootCategoryPath": "K2 Skills\\CWF.Corporate Workflow",
     "theme": "Lithium",
+    "styleProfile": "PSF UX v1",
     "replaceExisting": true,
     "checkIn": true,
     "lookups": [
@@ -205,6 +206,54 @@
         "defaultListMethod": "List",
         "area": "admin",
         "options": ["toolbar"]
+      },
+      {
+        "name": "CWF.Approval Matrix Rule Editor",
+        "smartObject": "CWF_CorporateWorkflowTest_CWF_RequestApprovalMatrix",
+        "type": "capture",
+        "properties": [
+          "RuleId",
+          "MatrixCode",
+          "RuleKey",
+          "StageNumber",
+          "MinAmount",
+          "MaxAmount",
+          "Priority",
+          "DepartmentId",
+          "ApproverType",
+          "ApproverValue",
+          "ApproverLabel",
+          "IsActive"
+        ],
+        "methods": ["Create", "Read", "Update", "Delete"],
+        "lookupControls": [
+          { "property": "DepartmentId", "lookup": "Department", "allowEmptySelection": true }
+        ],
+        "area": "admin",
+        "options": ["editable", "labels-left", "colon-labels", "toolbar"]
+      },
+      {
+        "name": "CWF.Approval Matrix Rule List",
+        "smartObject": "CWF_CorporateWorkflowTest_CWF_RequestApprovalMatrix",
+        "type": "list",
+        "properties": [
+          "RuleId",
+          "MatrixCode",
+          "RuleKey",
+          "StageNumber",
+          "MinAmount",
+          "MaxAmount",
+          "DepartmentId",
+          "ApproverLabel",
+          "ApproverType",
+          "ApproverValue",
+          "Priority",
+          "IsActive"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "area": "admin",
+        "options": ["toolbar"]
       }
     ],
     "forms": [
@@ -255,6 +304,13 @@
         "area": "admin",
         "options": ["no-tabs"],
         "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]
+      },
+      {
+        "name": "CWF.Approval Matrix Administration",
+        "views": ["CWF.Approval Matrix Rule Editor", "CWF.Approval Matrix Rule List"],
+        "area": "admin",
+        "options": ["no-tabs"],
+        "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]
       }
     ]
   },
@@ -267,13 +323,16 @@
       "CWF.Request Type Editor",
       "CWF.Request Type List",
       "CWF.Request Priority Editor",
-      "CWF.Request Priority List"
+      "CWF.Request Priority List",
+      "CWF.Approval Matrix Rule Editor",
+      "CWF.Approval Matrix Rule List"
     ],
     "expectedForms": [
       "CWF.Request Management",
       "CWF.Approval Task Management",
       "CWF.Request Type Administration",
-      "CWF.Request Priority Administration"
+      "CWF.Request Priority Administration",
+      "CWF.Approval Matrix Administration"
     ],
     "smokeTestRuntime": true,
     "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime"

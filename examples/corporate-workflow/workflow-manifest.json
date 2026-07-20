@@ -49,6 +49,16 @@
         "richText": true
       }
     },
+    "approvalMatrix": {
+      "name": "CWF.Resolve Request Approval Matrix",
+      "smartObject": "CWF_CorporateWorkflowTest_CWF_ResolveRequestApproval",
+      "method": "List",
+      "matrixCode": "CWF.REQUEST",
+      "amountProperty": "Amount",
+      "dimensions": [
+        { "requestProperty": "DepartmentId", "inputProperty": "DepartmentIdInput" }
+      ]
+    },
     "smartForms": {
       "form": "CWF.Request Management",
       "startState": "CWF.Request Approval Start",

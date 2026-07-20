@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Web.Script.Serialization;
 
@@ -12,6 +13,7 @@ namespace K2SqlCli
         public ApplicationOptions Application { get; set; }
         public DatabaseOptions Database { get; set; }
         public K2Options K2 { get; set; }
+        public List<ApprovalMatrixDefinition> ApprovalMatrices { get; set; }
         public VerificationOptions Verification { get; set; }
 
         public DeploymentManifest()
@@ -19,6 +21,7 @@ namespace K2SqlCli
             Application = new ApplicationOptions();
             Database = new DatabaseOptions();
             K2 = new K2Options();
+            ApprovalMatrices = new List<ApprovalMatrixDefinition>();
             Verification = new VerificationOptions();
         }
 
@@ -63,6 +66,7 @@ namespace K2SqlCli
             if (Application == null) Application = new ApplicationOptions();
             if (Database == null) Database = new DatabaseOptions();
             if (K2 == null) K2 = new K2Options();
+            if (ApprovalMatrices == null) ApprovalMatrices = new List<ApprovalMatrixDefinition>();
             if (Verification == null) Verification = new VerificationOptions();
             if (K2.ServiceInstance == null) K2.ServiceInstance = new ServiceInstanceOptions();
             if (K2.SmartObjects == null) K2.SmartObjects = new SmartObjectGenerationOptions();
@@ -130,6 +134,85 @@ namespace K2SqlCli
                 var scriptPath = ResolvePath(script);
                 if (!File.Exists(scriptPath)) throw new CliException("SQL script not found: " + scriptPath);
             }
+
+            ValidateApprovalMatrices();
+        }
+
+        private void ValidateApprovalMatrices()
+        {
+            var matrixCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var matrix in ApprovalMatrices)
+            {
+                if (matrix == null) throw new CliException("approvalMatrices entries cannot be null.");
+                Require(matrix.Name, "approvalMatrices.name");
+                Require(matrix.Schema, "approvalMatrices.schema");
+                Require(matrix.Table, "approvalMatrices.table");
+                Require(matrix.ResolverProcedure, "approvalMatrices.resolverProcedure");
+                Require(matrix.MatrixCode, "approvalMatrices.matrixCode");
+                ValidateSqlIdentifier(matrix.Schema, "approvalMatrices.schema");
+                ValidateSqlIdentifier(matrix.Table, "approvalMatrices.table");
+                ValidateSqlIdentifier(matrix.ResolverProcedure, "approvalMatrices.resolverProcedure");
+                if (!matrixCodes.Add(matrix.MatrixCode)) throw new CliException("approvalMatrices.matrixCode values must be unique: " + matrix.MatrixCode);
+                if (matrix.Dimensions == null) matrix.Dimensions = new List<ApprovalMatrixDimension>();
+                if (matrix.Rules == null || matrix.Rules.Count == 0) throw new CliException("Approval matrix must contain at least one rule: " + matrix.MatrixCode);
+                var dimensionNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var dimension in matrix.Dimensions)
+                {
+                    if (dimension == null) throw new CliException("Approval matrix dimensions cannot be null: " + matrix.MatrixCode);
+                    Require(dimension.Name, "approvalMatrices.dimensions.name");
+                    ValidateSqlIdentifier(dimension.Name, "approvalMatrices.dimensions.name");
+                    if (!dimensionNames.Add(dimension.Name)) throw new CliException("Approval matrix dimension names must be unique: " + dimension.Name);
+                    if (string.IsNullOrWhiteSpace(dimension.Type)) dimension.Type = "text";
+                    var type = dimension.Type.ToLowerInvariant();
+                    if (type != "text" && type != "number" && type != "decimal" && type != "guid")
+                        throw new CliException("Approval matrix dimension type must be text, number, decimal, or guid: " + dimension.Name);
+                    if (type == "text" && dimension.MaxLength <= 0) dimension.MaxLength = 100;
+                    if (dimension.MaxLength > 4000) throw new CliException("Approval matrix text dimension maxLength cannot exceed 4000: " + dimension.Name);
+                }
+                var ruleKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var rule in matrix.Rules)
+                {
+                    if (rule == null) throw new CliException("Approval matrix rules cannot be null: " + matrix.MatrixCode);
+                    Require(rule.Key, "approvalMatrices.rules.key");
+                    if (!ruleKeys.Add(rule.Key)) throw new CliException("Approval matrix rule keys must be unique within " + matrix.MatrixCode + ": " + rule.Key);
+                    if (rule.Stage <= 0) throw new CliException("Approval matrix rule stage must be positive: " + matrix.MatrixCode + "/" + rule.Key);
+                    if (rule.MinAmount < 0) throw new CliException("Approval matrix rule minAmount cannot be negative: " + matrix.MatrixCode + "/" + rule.Key);
+                    if (rule.MaxAmount.HasValue && rule.MaxAmount.Value <= rule.MinAmount)
+                        throw new CliException("Approval matrix rule maxAmount must be greater than minAmount: " + matrix.MatrixCode + "/" + rule.Key);
+                    if (rule.Priority <= 0) rule.Priority = 100;
+                    if (string.IsNullOrWhiteSpace(rule.ApproverType)) rule.ApproverType = "User";
+                    if (!new[] { "User", "Group", "Role", "K2String" }.Contains(rule.ApproverType, StringComparer.OrdinalIgnoreCase))
+                        throw new CliException("Approval matrix approverType must be User, Group, Role, or K2String: " + matrix.MatrixCode + "/" + rule.Key);
+                    if (string.IsNullOrWhiteSpace(rule.Approver)) rule.Approver = "$designer";
+                    if (rule.Conditions == null) rule.Conditions = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var condition in rule.Conditions.Keys)
+                        if (!dimensionNames.Contains(condition)) throw new CliException("Approval matrix rule uses an undeclared dimension '" + condition + "': " + matrix.MatrixCode + "/" + rule.Key);
+                }
+
+                AddSqlExpectation("table", matrix.Schema, matrix.Table);
+                AddSqlExpectation("procedure", matrix.Schema, matrix.ResolverProcedure);
+                AddServiceObjectExpectation(matrix.Schema + "-" + matrix.Table);
+                AddServiceObjectExpectation(matrix.Schema + "-" + matrix.ResolverProcedure);
+            }
+        }
+
+        private void AddSqlExpectation(string type, string schema, string name)
+        {
+            if (!Verification.SqlObjects.Any(x => x != null && string.Equals(x.Type, type, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(x.Schema, schema, StringComparison.OrdinalIgnoreCase) && string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)))
+                Verification.SqlObjects.Add(new SqlObjectExpectation { Type = type, Schema = schema, Name = name });
+        }
+
+        private void AddServiceObjectExpectation(string name)
+        {
+            if (!Verification.SmartObjectServiceObjects.Contains(name, StringComparer.OrdinalIgnoreCase))
+                Verification.SmartObjectServiceObjects.Add(name);
+        }
+
+        private static void ValidateSqlIdentifier(string value, string field)
+        {
+            if (!Regex.IsMatch(value, @"^[A-Za-z_][A-Za-z0-9_]*$"))
+                throw new CliException(field + " must be a conventional SQL identifier: " + value);
         }
 
         public string ResolvePath(string relativeOrAbsolute)
@@ -203,6 +286,61 @@ namespace K2SqlCli
             SecurityLabel = "K2";
             ServiceInstance = new ServiceInstanceOptions();
             SmartObjects = new SmartObjectGenerationOptions();
+        }
+    }
+
+    public sealed class ApprovalMatrixDefinition
+    {
+        public string Name { get; set; }
+        public string Schema { get; set; }
+        public string Table { get; set; }
+        public string ResolverProcedure { get; set; }
+        public string MatrixCode { get; set; }
+        public List<ApprovalMatrixDimension> Dimensions { get; set; }
+        public List<ApprovalMatrixRule> Rules { get; set; }
+
+        public ApprovalMatrixDefinition()
+        {
+            Table = "ApprovalMatrixRule";
+            ResolverProcedure = "ResolveApprovalMatrix";
+            Dimensions = new List<ApprovalMatrixDimension>();
+            Rules = new List<ApprovalMatrixRule>();
+        }
+    }
+
+    public sealed class ApprovalMatrixDimension
+    {
+        public string Name { get; set; }
+        public string Type { get; set; }
+        public int MaxLength { get; set; }
+
+        public ApprovalMatrixDimension()
+        {
+            Type = "text";
+            MaxLength = 100;
+        }
+    }
+
+    public sealed class ApprovalMatrixRule
+    {
+        public string Key { get; set; }
+        public int Stage { get; set; }
+        public decimal MinAmount { get; set; }
+        public decimal? MaxAmount { get; set; }
+        public int Priority { get; set; }
+        public Dictionary<string, object> Conditions { get; set; }
+        public string ApproverType { get; set; }
+        public string Approver { get; set; }
+        public string ApproverLabel { get; set; }
+        public bool IsActive { get; set; }
+
+        public ApprovalMatrixRule()
+        {
+            Priority = 100;
+            Conditions = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            ApproverType = "User";
+            Approver = "$designer";
+            IsActive = true;
         }
     }
 

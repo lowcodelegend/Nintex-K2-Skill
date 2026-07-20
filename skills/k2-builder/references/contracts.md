@@ -43,6 +43,14 @@ A typical request workflow must establish all of the following:
 - SmartForms Start integration starts the workflow after the form's create/save action succeeds.
 - SmartForms Task integration opens the correct task state with its Serial Number context and exposes the configured task actions.
 
+## Approval-matrix contract
+
+Use a matrix when participants depend on amount, department, another request dimension, or stage. Keep the rules in an application SQL table and expose both that table and its resolver procedure as SmartObjects under `<root>\Data`. Use half-open amount bands, explicit priority, wildcard fallback rows, and a no-more-stages sentinel. Seed `$designer` as the deploying AD user's fully qualified K2 identity for test/demo unless the requirement provides explicit identities, and always record that placeholder in errata.
+
+Create Admin capture/list views and a maintenance form under `<root>\Admin` for every business-managed matrix. Bind normalized dimensions to lookup SmartObjects. The workflow must map the request amount/dimensions into the resolver, assign its task to the returned K2 destination string, loop approvals through later stages, reject immediately, and finish Approved only after `HasApprover=false`. The direct-task Originator override does not apply to matrix-routed tasks.
+
+End-to-end scenarios must cover exact threshold boundaries, each dimension-specific route, wildcard fallback, each stage, rejection, and the terminal no-more-stages result. The handoff must list every seed still pointing at the designer.
+
 ## Workflow application shell
 
 - Separate the primary request List view and request capture/details view into named tabs for ordinary workflow applications.
