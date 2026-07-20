@@ -44,9 +44,21 @@ namespace K2WorkflowCli
                 throw new CliException("application.rootCategoryPath is required.");
             ValidateNoVersion(Application.RootCategoryPath, "application.rootCategoryPath");
             if (Application.RootCategoryPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)
-                .Any(x => string.Equals(x, "Workflows", StringComparison.OrdinalIgnoreCase)))
-                throw new CliException("application.rootCategoryPath must be the application root; the CLI appends a Workflows subcategory.");
+                .Any(x => string.Equals(x, "Workflow", StringComparison.OrdinalIgnoreCase) || string.Equals(x, "Workflows", StringComparison.OrdinalIgnoreCase)))
+                throw new CliException("application.rootCategoryPath must not contain a category named Workflow or Workflows.");
+            if (string.IsNullOrWhiteSpace(Application.WorkflowCategoryName))
+                Application.WorkflowCategoryName = Application.RootLeafName + " WFs";
+            ValidateNoVersion(Application.WorkflowCategoryName, "application.workflowCategoryName");
+            if (Application.WorkflowCategoryName.IndexOfAny(new[] { '\\', '/' }) >= 0)
+                throw new CliException("application.workflowCategoryName must be a leaf name.");
+            if (string.Equals(Application.WorkflowCategoryName, "Workflow", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(Application.WorkflowCategoryName, "Workflows", StringComparison.OrdinalIgnoreCase))
+                throw new CliException("application.workflowCategoryName must be solution-specific and end in ' WFs'; do not use Workflow or Workflows.");
+            var expectedWorkflowCategory = Application.RootLeafName + " WFs";
+            if (!string.Equals(Application.WorkflowCategoryName, expectedWorkflowCategory, StringComparison.Ordinal))
+                throw new CliException("application.workflowCategoryName must be '<application root leaf> WFs': " + expectedWorkflowCategory);
             if (Workflow == null || string.IsNullOrWhiteSpace(Workflow.Name)) throw new CliException("workflow.name is required.");
+            Workflow.ProcessFolderName = Application.WorkflowCategoryName;
             ValidateNoVersion(Workflow.Name, "workflow.name");
             if (Workflow.Name.IndexOfAny(new[] { '\\', '/' }) >= 0) throw new CliException("workflow.name must be a leaf name.");
             if (string.IsNullOrWhiteSpace(Workflow.Kind)) Workflow.Kind = "start-end";
@@ -147,7 +159,9 @@ namespace K2WorkflowCli
     internal sealed class ApplicationSettings
     {
         [JsonProperty("rootCategoryPath")] public string RootCategoryPath { get; set; }
-        [JsonIgnore] public string WorkflowsCategoryPath { get { return RootCategoryPath.TrimEnd('\\', '/') + "\\Workflows"; } }
+        [JsonProperty("workflowCategoryName")] public string WorkflowCategoryName { get; set; }
+        [JsonIgnore] public string RootLeafName { get { return RootCategoryPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries).Last(); } }
+        [JsonIgnore] public string WorkflowCategoryPath { get { return RootCategoryPath.TrimEnd('\\', '/') + "\\" + WorkflowCategoryName; } }
     }
 
     internal sealed class WorkflowSettings
@@ -162,7 +176,8 @@ namespace K2WorkflowCli
         [JsonProperty("email")] public EmailSettings Email { get; set; }
         [JsonProperty("userTask")] public UserTaskSettings UserTask { get; set; }
         [JsonProperty("smartForms")] public SmartFormsSettings SmartForms { get; set; }
-        [JsonIgnore] public string ProcessFullName { get { return "Workflows\\" + Name; } }
+        [JsonIgnore] public string ProcessFolderName { get; set; }
+        [JsonIgnore] public string ProcessFullName { get { return ProcessFolderName + "\\" + Name; } }
     }
 
     internal sealed class RequestStatusUpdateSettings

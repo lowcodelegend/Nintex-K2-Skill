@@ -8,7 +8,10 @@
     "integrated": true,
     "securityLabel": "K2"
   },
-  "application": { "rootCategoryPath": "K2 Skills\\CWF.Corporate Workflow" },
+  "application": {
+    "rootCategoryPath": "K2 Skills\\CWF.Corporate Workflow",
+    "workflowCategoryName": "CWF.Corporate Workflow WFs"
+  },
   "workflow": {
     "name": "CWF.Request Approval",
     "kind": "request-approval",

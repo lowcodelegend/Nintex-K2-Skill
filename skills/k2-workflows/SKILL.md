@@ -11,7 +11,7 @@ Use `scripts/k2wf.ps1`; do not write to the K2 database or invoke legacy workflo
 
 1. If the installed sibling `k2-builder` skill provides `scripts/k2env.ps1`, validate and load its selected/default environment profile before performing environment discovery; explicit requirements override profile values. Then run `scripts/k2wf.ps1 doctor` and report the detected identity and JSON authoring model.
 2. Read [references/manifest.md](references/manifest.md) and create a manifest. Keep names and category paths free of version numbers; K2 owns artifact versions.
-   When this belongs to a complete solution, prefix the manifest, category leaf, workflow, Designer-visible step names, referenced SmartObject/form, and generated Start/Task states with the solution's `<CODE>.` namespace. Leave the fixed `Workflows` subfolder and standard action/status values unprefixed.
+   When this belongs to a complete solution, prefix the manifest, category leaf, workflow, Designer-visible step names, referenced SmartObject/form, and generated Start/Task states with the solution's `<CODE>.` namespace. Set `application.workflowCategoryName` to `<application root leaf> WFs`; never use `Workflow` or `Workflows` as the workflow category name. Leave standard action/status values unprefixed.
 3. Run `plan`, review exact category/name/action, then run `render` when JSON review is useful.
 4. Run `deploy ... --confirm` only after the plan. A published workflow creates a K2 runtime major version; a draft remains designer JSON only.
 5. Run `inspect` and `verify`. Verification must prove both the saved JSON and, when `publish=true`, the runtime process definition. For SmartForms integration it must also prove that the declared Start and Task states exist, the Task state is not default, and the Start state's runtime default matches `makeStartStateDefault`.
@@ -29,7 +29,7 @@ Use `$environment:From Address`, `$originator`, and `$originatorManager` for the
 
 Use `workflow.kind=start-end` for the minimal smoke-test baseline. Use `json-file` only with a definition produced by this K2 Five HTML5 designer schema; the CLI rejects non-JSON/legacy roots and normalizes the root name.
 
-The CLI creates a `Workflows` subcategory beneath an existing application root. It will not create an application root or version folder. It refuses replacement unless `replaceExisting=true`.
+The CLI creates the solution-specific `application.workflowCategoryName` subcategory beneath an existing application root. When omitted it defaults to `<application root leaf> WFs`; complete-solution manifests must declare that value explicitly. It rejects generic `Workflow`/`Workflows` category names, will not create an application root or version folder, and refuses replacement unless `replaceExisting=true`.
 
 Read [references/design.md](references/design.md) before extending generated steps or touching provider internals. Read [references/cli.md](references/cli.md) for commands and cleanup behavior.
 

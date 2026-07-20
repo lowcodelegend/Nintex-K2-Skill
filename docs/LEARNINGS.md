@@ -16,6 +16,8 @@ The reusable environment profile now lives under `%CODEX_HOME%\k2`, outside proj
 
 Complete solutions use one uppercase three- or four-letter short code as a namespace. The `<CODE>.` prefix is applied across databases, Service Instances, category leaves, generated SmartObjects, SmartForms, workflows, Designer-visible workflow steps, and integration states. Using the code as the SQL schema makes fully qualified SQL object names follow the same convention without adding noise to column/property names.
 
+Do not use the generic category names `Workflow` or `Workflows` for HTML5 workflows. K2's workflow folder/process naming behavior makes those names troublesome. Use a solution-specific child named `<prefixed application root leaf> WFs`; the workflow runtime full name then becomes `<category name>\<workflow name>`.
+
 ## Supported K2 API path
 
 The tool uses supported client/management APIs on port 5555 rather than altering the K2 database:

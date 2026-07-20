@@ -69,6 +69,7 @@ The solution manifest is the orchestration contract. It references specialist ma
 - `components.smartObjects.manifest` points to a `$k2-sql-smartobjects` manifest.
 - `components.forms.manifest` points to a `$k2-smartforms` manifest.
 - `components.workflows` is an array of named `$k2-workflows` manifests.
+- Each referenced workflow manifest must set `application.workflowCategoryName` to `<application root leaf> WFs` (for example, `EXP.Expense Approval WFs`). Generic `Workflow` or `Workflows` category names are invalid.
 - Manifest paths are relative to the solution manifest.
 - `dependsOn` makes deployment order explicit. Forms normally depend on SmartObjects; SmartForms-integrated workflows normally depend on both.
 - `policies.versionFreeNames` and `policies.modernForms` should normally remain true.

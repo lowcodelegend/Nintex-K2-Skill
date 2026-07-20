@@ -14,7 +14,7 @@ Derive the code from the business solution name, check it against other applicat
 
 Apply it to the solution name, database, Service Instance system/display names, application category leaf, generated SmartObject system names, views, forms, workflows, workflow steps, and workflow-created form states. Make fully qualified SQL object names begin with the code, normally by using the code as the SQL schema (`FIN.Request`, `FIN.RequestSummary`, `FIN.Request_Submit`).
 
-Do not prefix fixed K2-generated subfolders (`Views`, `Forms`, `Workflows`) or ordinary internal vocabulary such as property names, SmartObject method names, task actions, and status values. Do not abbreviate the code differently in different layers.
+Do not prefix fixed K2-generated `Views` and `Forms` subfolders or ordinary internal vocabulary such as property names, SmartObject method names, task actions, and status values. Name the workflow child category `<prefixed application root leaf> WFs`—for example, `FIN.Expense Approval WFs`. Never call a workflow category `Workflow` or `Workflows`; those generic names interact badly with K2's workflow folder system. Do not abbreviate the code differently in different layers.
 
 Names shared across manifests must resolve to the same K2 artifacts:
 

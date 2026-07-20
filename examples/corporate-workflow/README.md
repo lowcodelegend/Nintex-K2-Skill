@@ -43,7 +43,7 @@ Example runtime URL:
 
 ## Workflow baseline
 
-`workflow-manifest.json` creates `CWF.Request Approval` in `K2 Skills\CWF.Corporate Workflow\Workflows` as SmartForm Start → Pending Approval status plus Originator email → task the Originator's Manager → Approved/Rejected decision → matching final status plus Originator email. It uses `CWF.Request Management` as the primary SmartForms item reference and additively creates `CWF.Request Approval Start` and `CWF.Request Approval Task` states with native StartProcess/LoadProcess/ActionProcess rules. The User Task also enables K2's built-in customized notification with participant name, request Title/Description/Amount, and the native worklist-item link.
+`workflow-manifest.json` creates `CWF.Request Approval` in `K2 Skills\CWF.Corporate Workflow\CWF.Corporate Workflow WFs` as SmartForm Start → Pending Approval status plus Originator email → task the Originator's Manager → Approved/Rejected decision → matching final status plus Originator email. It uses `CWF.Request Management` as the primary SmartForms item reference and additively creates `CWF.Request Approval Start` and `CWF.Request Approval Task` states with native StartProcess/LoadProcess/ActionProcess rules. The User Task also enables K2's built-in customized notification with participant name, request Title/Description/Amount, and the native worklist-item link.
 
 ```powershell
 $workflowSkillRoot = Join-Path $env:USERPROFILE '.codex\skills\k2-workflows'

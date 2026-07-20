@@ -13,7 +13,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if ($Command -eq 'version') {
-    Write-Output 'k2build 0.3.0'
+    Write-Output 'k2build 0.4.0'
     exit 0
 }
 
@@ -145,6 +145,8 @@ if ([string]::IsNullOrWhiteSpace($rootCategoryPath)) {
 } else {
     Test-ShortCodeCategoryPath $rootCategoryPath 'Root category leaf'
 }
+$rootSegments = @($rootCategoryPath.Split([char[]]'\/', [StringSplitOptions]::RemoveEmptyEntries))
+$rootLeaf = if ($rootSegments.Count -gt 0) { $rootSegments[-1] } else { $null }
 
 $policies = Get-PropertyValue $solution 'policies'
 if ((Get-PropertyValue $policies 'versionFreeNames') -ne $false) {
@@ -287,6 +289,16 @@ foreach ($workflowComponent in $workflows) {
         $workflowRoot = [string](Get-PropertyValue (Get-PropertyValue $workflowManifest 'application') 'rootCategoryPath')
         if ($workflowRoot -ne $rootCategoryPath) {
             Add-Issue "Workflow '$declaredName' rootCategoryPath '$workflowRoot' does not match solution root '$rootCategoryPath'."
+        }
+        $workflowApplication = Get-PropertyValue $workflowManifest 'application'
+        $workflowCategoryName = [string](Get-PropertyValue $workflowApplication 'workflowCategoryName')
+        $expectedWorkflowCategoryName = $rootLeaf + ' WFs'
+        if ([string]::IsNullOrWhiteSpace($workflowCategoryName)) {
+            Add-Issue "Workflow '$declaredName' application.workflowCategoryName is required."
+        } elseif ($workflowCategoryName -in @('Workflow', 'Workflows')) {
+            Add-Issue "Workflow '$declaredName' category must not be named Workflow or Workflows."
+        } elseif ($workflowCategoryName -cne $expectedWorkflowCategoryName) {
+            Add-Issue "Workflow '$declaredName' category must be '$expectedWorkflowCategoryName': $workflowCategoryName"
         }
         $actualWorkflowName = [string](Get-PropertyValue (Get-PropertyValue $workflowManifest 'workflow') 'name')
         Test-ShortCodePrefix $actualWorkflowName 'Workflow name'

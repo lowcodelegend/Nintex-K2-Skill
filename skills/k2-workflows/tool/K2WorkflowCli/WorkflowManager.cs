@@ -79,7 +79,7 @@ namespace K2WorkflowCli
         {
             var existing = GetProcessId();
             Console.WriteLine("Workflow: " + _manifest.Workflow.ProcessFullName);
-            Console.WriteLine("Category: " + _manifest.Application.WorkflowsCategoryPath);
+            Console.WriteLine("Category: " + _manifest.Application.WorkflowCategoryPath);
             Console.WriteLine("Definition: " + _manifest.Workflow.Kind);
             Console.WriteLine("Action: " + (existing.HasValue ? "update JSON process " + existing.Value : "create JSON process"));
             Console.WriteLine("Publish: " + _manifest.Workflow.Publish);
@@ -94,7 +94,7 @@ namespace K2WorkflowCli
 
         public void Deploy()
         {
-            var categoryId = EnsureWorkflowsCategory();
+            var categoryId = EnsureWorkflowCategory();
             var existing = GetProcessId();
             if (existing.HasValue && !_manifest.Workflow.ReplaceExisting)
                 throw new CliException("Workflow already exists. Set workflow.replaceExisting to true to update it: " + _manifest.Workflow.ProcessFullName);
@@ -157,7 +157,7 @@ namespace K2WorkflowCli
             var json = GetStringProperty(info, "Json");
             var root = WorkflowJsonBuilder.ParseAndValidate(json, _manifest.Workflow.Name);
             Console.WriteLine("Workflow: " + _manifest.Workflow.ProcessFullName);
-            var category = FindCategory(_manifest.Application.WorkflowsCategoryPath);
+            var category = FindCategory(_manifest.Application.WorkflowCategoryPath);
             if (category != null) Console.WriteLine("Category ID: " + Convert.ToString(category["id"]));
             Console.WriteLine("JSON process ID: " + id.Value);
             Console.WriteLine("Designer schema version: " + GetStringProperty(info, "DesignerVersion"));
@@ -315,29 +315,29 @@ namespace K2WorkflowCli
             }
             if (id.HasValue)
             {
-                var category = FindCategory(_manifest.Application.WorkflowsCategoryPath);
-                if (category == null) throw new CliException("Workflows category was not found.");
+                var category = FindCategory(_manifest.Application.WorkflowCategoryPath);
+                if (category == null) throw new CliException("Workflow category was not found: " + _manifest.Application.WorkflowCategoryPath);
                 Invoke("DeleteProcessById", _manifest.K2.DesignerHost, id.Value, _userName, (int)category["id"]);
             }
             if (!id.HasValue && !runtimeExists) { Console.WriteLine("Workflow is already absent: " + _manifest.Workflow.ProcessFullName); return; }
             Console.WriteLine("Deleted workflow: " + _manifest.Workflow.ProcessFullName);
         }
 
-        private int EnsureWorkflowsCategory()
+        private int EnsureWorkflowCategory()
         {
             var root = FindCategory(_manifest.Application.RootCategoryPath);
             if (root == null) throw new CliException("Application root category does not exist: " + _manifest.Application.RootCategoryPath);
-            var workflows = FindCategory(_manifest.Application.WorkflowsCategoryPath);
+            var workflows = FindCategory(_manifest.Application.WorkflowCategoryPath);
             if (workflows != null) return (int)workflows["id"];
             var assembly = Assembly.LoadFrom(Path.Combine(RuntimeAssemblyResolver.WorkflowDesignerBin, "SourceCode.K2Designer.dll"));
             var type = assembly.GetType("SourceCode.K2Designer.Providers.Legacy.CategoryManagementProvider", true);
             var provider = Activator.CreateInstance(type, _client);
-            try { type.GetMethod("CreateCategory").Invoke(provider, new object[] { "Workflows", CategorySystemId, (int)root["id"], _manifest.K2.DesignerHost }); }
-            catch (TargetInvocationException ex) { throw new CliException("Unable to create Workflows category: " + ex.GetBaseException().Message); }
+            try { type.GetMethod("CreateCategory").Invoke(provider, new object[] { _manifest.Application.WorkflowCategoryName, CategorySystemId, (int)root["id"], _manifest.K2.DesignerHost }); }
+            catch (TargetInvocationException ex) { throw new CliException("Unable to create workflow category '" + _manifest.Application.WorkflowCategoryName + "': " + ex.GetBaseException().Message); }
             finally { /* Provider shares the manager's designer client. */ }
-            workflows = FindCategory(_manifest.Application.WorkflowsCategoryPath);
-            if (workflows == null) throw new CliException("K2 did not return the new Workflows category.");
-            Console.WriteLine("Created category: " + _manifest.Application.WorkflowsCategoryPath);
+            workflows = FindCategory(_manifest.Application.WorkflowCategoryPath);
+            if (workflows == null) throw new CliException("K2 did not return the new workflow category: " + _manifest.Application.WorkflowCategoryPath);
+            Console.WriteLine("Created category: " + _manifest.Application.WorkflowCategoryPath);
             return (int)workflows["id"];
         }
 

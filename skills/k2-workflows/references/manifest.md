@@ -11,7 +11,10 @@
     "integrated": true,
     "securityLabel": "K2"
   },
-  "application": { "rootCategoryPath": "K2 Skills\\Corporate Workflow" },
+  "application": {
+    "rootCategoryPath": "K2 Skills\\Corporate Workflow",
+    "workflowCategoryName": "Corporate Workflow WFs"
+  },
   "workflow": {
     "name": "CW Request Approval",
     "kind": "request-approval",
@@ -61,7 +64,7 @@
 }
 ```
 
-`application.rootCategoryPath` must already exist. The CLI creates/uses its `Workflows` child. Neither category segments nor `workflow.name` may contain release/version suffixes because K2 maintains workflow versions internally.
+`application.rootCategoryPath` must already exist. `application.workflowCategoryName` is the leaf created beneath it and must equal `<application root leaf> WFs`; if omitted, the CLI derives that value. Never use `Workflow` or `Workflows` as a workflow category name because of K2 workflow-folder behavior. Neither category segments nor `workflow.name` may contain release/version suffixes because K2 maintains workflow versions internally. The runtime process full name is `<workflowCategoryName>\<workflow.name>`.
 
 Kinds:
 
