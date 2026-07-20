@@ -1,22 +1,42 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "shortCode": "SOL",
   "solution": "SOL.Solution Name",
   "deployedAtUtc": "YYYY-MM-DDTHH:mm:ssZ",
   "environment": "environment-name",
   "sourceRevision": "git-commit",
+  "result": "complete-with-errata",
   "manifestChecksums": {},
-  "artifacts": {
-    "serviceInstances": [],
-    "smartObjects": [],
-    "views": [],
-    "forms": [],
-    "workflows": []
-  },
+  "artifacts": [
+    {
+      "id": "sql-table:SOL.Request",
+      "layer": "sql",
+      "kind": "table",
+      "name": "SOL.Request",
+      "action": "created",
+      "location": "SOL.Database",
+      "identifier": null,
+      "version": null,
+      "source": "manifest.json / sql/001_schema.sql",
+      "verification": "verified"
+    }
+  ],
   "runtimeUrls": [],
   "verification": {
     "specialistChecks": [],
     "endToEndScenarios": []
   },
+  "errata": [
+    {
+      "id": "ERR-001",
+      "category": "manual-intervention",
+      "severity": "warning",
+      "artifactIds": [],
+      "description": "Describe the exact gap; remove this example when no errata exist.",
+      "impact": "Describe the affected behavior.",
+      "remediation": "Describe the exact manual step, custom code, or follow-up work.",
+      "status": "open"
+    }
+  ],
   "rollbackNotes": []
 }

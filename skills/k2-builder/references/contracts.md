@@ -64,4 +64,4 @@ For a shared form, never infer a default-state change. Choose and record one of:
 5. Execute each end-to-end scenario from the ordinary Runtime entry URL.
 6. Correlate the saved request identifier, workflow instance, worklist task, selected action, and final status. Do not accept independent smoke tests as equivalent evidence.
 
-Record verification evidence and deployed identifiers in a deployment ledger. Current tools do not provide atomic cross-layer rollback; stop on failure and do not mutate dependants.
+Record verification evidence and every generated/deployed artifact in a deployment ledger. Complete the mandatory artifact inventory and errata handoff described in [deployment-handoff.md](deployment-handoff.md). Current tools do not provide atomic cross-layer rollback; stop on failure and do not mutate dependants.

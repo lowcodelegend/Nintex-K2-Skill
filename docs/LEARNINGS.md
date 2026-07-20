@@ -85,6 +85,8 @@ The `examples/request-management` fixture was deployed twice:
 
 The current corporate workflow proof generated four ordinary views/two forms plus four administrative views/two forms. Eight editor properties use verified SmartObject-backed dropdown definitions, and the administrative forms are isolated under `K2 Skills\CWF.Corporate Workflow\Admin\Forms`. Form/view names and categories remain stable and version-free.
 
+A successful specialist command is not a sufficient application handoff. Complete-solution generation must preserve an itemized inventory that distinguishes created, updated, replaced, and reused artifacts, and an explicit errata register. Authentication redirects, unexecuted browser journeys, placeholders, manual Designer steps, and unsupported/custom-code requirements must remain visible rather than being summarized as successful verification.
+
 ## HTML5 Workflow Designer findings
 
 - The K2 Five web designer persists a JSON graph and calls `api/workflow/savejson`; on this installation the hosted designer environment token is `smartforms`, not the server hostname.

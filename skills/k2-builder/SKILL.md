@@ -25,7 +25,8 @@ Before investigating K2, read [environment-profiles.md](references/environment-p
 4. Run `scripts/k2build.ps1 plan -Manifest <solution-manifest.json>` and present the non-mutating, dependency-ordered plan.
 5. Invoke each selected specialist skill and its CLI in this order: SmartObjects, SmartForms, workflows. Run the specialist `plan` first, deploy only after the plan is coherent, then verify before proceeding to dependants.
 6. Run the solution manifest's end-to-end scenarios against the normal Runtime URL. A CLI deployment result alone is not completion.
-7. Record deployed names, category paths, K2 identifiers/versions, Runtime URLs, manifest checksums, and verification results for rollback and support. Use [deployment-ledger.template.json](assets/deployment-ledger.template.json) as the starting shape.
+7. Record every generated or deployed source, SQL, SmartObject, SmartForms, workflow, category, integration, and Runtime artifact. Include its action (`created`, `updated`, `replaced`, or `reused`), location, identifier/version when available, source manifest, and verification result. Use [deployment-ledger.template.json](assets/deployment-ledger.template.json) as the starting shape.
+8. Before declaring completion, read [deployment-handoff.md](references/deployment-handoff.md). Present the complete artifact inventory and an explicit errata register covering manual intervention, custom code, placeholders, partial configuration, unsupported requirements, known limitations, and skipped verification. State `None found` when the register is empty; never omit it.
 
 Stop on the first failed layer. Do not deploy dependent layers. Preserve successfully deployed prerequisites by default and report the exact remediation; clean up only when explicitly requested, in reverse dependency order.
 
@@ -40,6 +41,7 @@ Stop on the first failed layer. Do not deploy dependent layers. Preserve success
 - For a dedicated request-entry form, resolve `startStateDefault=auto` to true. The Start state must be the only default state, and the Task state must never be default.
 - For a shared existing form, require an explicit entry-state choice. Do not silently change its default state.
 - Verify that using Create from the ordinary form URL both saves the request and starts the workflow when the Start state is meant to be default.
+- Treat transparent handoff as part of generation. Do not describe a solution as complete while hiding placeholders, manual steps, custom-code requirements, partial configuration, or unexecuted tests in prose or logs.
 
 ## Capability boundary
 
