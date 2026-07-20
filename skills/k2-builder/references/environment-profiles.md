@@ -41,7 +41,7 @@ If validation passes, use the stored values and do not repeat full discovery. Ap
 
 `explicit user/manifest value → selected environment profile → tool default`
 
-The environment profile supplies K2 host, ports, integrated-authentication mode, security label, install directory, detected product build, Designer host token, public base URLs, installed SmartForms themes/style profiles, and the chosen default style profile. For SmartForms use `explicit manifest styleProfile → selected environment default → none`; stop and ask when selection is still `unselected`. It does not replace application-specific SQL database settings.
+The environment profile supplies K2 host, ports, integrated-authentication mode, security label, install directory, detected product build, Designer host token, public base URLs, installed SmartForms legacy themes/Style Profiles, and the chosen default Style Profile. For SmartForms use `explicit manifest styleProfile → selected environment default → legacy-compatibility exception`; stop and ask when selection is still `unselected`, and report an explicit `none` because Style Profiles are K2's modern styling path. It does not replace application-specific SQL database settings.
 
 ## Maintenance
 

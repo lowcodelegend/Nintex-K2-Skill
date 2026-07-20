@@ -58,7 +58,7 @@
 
 `k2` supports integrated authentication by default. For explicit AD authentication, set `integrated` false plus `domain`, `userName`, and `passwordEnvironmentVariable`; never store the password itself.
 
-`application.rootCategoryPath` is the stable application root. It must not contain a version segment or end in `Forms`, `Views`, or `Admin`. The CLI derives `<root>\Views`, `<root>\Forms`, `<root>\Admin\Views`, and `<root>\Admin\Forms`. Form and view names must not contain version tokens because K2 maintains internal artifact versions. `theme` must match an installed K2 theme. Optional `styleProfile` accepts an unambiguous installed Style Profile system name, display name, or GUID; prefer the system name stored by `k2env`. The CLI writes the StyleProfile GUID/name into every generated form and verifies it independently from theme and legacy-theme mode. `checkIn` should normally remain true.
+`application.rootCategoryPath` is the stable application root. It must not contain a version segment or end in `Forms`, `Views`, or `Admin`. The CLI derives `<root>\Views`, `<root>\Forms`, `<root>\Admin\Views`, and `<root>\Admin\Forms`. Form and view names must not contain version tokens because K2 maintains internal artifact versions. `theme` must match an installed legacy K2 theme because `FormGenerator` requires it, but it is fallback/compatibility metadata rather than the modern styling choice. For new forms, set `styleProfile` to an unambiguous installed Style Profile system name, display name, or GUID; prefer the system name stored by `k2env`. The CLI writes the StyleProfile GUID/name into every generated form and verifies it independently from the legacy theme field. `checkIn` should normally remain true.
 
 ## Lookup sources and controls
 
@@ -95,7 +95,7 @@ The lookup method must be a parameterless SmartObject List method. The target pr
 
 Set `area` on each view/form to `application` (the default) or `admin`. Admin artifacts deploy below `<root>\Admin`, while ordinary artifacts remain in the standard `Views` and `Forms` folders.
 
-Each form's optional `useLegacyTheme` defaults to `false`. The CLI writes the K2 `UseLegacyTheme` property explicitly and verifies it after deployment. Keep the default for modern theme rendering; set it to `true` only when legacy compatibility is intentional. The configured theme name does not imply this mode.
+Each form's optional `useLegacyTheme` defaults to `false`. The CLI writes the K2 `UseLegacyTheme` property explicitly and verifies it after deployment. Keep the default for Style Profile rendering; set it to `true` only when legacy named-theme compatibility is intentional.
 
 For capture and capture-list views, `properties` must contain every required input property reported by every method in `methods`. The `all-properties` option also satisfies this check. Validation uses live SmartObject metadata and fails before deployment with the view, method, and omitted property names. SQL column defaults are not treated as SmartObject input defaults.
 
