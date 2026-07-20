@@ -120,7 +120,8 @@ namespace K2WorkflowCli
 
                 Console.WriteLine("Reconciling SmartForm Start default state: " + currentIsDefault.ToString().ToLowerInvariant() +
                     " -> " + workflow.SmartForms.MakeStartStateDefault.ToString().ToLowerInvariant());
-                RemoveOne(form.FormId, workflow.ProcessFullName, true, workflow.SmartForms.StartState);
+                UpdateExistingStartDefault(workflow, form, current, currentStateId);
+                return;
             }
             var state = BaseState(form.FormId);
             var rule = SelectRule(form.FormId, Convert.ToString(state["id"]), true, workflow.SmartForms.StartRuleContains);
@@ -138,6 +139,32 @@ namespace K2WorkflowCli
                 "folio", Expression(workflow.Name), "moveAction", false);
             InvokeManagement("UpdateForm", _host, payload.ToString(Formatting.None));
             Console.WriteLine("Integrated SmartForm Start state: " + workflow.SmartForms.StartState);
+        }
+
+        private void UpdateExistingStartDefault(WorkflowSettings workflow, SmartFormsIntegrationDescriptor form, JObject current, string stateId)
+        {
+            var action = current["workflowAction"] as JObject;
+            var actionRule = current["workflowActionRule"] as JObject;
+            var actionRuleId = actionRule == null ? string.Empty : Convert.ToString(actionRule["id"]);
+            var rules = JArray.Parse(InvokeData("GetFormRules", _host, form.FormId, stateId, true));
+            var rule = rules.OfType<JObject>().FirstOrDefault(x =>
+                new[] { "id", "definitionGuid", "instanceGuid" }.Any(name =>
+                    string.Equals(Convert.ToString(x[name]), actionRuleId, StringComparison.OrdinalIgnoreCase)))
+                ?? rules.OfType<JObject>().FirstOrDefault(x => (bool?)x["isDefault"] == true)
+                ?? rules.OfType<JObject>().FirstOrDefault();
+            if (action == null || rule == null) throw new CliException("Existing SmartForm Start integration is missing its action or rule metadata.");
+
+            var itemReferences = current["itemReferences"] as JArray ?? new JArray();
+            var payload = O(
+                "formSystemName", form.SystemName, "formName", form.DisplayName,
+                "processName", workflow.ProcessFullName, "stateName", workflow.SmartForms.StartState,
+                "stateId", stateId, "makeDefaultState", workflow.SmartForms.MakeStartStateDefault,
+                "ruleId", rule["definitionGuid"], "ruleInstanceId", rule["instanceGuid"], "ruleSubFormId", rule["subFormGuid"],
+                "precedingActionId", action["previousActionId"], "handlerId", action["handlerId"],
+                "itemReferences", itemReferences.DeepClone(), "actionId", action["id"],
+                "folio", Expression(workflow.Name), "moveAction", false);
+            InvokeManagement("UpdateForm", _host, payload.ToString(Formatting.None));
+            Console.WriteLine("Updated SmartForm Start default state in place: " + workflow.SmartForms.StartState);
         }
 
         private void IntegrateTask(WorkflowSettings workflow, SmartFormsIntegrationDescriptor form)

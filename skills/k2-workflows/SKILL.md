@@ -18,7 +18,7 @@ Use `scripts/k2wf.ps1`; do not write to the K2 database or invoke legacy workflo
 
 `deploy` explicitly releases the HTML5 designer lock with K2's resolved AD identity after every successful save/publish. If a prior tool/browser session left a workflow locked, run `unlock <manifest> --confirm`, then refresh the Designer page. Do not inspect through `GetUserProcessKprx` or `GetProcessJson`: on K2 Five 5.10 those reads check the process out again. The CLI's read commands use `GetProcessInfo` plus `GetProcessDefinitionPerVersion` instead.
 
-For an existing tool-owned SmartForms Start integration, `deploy` compares the runtime default flag with `makeStartStateDefault`. When they differ, it reconciles the workflow-specific Start integration/state before publishing (to avoid the form checkout created by `SaveKprx`), then verification requires exactly one default state when Start is default. Review this planned change because manual edits inside that workflow-specific Start state are not preserved by reconciliation.
+For an existing tool-owned SmartForms Start integration, `deploy` compares the runtime default flag with `makeStartStateDefault`. When they differ, it updates that flag in place using the existing state, rule, handler, action, and item-reference IDs before publishing (to avoid the form checkout created by `SaveKprx`), then verification requires exactly one default state when Start is default.
 
 ## Generated workflows
 
