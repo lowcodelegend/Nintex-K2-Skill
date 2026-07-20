@@ -1,8 +1,9 @@
 {
   "schemaVersion": 1,
-  "name": "Solution Name",
+  "shortCode": "SOL",
+  "name": "SOL.Solution Name",
   "application": {
-    "rootCategoryPath": "K2 Skills\\Solution Name"
+    "rootCategoryPath": "K2 Skills\\SOL.Solution Name"
   },
   "components": {
     "smartObjects": {
@@ -14,7 +15,7 @@
     },
     "workflows": [
       {
-        "name": "Request Approval",
+        "name": "SOL.Request Approval",
         "manifest": "workflow-manifest.json",
         "dependsOn": ["smartObjects", "forms"]
       }
@@ -25,8 +26,8 @@
     "modernForms": true,
     "workflowEntries": [
       {
-        "workflow": "Request Approval",
-        "form": "Request Management",
+        "workflow": "SOL.Request Approval",
+        "form": "SOL.Request Management",
         "formOwnership": "dedicated",
         "startStateDefault": "auto"
       }
@@ -37,7 +38,7 @@
     "scenarios": [
       {
         "name": "Submit and approve a request",
-        "entryForm": "Request Management",
+        "entryForm": "SOL.Request Management",
         "steps": [
           "open the ordinary form URL without a state query parameter",
           "create a valid request",

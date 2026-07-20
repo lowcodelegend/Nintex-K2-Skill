@@ -14,6 +14,8 @@ No supplied password is stored in the repository or CLI output. Integrated authe
 
 The reusable environment profile now lives under `%CODEX_HOME%\k2`, outside projects and installed skill payloads. `k2env` discovers the install path/build from the registry and K2 assembly, derives public SmartForms URLs from IIS, records only the current identity name and integrated-authentication mode, and performs inexpensive port/route validation on later runs. Clean skill replacement therefore cannot erase learned environment facts.
 
+Complete solutions use one uppercase three- or four-letter short code as a namespace. The `<CODE>.` prefix is applied across databases, Service Instances, category leaves, generated SmartObjects, SmartForms, workflows, Designer-visible workflow steps, and integration states. Using the code as the SQL schema makes fully qualified SQL object names follow the same convention without adding noise to column/property names.
+
 ## Supported K2 API path
 
 The tool uses supported client/management APIs on port 5555 rather than altering the K2 database:

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "name": "Corporate request approval workflow",
+  "name": "CWF.Corporate request approval workflow",
   "k2": {
     "designerHost": "smartforms",
     "host": "localhost",
@@ -8,16 +8,16 @@
     "integrated": true,
     "securityLabel": "K2"
   },
-  "application": { "rootCategoryPath": "K2 Skills\\Corporate Workflow" },
+  "application": { "rootCategoryPath": "K2 Skills\\CWF.Corporate Workflow" },
   "workflow": {
-    "name": "CW Request Approval",
+    "name": "CWF.Request Approval",
     "kind": "request-approval",
     "publish": true,
     "replaceExisting": true,
     "comment": "Request status, email, and approval task baseline",
     "requestStatusUpdate": {
-      "name": "Set Pending Approval Status",
-      "smartObject": "K2Skills_CorporateWorkflow_Test_app_WorkflowRequest",
+      "name": "CWF.Set Pending Approval Status",
+      "smartObject": "CWF.CorporateWorkflowTest_CWF_WorkflowRequest",
       "method": "Update",
       "identifierProperty": "RequestId",
       "statusProperty": "Status",
@@ -26,7 +26,7 @@
       "rejectedStatusValue": "Rejected"
     },
     "email": {
-      "name": "Send Approval Notification",
+      "name": "CWF.Send Approval Notification",
       "from": "$environment:From Address",
       "to": ["$originator"],
       "subject": "Corporate request awaiting approval",
@@ -34,7 +34,7 @@
       "html": false
     },
     "userTask": {
-      "name": "Review Corporate Request",
+      "name": "CWF.Review Corporate Request",
       "assignees": ["$originatorManager"],
       "instructions": "Review the corporate request and select an outcome.",
       "actions": ["Approve", "Reject"],
@@ -47,9 +47,9 @@
       }
     },
     "smartForms": {
-      "form": "CW Request Management",
-      "startState": "CW Request Approval Start",
-      "taskState": "CW Request Approval Task",
+      "form": "CWF.Request Management",
+      "startState": "CWF.Request Approval Start",
+      "taskState": "CWF.Request Approval Task",
       "startRuleContains": "Create Button",
       "makeStartStateDefault": true,
       "workflowStripLocation": "bottom"

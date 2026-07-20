@@ -1,5 +1,5 @@
 {
-  "name": "Corporate workflow CRUD SmartForms",
+  "name": "CWF.Corporate workflow CRUD SmartForms",
   "k2": {
     "host": "localhost",
     "port": 5555,
@@ -7,14 +7,14 @@
     "securityLabel": "K2"
   },
   "application": {
-    "rootCategoryPath": "K2 Skills\\Corporate Workflow",
+    "rootCategoryPath": "K2 Skills\\CWF.Corporate Workflow",
     "theme": "Lithium",
     "replaceExisting": true,
     "checkIn": true,
     "views": [
       {
-        "name": "CW Request Editor",
-        "smartObject": "K2Skills_CorporateWorkflow_Test_app_WorkflowRequest",
+        "name": "CWF.Request Editor",
+        "smartObject": "CWF.CorporateWorkflowTest_CWF_WorkflowRequest",
         "type": "capture",
         "properties": [
           "RequestId",
@@ -34,8 +34,8 @@
         "options": ["editable", "labels-left", "colon-labels", "toolbar"]
       },
       {
-        "name": "CW Request List",
-        "smartObject": "K2Skills_CorporateWorkflow_Test_app_WorkflowRequest",
+        "name": "CWF.Request List",
+        "smartObject": "CWF.CorporateWorkflowTest_CWF_WorkflowRequest",
         "type": "list",
         "properties": [
           "RequestId",
@@ -52,8 +52,8 @@
         "options": ["toolbar"]
       },
       {
-        "name": "CW Approval Task Editor",
-        "smartObject": "K2Skills_CorporateWorkflow_Test_app_ApprovalTask",
+        "name": "CWF.Approval Task Editor",
+        "smartObject": "CWF.CorporateWorkflowTest_CWF_ApprovalTask",
         "type": "capture",
         "properties": [
           "ApprovalTaskId",
@@ -71,8 +71,8 @@
         "options": ["editable", "labels-left", "colon-labels", "toolbar"]
       },
       {
-        "name": "CW Approval Task List",
-        "smartObject": "K2Skills_CorporateWorkflow_Test_app_ApprovalTask",
+        "name": "CWF.Approval Task List",
+        "smartObject": "CWF.CorporateWorkflowTest_CWF_ApprovalTask",
         "type": "list",
         "properties": [
           "ApprovalTaskId",
@@ -89,8 +89,8 @@
         "options": ["toolbar"]
       },
       {
-        "name": "CW Request Type Editor",
-        "smartObject": "K2Skills_CorporateWorkflow_Test_app_RequestType",
+        "name": "CWF.Request Type Editor",
+        "smartObject": "CWF.CorporateWorkflowTest_CWF_RequestType",
         "type": "capture",
         "properties": [
           "RequestTypeId",
@@ -105,8 +105,8 @@
         "options": ["editable", "labels-left", "colon-labels", "toolbar"]
       },
       {
-        "name": "CW Request Type List",
-        "smartObject": "K2Skills_CorporateWorkflow_Test_app_RequestType",
+        "name": "CWF.Request Type List",
+        "smartObject": "CWF.CorporateWorkflowTest_CWF_RequestType",
         "type": "list",
         "properties": [
           "RequestTypeId",
@@ -123,20 +123,20 @@
     ],
     "forms": [
       {
-        "name": "CW Request Management",
-        "views": ["CW Request Editor", "CW Request List"],
+        "name": "CWF.Request Management",
+        "views": ["CWF.Request Editor", "CWF.Request List"],
         "options": ["no-tabs"],
         "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]
       },
       {
-        "name": "CW Approval Task Management",
-        "views": ["CW Approval Task Editor", "CW Approval Task List"],
+        "name": "CWF.Approval Task Management",
+        "views": ["CWF.Approval Task Editor", "CWF.Approval Task List"],
         "options": ["no-tabs"],
         "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]
       },
       {
-        "name": "CW Request Type Administration",
-        "views": ["CW Request Type Editor", "CW Request Type List"],
+        "name": "CWF.Request Type Administration",
+        "views": ["CWF.Request Type Editor", "CWF.Request Type List"],
         "options": ["no-tabs"],
         "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]
       }
@@ -144,17 +144,17 @@
   },
   "verification": {
     "expectedViews": [
-      "CW Request Editor",
-      "CW Request List",
-      "CW Approval Task Editor",
-      "CW Approval Task List",
-      "CW Request Type Editor",
-      "CW Request Type List"
+      "CWF.Request Editor",
+      "CWF.Request List",
+      "CWF.Approval Task Editor",
+      "CWF.Approval Task List",
+      "CWF.Request Type Editor",
+      "CWF.Request Type List"
     ],
     "expectedForms": [
-      "CW Request Management",
-      "CW Approval Task Management",
-      "CW Request Type Administration"
+      "CWF.Request Management",
+      "CWF.Approval Task Management",
+      "CWF.Request Type Administration"
     ],
     "smokeTestRuntime": true,
     "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime"

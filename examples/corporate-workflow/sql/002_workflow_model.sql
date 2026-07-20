@@ -1,8 +1,8 @@
 SET NOCOUNT ON;
 
-IF OBJECT_ID(N'app.RequestType', N'U') IS NULL
+IF OBJECT_ID(N'CWF.RequestType', N'U') IS NULL
 BEGIN
-    CREATE TABLE app.RequestType
+    CREATE TABLE CWF.RequestType
     (
         RequestTypeId int IDENTITY(1,1) NOT NULL CONSTRAINT PK_RequestType PRIMARY KEY,
         RequestTypeCode nvarchar(30) NOT NULL CONSTRAINT UQ_RequestType_RequestTypeCode UNIQUE,
@@ -15,9 +15,9 @@ BEGIN
 END;
 GO
 
-IF OBJECT_ID(N'app.WorkflowRequest', N'U') IS NULL
+IF OBJECT_ID(N'CWF.WorkflowRequest', N'U') IS NULL
 BEGIN
-    CREATE TABLE app.WorkflowRequest
+    CREATE TABLE CWF.WorkflowRequest
     (
         RequestId int IDENTITY(1,1) NOT NULL CONSTRAINT PK_WorkflowRequest PRIMARY KEY,
         RequestNumber nvarchar(30) NOT NULL CONSTRAINT UQ_WorkflowRequest_RequestNumber UNIQUE,
@@ -34,9 +34,9 @@ BEGIN
         CreatedOn datetime2(0) NULL CONSTRAINT DF_WorkflowRequest_CreatedOn DEFAULT (SYSUTCDATETIME()),
         ModifiedOn datetime2(0) NULL CONSTRAINT DF_WorkflowRequest_ModifiedOn DEFAULT (SYSUTCDATETIME()),
         RowVersion rowversion NOT NULL,
-        CONSTRAINT FK_WorkflowRequest_RequestType FOREIGN KEY (RequestTypeId) REFERENCES app.RequestType(RequestTypeId),
-        CONSTRAINT FK_WorkflowRequest_Requestor FOREIGN KEY (RequestorEmployeeId) REFERENCES org.Employee(EmployeeId),
-        CONSTRAINT FK_WorkflowRequest_Department FOREIGN KEY (DepartmentId) REFERENCES org.Department(DepartmentId),
+        CONSTRAINT FK_WorkflowRequest_RequestType FOREIGN KEY (RequestTypeId) REFERENCES CWF.RequestType(RequestTypeId),
+        CONSTRAINT FK_WorkflowRequest_Requestor FOREIGN KEY (RequestorEmployeeId) REFERENCES CWF.Employee(EmployeeId),
+        CONSTRAINT FK_WorkflowRequest_Department FOREIGN KEY (DepartmentId) REFERENCES CWF.Department(DepartmentId),
         CONSTRAINT CK_WorkflowRequest_Priority CHECK (Priority IN (N'Low', N'Normal', N'High', N'Critical')),
         CONSTRAINT CK_WorkflowRequest_Status CHECK (Status IN (N'Draft', N'Submitted', N'In Review', N'Approved', N'Rejected', N'Cancelled'))
     );
@@ -47,31 +47,31 @@ IF EXISTS
 (
     SELECT 1
     FROM sys.columns
-    WHERE object_id = OBJECT_ID(N'app.WorkflowRequest')
+    WHERE object_id = OBJECT_ID(N'CWF.WorkflowRequest')
       AND name = N'CreatedOn'
       AND is_nullable = 0
 )
-    ALTER TABLE app.WorkflowRequest ALTER COLUMN CreatedOn datetime2(0) NULL;
+    ALTER TABLE CWF.WorkflowRequest ALTER COLUMN CreatedOn datetime2(0) NULL;
 GO
 
 IF EXISTS
 (
     SELECT 1
     FROM sys.columns
-    WHERE object_id = OBJECT_ID(N'app.WorkflowRequest')
+    WHERE object_id = OBJECT_ID(N'CWF.WorkflowRequest')
       AND name = N'ModifiedOn'
       AND is_nullable = 0
 )
-    ALTER TABLE app.WorkflowRequest ALTER COLUMN ModifiedOn datetime2(0) NULL;
+    ALTER TABLE CWF.WorkflowRequest ALTER COLUMN ModifiedOn datetime2(0) NULL;
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'app.WorkflowRequest') AND name = N'IX_WorkflowRequest_Status_Requestor')
-    CREATE INDEX IX_WorkflowRequest_Status_Requestor ON app.WorkflowRequest(Status, RequestorEmployeeId);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'CWF.WorkflowRequest') AND name = N'IX_WorkflowRequest_Status_Requestor')
+    CREATE INDEX IX_WorkflowRequest_Status_Requestor ON CWF.WorkflowRequest(Status, RequestorEmployeeId);
 GO
 
-IF OBJECT_ID(N'app.ApprovalTask', N'U') IS NULL
+IF OBJECT_ID(N'CWF.ApprovalTask', N'U') IS NULL
 BEGIN
-    CREATE TABLE app.ApprovalTask
+    CREATE TABLE CWF.ApprovalTask
     (
         ApprovalTaskId int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalTask PRIMARY KEY,
         RequestId int NOT NULL,
@@ -86,8 +86,8 @@ BEGIN
         CreatedOn datetime2(0) NULL CONSTRAINT DF_ApprovalTask_CreatedOn DEFAULT (SYSUTCDATETIME()),
         RowVersion rowversion NOT NULL,
         CONSTRAINT UQ_ApprovalTask_Request_Step UNIQUE (RequestId, StepNumber),
-        CONSTRAINT FK_ApprovalTask_Request FOREIGN KEY (RequestId) REFERENCES app.WorkflowRequest(RequestId),
-        CONSTRAINT FK_ApprovalTask_AssignedEmployee FOREIGN KEY (AssignedEmployeeId) REFERENCES org.Employee(EmployeeId),
+        CONSTRAINT FK_ApprovalTask_Request FOREIGN KEY (RequestId) REFERENCES CWF.WorkflowRequest(RequestId),
+        CONSTRAINT FK_ApprovalTask_AssignedEmployee FOREIGN KEY (AssignedEmployeeId) REFERENCES CWF.Employee(EmployeeId),
         CONSTRAINT CK_ApprovalTask_Status CHECK (Status IN (N'Pending', N'Completed', N'Cancelled')),
         CONSTRAINT CK_ApprovalTask_Decision CHECK (Decision IS NULL OR Decision IN (N'Approved', N'Rejected'))
     );
@@ -98,20 +98,20 @@ IF EXISTS
 (
     SELECT 1
     FROM sys.columns
-    WHERE object_id = OBJECT_ID(N'app.ApprovalTask')
+    WHERE object_id = OBJECT_ID(N'CWF.ApprovalTask')
       AND name = N'CreatedOn'
       AND is_nullable = 0
 )
-    ALTER TABLE app.ApprovalTask ALTER COLUMN CreatedOn datetime2(0) NULL;
+    ALTER TABLE CWF.ApprovalTask ALTER COLUMN CreatedOn datetime2(0) NULL;
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'app.ApprovalTask') AND name = N'IX_ApprovalTask_Assignee_Status')
-    CREATE INDEX IX_ApprovalTask_Assignee_Status ON app.ApprovalTask(AssignedEmployeeId, Status, DueOn);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'CWF.ApprovalTask') AND name = N'IX_ApprovalTask_Assignee_Status')
+    CREATE INDEX IX_ApprovalTask_Assignee_Status ON CWF.ApprovalTask(AssignedEmployeeId, Status, DueOn);
 GO
 
-IF OBJECT_ID(N'app.RequestComment', N'U') IS NULL
+IF OBJECT_ID(N'CWF.RequestComment', N'U') IS NULL
 BEGIN
-    CREATE TABLE app.RequestComment
+    CREATE TABLE CWF.RequestComment
     (
         RequestCommentId int IDENTITY(1,1) NOT NULL CONSTRAINT PK_RequestComment PRIMARY KEY,
         RequestId int NOT NULL,
@@ -119,17 +119,17 @@ BEGIN
         CommentText nvarchar(2000) NOT NULL,
         IsPrivate bit NOT NULL CONSTRAINT DF_RequestComment_IsPrivate DEFAULT (0),
         CreatedOn datetime2(0) NOT NULL CONSTRAINT DF_RequestComment_CreatedOn DEFAULT (SYSUTCDATETIME()),
-        CONSTRAINT FK_RequestComment_Request FOREIGN KEY (RequestId) REFERENCES app.WorkflowRequest(RequestId),
-        CONSTRAINT FK_RequestComment_Author FOREIGN KEY (AuthorEmployeeId) REFERENCES org.Employee(EmployeeId)
+        CONSTRAINT FK_RequestComment_Request FOREIGN KEY (RequestId) REFERENCES CWF.WorkflowRequest(RequestId),
+        CONSTRAINT FK_RequestComment_Author FOREIGN KEY (AuthorEmployeeId) REFERENCES CWF.Employee(EmployeeId)
     );
 END;
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'app.RequestComment') AND name = N'IX_RequestComment_RequestId')
-    CREATE INDEX IX_RequestComment_RequestId ON app.RequestComment(RequestId, CreatedOn);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'CWF.RequestComment') AND name = N'IX_RequestComment_RequestId')
+    CREATE INDEX IX_RequestComment_RequestId ON CWF.RequestComment(RequestId, CreatedOn);
 GO
 
-MERGE app.RequestType AS target
+MERGE CWF.RequestType AS target
 USING
 (
     VALUES

@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
-  "solution": "Solution Name",
+  "shortCode": "SOL",
+  "solution": "SOL.Solution Name",
   "deployedAtUtc": "YYYY-MM-DDTHH:mm:ssZ",
   "environment": "environment-name",
   "sourceRevision": "git-commit",

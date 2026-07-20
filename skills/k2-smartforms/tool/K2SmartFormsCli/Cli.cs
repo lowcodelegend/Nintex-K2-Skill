@@ -165,7 +165,7 @@ namespace K2SmartFormsCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2forms 0.1.5");
+            Console.WriteLine("k2forms 0.1.6");
         }
 
         private static void PrintHelp()

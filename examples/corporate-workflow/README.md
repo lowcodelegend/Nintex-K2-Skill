@@ -1,4 +1,4 @@
-# Corporate workflow SQL SmartObject test model
+# CWF.Corporate workflow SQL SmartObject test model
 
 This disposable fixture models a generic corporate approval application with:
 
@@ -18,7 +18,7 @@ $skillRoot = Join-Path $env:USERPROFILE '.codex\skills\k2-sql-smartobjects'
 & "$skillRoot\scripts\k2sql.ps1" inspect --manifest "$PWD\manifest.json"
 ```
 
-The database and K2 Service Instance are both named `K2Skills_CorporateWorkflow_Test`. The K2 runtime connects with the K2 Server service account. All scripts are rerunnable, and generated SmartObjects are retained if a SQL object is later removed from the model.
+The solution short code is `CWF`. The database and K2 Service Instance are both named `CWF.CorporateWorkflowTest`, and the SQL model uses schema `CWF`, so every fully qualified SQL object begins `CWF.`. The K2 runtime connects with the K2 Server service account. All scripts are rerunnable, and generated SmartObjects are retained if a SQL object is later removed from the model.
 
 Because this fixture is explicitly disposable, it can be removed with:
 
@@ -28,7 +28,7 @@ Because this fixture is explicitly disposable, it can be removed with:
 
 ## SmartForms baseline
 
-`smartforms-manifest.json` generates three modern-mode Lithium CRUD screens over the deployed request, approval-task, and request-type SmartObjects. Modern mode is the default, so the omitted per-form `useLegacyTheme` setting resolves to `false`. It creates six views in `K2 Skills\Corporate Workflow\Views` and three forms in `K2 Skills\Corporate Workflow\Forms`. K2 handles artifact versions internally, so names and folders remain version-free.
+`smartforms-manifest.json` generates three modern-mode Lithium CRUD screens over the deployed request, approval-task, and request-type SmartObjects. Modern mode is the default, so the omitted per-form `useLegacyTheme` setting resolves to `false`. It creates six `CWF.`-prefixed views in `K2 Skills\CWF.Corporate Workflow\Views` and three prefixed forms in `K2 Skills\CWF.Corporate Workflow\Forms`. K2 handles artifact versions internally, so names and folders remain version-free.
 
 ```powershell
 $formsSkillRoot = Join-Path $env:USERPROFILE '.codex\skills\k2-smartforms'
@@ -39,11 +39,11 @@ $formsSkillRoot = Join-Path $env:USERPROFILE '.codex\skills\k2-smartforms'
 
 Example runtime URL:
 
-`https://spk2.trials.demome.tech/Runtime/Runtime/Form/CW+Approval+Task+Management/`
+`https://spk2.trials.demome.tech/Runtime/Runtime/Form/CWF.Approval+Task+Management/`
 
 ## Workflow baseline
 
-`workflow-manifest.json` creates `CW Request Approval` in `K2 Skills\Corporate Workflow\Workflows` as SmartForm Start → Pending Approval status plus Originator email → task the Originator's Manager → Approved/Rejected decision → matching final status plus Originator email. It uses `CW Request Management` as the primary SmartForms item reference and additively creates `CW Request Approval Start` and `CW Request Approval Task` states with native StartProcess/LoadProcess/ActionProcess rules. The User Task also enables K2's built-in customized notification with participant name, request Title/Description/Amount, and the native worklist-item link.
+`workflow-manifest.json` creates `CWF.Request Approval` in `K2 Skills\CWF.Corporate Workflow\Workflows` as SmartForm Start → Pending Approval status plus Originator email → task the Originator's Manager → Approved/Rejected decision → matching final status plus Originator email. It uses `CWF.Request Management` as the primary SmartForms item reference and additively creates `CWF.Request Approval Start` and `CWF.Request Approval Task` states with native StartProcess/LoadProcess/ActionProcess rules. The User Task also enables K2's built-in customized notification with participant name, request Title/Description/Amount, and the native worklist-item link.
 
 ```powershell
 $workflowSkillRoot = Join-Path $env:USERPROFILE '.codex\skills\k2-workflows'

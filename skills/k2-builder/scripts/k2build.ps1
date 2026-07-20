@@ -13,7 +13,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if ($Command -eq 'version') {
-    Write-Output 'k2build 0.2.0'
+    Write-Output 'k2build 0.3.0'
     exit 0
 }
 
@@ -79,6 +79,24 @@ function Test-VersionFreeName {
     }
 }
 
+function Test-ShortCodePrefix {
+    param([string]$Value, [string]$Label)
+
+    if ([string]::IsNullOrWhiteSpace($Value) -or [string]::IsNullOrWhiteSpace($script:shortCode)) { return }
+    $expected = $script:shortCode + '.'
+    if (-not $Value.StartsWith($expected, [StringComparison]::Ordinal)) {
+        Add-Issue "$Label must start with solution short-code prefix '$expected': $Value"
+    }
+}
+
+function Test-ShortCodeCategoryPath {
+    param([string]$Value, [string]$Label)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) { return }
+    $segments = @($Value.Split([char[]]'\/', [StringSplitOptions]::RemoveEmptyEntries))
+    if ($segments.Count -gt 0) { Test-ShortCodePrefix $segments[-1] $Label }
+}
+
 function Get-DependencyNames {
     param($Component)
     $value = Get-PropertyValue $Component 'dependsOn'
@@ -112,10 +130,20 @@ if ((Get-PropertyValue $solution 'schemaVersion') -ne 1) {
 $solutionName = [string](Get-PropertyValue $solution 'name')
 if ([string]::IsNullOrWhiteSpace($solutionName)) { Add-Issue 'name is required.' }
 
+$shortCode = [string](Get-PropertyValue $solution 'shortCode')
+if ($shortCode -cnotmatch '^[A-Z]{3,4}$') {
+    Add-Issue 'shortCode is required and must contain exactly three or four uppercase letters.'
+    $shortCode = $null
+} else {
+    Test-ShortCodePrefix $solutionName 'Solution name'
+}
+
 $application = Get-PropertyValue $solution 'application'
 $rootCategoryPath = [string](Get-PropertyValue $application 'rootCategoryPath')
 if ([string]::IsNullOrWhiteSpace($rootCategoryPath)) {
     Add-Issue 'application.rootCategoryPath is required.'
+} else {
+    Test-ShortCodeCategoryPath $rootCategoryPath 'Root category leaf'
 }
 
 $policies = Get-PropertyValue $solution 'policies'
@@ -152,6 +180,21 @@ if ($null -ne $smartObjects) {
     }
 }
 
+if ($null -ne $smartObjectsManifest) {
+    Test-ShortCodePrefix ([string](Get-PropertyValue $smartObjectsManifest 'name')) 'SmartObjects manifest name'
+    $database = Get-PropertyValue $smartObjectsManifest 'database'
+    Test-ShortCodePrefix ([string](Get-PropertyValue $database 'name')) 'Database name'
+    $smartObjectK2 = Get-PropertyValue $smartObjectsManifest 'k2'
+    $serviceInstance = Get-PropertyValue $smartObjectK2 'serviceInstance'
+    Test-ShortCodePrefix ([string](Get-PropertyValue $serviceInstance 'systemName')) 'Service Instance system name'
+    Test-ShortCodePrefix ([string](Get-PropertyValue $serviceInstance 'displayName')) 'Service Instance display name'
+    $sqlVerification = Get-PropertyValue $smartObjectsManifest 'verification'
+    foreach ($sqlObject in @(Get-PropertyValue $sqlVerification 'sqlObjects')) {
+        $qualifiedName = ([string](Get-PropertyValue $sqlObject 'schema')) + '.' + ([string](Get-PropertyValue $sqlObject 'name'))
+        Test-ShortCodePrefix $qualifiedName 'Fully qualified SQL object name'
+    }
+}
+
 if ($null -ne $forms) {
     $formsPath = Resolve-ComponentManifest $forms 'components.forms'
     if ($null -ne $formsPath) {
@@ -173,6 +216,7 @@ if ($null -ne $forms) {
 
 $formNames = @()
 if ($null -ne $formsManifest) {
+    Test-ShortCodePrefix ([string](Get-PropertyValue $formsManifest 'name')) 'SmartForms manifest name'
     $formsApplication = Get-PropertyValue $formsManifest 'application'
     $formsRoot = [string](Get-PropertyValue $formsApplication 'rootCategoryPath')
     if ($formsRoot -ne $rootCategoryPath) {
@@ -182,6 +226,7 @@ if ($null -ne $formsManifest) {
     foreach ($form in @(Get-PropertyValue $formsApplication 'forms')) {
         $formName = [string](Get-PropertyValue $form 'name')
         if (-not [string]::IsNullOrWhiteSpace($formName)) { $formNames += $formName }
+        Test-ShortCodePrefix $formName 'Form name'
         if ((Get-PropertyValue $policies 'versionFreeNames') -ne $false) {
             Test-VersionFreeName $formName 'Form name'
         }
@@ -191,6 +236,8 @@ if ($null -ne $formsManifest) {
     }
 
     foreach ($view in @(Get-PropertyValue $formsApplication 'views')) {
+        Test-ShortCodePrefix ([string](Get-PropertyValue $view 'name')) 'View name'
+        Test-ShortCodePrefix ([string](Get-PropertyValue $view 'smartObject')) 'View SmartObject system name'
         if ((Get-PropertyValue $policies 'versionFreeNames') -ne $false) {
             Test-VersionFreeName ([string](Get-PropertyValue $view 'name')) 'View name'
         }
@@ -207,6 +254,7 @@ foreach ($workflowComponent in $workflows) {
         Add-Issue "components.workflows[$workflowIndex].name is required."
         $declaredName = "workflow-$workflowIndex"
     }
+    Test-ShortCodePrefix $declaredName 'Workflow component name'
     if ($workflowNames -contains $declaredName) { Add-Issue "Workflow component name is duplicated: $declaredName" }
     $workflowNames += $declaredName
 
@@ -235,16 +283,34 @@ foreach ($workflowComponent in $workflows) {
     })
 
     if ($null -ne $workflowManifest) {
+        Test-ShortCodePrefix ([string](Get-PropertyValue $workflowManifest 'name')) 'Workflow manifest name'
         $workflowRoot = [string](Get-PropertyValue (Get-PropertyValue $workflowManifest 'application') 'rootCategoryPath')
         if ($workflowRoot -ne $rootCategoryPath) {
             Add-Issue "Workflow '$declaredName' rootCategoryPath '$workflowRoot' does not match solution root '$rootCategoryPath'."
         }
         $actualWorkflowName = [string](Get-PropertyValue (Get-PropertyValue $workflowManifest 'workflow') 'name')
+        Test-ShortCodePrefix $actualWorkflowName 'Workflow name'
         if ($actualWorkflowName -ne $declaredName) {
             Add-Issue "Workflow component name '$declaredName' does not match workflow manifest name '$actualWorkflowName'."
         }
         if ((Get-PropertyValue $policies 'versionFreeNames') -ne $false) {
             Test-VersionFreeName $actualWorkflowName 'Workflow name'
+        }
+        $workflowDefinition = Get-PropertyValue $workflowManifest 'workflow'
+        $statusUpdate = Get-PropertyValue $workflowDefinition 'requestStatusUpdate'
+        if ($null -ne $statusUpdate) {
+            Test-ShortCodePrefix ([string](Get-PropertyValue $statusUpdate 'name')) 'Workflow status-update step name'
+            Test-ShortCodePrefix ([string](Get-PropertyValue $statusUpdate 'smartObject')) 'Workflow SmartObject system name'
+        }
+        $emailStep = Get-PropertyValue $workflowDefinition 'email'
+        if ($null -ne $emailStep) { Test-ShortCodePrefix ([string](Get-PropertyValue $emailStep 'name')) 'Workflow email step name' }
+        $userTask = Get-PropertyValue $workflowDefinition 'userTask'
+        if ($null -ne $userTask) { Test-ShortCodePrefix ([string](Get-PropertyValue $userTask 'name')) 'Workflow user-task name' }
+        $workflowSmartForms = Get-PropertyValue $workflowDefinition 'smartForms'
+        if ($null -ne $workflowSmartForms) {
+            Test-ShortCodePrefix ([string](Get-PropertyValue $workflowSmartForms 'form')) 'Workflow SmartForm name'
+            Test-ShortCodePrefix ([string](Get-PropertyValue $workflowSmartForms 'startState')) 'Workflow Start state name'
+            Test-ShortCodePrefix ([string](Get-PropertyValue $workflowSmartForms 'taskState')) 'Workflow Task state name'
         }
     }
 }
@@ -304,6 +370,7 @@ foreach ($workflowName in $workflowNames) {
 $result = [pscustomobject]@{
     valid = ($issues.Count -eq 0)
     solution = $solutionName
+    shortCode = $shortCode
     manifest = $manifestPath
     rootCategoryPath = $rootCategoryPath
     issues = @($issues)
@@ -316,6 +383,7 @@ if ($Output -eq 'json') {
 }
 else {
     Write-Output "K2 solution: $solutionName"
+    Write-Output "Short code: $shortCode"
     Write-Output "Root category: $rootCategoryPath"
     if ($Command -eq 'plan') {
         Write-Output 'Dependency-ordered specialist plan:'

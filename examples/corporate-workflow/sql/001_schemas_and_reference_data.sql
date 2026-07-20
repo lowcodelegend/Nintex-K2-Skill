@@ -1,20 +1,12 @@
 SET NOCOUNT ON;
 
-IF SCHEMA_ID(N'org') IS NULL
-    EXEC(N'CREATE SCHEMA org AUTHORIZATION dbo');
+IF SCHEMA_ID(N'CWF') IS NULL
+    EXEC(N'CREATE SCHEMA CWF AUTHORIZATION dbo');
 GO
 
-IF SCHEMA_ID(N'app') IS NULL
-    EXEC(N'CREATE SCHEMA app AUTHORIZATION dbo');
-GO
-
-IF SCHEMA_ID(N'reporting') IS NULL
-    EXEC(N'CREATE SCHEMA reporting AUTHORIZATION dbo');
-GO
-
-IF OBJECT_ID(N'org.Department', N'U') IS NULL
+IF OBJECT_ID(N'CWF.Department', N'U') IS NULL
 BEGIN
-    CREATE TABLE org.Department
+    CREATE TABLE CWF.Department
     (
         DepartmentId int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Department PRIMARY KEY,
         DepartmentCode nvarchar(20) NOT NULL CONSTRAINT UQ_Department_DepartmentCode UNIQUE,
@@ -26,9 +18,9 @@ BEGIN
 END;
 GO
 
-IF OBJECT_ID(N'org.Employee', N'U') IS NULL
+IF OBJECT_ID(N'CWF.Employee', N'U') IS NULL
 BEGIN
-    CREATE TABLE org.Employee
+    CREATE TABLE CWF.Employee
     (
         EmployeeId int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Employee PRIMARY KEY,
         EmployeeNumber nvarchar(30) NOT NULL CONSTRAINT UQ_Employee_EmployeeNumber UNIQUE,
@@ -41,17 +33,17 @@ BEGIN
         CreatedOn datetime2(0) NOT NULL CONSTRAINT DF_Employee_CreatedOn DEFAULT (SYSUTCDATETIME()),
         ModifiedOn datetime2(0) NOT NULL CONSTRAINT DF_Employee_ModifiedOn DEFAULT (SYSUTCDATETIME()),
         RowVersion rowversion NOT NULL,
-        CONSTRAINT FK_Employee_Department FOREIGN KEY (DepartmentId) REFERENCES org.Department(DepartmentId),
-        CONSTRAINT FK_Employee_Manager FOREIGN KEY (ManagerEmployeeId) REFERENCES org.Employee(EmployeeId)
+        CONSTRAINT FK_Employee_Department FOREIGN KEY (DepartmentId) REFERENCES CWF.Department(DepartmentId),
+        CONSTRAINT FK_Employee_Manager FOREIGN KEY (ManagerEmployeeId) REFERENCES CWF.Employee(EmployeeId)
     );
 END;
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'org.Employee') AND name = N'IX_Employee_DepartmentId')
-    CREATE INDEX IX_Employee_DepartmentId ON org.Employee(DepartmentId);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'CWF.Employee') AND name = N'IX_Employee_DepartmentId')
+    CREATE INDEX IX_Employee_DepartmentId ON CWF.Employee(DepartmentId);
 GO
 
-MERGE org.Department AS target
+MERGE CWF.Department AS target
 USING
 (
     VALUES
@@ -68,28 +60,28 @@ WHEN NOT MATCHED THEN
     VALUES (source.DepartmentCode, source.DepartmentName, source.CostCentre);
 GO
 
-IF NOT EXISTS (SELECT 1 FROM org.Employee WHERE EmployeeNumber = N'E1001')
+IF NOT EXISTS (SELECT 1 FROM CWF.Employee WHERE EmployeeNumber = N'E1001')
 BEGIN
-    INSERT org.Employee (EmployeeNumber, DisplayName, EmailAddress, DepartmentId, JobTitle)
+    INSERT CWF.Employee (EmployeeNumber, DisplayName, EmailAddress, DepartmentId, JobTitle)
     SELECT N'E1001', N'Maya Finance', N'maya.finance@example.test', DepartmentId, N'Finance Manager'
-    FROM org.Department WHERE DepartmentCode = N'FIN';
+    FROM CWF.Department WHERE DepartmentCode = N'FIN';
 END;
 GO
 
-IF NOT EXISTS (SELECT 1 FROM org.Employee WHERE EmployeeNumber = N'E1002')
+IF NOT EXISTS (SELECT 1 FROM CWF.Employee WHERE EmployeeNumber = N'E1002')
 BEGIN
-    INSERT org.Employee (EmployeeNumber, DisplayName, EmailAddress, DepartmentId, ManagerEmployeeId, JobTitle)
+    INSERT CWF.Employee (EmployeeNumber, DisplayName, EmailAddress, DepartmentId, ManagerEmployeeId, JobTitle)
     SELECT N'E1002', N'Alex Requestor', N'alex.requestor@example.test', d.DepartmentId, m.EmployeeId, N'Financial Analyst'
-    FROM org.Department AS d
-    CROSS JOIN org.Employee AS m
+    FROM CWF.Department AS d
+    CROSS JOIN CWF.Employee AS m
     WHERE d.DepartmentCode = N'FIN' AND m.EmployeeNumber = N'E1001';
 END;
 GO
 
-IF NOT EXISTS (SELECT 1 FROM org.Employee WHERE EmployeeNumber = N'E3001')
+IF NOT EXISTS (SELECT 1 FROM CWF.Employee WHERE EmployeeNumber = N'E3001')
 BEGIN
-    INSERT org.Employee (EmployeeNumber, DisplayName, EmailAddress, DepartmentId, JobTitle)
+    INSERT CWF.Employee (EmployeeNumber, DisplayName, EmailAddress, DepartmentId, JobTitle)
     SELECT N'E3001', N'Jordan IT', N'jordan.it@example.test', DepartmentId, N'IT Manager'
-    FROM org.Department WHERE DepartmentCode = N'IT';
+    FROM CWF.Department WHERE DepartmentCode = N'IT';
 END;
 GO

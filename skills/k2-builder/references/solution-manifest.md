@@ -5,9 +5,10 @@ The solution manifest is the orchestration contract. It references specialist ma
 ```json
 {
   "schemaVersion": 1,
-  "name": "Expense Approval",
+  "shortCode": "EXP",
+  "name": "EXP.Expense Approval",
   "application": {
-    "rootCategoryPath": "K2 Skills\\Expense Approval"
+    "rootCategoryPath": "K2 Skills\\EXP.Expense Approval"
   },
   "components": {
     "smartObjects": {
@@ -19,7 +20,7 @@ The solution manifest is the orchestration contract. It references specialist ma
     },
     "workflows": [
       {
-        "name": "Expense Approval",
+        "name": "EXP.Expense Approval",
         "manifest": "workflow-manifest.json",
         "dependsOn": ["smartObjects", "forms"]
       }
@@ -30,8 +31,8 @@ The solution manifest is the orchestration contract. It references specialist ma
     "modernForms": true,
     "workflowEntries": [
       {
-        "workflow": "Expense Approval",
-        "form": "Expense Request",
+        "workflow": "EXP.Expense Approval",
+        "form": "EXP.Expense Request",
         "formOwnership": "dedicated",
         "startStateDefault": "auto"
       }
@@ -42,7 +43,7 @@ The solution manifest is the orchestration contract. It references specialist ma
     "scenarios": [
       {
         "name": "Submit and approve an expense",
-        "entryForm": "Expense Request",
+        "entryForm": "EXP.Expense Request",
         "steps": [
           "open the ordinary form URL without a state query parameter",
           "create a valid request",
@@ -61,8 +62,10 @@ The solution manifest is the orchestration contract. It references specialist ma
 ## Fields
 
 - `schemaVersion` must be `1`.
-- `name` is a human-readable solution name. Do not add a release number.
+- `shortCode` is required and contains exactly three or four uppercase letters.
+- `name` is a human-readable solution name prefixed with `<shortCode>.`. Do not add a release number.
 - `application.rootCategoryPath` is the shared K2 application root. Specialist manifests that declare a root category must match it.
+- The category leaf and all solution-owned artifact names in referenced manifests must use the same `<shortCode>.` prefix. Fully qualified SQL objects normally satisfy this by using the short code as their schema.
 - `components.smartObjects.manifest` points to a `$k2-sql-smartobjects` manifest.
 - `components.forms.manifest` points to a `$k2-smartforms` manifest.
 - `components.workflows` is an array of named `$k2-workflows` manifests.
@@ -86,4 +89,3 @@ The solution manifest is the orchestration contract. It references specialist ma
 | `shared` | `false` | Preserve its current default; use a state-specific link or a dedicated entry form. |
 
 The workflow specialist manifest must agree with the resolved value in `workflow.smartForms.makeStartStateDefault`. Resolve mismatches before deployment.
-

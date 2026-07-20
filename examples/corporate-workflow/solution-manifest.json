@@ -1,8 +1,9 @@
 {
   "schemaVersion": 1,
-  "name": "Corporate Workflow",
+  "shortCode": "CWF",
+  "name": "CWF.Corporate Workflow",
   "application": {
-    "rootCategoryPath": "K2 Skills\\Corporate Workflow"
+    "rootCategoryPath": "K2 Skills\\CWF.Corporate Workflow"
   },
   "components": {
     "smartObjects": {
@@ -14,7 +15,7 @@
     },
     "workflows": [
       {
-        "name": "CW Request Approval",
+        "name": "CWF.Request Approval",
         "manifest": "workflow-manifest.json",
         "dependsOn": ["smartObjects", "forms"]
       }
@@ -25,8 +26,8 @@
     "modernForms": true,
     "workflowEntries": [
       {
-        "workflow": "CW Request Approval",
-        "form": "CW Request Management",
+        "workflow": "CWF.Request Approval",
+        "form": "CWF.Request Management",
         "formOwnership": "dedicated",
         "startStateDefault": "auto"
       }
@@ -36,13 +37,13 @@
     "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime",
     "scenarios": [
       {
-        "name": "Submit and decide a corporate request",
-        "entryForm": "CW Request Management",
+        "name": "CWF.Submit and decide a corporate request",
+        "entryForm": "CWF.Request Management",
         "steps": [
           "open the ordinary form URL without a state query parameter",
           "create a valid corporate request",
           "prove the request was saved and capture RequestId",
-          "prove one CW Request Approval instance started for RequestId",
+          "prove one CWF.Request Approval instance started for RequestId",
           "prove Originator Manager received the Review Corporate Request task notification",
           "select Approve or Reject",
           "prove WorkflowRequest.Status matches the selected outcome"
