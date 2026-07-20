@@ -7,7 +7,7 @@ namespace K2EnvironmentCli
 {
     internal static class Cli
     {
-        public const string Version = "0.5.0";
+        public const string Version = "0.6.0";
 
         public static int Run(string[] args)
         {
@@ -216,6 +216,18 @@ namespace K2EnvironmentCli
                         throw new CliException("Header view has no control named '" + controlName + "'. Available: " + string.Join(", ", selected.Controls.Select(x => x.Name).ToArray()));
                     transfers[controlName] = controlValue;
                 }
+                bool? isCollapsible = null;
+                var collapsibleValue = options.Get("collapsible");
+                if (!string.IsNullOrWhiteSpace(collapsibleValue))
+                {
+                    bool parsedCollapsible;
+                    if (!bool.TryParse(collapsibleValue, out parsedCollapsible)) throw new CliException("--collapsible must be true or false.");
+                    isCollapsible = parsedCollapsible;
+                }
+                var serverLoadOrder = options.Get("server-load-order") ?? "transfers-then-rules";
+                if (!string.Equals(serverLoadOrder, "transfers-then-rules", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(serverLoadOrder, "rules-then-transfers", StringComparison.OrdinalIgnoreCase))
+                    throw new CliException("--server-load-order must be transfers-then-rules or rules-then-transfers.");
                 CommonFooterSettings footer = null;
                 var footerValue = options.Get("footer");
                 if (!string.IsNullOrWhiteSpace(footerValue))
@@ -239,15 +251,17 @@ namespace K2EnvironmentCli
                 {
                     ViewGuid = selected.Guid, ViewName = selected.Name, ViewDisplayName = selected.DisplayName,
                     CategoryPath = selected.CategoryPath, ViewVersion = selected.Version,
-                    Title = options.Get("title") ?? string.Empty, InitializeEvent = initializeEvent,
-                    ServerRules = serverRules, Parameters = parameters, ServerLoadControlTransfers = transfers,
+                    Title = options.Get("title") ?? string.Empty, InstanceName = options.Get("instance-name"), IsCollapsible = isCollapsible,
+                    InitializeEvent = initializeEvent, ServerRules = serverRules,
+                    ServerRulesBeforeControlTransfers = string.Equals(serverLoadOrder, "rules-then-transfers", StringComparison.OrdinalIgnoreCase),
+                    Parameters = parameters, ServerLoadControlTransfers = transfers,
                     Footer = footer, Inspection = selected
                 };
             }
             store.Write(profile, true);
             var header = profile.SmartForms.DefaultCommonHeader;
             Console.WriteLine("Default SmartForms common header: " + (header == null ? "(none)" : header.ViewDisplayName + " [" + header.ViewName + "]"));
-            if (header != null) Console.WriteLine("  Initialize event: " + (header.InitializeEvent ?? "(none)") + "; server rules: " + (header.ServerRules == null || header.ServerRules.Count == 0 ? "(none)" : string.Join(", ", header.ServerRules.ToArray())) + "; parameters: " + string.Join(", ", header.Parameters.Select(x => x.Key + "=" + x.Value).ToArray()) + "; server-load transfers: " + string.Join(", ", (header.ServerLoadControlTransfers ?? new Dictionary<string, string>()).Select(x => x.Key + "=" + x.Value).ToArray()) + "; footer: " + (header.Footer == null ? "(none)" : header.Footer.ViewName));
+            if (header != null) Console.WriteLine("  Instance: name=" + (header.InstanceName ?? "(generated)") + ", title='" + (header.Title ?? string.Empty) + "', collapsible=" + (header.IsCollapsible.HasValue ? header.IsCollapsible.Value.ToString().ToLowerInvariant() : "generated") + "; initialize event: " + (header.InitializeEvent ?? "(none)") + "; server rules: " + (header.ServerRules == null || header.ServerRules.Count == 0 ? "(none)" : string.Join(", ", header.ServerRules.ToArray())) + "; server-load order: " + (header.ServerRulesBeforeControlTransfers ? "rules-then-transfers" : "transfers-then-rules") + "; parameters: " + string.Join(", ", header.Parameters.Select(x => x.Key + "=" + x.Value).ToArray()) + "; server-load transfers: " + string.Join(", ", (header.ServerLoadControlTransfers ?? new Dictionary<string, string>()).Select(x => x.Key + "=" + x.Value).ToArray()) + "; footer: " + (header.Footer == null ? "(none)" : header.Footer.ViewName));
             return 0;
         }
 
@@ -288,8 +302,10 @@ namespace K2EnvironmentCli
             {
                 ViewGuid = refreshed.Guid, ViewName = refreshed.Name, ViewDisplayName = refreshed.DisplayName,
                 CategoryPath = refreshed.CategoryPath, ViewVersion = refreshed.Version,
-                Title = selected.Title, InitializeEvent = selected.InitializeEvent,
+                Title = selected.Title, InstanceName = selected.InstanceName, IsCollapsible = selected.IsCollapsible,
+                InitializeEvent = selected.InitializeEvent,
                 ServerRules = selected.ServerRules ?? new List<string>(),
+                ServerRulesBeforeControlTransfers = selected.ServerRulesBeforeControlTransfers,
                 Parameters = selected.Parameters ?? new Dictionary<string, string>(),
                 ServerLoadControlTransfers = selected.ServerLoadControlTransfers ?? new Dictionary<string, string>(),
                 Footer = footer, Inspection = refreshed
@@ -354,7 +370,7 @@ namespace K2EnvironmentCli
             Console.WriteLine("  set-style-profile [--name NAME] (--style-profile NAME_OR_GUID | --no-style-profile)");
             Console.WriteLine("  inspect-header [--name NAME] --hint TEXT [--output json]");
             Console.WriteLine("  inspect-framework [--name NAME] --hint TEXT [--output json]");
-            Console.WriteLine("  set-common-header [--name NAME] (--view NAME_OR_GUID [--footer NAME_OR_GUID] [--initialize-event EVENT] [--server-rule EVENT ...] [--title TEXT] [--footer-title TEXT] [--parameter NAME=VALUE ...] [--control-transfer CONTROL=VALUE ...] | --no-common-header)");
+            Console.WriteLine("  set-common-header [--name NAME] (--view NAME_OR_GUID [--footer NAME_OR_GUID] [--instance-name TEXT] [--title TEXT] [--collapsible true|false] [--initialize-event EVENT] [--server-rule EVENT ...] [--server-load-order transfers-then-rules|rules-then-transfers] [--footer-title TEXT] [--parameter NAME=VALUE ...] [--control-transfer CONTROL=VALUE ...] | --no-common-header)");
             Console.WriteLine("Common: --root PATH overrides the default %CODEX_HOME%\\k2 store.");
         }
     }

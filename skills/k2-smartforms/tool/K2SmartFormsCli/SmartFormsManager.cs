@@ -619,8 +619,10 @@ namespace K2SmartFormsCli
             {
                 ViewGuid = info.Guid, ViewName = info.Name, DisplayName = info.DisplayName,
                 CategoryPath = info.CategoryPath, Title = configured.Title ?? string.Empty,
+                InstanceName = configured.InstanceName, IsCollapsible = configured.IsCollapsible,
                 InitializeEvent = configured.InitializeEvent, InitializeEventDefinitionId = initializeDefinitionId,
                 ServerRules = serverRules,
+                ServerRulesBeforeControlTransfers = configured.ServerRulesBeforeControlTransfers,
                 Parameters = configured.Parameters ?? new Dictionary<string, string>(),
                 ServerLoadControlTransfers = controlTransfers,
                 Footer = footer

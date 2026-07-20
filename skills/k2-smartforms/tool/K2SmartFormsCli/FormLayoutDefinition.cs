@@ -146,7 +146,15 @@ namespace K2SmartFormsCli
             var controls = RequiredChild(form, "Controls");
             var control = controls.Elements().FirstOrDefault(x => x.Name.LocalName == "Control" && string.Equals((string)x.Attribute("ID"), instanceId, StringComparison.OrdinalIgnoreCase));
             if (control == null) throw new CliException("Generated form has no AreaItem control for common header '" + header.ViewName + "'.");
+            if (!string.IsNullOrWhiteSpace(header.InstanceName))
+            {
+                SetChildValue(item, "Name", header.InstanceName);
+                SetChildValue(control, "Name", header.InstanceName);
+                SetChildValue(control, "DisplayName", header.InstanceName);
+                SetProperty(control, "ControlName", header.InstanceName);
+            }
             SetProperty(control, "Title", header.Title ?? string.Empty);
+            if (header.IsCollapsible.HasValue) SetProperty(control, "IsCollapsible", Bool(header.IsCollapsible.Value));
             if (!string.IsNullOrWhiteSpace(header.InitializeEvent))
             {
                 if (header.InitializeEventDefinitionId == Guid.Empty)
@@ -167,17 +175,22 @@ namespace K2SmartFormsCli
             XElement serverActions = null;
             if ((controlTransfers != null && controlTransfers.Count > 0) || (header.ServerRules != null && header.ServerRules.Count > 0))
                 serverActions = EnsureFormLifecycleActions(form, "ServerPreRender", "FormServerPreRenderEvent", "When the server loads the Form", "When the server loads the Form");
-            foreach (var transfer in controlTransfers == null ? new List<ResolvedHeaderControlTransfer>() : controlTransfers.Values)
+            var transfers = controlTransfers == null ? new List<ResolvedHeaderControlTransfer>() : controlTransfers.Values.ToList();
+            foreach (var transfer in transfers)
             {
                 foreach (var existing in serverActions.Elements().Where(x => IsControlTransfer(x, instanceId, transfer.ControlGuid)).ToList()) existing.Remove();
-                serverActions.Add(BuildControlTransfer(form, instanceId, transfer));
             }
             foreach (var serverRule in header.ServerRules ?? new List<ResolvedHeaderRule>())
-            {
                 RemoveRuleCall(serverActions, instanceId, serverRule.DefinitionId);
-                serverActions.Add(BuildRuleCall(form.Name.Namespace, instanceId, serverRule.DefinitionId,
-                    "When the server loads " + header.DisplayName + " View", "ServerRuleExecute", null));
-            }
+            Action addRules = delegate
+            {
+                foreach (var serverRule in header.ServerRules ?? new List<ResolvedHeaderRule>())
+                    serverActions.Add(BuildRuleCall(form.Name.Namespace, instanceId, serverRule.DefinitionId,
+                        "When the server loads " + header.DisplayName + " View", "ServerRuleExecute", null));
+            };
+            Action addTransfer = delegate { if (transfers.Count > 0) serverActions.Add(BuildControlTransfer(form, instanceId, transfers)); };
+            if (header.ServerRulesBeforeControlTransfers) { addRules(); addTransfer(); }
+            else { addTransfer(); addRules(); }
         }
 
         private static void ApplyFooter(XElement form, ResolvedCommonFooter footer)
@@ -199,6 +212,16 @@ namespace K2SmartFormsCli
             var title = control == null ? null : ReadProperty(control, "Title") ?? string.Empty;
             if (!string.Equals(title, header.Title ?? string.Empty, StringComparison.Ordinal))
                 throw new CliException("K2 Form '" + formName + "' common header title does not match the environment configuration.");
+            if (!string.IsNullOrWhiteSpace(header.InstanceName))
+            {
+                if (!string.Equals(ChildValue(item, "Name"), header.InstanceName, StringComparison.Ordinal) || control == null ||
+                    !string.Equals(ChildValue(control, "Name"), header.InstanceName, StringComparison.Ordinal) ||
+                    !string.Equals(ChildValue(control, "DisplayName"), header.InstanceName, StringComparison.Ordinal) ||
+                    !string.Equals(ReadProperty(control, "ControlName"), header.InstanceName, StringComparison.Ordinal))
+                    throw new CliException("K2 Form '" + formName + "' common header instance name must be '" + header.InstanceName + "'.");
+            }
+            if (header.IsCollapsible.HasValue && (control == null || !string.Equals(ReadProperty(control, "IsCollapsible"), Bool(header.IsCollapsible.Value), StringComparison.OrdinalIgnoreCase)))
+                throw new CliException("K2 Form '" + formName + "' common header collapsible setting does not match the environment configuration.");
             VerifyFrameworkPositions(form, header, formName);
             if (!string.IsNullOrWhiteSpace(header.InitializeEvent))
             {
@@ -214,9 +237,14 @@ namespace K2SmartFormsCli
                 }
             }
             var serverEventForTransfers = FindFormLifecycleEvent(form, "ServerPreRender");
-            foreach (var transfer in controlTransfers == null ? new List<ResolvedHeaderControlTransfer>() : controlTransfers.Values)
+            var configuredTransfers = controlTransfers == null ? new List<ResolvedHeaderControlTransfer>() : controlTransfers.Values.ToList();
+            var transferActions = serverEventForTransfers == null ? new List<XElement>() : serverEventForTransfers.Descendants()
+                .Where(x => x.Name.LocalName == "Action" && configuredTransfers.Any(t => IsControlTransfer(x, instanceId, t.ControlGuid))).Distinct().ToList();
+            if (configuredTransfers.Count > 0 && transferActions.Count != 1)
+                throw new CliException("K2 Form '" + formName + "' must use one combined server-load transfer action for all configured common-header controls.");
+            foreach (var transfer in configuredTransfers)
             {
-                var action = serverEventForTransfers == null ? null : serverEventForTransfers.Descendants().FirstOrDefault(x => x.Name.LocalName == "Action" && IsControlTransfer(x, instanceId, transfer.ControlGuid));
+                var action = transferActions.FirstOrDefault(x => IsControlTransfer(x, instanceId, transfer.ControlGuid));
                 if (action == null) throw new CliException("K2 Form '" + formName + "' does not transfer '" + transfer.ControlName + "' from 'When the server loads the Form'.");
                 var parameter = action.Descendants().First(x => x.Name.LocalName == "Parameter" && string.Equals((string)x.Attribute("TargetID"), transfer.ControlGuid.ToString(), StringComparison.OrdinalIgnoreCase));
                 var source = parameter.Elements().FirstOrDefault(x => x.Name.LocalName == "SourceValue");
@@ -235,9 +263,14 @@ namespace K2SmartFormsCli
                 if (action == null) throw new CliException("K2 Form '" + formName + "' does not call common header server rule '" + serverRule.Name + "' from 'When the server loads the Form'.");
                 if (!string.Equals(ReadActionProperty(action, "DesignTemplate"), "ServerRuleExecute", StringComparison.OrdinalIgnoreCase))
                     throw new CliException("K2 Form '" + formName + "' common header server rule call is missing DesignTemplate=ServerRuleExecute.");
-                if (controlTransfers != null && controlTransfers.Count > 0 && serverEvent.Descendants().Where(x => x.Name.LocalName == "Action").ToList().IndexOf(action) <=
-                    serverEvent.Descendants().Where(x => x.Name.LocalName == "Action" && controlTransfers.Values.Any(t => IsControlTransfer(x, instanceId, t.ControlGuid))).Select(x => serverEvent.Descendants().Where(y => y.Name.LocalName == "Action").ToList().IndexOf(x)).DefaultIfEmpty(-1).Max())
-                    throw new CliException("K2 Form '" + formName + "' must transfer common-header control values before calling server rule '" + serverRule.Name + "'.");
+                if (configuredTransfers.Count > 0)
+                {
+                    var actionList = serverEvent.Descendants().Where(x => x.Name.LocalName == "Action").ToList();
+                    var ruleIndex = actionList.IndexOf(action);
+                    var transferIndex = actionList.IndexOf(transferActions[0]);
+                    var correctOrder = header.ServerRulesBeforeControlTransfers ? ruleIndex < transferIndex : transferIndex < ruleIndex;
+                    if (!correctOrder) throw new CliException("K2 Form '" + formName + "' common-header server-load rule/transfer order does not match the environment configuration.");
+                }
             }
         }
 
@@ -255,7 +288,7 @@ namespace K2SmartFormsCli
                 throw new CliException("K2 Form '" + formName + "' common footer title does not match the environment configuration.");
         }
 
-        private static XElement BuildControlTransfer(XElement form, string instanceId, ResolvedHeaderControlTransfer transfer)
+        private static XElement BuildControlTransfer(XElement form, string instanceId, IEnumerable<ResolvedHeaderControlTransfer> transfers)
         {
             var ns = form.Name.Namespace;
             var formName = ChildValue(form, "Name") ?? (string)form.Attribute("Name") ?? string.Empty;
@@ -263,14 +296,15 @@ namespace K2SmartFormsCli
                 Property(ns, "Location", "Form", false),
                 Property(ns, "DesignTemplate", "ServerDataTransfer", false),
                 new XElement(ns + "Property", new XElement(ns + "Name", "FormID"), new XElement(ns + "DisplayValue", formName), new XElement(ns + "NameValue", formName), new XElement(ns + "Value", (string)form.Attribute("ID"))));
-            return new XElement(ns + "Action", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
-                new XAttribute("Type", "Transfer"), new XAttribute("ExecutionType", "Synchronous"), properties,
-                new XElement(ns + "Parameters",
-                    new XElement(ns + "Parameter", new XAttribute("SourceID", "Sources"), new XAttribute("SourceType", "Value"),
+            var parameters = new XElement(ns + "Parameters");
+            foreach (var transfer in transfers)
+                parameters.Add(new XElement(ns + "Parameter", new XAttribute("SourceID", "Sources"), new XAttribute("SourceType", "Value"),
                         new XAttribute("TargetInstanceID", instanceId), new XAttribute("TargetID", transfer.ControlGuid.ToString()),
                         new XAttribute("TargetName", transfer.ControlName), new XAttribute("TargetDisplayName", transfer.ControlName),
                         new XAttribute("TargetType", "Control"),
-                        new XElement(ns + "SourceValue", new XAttribute(XNamespace.Xml + "space", "preserve"), transfer.ValueTemplate ?? string.Empty))));
+                        new XElement(ns + "SourceValue", new XAttribute(XNamespace.Xml + "space", "preserve"), transfer.ValueTemplate ?? string.Empty)));
+            return new XElement(ns + "Action", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                new XAttribute("Type", "Transfer"), new XAttribute("ExecutionType", "Synchronous"), properties, parameters);
         }
 
         private static bool IsControlTransfer(XElement action, string instanceId, Guid controlGuid)

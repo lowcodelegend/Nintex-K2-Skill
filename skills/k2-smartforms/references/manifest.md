@@ -70,9 +70,12 @@ By default the CLI reads the selected common header from `%CODEX_HOME%\k2` (or `
   "environment": "spk2-local",
   "view": "Corporate.FrameworkHeader",
   "viewGuid": "00000000-0000-0000-0000-000000000000",
+  "instanceName": "Header",
   "title": "",
+  "isCollapsible": false,
   "initializeEvent": "Init",
   "serverRules": ["ServerPreRender"],
+  "serverRulesBeforeControlTransfers": true,
   "parameters": {
     "AppId": "{{solution.code}}",
     "Debug": "false"
@@ -89,7 +92,7 @@ By default the CLI reads the selected common header from `%CODEX_HOME%\k2` (or `
 }
 ```
 
-Supported templates are `{{form.name}}`, `{{application.name}}`, `{{application.rootCategoryPath}}`, and `{{solution.code}}`; other text is literal. `initializeEvent` must name a callable user rule on the header View; `parameters` are passed as View parameters. `serverLoadControlTransfers` maps exact header control names to literal/template values and writes them with a Form-level `ServerDataTransfer` action. Each `serverRules` entry names a callable header rule. The CLI runs control transfers first and rule calls second in Form server load. `footer` selects an optional paired external View that is always kept in the final form view position. An explicit `view` takes precedence over the environment selection. To suppress the framework use `{ "enabled": false, "reason": "..." }`; the reason is mandatory. External framework Views are never created, replaced, or removed by the manifest.
+Supported templates are `{{form.name}}`, `{{application.name}}`, `{{application.rootCategoryPath}}`, and `{{solution.code}}`; other text is literal. `instanceName`, `title`, and `isCollapsible` control the external header instance independently. `initializeEvent` must name a callable user rule on the header View; `parameters` are passed as View parameters. `serverLoadControlTransfers` maps exact header control names to literal/template values and writes all mappings with one Form-level `ServerDataTransfer` action. Each `serverRules` entry names a callable header rule. Set `serverRulesBeforeControlTransfers` when the discovered framework requires rule execution before the combined transfer; otherwise transfers precede calls. `footer` selects an optional paired external View that is always kept in the final form view position. An explicit `view` takes precedence over the environment selection. To suppress the framework use `{ "enabled": false, "reason": "..." }`; the reason is mandatory. External framework Views are never created, replaced, or removed by the manifest.
 
 ## Lookup sources and controls
 

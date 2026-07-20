@@ -96,8 +96,11 @@ namespace K2EnvironmentCli
         public string CategoryPath { get; set; }
         public int ViewVersion { get; set; }
         public string Title { get; set; }
+        public string InstanceName { get; set; }
+        public bool? IsCollapsible { get; set; }
         public string InitializeEvent { get; set; }
         public List<string> ServerRules { get; set; }
+        public bool ServerRulesBeforeControlTransfers { get; set; }
         public Dictionary<string, string> Parameters { get; set; }
         public Dictionary<string, string> ServerLoadControlTransfers { get; set; }
         public CommonFooterSettings Footer { get; set; }

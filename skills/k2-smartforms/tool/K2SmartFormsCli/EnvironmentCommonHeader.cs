@@ -45,8 +45,11 @@ namespace K2SmartFormsCli
                 View = selected.ViewName,
                 ViewGuid = selected.ViewGuid,
                 Title = selected.Title,
+                InstanceName = selected.InstanceName,
+                IsCollapsible = selected.IsCollapsible,
                 InitializeEvent = selected.InitializeEvent,
                 ServerRules = selected.ServerRules ?? new List<string>(),
+                ServerRulesBeforeControlTransfers = selected.ServerRulesBeforeControlTransfers,
                 Parameters = selected.Parameters ?? new Dictionary<string, string>(),
                 ServerLoadControlTransfers = selected.ServerLoadControlTransfers ?? new Dictionary<string, string>(),
                 Footer = selected.Footer == null ? null : new CommonFooterDefinition
@@ -86,8 +89,11 @@ namespace K2SmartFormsCli
             public Guid ViewGuid { get; set; }
             public string ViewName { get; set; }
             public string Title { get; set; }
+            public string InstanceName { get; set; }
+            public bool? IsCollapsible { get; set; }
             public string InitializeEvent { get; set; }
             public List<string> ServerRules { get; set; }
+            public bool ServerRulesBeforeControlTransfers { get; set; }
             public Dictionary<string, string> Parameters { get; set; }
             public Dictionary<string, string> ServerLoadControlTransfers { get; set; }
             public EnvironmentFooter Footer { get; set; }
@@ -107,9 +113,12 @@ namespace K2SmartFormsCli
         public string DisplayName { get; set; }
         public string CategoryPath { get; set; }
         public string Title { get; set; }
+        public string InstanceName { get; set; }
+        public bool? IsCollapsible { get; set; }
         public string InitializeEvent { get; set; }
         public Guid InitializeEventDefinitionId { get; set; }
         public List<ResolvedHeaderRule> ServerRules { get; set; }
+        public bool ServerRulesBeforeControlTransfers { get; set; }
         public Dictionary<string, string> Parameters { get; set; }
         public List<ResolvedHeaderControlTransfer> ServerLoadControlTransfers { get; set; }
         public ResolvedCommonFooter Footer { get; set; }
