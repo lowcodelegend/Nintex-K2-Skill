@@ -31,6 +31,22 @@ Names shared across manifests must resolve to the same K2 artifacts:
 - Every business-managed lookup declares an Admin form containing CRUD capture and List views under `<root>\Admin`; external masters and fixed workflow/system vocabularies omit Admin UX deliberately.
 - Verify the dropdown definition and execute the lookup List method. Browser-test that options load, the displayed label differs from an opaque key where appropriate, and create/update persists the selected value.
 
+## Master-detail contract
+
+Treat any requirement for multiple line items, details, rows, allocations, attachments, or repeated child entries as a one-to-many collection. Name it explicitly in the artifact graph. A complete contract requires all of these:
+
+- SQL master and detail tables with separate primary keys; the master key is generated before children are written.
+- A non-null detail foreign key with the exact master-key type, a real SQL foreign key, intentional delete behavior, and a leading index.
+- Both generated SQL SmartObjects under `<root>\Data`.
+- A capture/item master View, an editable-list detail View, and a Form containing both. Controlled detail values use the shared lookup contract.
+- A Form-level create batch: master Create returns its key, then child Create runs once for each `Added` row with that key mapped to the child foreign key.
+- A Form-level update batch: child Update for `Changed`, Create for `Added`, and Delete for `Removed` rows.
+- A Form-level filtered child List after master Read. Cross-view coordination must never be placed on a View rule.
+
+Declare the same relationship in SQL `masterDetails`, SmartForms `form.masterDetail`, and solution `policies.masterDetails`; `k2build` rejects an incomplete cross-layer contract. Keep workflow status and the primary workflow reference on the master unless child-specific processing is an explicit requirement.
+
+The verification scenario must create at least two child rows, prove they share the returned parent key, reload only that parent's children, then add/change/remove rows and prove all three item states persisted. Record authenticated browser interaction as errata when it cannot be executed.
+
 ## Request workflow baseline
 
 A typical request workflow must establish all of the following:

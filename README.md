@@ -89,13 +89,14 @@ Claude: /k2-builder create an expense approval solution with code EXP. Plan,
 - Inventory K2 version, management port, IIS Designer/Runtime URLs, themes, Style Profiles, and common framework views.
 - Persist Style Profile and header/footer lifecycle choices, including rule calls, control transfers, titles, and ordering.
 - Validate and plan complete solution manifests with SQL → SmartObjects → SmartForms → workflow dependencies.
-- Enforce 3–4 letter solution codes, version-free K2 names, shared categories, workflow entry-state defaults, approval-matrix/Admin UX contracts, artifact inventories, and errata.
-- Copy bundled `corporate-workflow` and `request-management` examples into a project.
+- Enforce 3–4 letter solution codes, version-free names, shared categories, workflow states, approval-matrix/Admin UX, and end-to-end master-detail contracts.
+- Copy bundled `corporate-workflow`, `expense-claim`, and `request-management` examples into a project.
 
 ### `k2sql`
 
 - Create databases, schemas, tables, views, stored procedures, keys, checks, foreign keys, seed data, and runtime grants.
 - Create/update/refresh SQL Server Service Instances; generate SmartObjects and place them in `<solution>\Data`.
+- Verify declared master/detail primary keys, generated parent IDs, exact FK types, delete behavior, and child FK indexes.
 - Generate threshold, dimensional, and multi-stage approval-matrix tables, seeds, and resolver procedures.
 - Plan, deploy, inspect, verify SQL/SmartObject metadata, run List smoke tests, and explicitly clean up disposable instances/databases.
 
@@ -104,6 +105,7 @@ Claude: /k2-builder create an expense approval solution with code EXP. Plan,
 - Generate checked-in capture, list, content, and editable-list views plus composed forms.
 - Use modern Style Profiles with legacy theme mode disabled.
 - Build tabs, list/details navigation, native My Tasks Worklist tabs, lookup dropdowns, and lookup/approval-matrix Admin UX.
+- Build item-view/editable-list master-detail forms with Form-level create/update/delete item-state batches and filtered child reloads.
 - Apply discovered shared headers/footers, view titles, initialization/server-load rules, combined control transfers, and footer ordering.
 - Plan, deploy, inspect, verify Runtime definitions/routes, check in exact forms, and dependency-safe cleanup/replace.
 

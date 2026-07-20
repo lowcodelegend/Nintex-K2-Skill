@@ -61,6 +61,7 @@ namespace K2SqlCli
                     return 0;
 
                 case "inspect":
+                    sql.InspectMasterDetails();
                     sql.InspectApprovalMatrices();
                     Inspect(k2);
                     return 0;
@@ -94,6 +95,8 @@ namespace K2SqlCli
                 Console.WriteLine("  SQL script: apply " + manifest.ResolvePath(script));
             }
             new ApprovalMatrixSql(manifest).PrintPlan();
+            foreach (var relationship in manifest.MasterDetails)
+                Console.WriteLine("  Master-detail: verify generated parent ID and indexed FK " + relationship.MasterSchema + "." + relationship.MasterTable + "." + relationship.MasterKey + " -> " + relationship.DetailSchema + "." + relationship.DetailTable + "." + relationship.DetailForeignKey + " (delete=" + relationship.DeleteBehavior + ")");
             if (!string.IsNullOrWhiteSpace(manifest.Database.RuntimePrincipal))
             {
                 Console.WriteLine("  SQL runtime access: grant DML, EXECUTE, and VIEW DEFINITION to " + manifest.Database.RuntimePrincipal);
@@ -169,7 +172,7 @@ namespace K2SqlCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2sql 0.3.1");
+            Console.WriteLine("k2sql 0.4.0");
         }
 
         private static void PrintHelp()

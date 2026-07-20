@@ -25,6 +25,7 @@
     "dataModelComplexity": "small",
     "versionFreeNames": true,
     "modernForms": true,
+    "masterDetails": [],
     "workflowEntries": [
       {
         "workflow": "SOL.Request Approval",

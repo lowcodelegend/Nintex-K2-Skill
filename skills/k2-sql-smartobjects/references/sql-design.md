@@ -38,6 +38,12 @@ Avoid heavy normalization by default:
 
 Give each business-managed lookup a stable value property, friendly display property, active flag when retirement is needed, and deterministic sort order. Seed required values idempotently before adding foreign keys. Coordinate the corresponding SmartForm dropdown and Admin CRUD page with `$k2-smartforms`.
 
+## Master-detail models
+
+Repeated business rows such as expense lines, order lines, allocations, or attachments require their own detail table. Use a generated integer/long/GUID key on the master, a separate primary key on the detail, and a non-null child foreign key with the exact same SQL type. Index the foreign key as the leading key so filtered K2 List calls do not scan the detail table. Choose `ON DELETE CASCADE` only when deleting the master must own deletion of every child; otherwise use restrict/no-action.
+
+Declare every such relationship in `masterDetails`. Verification proves both primary keys, the generated master identity when required, exact key type compatibility, the foreign key/delete behavior, and the leading child index. This prevents a complete-solution build from silently generating only the header SmartObject. Coordinate the matching capture/editable-list Form contract with `$k2-smartforms`.
+
 ## Deployment shape
 
 Use a dedicated application database when feasible. Organize objects in business schemas such as `app`, `ref`, and `reporting`. Keep schema scripts ordered and rerunnable:

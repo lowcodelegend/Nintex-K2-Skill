@@ -14,6 +14,7 @@ namespace K2SqlCli
         public DatabaseOptions Database { get; set; }
         public K2Options K2 { get; set; }
         public List<ApprovalMatrixDefinition> ApprovalMatrices { get; set; }
+        public List<MasterDetailDefinition> MasterDetails { get; set; }
         public VerificationOptions Verification { get; set; }
 
         public DeploymentManifest()
@@ -22,6 +23,7 @@ namespace K2SqlCli
             Database = new DatabaseOptions();
             K2 = new K2Options();
             ApprovalMatrices = new List<ApprovalMatrixDefinition>();
+            MasterDetails = new List<MasterDetailDefinition>();
             Verification = new VerificationOptions();
         }
 
@@ -67,6 +69,7 @@ namespace K2SqlCli
             if (Database == null) Database = new DatabaseOptions();
             if (K2 == null) K2 = new K2Options();
             if (ApprovalMatrices == null) ApprovalMatrices = new List<ApprovalMatrixDefinition>();
+            if (MasterDetails == null) MasterDetails = new List<MasterDetailDefinition>();
             if (Verification == null) Verification = new VerificationOptions();
             if (K2.ServiceInstance == null) K2.ServiceInstance = new ServiceInstanceOptions();
             if (K2.SmartObjects == null) K2.SmartObjects = new SmartObjectGenerationOptions();
@@ -136,6 +139,41 @@ namespace K2SqlCli
             }
 
             ValidateApprovalMatrices();
+            ValidateMasterDetails();
+        }
+
+        private void ValidateMasterDetails()
+        {
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var relationship in MasterDetails)
+            {
+                if (relationship == null) throw new CliException("masterDetails entries cannot be null.");
+                Require(relationship.Name, "masterDetails.name");
+                if (!names.Add(relationship.Name)) throw new CliException("masterDetails.name values must be unique: " + relationship.Name);
+                Require(relationship.MasterSchema, "masterDetails.masterSchema");
+                Require(relationship.MasterTable, "masterDetails.masterTable");
+                Require(relationship.MasterKey, "masterDetails.masterKey");
+                Require(relationship.DetailSchema, "masterDetails.detailSchema");
+                Require(relationship.DetailTable, "masterDetails.detailTable");
+                Require(relationship.DetailKey, "masterDetails.detailKey");
+                Require(relationship.DetailForeignKey, "masterDetails.detailForeignKey");
+                ValidateSqlIdentifier(relationship.MasterSchema, "masterDetails.masterSchema");
+                ValidateSqlIdentifier(relationship.MasterTable, "masterDetails.masterTable");
+                ValidateSqlIdentifier(relationship.MasterKey, "masterDetails.masterKey");
+                ValidateSqlIdentifier(relationship.DetailSchema, "masterDetails.detailSchema");
+                ValidateSqlIdentifier(relationship.DetailTable, "masterDetails.detailTable");
+                ValidateSqlIdentifier(relationship.DetailKey, "masterDetails.detailKey");
+                ValidateSqlIdentifier(relationship.DetailForeignKey, "masterDetails.detailForeignKey");
+                relationship.DeleteBehavior = string.IsNullOrWhiteSpace(relationship.DeleteBehavior)
+                    ? "restrict"
+                    : relationship.DeleteBehavior.Trim().ToLowerInvariant();
+                if (!new[] { "restrict", "no-action", "cascade" }.Contains(relationship.DeleteBehavior, StringComparer.OrdinalIgnoreCase))
+                    throw new CliException("masterDetails.deleteBehavior must be restrict, no-action, or cascade: " + relationship.Name);
+                AddSqlExpectation("table", relationship.MasterSchema, relationship.MasterTable);
+                AddSqlExpectation("table", relationship.DetailSchema, relationship.DetailTable);
+                AddServiceObjectExpectation(relationship.MasterSchema + "-" + relationship.MasterTable);
+                AddServiceObjectExpectation(relationship.DetailSchema + "-" + relationship.DetailTable);
+            }
         }
 
         private void ValidateApprovalMatrices()
@@ -305,6 +343,28 @@ namespace K2SqlCli
             ResolverProcedure = "ResolveApprovalMatrix";
             Dimensions = new List<ApprovalMatrixDimension>();
             Rules = new List<ApprovalMatrixRule>();
+        }
+    }
+
+    public sealed class MasterDetailDefinition
+    {
+        public string Name { get; set; }
+        public string MasterSchema { get; set; }
+        public string MasterTable { get; set; }
+        public string MasterKey { get; set; }
+        public string DetailSchema { get; set; }
+        public string DetailTable { get; set; }
+        public string DetailKey { get; set; }
+        public string DetailForeignKey { get; set; }
+        public string DeleteBehavior { get; set; }
+        public bool RequireIdentityMasterKey { get; set; }
+        public bool RequireForeignKeyIndex { get; set; }
+
+        public MasterDetailDefinition()
+        {
+            DeleteBehavior = "restrict";
+            RequireIdentityMasterKey = true;
+            RequireForeignKeyIndex = true;
         }
     }
 

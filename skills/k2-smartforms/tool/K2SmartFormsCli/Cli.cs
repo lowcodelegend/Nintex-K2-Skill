@@ -108,6 +108,8 @@ namespace K2SmartFormsCli
                     Console.WriteLine("      tab: " + tab.Name + " <= " + (tab.Worklist != null ? "native Worklist control" : "[" + string.Join(", ", tab.Views.ToArray()) + "]"));
                 foreach (var navigation in form.ListClickTabNavigation)
                     Console.WriteLine("      list click: " + navigation.SourceView + " -> load selected item -> tab '" + navigation.TargetTab + "'");
+                if (form.MasterDetail != null)
+                    Console.WriteLine("      master-detail: " + form.MasterDetail.MasterView + "." + form.MasterDetail.MasterKeyProperty + " -> [" + string.Join(", ", form.MasterDetail.Details.Select(x => x.View + "." + x.ForeignKeyProperty).ToArray()) + "]; Form-level create/update/load batching");
             }
             if (dependencies.Count > 0)
             {
@@ -175,7 +177,7 @@ namespace K2SmartFormsCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2forms 0.10.1");
+            Console.WriteLine("k2forms 0.11.0");
         }
 
         private static void PrintHelp()

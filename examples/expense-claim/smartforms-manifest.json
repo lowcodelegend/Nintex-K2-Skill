@@ -1,0 +1,91 @@
+{
+  "name": "EXP.Expense Claims UX",
+  "k2": { "host": "localhost", "port": 5555, "integrated": true, "securityLabel": "K2" },
+  "application": {
+    "rootCategoryPath": "K2 Skills\\EXP.Expense Claims",
+    "theme": "Lithium",
+    "styleProfile": "PSF UX v1",
+    "solutionCode": "EXP",
+    "replaceExisting": true,
+    "checkIn": true,
+    "lookups": [
+      {
+        "name": "Expense Category",
+        "smartObject": "EXP_ExpenseClaimsSql_EXP_ExpenseCategory",
+        "method": "List",
+        "valueProperty": "CategoryCode",
+        "displayProperty": "CategoryName"
+      }
+    ],
+    "views": [
+      {
+        "name": "EXP.Claim List",
+        "smartObject": "EXP_ExpenseClaimsSql_EXP_ExpenseClaim",
+        "type": "list",
+        "properties": ["ExpenseClaimId", "ClaimTitle", "Department", "Status", "TotalAmount", "CreatedOn"],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": ["toolbar"]
+      },
+      {
+        "name": "EXP.Claim Editor",
+        "smartObject": "EXP_ExpenseClaimsSql_EXP_ExpenseClaim",
+        "type": "capture",
+        "properties": ["ExpenseClaimId", "ClaimTitle", "Department", "BusinessPurpose", "Status", "TotalAmount", "CreatedOn"],
+        "methods": ["Create", "Read", "Update", "Delete"],
+        "options": ["editable", "labels-left", "colon-labels", "toolbar"]
+      },
+      {
+        "name": "EXP.Claim Lines",
+        "smartObject": "EXP_ExpenseClaimsSql_EXP_ExpenseLine",
+        "type": "capture-list",
+        "properties": ["ExpenseLineId", "CategoryCode", "ExpenseDate", "Description", "Amount", "ReceiptReference"],
+        "methods": ["Create", "Update", "Delete", "List"],
+        "defaultListMethod": "List",
+        "options": ["editable", "toolbar"],
+        "lookupControls": [{ "property": "CategoryCode", "lookup": "Expense Category" }]
+      }
+    ],
+    "forms": [
+      {
+        "name": "EXP.Expense Claims",
+        "useLegacyTheme": false,
+        "views": ["EXP.Claim List", "EXP.Claim Editor", "EXP.Claim Lines"],
+        "behaviors": ["load-form-list-click", "refresh-list-form-submit"],
+        "viewTitles": {
+          "EXP.Claim List": "Expense Claims",
+          "EXP.Claim Editor": "Claim Details",
+          "EXP.Claim Lines": "Expense Line Items"
+        },
+        "tabs": [
+          { "name": "Claims", "views": ["EXP.Claim List"] },
+          { "name": "Claim Details", "views": ["EXP.Claim Editor", "EXP.Claim Lines"] }
+        ],
+        "listClickTabNavigation": [{ "sourceView": "EXP.Claim List", "targetTab": "Claim Details" }],
+        "masterDetail": {
+          "masterView": "EXP.Claim Editor",
+          "masterKeyProperty": "ExpenseClaimId",
+          "masterCreateMethod": "Create",
+          "masterUpdateMethod": "Update",
+          "masterReadMethod": "Read",
+          "details": [
+            {
+              "view": "EXP.Claim Lines",
+              "foreignKeyProperty": "ExpenseClaimId",
+              "createMethod": "Create",
+              "updateMethod": "Update",
+              "deleteMethod": "Delete",
+              "listMethod": "List"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "verification": {
+    "expectedViews": ["EXP.Claim List", "EXP.Claim Editor", "EXP.Claim Lines"],
+    "expectedForms": ["EXP.Expense Claims"],
+    "smokeTestRuntime": true,
+    "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime"
+  }
+}

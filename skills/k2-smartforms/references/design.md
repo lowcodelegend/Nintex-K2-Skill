@@ -1,4 +1,4 @@
-# SmartForms v0.10 design guide
+# SmartForms v0.11 design guide
 
 ## CRUD shape
 
@@ -24,11 +24,24 @@ Suppress a title only when it would be genuinely redundant or interfere with an 
 
 For capture views, select the SmartObject's Create, Read, Update, and Delete methods. For list views, set the parameterless List method as `defaultListMethod`.
 
+## Master-detail forms
+
+Model a repeated child collection with a capture/item master View and an editable `capture-list` detail View. Include the master generated key and the detail primary key in the View fields needed by K2 method mappings. Bind child controlled values to lookup SmartObjects. Put both Views on the details tab and give them user-facing titles.
+
+Declare the relationship on the Form. `k2forms` extends the generated Form rules—not the View rules—using K2's native actions:
+
+1. The master Create action returns the generated key to the master View field.
+2. In the same batch, `Execute a View method for items that are in a specific state` calls child Create for every `Added` row and maps the master key to the child foreign key.
+3. Master Update batches child Update for `Changed`, Create for `Added`, and Delete for `Removed` rows.
+4. A master Read is followed by child List with the master key mapped as its foreign-key filter.
+
+This follows K2's parent/child pattern: users may stage lines in the editable list, but persist the transaction through the master Create/Update button. Never rely on a View rule to coordinate another View. Test creation with two rows, reload/filtering, and then one added, one changed, and one removed row.
+
 ## Property selection
 
 Order fields by user task, not database column order. Include the stable key when generated Read/Update/Delete rules need it, but review whether it should be hidden or rendered as a data label in a later Designer pass. Exclude `rowversion`, audit fields users cannot edit, and large technical projections unless the screen needs them.
 
-For every method selected on a capture or capture-list view, include every property reported by that live SmartObject method's `RequiredProperties` collection. The CLI blocks `doctor`, `plan`, `deploy`, and `verify` when a required method input is absent. A SQL `DEFAULT` constraint does not necessarily make a generated SQL broker Create input optional. If a database-managed audit value is still required by K2, redesign the SQL/SmartObject contract—for example, make the broker input optional while applying the default in SQL, or expose a purpose-built create method—instead of placing a technical timestamp control on the user form.
+For every method selected on a capture or capture-list view, include every property reported by that live SmartObject method's `RequiredProperties` collection. The sole exception is a child foreign key explicitly mapped from the master by `form.masterDetail`; the Form supplies it. The CLI blocks invalid omissions. A SQL `DEFAULT` constraint does not necessarily make a generated SQL broker Create input optional.
 
 Convert user-selected foreign keys and controlled codes into SmartObject-backed dropdowns. Use a parameterless List method, bind the stored value to a stable key/code, and show a friendly name. Do not turn workflow-managed status properties into user-editable controls merely because a lookup exists; control editability remains a business-rule decision.
 

@@ -158,11 +158,39 @@ If a deliberate layout should have no title, use `untitledViews` and provide the
 
 Blank `viewTitles` values are invalid. Deployment writes the `Title` property on the view's AreaItem control, and verification checks every effective title or explicit suppression.
 
-For capture and capture-list views, `properties` must contain every required input property reported by every method in `methods`. The `all-properties` option also satisfies this check. Validation uses live SmartObject metadata and fails before deployment with the view, method, and omitted property names. SQL column defaults are not treated as SmartObject input defaults.
+For capture and capture-list views, `properties` must contain every required input property reported by every method in `methods`. The `all-properties` option also satisfies this check. A detail foreign key supplied by `form.masterDetail` is the supported exception. SQL column defaults are not treated as SmartObject input defaults.
 
 Supported view types are `capture`, `list`, `content`, and `capture-list`. Supported options are `display-controls`, `all-properties`, `all-methods`, `labels-left`, `colon-labels`, `toolbar`, and `editable`. Editable types require `editable`.
 
 Supported form options are `no-tabs`. Supported behaviors are `load-form-list-click`, `refresh-list-form-submit`, and `refresh-list-form-load`.
+
+## Master-detail rules
+
+Declare one master and one or more editable-list children on a Form:
+
+```json
+"masterDetail": {
+  "masterView": "EXP.Claim Editor",
+  "masterKeyProperty": "ExpenseClaimId",
+  "masterCreateMethod": "Create",
+  "masterUpdateMethod": "Update",
+  "masterReadMethod": "Read",
+  "details": [
+    {
+      "view": "EXP.Claim Lines",
+      "foreignKeyProperty": "ExpenseClaimId",
+      "createMethod": "Create",
+      "updateMethod": "Update",
+      "deleteMethod": "Delete",
+      "listMethod": "List"
+    }
+  ]
+}
+```
+
+The master must be a `capture` View containing its key and selected Create/Update/Read methods. Each detail must be `capture-list` with `editable` and selected Create/Update/Delete/List methods. The CLI generates and verifies Form-level K2 actions for the create batch (`Added`), update batch (`Changed`, `Added`, `Removed`), returned-key mapping, and filtered detail List after master Read. Method defaults shown above apply when omitted.
+
+`capture-list` is a manifest intent: the CLI uses K2's List generator with editable mode, producing the native editable-list View and item-state rules. On complete solution forms, combine it with a list tab and `listClickTabNavigation` so a selected master is read before its child List runs.
 
 ## Tabs and Worklist
 
@@ -202,6 +230,6 @@ The CLI validates that the installed environment registers the native `Worklist`
 
 `listClickTabNavigation` is a generic list/detail navigation contract. Each entry names a declared list `sourceView` and a different existing `targetTab`. It requires the `load-form-list-click` behavior. On the source View's `ListClick` rule, the CLI preserves the generated SmartObject `Read` action and appends one native synchronous `Focus` action targeting the destination tab Panel. Verification requires exactly one matching action and proves that it follows the Read. Use it when selecting an item should drill into a details/editor tab—for example, a workflow request list opening `Request Details`. Multiple list views may each target their own tab, but each source view may appear only once.
 
-Tabs must have stable, version-free names. Version 0.10 supports one Worklist tab per form. It loads the current K2 user's default worklist across processes; process-specific Worklist filters, workflow-specific SmartObjects, and fixed users are not configured.
+Tabs must have stable, version-free names. Version 0.11 supports one Worklist tab per form. It loads the current K2 user's default worklist across processes; process-specific Worklist filters, workflow-specific SmartObjects, and fixed users are not configured.
 
 When expected artifacts are omitted, verification defaults to every declared view and form. Verification checks tab order/content, list-click Read-before-tab-focus behavior, native Worklist properties, its click-to-open-task rule, and any resolved common framework's header-first/footer-last placement and titles, initialization bindings, server-load control targets/values/order, and explicit server-rule calls. Runtime routes use `<runtimeBaseUrl>/Runtime/Form/<URL-encoded-form-name>/`; an unauthenticated CLI may verify the route up to the environment's interactive authentication redirect, which is not an interactive Worklist test.

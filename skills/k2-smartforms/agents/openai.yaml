@@ -1,4 +1,4 @@
 interface:
   display_name: "K2 SmartForms Builder"
-  short_description: "Build CRUD and Admin SmartForms over K2 data"
-  default_prompt: "Use $k2-smartforms to generate and verify polished CRUD and approval-matrix administration forms over existing K2 SmartObjects."
+  short_description: "Build CRUD, master-detail, and Admin SmartForms"
+  default_prompt: "Use $k2-smartforms to generate and verify polished CRUD, master-detail editable-list, and approval-matrix administration forms over existing K2 SmartObjects."

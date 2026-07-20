@@ -146,6 +146,7 @@ namespace K2SmartFormsCli
                 if (form.Behaviors == null) form.Behaviors = new List<string>();
                 if (form.Tabs == null) form.Tabs = new List<FormTabDefinition>();
                 if (form.ListClickTabNavigation == null) form.ListClickTabNavigation = new List<ListClickTabNavigationDefinition>();
+                if (form.MasterDetail != null && form.MasterDetail.Details == null) form.MasterDetail.Details = new List<MasterDetailChildDefinition>();
                 if (form.ViewTitles == null) form.ViewTitles = new Dictionary<string, string>();
                 if (form.UntitledViews == null) form.UntitledViews = new Dictionary<string, string>();
                 RequireArtifactName(form.Name, "form.name");
@@ -175,6 +176,7 @@ namespace K2SmartFormsCli
                 form.Area = NormalizeArea(form.Area, "form", form.Name);
                 ValidateTabs(form);
                 ValidateListClickTabNavigation(form, Application.Views);
+                ValidateMasterDetail(form, Application.Views);
             }
 
             foreach (var lookup in Application.Lookups.Where(x => !string.IsNullOrWhiteSpace(x.AdminForm)))
@@ -208,6 +210,46 @@ namespace K2SmartFormsCli
         private static readonly HashSet<string> AllowedFormBehaviors = NewSet("load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load");
         private static readonly HashSet<string> AllowedAreas = NewSet("application", "admin");
         private static readonly HashSet<string> AllowedWorklistActions = NewSet("viewWorkflow", "sleep", "redirect", "release", "share");
+
+        private static void ValidateMasterDetail(FormDefinition form, IEnumerable<ViewDefinition> views)
+        {
+            var relationship = form.MasterDetail;
+            if (relationship == null) return;
+            Require(relationship.MasterView, "form.masterDetail.masterView");
+            Require(relationship.MasterKeyProperty, "form.masterDetail.masterKeyProperty");
+            Require(relationship.MasterCreateMethod, "form.masterDetail.masterCreateMethod");
+            Require(relationship.MasterUpdateMethod, "form.masterDetail.masterUpdateMethod");
+            Require(relationship.MasterReadMethod, "form.masterDetail.masterReadMethod");
+            if (!form.Views.Contains(relationship.MasterView, StringComparer.OrdinalIgnoreCase))
+                throw new CliException("Form '" + form.Name + "' masterDetail.masterView is not present on the form: " + relationship.MasterView);
+            var master = views.Single(x => string.Equals(x.Name, relationship.MasterView, StringComparison.OrdinalIgnoreCase));
+            if (master.Type != "capture") throw new CliException("Form '" + form.Name + "' master-detail master must be a capture/item view: " + master.Name);
+            if (!master.Properties.Contains(relationship.MasterKeyProperty, StringComparer.OrdinalIgnoreCase))
+                throw new CliException("Form '" + form.Name + "' master view must select the generated key property so it can be returned by Create: " + relationship.MasterKeyProperty);
+            foreach (var method in new[] { relationship.MasterCreateMethod, relationship.MasterUpdateMethod, relationship.MasterReadMethod })
+                if (!master.Methods.Contains(method, StringComparer.OrdinalIgnoreCase) && !master.Options.Contains("all-methods", StringComparer.OrdinalIgnoreCase))
+                    throw new CliException("Form '" + form.Name + "' master view does not select required master-detail method '" + method + "'.");
+            if (relationship.Details.Count == 0) throw new CliException("Form '" + form.Name + "' masterDetail.details must contain at least one child view.");
+            EnsureUniqueValues(relationship.Details.Select(x => x == null ? null : x.View), "master-detail child view", form.Name);
+            foreach (var child in relationship.Details)
+            {
+                if (child == null) throw new CliException("Form '" + form.Name + "' masterDetail.details cannot contain null entries.");
+                Require(child.ForeignKeyProperty, "form.masterDetail.details.foreignKeyProperty");
+                Require(child.CreateMethod, "form.masterDetail.details.createMethod");
+                Require(child.UpdateMethod, "form.masterDetail.details.updateMethod");
+                Require(child.DeleteMethod, "form.masterDetail.details.deleteMethod");
+                Require(child.ListMethod, "form.masterDetail.details.listMethod");
+                if (!form.Views.Contains(child.View, StringComparer.OrdinalIgnoreCase))
+                    throw new CliException("Form '" + form.Name + "' master-detail child view is not present on the form: " + child.View);
+                var detail = views.Single(x => string.Equals(x.Name, child.View, StringComparison.OrdinalIgnoreCase));
+                if (detail.Type != "capture-list" || !detail.Options.Contains("editable", StringComparer.OrdinalIgnoreCase))
+                    throw new CliException("Form '" + form.Name + "' master-detail child must be an editable capture-list view: " + detail.Name);
+                foreach (var method in new[] { child.CreateMethod, child.UpdateMethod, child.DeleteMethod, child.ListMethod })
+                    if (!detail.Methods.Contains(method, StringComparer.OrdinalIgnoreCase) && !detail.Options.Contains("all-methods", StringComparer.OrdinalIgnoreCase) &&
+                        !string.Equals(detail.DefaultListMethod, method, StringComparison.OrdinalIgnoreCase))
+                        throw new CliException("Form '" + form.Name + "' detail view '" + detail.Name + "' does not select required method '" + method + "'.");
+            }
+        }
 
         private static void ValidateTabs(FormDefinition form)
         {
@@ -486,6 +528,7 @@ namespace K2SmartFormsCli
         public string Area { get; set; }
         public List<FormTabDefinition> Tabs { get; set; }
         public List<ListClickTabNavigationDefinition> ListClickTabNavigation { get; set; }
+        public MasterDetailFormDefinition MasterDetail { get; set; }
         public Dictionary<string, string> ViewTitles { get; set; }
         public Dictionary<string, string> UntitledViews { get; set; }
 
@@ -506,6 +549,42 @@ namespace K2SmartFormsCli
             if (UntitledViews.Keys.Contains(viewName, StringComparer.OrdinalIgnoreCase)) return string.Empty;
             var custom = ViewTitles.FirstOrDefault(x => string.Equals(x.Key, viewName, StringComparison.OrdinalIgnoreCase));
             return string.IsNullOrWhiteSpace(custom.Key) ? viewName : custom.Value;
+        }
+    }
+
+    public sealed class MasterDetailFormDefinition
+    {
+        public string MasterView { get; set; }
+        public string MasterKeyProperty { get; set; }
+        public string MasterCreateMethod { get; set; }
+        public string MasterUpdateMethod { get; set; }
+        public string MasterReadMethod { get; set; }
+        public List<MasterDetailChildDefinition> Details { get; set; }
+
+        public MasterDetailFormDefinition()
+        {
+            MasterCreateMethod = "Create";
+            MasterUpdateMethod = "Update";
+            MasterReadMethod = "Read";
+            Details = new List<MasterDetailChildDefinition>();
+        }
+    }
+
+    public sealed class MasterDetailChildDefinition
+    {
+        public string View { get; set; }
+        public string ForeignKeyProperty { get; set; }
+        public string CreateMethod { get; set; }
+        public string UpdateMethod { get; set; }
+        public string DeleteMethod { get; set; }
+        public string ListMethod { get; set; }
+
+        public MasterDetailChildDefinition()
+        {
+            CreateMethod = "Create";
+            UpdateMethod = "Update";
+            DeleteMethod = "Delete";
+            ListMethod = "List";
         }
     }
 

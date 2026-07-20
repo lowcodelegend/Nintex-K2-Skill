@@ -30,6 +30,19 @@ The solution manifest is the orchestration contract. It references specialist ma
     "dataModelComplexity": "small",
     "versionFreeNames": true,
     "modernForms": true,
+    "masterDetails": [
+      {
+        "name": "EXP.Claim Lines",
+        "masterSmartObject": "EXP_ExpenseSql_EXP_ExpenseClaim",
+        "masterKey": "ExpenseClaimId",
+        "detailSmartObject": "EXP_ExpenseSql_EXP_ExpenseLine",
+        "detailKey": "ExpenseLineId",
+        "foreignKey": "ExpenseClaimId",
+        "form": "EXP.Expense Request",
+        "masterView": "EXP.Claim Editor",
+        "detailView": "EXP.Claim Lines"
+      }
+    ],
     "workflowEntries": [
       {
         "workflow": "EXP.Expense Approval",
@@ -76,6 +89,7 @@ The solution manifest is the orchestration contract. It references specialist ma
 - `policies.dataModelComplexity` is required: use `small` to default lookups to stable code/text foreign keys, or `complex` to default them to normalized surrogate keys. Explicit per-lookup requirements may override that default.
 - `policies.versionFreeNames` and `policies.modernForms` should normally remain true.
 - Approval matrices live in the referenced SmartObjects manifest's root `approvalMatrices` array. The builder validates their namespace, requires Admin maintenance UX in the referenced Forms manifest, validates workflow matrix codes/dimension inputs, previews stages/rule counts, and emits `$designer` seed errata.
+- `policies.masterDetails` makes each one-to-many relationship a cross-layer requirement. Every item must match one SQL `masterDetails` relationship by name and one SmartForms `form.masterDetail` contract by Form, keys, and Views. The named View SmartObjects must match `masterSmartObject` and `detailSmartObject`. The builder also rejects SQL or Form master-detail declarations omitted from this policy, preventing a header-only solution from passing orchestration validation.
 - Each `workflowEntries` item binds a workflow, a generated form, and the entry-state decision.
 - `formOwnership` is `dedicated` when the form belongs to this workflow solution, or `shared` when independently owned behavior must be preserved.
 - `startStateDefault` accepts `auto`, `true`, or `false`. Use strings so intent is reviewable across JSON tooling.

@@ -1,6 +1,6 @@
 ---
 name: k2-sql-smartobjects
-description: Build, update, inspect, verify, and clean up SQL Server-backed SmartObjects in self-hosted Nintex K2 Five using declarative JSON manifests and the bundled k2sql .NET CLI. Use for SQL data modeling, generic threshold/dimensional/multi-stage approval matrices, lookup/reference tables, constraints and foreign keys, SQL tables/views/stored procedures, SQL Server Service Instances, generated SmartObjects, K2 SQL integration troubleshooting, or repeatable database deployments. Do not use for SmartBox, SharePoint, REST, Oracle, SmartForms, or workflow construction.
+description: Build, update, inspect, verify, and clean up SQL Server-backed SmartObjects in self-hosted Nintex K2 Five using declarative JSON manifests and the bundled k2sql .NET CLI. Use for SQL data models including master-detail relationships, approval matrices, lookups, constraints, tables/views/procedures, SQL Service Instances, generated SmartObjects, troubleshooting, or repeatable deployments. Do not use for SmartBox, SharePoint, REST, Oracle, SmartForms, or workflow construction.
 ---
 
 # K2 SQL SmartObjects
@@ -15,6 +15,7 @@ Deploy a SQL model and its K2 SQL Server Service Instance as one repeatable unit
    For a complete solution, set `application.rootCategoryPath` to the shared solution root; the CLI creates and uses the fixed `<root>\Data` category for generated SmartObjects.
    When this belongs to a complete solution, use its three- or four-letter uppercase short code as the `<CODE>.` prefix for the manifest, database, and Service Instance names. Use the code as the SQL schema so every fully qualified table, view, and procedure name begins `<CODE>.`; generated SmartObject names must retain the same prefix.
    Prefer lookup tables plus foreign keys for user-selected controlled values. Keep code/text foreign keys for small applications unless normalization is requested; prefer surrogate lookup keys for complex applications. Coordinate lookup controls and administrative UX with `$k2-smartforms`.
+   When requirements contain repeatable line items/details, create a separate detail table rather than flattening or omitting the collection. Give both tables single stable primary keys, make the master key generated (normally `IDENTITY`), add the child foreign key and a leading index, then declare the relationship under `masterDetails`. Coordinate its editable-list and Form-level save/load rules with `$k2-smartforms`.
 4. Keep passwords out of JSON and SQL. Name an environment variable in the manifest when explicit credentials are unavoidable.
 5. Build and diagnose the CLI:
 
@@ -60,8 +61,8 @@ Deploy a SQL model and its K2 SQL Server Service Instance as one repeatable unit
 
 The CLI performs deployment in this order:
 
-`create database → apply SQL scripts → create/update approval-matrix tables/procedures and seeds → grant optional runtime access → create/update and refresh Service Instance → generate/update SmartObjects → place them in <root>\Data → verify SQL/matrix terminal behavior → verify categories and smoke-test K2`
+`create database → apply SQL scripts → create/update approval matrices → grant runtime access → create/update and refresh Service Instance → generate/update SmartObjects → place them in <root>\Data → verify SQL/master-detail/matrix contracts → verify categories and smoke-test K2`
 
 It discovers K2 from `K2_INSTALL_DIR`, the SourceCode registry key, or `C:\Program Files\K2`. It builds as a 64-bit .NET Framework executable and resolves the installed K2 client assemblies at runtime.
 
-Read [references/cli.md](references/cli.md) for commands, exit codes, authentication, and cleanup details. When the sibling `k2-builder` skill is installed, copy its bundled SQL-only fixture with `../k2-builder/scripts/copy-example.ps1 -Name request-management -Destination <empty-project-folder>` when a concrete model is useful.
+Read [references/cli.md](references/cli.md) for commands, exit codes, authentication, and cleanup details. The sibling builder bundles `request-management` for SQL-only work and `expense-claim` for a verified master-detail model.

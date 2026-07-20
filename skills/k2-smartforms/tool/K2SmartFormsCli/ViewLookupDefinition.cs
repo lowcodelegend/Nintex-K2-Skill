@@ -83,10 +83,17 @@ namespace K2SmartFormsCli
                 x.Name.LocalName == "Control" &&
                 string.Equals((string)x.Attribute("FieldID"), fieldId, StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals((string)x.Attribute("Type"), "Label", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals((string)x.Attribute("Type"), "DataLabel", StringComparison.OrdinalIgnoreCase)).ToList();
+                !string.Equals((string)x.Attribute("Type"), "DataLabel", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals((string)x.Attribute("Type"), "ListDisplay", StringComparison.OrdinalIgnoreCase)).ToList();
             if (candidates.Count != 1)
-                throw new CliException("Generated view '" + view.Name + "' has " + candidates.Count + " editable controls for lookup property '" + propertyName + "'; expected one.");
+                throw new CliException("Generated view '" + view.Name + "' has " + candidates.Count + " editable controls for lookup property '" + propertyName + "'; expected one. Candidates: " + string.Join("; ", candidates.Select(x => ((string)x.Attribute("Type") ?? "<type>") + "/" + (ChildValue(x, "Name") ?? (string)x.Attribute("ID"))).ToArray()));
             return candidates[0];
+        }
+
+        private static string ChildValue(XElement parent, string name)
+        {
+            var child = parent.Elements().FirstOrDefault(x => x.Name.LocalName == name);
+            return child == null ? null : child.Value;
         }
 
         private static string BuildTemplate(LookupRuntimeSource source)

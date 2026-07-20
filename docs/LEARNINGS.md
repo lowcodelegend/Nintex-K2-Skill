@@ -136,6 +136,15 @@ The disposable workflow proof published and removed both designer/runtime layers
 - `$designer` can safely mean the current Windows deployment identity and is persisted as `K2:DOMAIN\\username`. It is a usable demo default, not production authorization; inventory every such seed as errata.
 - The live CWF proof publishes an eight-node/eight-link runtime process and uses the SQL matrix table/resolver SmartObjects plus Admin editor/list/form UX. Boundary tests cover HR manager below 1000, HR director at/above 1000, wildcard department fallback, executive stage 2 at 5000, and the terminal sentinel.
 
+## Master-detail findings
+
+- Nintex's canonical parent/child pattern uses an item View for the header and an editable List View for the lines. A Form rule executes the master Create first, maps its returned ID, and calls the child Create method once for every row in `Added` state. The two persistence actions use K2 batch processing so the key handoff completes as one group.
+- Existing-record editing uses the same state action for `Changed`/Update, `Added`/Create, and `Removed`/Delete. K2 SQL SmartObjects call the update method `Update`; some SmartBox tutorials call it `Save`, so method names stay declarative.
+- Child reload is another Form-level action: after master Read, execute the detail List method with the master key mapped to the child foreign-key filter. Cross-view rules cannot live on either View.
+- `ViewGenerator(ViewType.CaptureList, ...)` throws a null reference on this installed build. K2's supported generator produces the native editable List correctly with `ViewType.List` plus `ViewCreationOption.IsEditable`; input properties generate one `ListDisplay` and one editing control. Lookup conversion must target the editing control and ignore `ListDisplay`.
+- K2 rehydrates inherited View actions when a Form is deployed. To make master actions participate in an explicit Form batch, the CLI adds a non-inherited action cloned from the View definition and verifies the parallel action plus its child state actions rather than assuming the first same-method action is the custom one.
+- The disposable `EXP.Expense Claims` proof verified SQL PK/identity/FK/type/index metadata, generated four SQL SmartObjects, deployed a capture master, editable-list detail with Category dropdown, and a modern tabbed Form. Definition verification proved create/update item-state batches, returned-key mappings, filtered List loading, PSF framework rules, titles, and the Runtime route. Authenticated interactive row entry remained a browser test rather than a CLI test.
+
 ## Important constraints
 
 - K2 documentation explicitly warns against direct access or modification of the K2 database. All K2 mutations must go through supported APIs.
@@ -154,6 +163,9 @@ The disposable workflow proof published and removed both designer/runtime layers
 - [Generating Forms and Views with C#](https://help.nintex.com/en-us/k2five/devref/5.6/content/Forms/FormsSamples.htm)
 - [Using SmartObjects in SmartForms](https://help.nintex.com/en-us/k2five/userguide/5.3/Content/create/SmartObjects/UsingSmOInSmartForms.htm)
 - [Generate a View](https://help.nintex.com/en-US/k2five/userguide/5.3/content/Create/SmartObjects/CreateSmOContextMenu.htm)
+- [Header-detail or master-line items form](https://help.nintex.com/en-us/k2five/userguide/5.3/Content/How-Tos/MasterDetail/MasterDetail.htm)
+- [Create the Expense Claim Form](https://help.nintex.com/en-us/k2five/userguide/5.3/Content/Tutorials/Advanced/Expense%20Claim/02Forms/10CreateExpClaimForm.htm)
+- [Edit the Expense Claim Form for rework](https://help.nintex.com/en-us/k2five/userguide/5.3/content/Tutorials/Advanced/Expense%20Claim/03Workflow/22EditOriginatorReworkState.htm)
 - [About K2 Workflow Designer](https://help.nintex.com/en-US/K2Five/UserGuide/5.3/Content/K2-Workflow-Designer/About/About-Workflow-Designer.htm)
 - [Deploy a workflow](https://help.nintex.com/en-US/k2cloud/userguide/current/Content/K2-Workflow-Designer/Deploy/Deploy.htm)
 - [Workflow Management API](https://help.nintex.com/en-US/k2five/devref/5.6/Content/Runtime/WF-Manage/WFManage-Intro.htm)

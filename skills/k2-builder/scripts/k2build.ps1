@@ -13,7 +13,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if ($Command -eq 'version') {
-    Write-Output 'k2build 0.15.0'
+    Write-Output 'k2build 0.16.0'
     exit 0
 }
 
@@ -186,6 +186,7 @@ $formsPath = $null
 $smartObjectsManifest = $null
 $formsManifest = $null
 $approvalMatrices = @()
+$sqlMasterDetails = @()
 
 if ($null -ne $smartObjects) {
     $smartObjectsPath = Resolve-ComponentManifest $smartObjects 'components.smartObjects'
@@ -244,6 +245,8 @@ if ($null -ne $smartObjectsManifest) {
             })
         }
     }
+    $sqlMasterDetails = @(Get-PropertyValue $smartObjectsManifest 'masterDetails')
+    if ($sqlMasterDetails.Count -eq 1 -and $null -eq $sqlMasterDetails[0]) { $sqlMasterDetails = @() }
 }
 
 if ($null -ne $forms) {
@@ -348,6 +351,89 @@ if ($null -ne $formsManifest) {
         if ($matrixAdminForms.Count -eq 0) {
             Add-Issue "Approval matrix '$([string](Get-PropertyValue $matrix 'matrixCode'))' requires an Admin maintenance form."
         }
+    }
+}
+
+$masterDetailPolicies = @(Get-PropertyValue $policies 'masterDetails')
+if ($masterDetailPolicies.Count -eq 1 -and $null -eq $masterDetailPolicies[0]) { $masterDetailPolicies = @() }
+$formMasterDetails = @()
+if ($null -ne $formsManifest) {
+    $formsApplication = Get-PropertyValue $formsManifest 'application'
+    $declaredForms = @(Get-PropertyValue $formsApplication 'forms')
+    $declaredViews = @(Get-PropertyValue $formsApplication 'views')
+    foreach ($form in $declaredForms) {
+        $contract = Get-PropertyValue $form 'masterDetail'
+        if ($null -ne $contract) {
+            $formMasterDetails += [pscustomobject]@{ Form = $form; Contract = $contract }
+        }
+    }
+}
+foreach ($policy in $masterDetailPolicies) {
+    $policyName = [string](Get-PropertyValue $policy 'name')
+    $policyFormName = [string](Get-PropertyValue $policy 'form')
+    $policyMasterView = [string](Get-PropertyValue $policy 'masterView')
+    $policyDetailView = [string](Get-PropertyValue $policy 'detailView')
+    Test-ShortCodePrefix $policyName 'Master-detail name'
+    Test-ShortCodePrefix $policyFormName 'Master-detail form'
+    Test-ShortCodePrefix $policyMasterView 'Master-detail master view'
+    Test-ShortCodePrefix $policyDetailView 'Master-detail detail view'
+    Test-SmartObjectPrefix ([string](Get-PropertyValue $policy 'masterSmartObject')) 'Master-detail master SmartObject'
+    Test-SmartObjectPrefix ([string](Get-PropertyValue $policy 'detailSmartObject')) 'Master-detail detail SmartObject'
+
+    $sqlMatch = @($sqlMasterDetails | Where-Object { [string](Get-PropertyValue $_ 'name') -eq $policyName })
+    if ($sqlMatch.Count -ne 1) {
+        Add-Issue "Master-detail policy '$policyName' must match exactly one SmartObjects masterDetails contract."
+    } else {
+        $sqlRelationship = $sqlMatch[0]
+        if ([string](Get-PropertyValue $sqlRelationship 'masterKey') -ne [string](Get-PropertyValue $policy 'masterKey')) {
+            Add-Issue "Master-detail policy '$policyName' masterKey does not match the SQL contract."
+        }
+        if ([string](Get-PropertyValue $sqlRelationship 'detailKey') -ne [string](Get-PropertyValue $policy 'detailKey')) {
+            Add-Issue "Master-detail policy '$policyName' detailKey does not match the SQL contract."
+        }
+        if ([string](Get-PropertyValue $sqlRelationship 'detailForeignKey') -ne [string](Get-PropertyValue $policy 'foreignKey')) {
+            Add-Issue "Master-detail policy '$policyName' foreignKey does not match the SQL contract."
+        }
+    }
+
+    $formMatch = @($formMasterDetails | Where-Object { [string](Get-PropertyValue $_.Form 'name') -eq $policyFormName })
+    if ($formMatch.Count -ne 1) {
+        Add-Issue "Master-detail policy '$policyName' must match exactly one SmartForms form contract: $policyFormName"
+        continue
+    }
+    $formContract = $formMatch[0].Contract
+    if ([string](Get-PropertyValue $formContract 'masterView') -ne $policyMasterView) {
+        Add-Issue "Master-detail policy '$policyName' masterView does not match the SmartForms contract."
+    }
+    if ([string](Get-PropertyValue $formContract 'masterKeyProperty') -ne [string](Get-PropertyValue $policy 'masterKey')) {
+        Add-Issue "Master-detail policy '$policyName' masterKey does not match the SmartForms contract."
+    }
+    $childMatches = @((Get-PropertyValue $formContract 'details') | Where-Object {
+        [string](Get-PropertyValue $_ 'view') -eq $policyDetailView -and
+        [string](Get-PropertyValue $_ 'foreignKeyProperty') -eq [string](Get-PropertyValue $policy 'foreignKey')
+    })
+    if ($childMatches.Count -ne 1) {
+        Add-Issue "Master-detail policy '$policyName' detail view/foreign key does not match the SmartForms contract."
+    }
+    $masterViewDefinition = $declaredViews | Where-Object { [string](Get-PropertyValue $_ 'name') -eq $policyMasterView } | Select-Object -First 1
+    $detailViewDefinition = $declaredViews | Where-Object { [string](Get-PropertyValue $_ 'name') -eq $policyDetailView } | Select-Object -First 1
+    if ($null -eq $masterViewDefinition -or [string](Get-PropertyValue $masterViewDefinition 'smartObject') -ne [string](Get-PropertyValue $policy 'masterSmartObject')) {
+        Add-Issue "Master-detail policy '$policyName' master SmartObject does not match its View."
+    }
+    if ($null -eq $detailViewDefinition -or [string](Get-PropertyValue $detailViewDefinition 'smartObject') -ne [string](Get-PropertyValue $policy 'detailSmartObject')) {
+        Add-Issue "Master-detail policy '$policyName' detail SmartObject does not match its View."
+    }
+}
+foreach ($sqlRelationship in $sqlMasterDetails) {
+    $name = [string](Get-PropertyValue $sqlRelationship 'name')
+    if (@($masterDetailPolicies | Where-Object { [string](Get-PropertyValue $_ 'name') -eq $name }).Count -eq 0) {
+        Add-Issue "SQL master-detail '$name' requires a policies.masterDetails integration contract so the detail UX cannot be omitted."
+    }
+}
+foreach ($formRelationship in $formMasterDetails) {
+    $formName = [string](Get-PropertyValue $formRelationship.Form 'name')
+    if (@($masterDetailPolicies | Where-Object { [string](Get-PropertyValue $_ 'form') -eq $formName }).Count -eq 0) {
+        Add-Issue "SmartForms master-detail form '$formName' requires a policies.masterDetails integration contract."
     }
 }
 
@@ -538,6 +624,7 @@ $result = [pscustomobject]@{
             seededRules = @((Get-PropertyValue $_ 'rules')).Count
         }
     })
+    masterDetails = @($masterDetailPolicies)
     issues = @($issues)
     resolvedPolicies = @($resolvedPolicies)
     errata = @($errata)
@@ -556,6 +643,9 @@ else {
     Write-Output "Data model complexity: $dataModelComplexity"
     foreach ($matrix in $result.approvalMatrices) {
         Write-Output ("Approval matrix: {0} ({1} rule(s), stages={2}, dimensions={3})" -f $matrix.matrixCode, $matrix.seededRules, ($matrix.stages -join ','), (($matrix.dimensions + @('Amount')) -join ','))
+    }
+    foreach ($relationship in $result.masterDetails) {
+        Write-Output ("Master-detail: {0} ({1}.{2} -> {3}.{4}; form={5})" -f $relationship.name, $relationship.masterSmartObject, $relationship.masterKey, $relationship.detailSmartObject, $relationship.foreignKey, $relationship.form)
     }
     if ($Command -eq 'plan') {
         Write-Output 'Dependency-ordered specialist plan:'

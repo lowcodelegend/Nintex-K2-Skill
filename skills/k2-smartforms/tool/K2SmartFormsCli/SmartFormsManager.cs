@@ -71,7 +71,16 @@ namespace K2SmartFormsCli
                     if (!string.IsNullOrWhiteSpace(view.DefaultListMethod) && !methods.Contains(view.DefaultListMethod))
                         throw new CliException("SmartObject '" + view.SmartObject + "' has no default List method '" + view.DefaultListMethod + "' requested by view '" + view.Name + "'.");
 
-                    ValidateRequiredMethodInputs(view, smartObject);
+                    var externallySupplied = _manifest.Application.Forms
+                        .Where(f => f.MasterDetail != null)
+                        .SelectMany(f => f.MasterDetail.Details)
+                        .Where(d => string.Equals(d.View, view.Name, StringComparison.OrdinalIgnoreCase))
+                        .Select(d => d.ForeignKeyProperty)
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+                    foreach (var property in externallySupplied)
+                        if (!properties.Contains(property)) throw new CliException("SmartObject '" + view.SmartObject + "' has no master-detail foreign key property '" + property + "' requested by view '" + view.Name + "'.");
+                    ValidateRequiredMethodInputs(view, smartObject, externallySupplied);
                     foreach (var binding in view.LookupControls)
                     {
                         var targetProperty = smartObject.Properties.Cast<SmartProperty>().Single(x => string.Equals(x.Name, binding.Property, StringComparison.OrdinalIgnoreCase));
@@ -134,11 +143,12 @@ namespace K2SmartFormsCli
             });
         }
 
-        private static void ValidateRequiredMethodInputs(ViewDefinition view, SmartObject smartObject)
+        private static void ValidateRequiredMethodInputs(ViewDefinition view, SmartObject smartObject, IEnumerable<string> externallySuppliedProperties)
         {
             if (view.Type != "capture" && view.Type != "capture-list") return;
 
             var effectiveProperties = new HashSet<string>(view.Properties, StringComparer.OrdinalIgnoreCase);
+            effectiveProperties.UnionWith(externallySuppliedProperties ?? Enumerable.Empty<string>());
             if (view.Options.Contains("all-properties", StringComparer.OrdinalIgnoreCase))
                 effectiveProperties.UnionWith(smartObject.Properties.Cast<SmartProperty>().Select(x => x.Name));
 
@@ -330,6 +340,8 @@ namespace K2SmartFormsCli
                         var definition = FormThemeDefinition.SetUseLegacyTheme(generated.ToXml(), form.UseLegacyTheme);
                         if (styleProfile != null) definition = FormThemeDefinition.SetStyleProfile(definition, styleProfile.Guid, styleProfile.Name);
                         definition = FormLayoutDefinition.Apply(definition, form, commonHeader, ResolveHeaderParameters(commonHeader, form), ResolveHeaderControlTransfers(commonHeader, form));
+                        var masterDetail = ResolvedMasterDetailRules.Resolve(manager, form);
+                        definition = MasterDetailRules.Apply(definition, form, masterDetail);
                         manager.DeployForms(definition, _manifest.Application.GetFormCategoryPath(form), _manifest.Application.CheckIn);
                         var info = manager.GetForm(form.Name);
                         Console.WriteLine("Form: deployed (" + form.Name + ", " + info.Guid + ", theme " + info.Theme.Name + ", styleProfile=" + (styleProfile == null ? "none" : styleProfile.Name) + ", legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant() + ", commonHeader=" + (commonHeader == null ? "none" : commonHeader.ViewName) + ", commonFooter=" + (commonHeader == null || commonHeader.Footer == null ? "none" : commonHeader.Footer.ViewName) + ", tabs=" + form.Tabs.Count + ", worklist=" + form.Tabs.Any(x => x.Worklist != null).ToString().ToLowerInvariant() + ")");
@@ -386,6 +398,7 @@ namespace K2SmartFormsCli
                     if (expectedStyleProfile != null && (actualStyleProfile == null || actualStyleProfile.Guid != expectedStyleProfile.Guid))
                         throw new CliException("K2 Form style profile does not match '" + expectedStyleProfile.DisplayName + "' [" + expectedStyleProfile.Name + "]: " + expected);
                     FormLayoutDefinition.Verify(definition, declaredForm, commonHeader, ResolveHeaderParameters(commonHeader, declaredForm), ResolveHeaderControlTransfers(commonHeader, declaredForm));
+                    MasterDetailRules.Verify(definition, declaredForm, ResolvedMasterDetailRules.Resolve(manager, declaredForm));
                     foreach (var viewName in declaredForm.Views)
                     {
                         var viewGuid = manager.GetView(viewName).Guid.ToString();
@@ -457,7 +470,7 @@ namespace K2SmartFormsCli
             request.AllowAutoRedirect = false;
             request.Timeout = 30000;
             request.ReadWriteTimeout = 30000;
-            request.UserAgent = "k2forms/0.4.1";
+            request.UserAgent = "k2forms/0.11.0";
             try
             {
                 using (var response = (HttpWebResponse)request.GetResponse())
@@ -721,7 +734,7 @@ namespace K2SmartFormsCli
                 case "capture": return AuthoringViewType.Capture;
                 case "list": return AuthoringViewType.List;
                 case "content": return AuthoringViewType.Content;
-                case "capture-list": return AuthoringViewType.CaptureList;
+                case "capture-list": return AuthoringViewType.List;
                 default: throw new CliException("Unsupported view type: " + value);
             }
         }

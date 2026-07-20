@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "shortCode": "EXP",
+  "name": "EXP.Expense Claims",
+  "application": { "rootCategoryPath": "K2 Skills\\EXP.Expense Claims" },
+  "components": {
+    "smartObjects": { "manifest": "manifest.json" },
+    "forms": { "manifest": "smartforms-manifest.json", "dependsOn": ["smartObjects"] },
+    "workflows": []
+  },
+  "policies": {
+    "dataModelComplexity": "small",
+    "versionFreeNames": true,
+    "modernForms": true,
+    "masterDetails": [
+      {
+        "name": "EXP.Claim Lines",
+        "masterSmartObject": "EXP_ExpenseClaimsSql_EXP_ExpenseClaim",
+        "masterKey": "ExpenseClaimId",
+        "detailSmartObject": "EXP_ExpenseClaimsSql_EXP_ExpenseLine",
+        "detailKey": "ExpenseLineId",
+        "foreignKey": "ExpenseClaimId",
+        "form": "EXP.Expense Claims",
+        "masterView": "EXP.Claim Editor",
+        "detailView": "EXP.Claim Lines"
+      }
+    ],
+    "workflowEntries": []
+  },
+  "verification": {
+    "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime",
+    "scenarios": [
+      {
+        "name": "Create and edit an expense claim with lines",
+        "entryForm": "EXP.Expense Claims",
+        "steps": [
+          "stage two detail rows in the editable list",
+          "create the master claim and capture ExpenseClaimId",
+          "prove both detail rows use the returned ExpenseClaimId",
+          "reload the claim and prove its details are filtered by ExpenseClaimId",
+          "add, change, and remove detail rows and save the master",
+          "prove Added, Changed, and Removed rows were persisted"
+        ]
+      }
+    ]
+  }
+}

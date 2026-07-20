@@ -146,6 +146,7 @@ namespace K2SqlCli
                 {
                     VerifyQuery(connection, query);
                 }
+                VerifyMasterDetails(connection);
                 new ApprovalMatrixSql(_manifest).Verify(connection, _manifest.Database.CommandTimeoutSeconds);
             }
             Console.WriteLine("SQL verification: OK");
@@ -156,6 +157,120 @@ namespace K2SqlCli
             if (_manifest.ApprovalMatrices.Count == 0) return;
             using (var connection = OpenConnection(_manifest.Database.Name))
                 new ApprovalMatrixSql(_manifest).Inspect(connection, _manifest.Database.CommandTimeoutSeconds);
+        }
+
+        public void InspectMasterDetails()
+        {
+            if (_manifest.MasterDetails.Count == 0) return;
+            using (var connection = OpenConnection(_manifest.Database.Name))
+            {
+                VerifyMasterDetails(connection);
+                foreach (var relationship in _manifest.MasterDetails)
+                {
+                    Console.WriteLine("Master-detail: " + relationship.Name + " (" +
+                        relationship.MasterSchema + "." + relationship.MasterTable + "." + relationship.MasterKey +
+                        " -> " + relationship.DetailSchema + "." + relationship.DetailTable + "." + relationship.DetailForeignKey +
+                        ", detail key " + relationship.DetailKey + ", delete=" + relationship.DeleteBehavior + ")");
+                }
+            }
+        }
+
+        private void VerifyMasterDetails(SqlConnection connection)
+        {
+            foreach (var relationship in _manifest.MasterDetails)
+            {
+                VerifyPrimaryKey(connection, relationship.MasterSchema, relationship.MasterTable, relationship.MasterKey, relationship.Name + " master");
+                VerifyPrimaryKey(connection, relationship.DetailSchema, relationship.DetailTable, relationship.DetailKey, relationship.Name + " detail");
+                if (relationship.RequireIdentityMasterKey)
+                {
+                    const string identitySql = @"SELECT COUNT(*) FROM sys.columns c
+INNER JOIN sys.tables t ON t.object_id=c.object_id INNER JOIN sys.schemas s ON s.schema_id=t.schema_id
+WHERE s.name=@schema AND t.name=@table AND c.name=@column AND c.is_identity=1";
+                    if (ExecuteCount(connection, identitySql, relationship.MasterSchema, relationship.MasterTable, relationship.MasterKey) != 1)
+                        throw new CliException("Master-detail '" + relationship.Name + "' requires an IDENTITY master key so Create returns a generated parent ID: " + relationship.MasterSchema + "." + relationship.MasterTable + "." + relationship.MasterKey);
+                }
+
+                const string foreignKeySql = @"SELECT COUNT(*) FROM sys.foreign_key_columns fkc
+INNER JOIN sys.foreign_keys fk ON fk.object_id=fkc.constraint_object_id
+INNER JOIN sys.tables dt ON dt.object_id=fkc.parent_object_id INNER JOIN sys.schemas ds ON ds.schema_id=dt.schema_id
+INNER JOIN sys.columns dc ON dc.object_id=dt.object_id AND dc.column_id=fkc.parent_column_id
+INNER JOIN sys.tables mt ON mt.object_id=fkc.referenced_object_id INNER JOIN sys.schemas ms ON ms.schema_id=mt.schema_id
+INNER JOIN sys.columns mc ON mc.object_id=mt.object_id AND mc.column_id=fkc.referenced_column_id
+WHERE ds.name=@detailSchema AND dt.name=@detailTable AND dc.name=@detailColumn
+AND ms.name=@masterSchema AND mt.name=@masterTable AND mc.name=@masterColumn
+AND fk.delete_referential_action_desc=@deleteAction";
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = foreignKeySql;
+                    command.CommandTimeout = _manifest.Database.CommandTimeoutSeconds;
+                    command.Parameters.AddWithValue("@detailSchema", relationship.DetailSchema);
+                    command.Parameters.AddWithValue("@detailTable", relationship.DetailTable);
+                    command.Parameters.AddWithValue("@detailColumn", relationship.DetailForeignKey);
+                    command.Parameters.AddWithValue("@masterSchema", relationship.MasterSchema);
+                    command.Parameters.AddWithValue("@masterTable", relationship.MasterTable);
+                    command.Parameters.AddWithValue("@masterColumn", relationship.MasterKey);
+                    command.Parameters.AddWithValue("@deleteAction", relationship.DeleteBehavior == "cascade" ? "CASCADE" : "NO_ACTION");
+                    if (Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture) != 1)
+                        throw new CliException("Master-detail '" + relationship.Name + "' is missing the expected foreign key/delete behavior from " + relationship.DetailSchema + "." + relationship.DetailTable + "." + relationship.DetailForeignKey + " to " + relationship.MasterSchema + "." + relationship.MasterTable + "." + relationship.MasterKey + ".");
+                }
+
+                const string compatibleTypesSql = @"SELECT COUNT(*) FROM sys.columns dc
+INNER JOIN sys.tables dt ON dt.object_id=dc.object_id INNER JOIN sys.schemas ds ON ds.schema_id=dt.schema_id
+CROSS JOIN sys.columns mc INNER JOIN sys.tables mt ON mt.object_id=mc.object_id INNER JOIN sys.schemas ms ON ms.schema_id=mt.schema_id
+WHERE ds.name=@detailSchema AND dt.name=@detailTable AND dc.name=@detailColumn
+AND ms.name=@masterSchema AND mt.name=@masterTable AND mc.name=@masterColumn
+AND dc.system_type_id=mc.system_type_id AND dc.user_type_id=mc.user_type_id
+AND dc.max_length=mc.max_length AND dc.precision=mc.precision AND dc.scale=mc.scale";
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = compatibleTypesSql;
+                    command.CommandTimeout = _manifest.Database.CommandTimeoutSeconds;
+                    command.Parameters.AddWithValue("@detailSchema", relationship.DetailSchema);
+                    command.Parameters.AddWithValue("@detailTable", relationship.DetailTable);
+                    command.Parameters.AddWithValue("@detailColumn", relationship.DetailForeignKey);
+                    command.Parameters.AddWithValue("@masterSchema", relationship.MasterSchema);
+                    command.Parameters.AddWithValue("@masterTable", relationship.MasterTable);
+                    command.Parameters.AddWithValue("@masterColumn", relationship.MasterKey);
+                    if (Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture) != 1)
+                        throw new CliException("Master-detail '" + relationship.Name + "' master key and detail foreign key SQL types do not match exactly.");
+                }
+
+                if (relationship.RequireForeignKeyIndex)
+                {
+                    const string indexSql = @"SELECT COUNT(*) FROM sys.indexes i
+INNER JOIN sys.index_columns ic ON ic.object_id=i.object_id AND ic.index_id=i.index_id AND ic.key_ordinal=1
+INNER JOIN sys.columns c ON c.object_id=ic.object_id AND c.column_id=ic.column_id
+INNER JOIN sys.tables t ON t.object_id=i.object_id INNER JOIN sys.schemas s ON s.schema_id=t.schema_id
+WHERE s.name=@schema AND t.name=@table AND c.name=@column AND i.is_disabled=0 AND i.is_hypothetical=0";
+                    if (ExecuteCount(connection, indexSql, relationship.DetailSchema, relationship.DetailTable, relationship.DetailForeignKey) < 1)
+                        throw new CliException("Master-detail '" + relationship.Name + "' requires an index whose leading column is the detail foreign key: " + relationship.DetailSchema + "." + relationship.DetailTable + "." + relationship.DetailForeignKey);
+                }
+                Console.WriteLine("SQL master-detail verification: OK (" + relationship.Name + ")");
+            }
+        }
+
+        private void VerifyPrimaryKey(SqlConnection connection, string schema, string table, string column, string label)
+        {
+            const string sql = @"SELECT COUNT(*) FROM sys.indexes i
+INNER JOIN sys.index_columns ic ON ic.object_id=i.object_id AND ic.index_id=i.index_id AND ic.key_ordinal=1
+INNER JOIN sys.columns c ON c.object_id=ic.object_id AND c.column_id=ic.column_id
+INNER JOIN sys.tables t ON t.object_id=i.object_id INNER JOIN sys.schemas s ON s.schema_id=t.schema_id
+WHERE i.is_primary_key=1 AND s.name=@schema AND t.name=@table AND c.name=@column";
+            if (ExecuteCount(connection, sql, schema, table, column) != 1)
+                throw new CliException("Master-detail " + label + " key is not the leading primary-key column: " + schema + "." + table + "." + column);
+        }
+
+        private int ExecuteCount(SqlConnection connection, string sql, string schema, string table, string column)
+        {
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = sql;
+                command.CommandTimeout = _manifest.Database.CommandTimeoutSeconds;
+                command.Parameters.AddWithValue("@schema", schema);
+                command.Parameters.AddWithValue("@table", table);
+                command.Parameters.AddWithValue("@column", column);
+                return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+            }
         }
 
         public void DropDatabase()

@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('corporate-workflow', 'request-management')]
+    [ValidateSet('corporate-workflow', 'expense-claim', 'request-management')]
     [string]$Name,
 
     [Parameter(Mandatory = $true)]

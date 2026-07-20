@@ -1,0 +1,47 @@
+{
+  "name": "EXP.Expense Claims Data",
+  "application": { "rootCategoryPath": "K2 Skills\\EXP.Expense Claims" },
+  "database": {
+    "server": "localhost",
+    "name": "EXP.ExpenseClaims",
+    "integratedSecurity": true,
+    "createIfMissing": true,
+    "runtimePrincipal": "TRIALS\\k2svc",
+    "scripts": ["sql/001_expense_claim.sql"]
+  },
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2",
+    "serviceInstance": {
+      "systemName": "EXP.ExpenseClaimsSql",
+      "displayName": "EXP.Expense Claims SQL",
+      "authenticationMode": "service-account",
+      "useNativeSqlExecution": true
+    },
+    "smartObjects": { "createNew": true, "updateExisting": true, "deleteRemoved": false }
+  },
+  "masterDetails": [
+    {
+      "name": "EXP.Claim Lines",
+      "masterSchema": "EXP",
+      "masterTable": "ExpenseClaim",
+      "masterKey": "ExpenseClaimId",
+      "detailSchema": "EXP",
+      "detailTable": "ExpenseLine",
+      "detailKey": "ExpenseLineId",
+      "detailForeignKey": "ExpenseClaimId",
+      "deleteBehavior": "cascade",
+      "requireIdentityMasterKey": true,
+      "requireForeignKeyIndex": true
+    }
+  ],
+  "verification": {
+    "sqlObjects": [{ "type": "view", "schema": "EXP", "name": "ExpenseClaimSummary" }],
+    "queries": [{ "name": "expense category seed", "sql": "SELECT COUNT(*) FROM EXP.ExpenseCategory", "expectedScalar": "4" }],
+    "smartObjectServiceObjects": ["EXP-ExpenseCategory", "EXP-ExpenseClaim", "EXP-ExpenseLine", "EXP-ExpenseClaimSummary"],
+    "minimumGeneratedSmartObjects": 4,
+    "smokeTestListMethods": true
+  }
+}
