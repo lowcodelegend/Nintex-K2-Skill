@@ -8,6 +8,10 @@ The target solution flow is:
 
 `requirements → data/SmartObjects → views/forms → workflows → security → packaging/deployment → runtime verification/operations`
 
+## Mid-horizon goal: iterative improvement
+
+The SQL SmartObjects, SmartForms, and workflow skills should evolve from repeatable full generation/replacement into safe iterative reconcilers. Each tool should be able to import or discover the current artifact state, compare it semantically with manifest intent, preview a dependency-aware patch, modify only tool-owned elements, preserve compatible unmanaged Designer work, detect drift and edit conflicts, verify the result, and retain an export/version checkpoint for rollback. This is a mid-horizon goal, not a capability of the current releases.
+
 ## Sub-skills
 
 ### 1. K2 SQL SmartObjects — implemented baseline
@@ -23,6 +27,7 @@ Next increments:
 - Add least-privilege schema/object grant generation.
 - Add structured JSON output for orchestration.
 - Package a release executable and add repeatable automated tests around manifest validation and SQL batching.
+- **Mid-horizon iterative improvement:** discover the existing application database, Service Instance, and generated SmartObjects; produce a semantic manifest-to-runtime diff; apply dependency-ordered migrations and targeted SmartObject refreshes; preserve compatible data and unmanaged SQL objects; detect destructive drift/conflicts; and create rollback checkpoints.
 
 ### 2. K2 SmartObject designer
 
@@ -41,6 +46,7 @@ Next increments:
 - Preserve or export existing artifacts before replacement and add rollback.
 - Add authenticated browser automation for visual, accessibility, and full CRUD tests.
 - Add workflow start/action rules after the workflow-builder contract exists.
+- **Mid-horizon iterative improvement:** import existing form/view definitions with stable artifact, control, and rule identities; track tool ownership; patch only declared layout, control, method, and rule changes; preserve unmanaged Designer customizations; surface merge conflicts before deployment; and support export-backed rollback.
 
 ### 4. K2 workflow builder — v0.5 implemented
 
@@ -52,6 +58,7 @@ Next increments:
 - Add related/secondary SmartObject item references and property-driven recipients/content beyond the primary request reference.
 - Add task reminders, deadlines, and escalations.
 - Add subworkflows, exception paths, instance-start/task-action smoke tests, and rollback/import.
+- **Mid-horizon iterative improvement:** import the current HTML5 workflow JSON graph and K2 version metadata; assign stable ownership-aware node/link identities; generate a semantic graph diff; patch supported nodes, routes, mappings, and integrations without replacing unrelated Designer work; detect concurrent/manual edit conflicts; and support version/export-backed rollback.
 
 ### 5. K2 categories and packaging
 
