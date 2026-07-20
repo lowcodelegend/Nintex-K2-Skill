@@ -1,0 +1,40 @@
+---
+name: k2-builder
+description: Orchestrate complete self-hosted Nintex K2 Five solutions across SQL-backed SmartObjects, modern SmartForms, and HTML5 workflows. Use when turning solution requirements into an ordered K2 artifact graph, coordinating the k2-sql-smartobjects, k2-smartforms, and k2-workflows skills, enforcing cross-artifact defaults such as workflow form states, or planning and verifying an end-to-end K2 application. Do not use as a replacement for the specialist skills or for unsupported K2 artifact types.
+---
+
+# K2 Solution Builder
+
+Build a complete K2 solution by coordinating the installed specialist skills:
+
+1. Use `$k2-sql-smartobjects` for SQL schema, data, Service Instances, and generated SmartObjects.
+2. Use `$k2-smartforms` for modern SmartForms views, forms, rules, and runtime CRUD verification.
+3. Use `$k2-workflows` for HTML5 Designer JSON workflows, publication, SmartForms integration, and workflow verification.
+
+Keep the specialist manifests authoritative for their own artifact types. Use the solution manifest for dependencies, shared policy, entry points, and end-to-end scenarios; do not duplicate specialist implementation details in it.
+
+## Build workflow
+
+1. Read [solution-manifest.md](references/solution-manifest.md) and create or update a solution manifest beside the specialist manifests. Copy [solution-manifest.template.json](assets/solution-manifest.template.json) when starting from scratch.
+2. Read [contracts.md](references/contracts.md) and resolve every cross-artifact decision before mutation.
+3. Run `scripts/k2build.ps1 validate -Manifest <solution-manifest.json>`.
+4. Run `scripts/k2build.ps1 plan -Manifest <solution-manifest.json>` and present the non-mutating, dependency-ordered plan.
+5. Invoke each selected specialist skill and its CLI in this order: SmartObjects, SmartForms, workflows. Run the specialist `plan` first, deploy only after the plan is coherent, then verify before proceeding to dependants.
+6. Run the solution manifest's end-to-end scenarios against the normal Runtime URL. A CLI deployment result alone is not completion.
+7. Record deployed names, category paths, K2 identifiers/versions, Runtime URLs, manifest checksums, and verification results for rollback and support. Use [deployment-ledger.template.json](assets/deployment-ledger.template.json) as the starting shape.
+
+Stop on the first failed layer. Do not deploy dependent layers. Preserve successfully deployed prerequisites by default and report the exact remediation; clean up only when explicitly requested, in reverse dependency order.
+
+## Required defaults
+
+- Keep release/version numbers out of K2 category, view, form, and workflow names. K2 owns artifact versions internally.
+- Put views under `<root>\Views`, forms under `<root>\Forms`, and workflows under `<root>\Workflows` through the specialist tools.
+- Generate SmartForms with `useLegacyTheme=false` unless legacy compatibility is an explicit requirement.
+- Use dynamic workflow identities such as Originator and Originator Manager instead of fixed users or email addresses unless the requirement is explicitly fixed.
+- For a dedicated request-entry form, resolve `startStateDefault=auto` to true. The Start state must be the only default state, and the Task state must never be default.
+- For a shared existing form, require an explicit entry-state choice. Do not silently change its default state.
+- Verify that using Create from the ordinary form URL both saves the request and starts the workflow when the Start state is meant to be default.
+
+## Capability boundary
+
+Treat current specialist deployment as repeatable generation/replacement, not ownership-aware semantic merge. Never promise preservation of arbitrary manual Designer edits. Iterative reconciliation is a mid-horizon roadmap capability. Do not edit K2 databases directly or substitute legacy XML workflow tooling for the HTML5 JSON workflow path.

@@ -1,0 +1,332 @@
+[CmdletBinding()]
+param(
+    [Parameter(Position = 0)]
+    [ValidateSet('validate', 'plan')]
+    [string]$Command = 'validate',
+
+    [Parameter(Mandatory = $true)]
+    [string]$Manifest,
+
+    [ValidateSet('text', 'json')]
+    [string]$Output = 'text'
+)
+
+$ErrorActionPreference = 'Stop'
+
+function Add-Issue {
+    param([string]$Message)
+    $script:issues.Add($Message)
+}
+
+function Read-JsonFile {
+    param([string]$Path, [string]$Label)
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        Add-Issue "$Label manifest does not exist: $Path"
+        return $null
+    }
+
+    try {
+        return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+    }
+    catch {
+        Add-Issue "$Label manifest is not valid JSON: $Path ($($_.Exception.Message))"
+        return $null
+    }
+}
+
+function Get-PropertyValue {
+    param($Object, [string]$Name)
+
+    if ($null -eq $Object) { return $null }
+    $property = $Object.PSObject.Properties[$Name]
+    if ($null -eq $property) { return $null }
+    return $property.Value
+}
+
+function Resolve-ComponentManifest {
+    param($Component, [string]$Label)
+
+    $relativePath = Get-PropertyValue $Component 'manifest'
+    if ([string]::IsNullOrWhiteSpace([string]$relativePath)) {
+        Add-Issue "$Label must declare manifest."
+        return $null
+    }
+
+    $candidate = Join-Path -Path $script:manifestDirectory -ChildPath ([string]$relativePath)
+    try { return [System.IO.Path]::GetFullPath($candidate) }
+    catch {
+        Add-Issue "$Label has an invalid manifest path: $relativePath"
+        return $null
+    }
+}
+
+function Test-VersionFreeName {
+    param([string]$Value, [string]$Label)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) { return }
+    if ($Value -match '(?i)(^|[\\/\s_.-])v?\d+\.\d+(?:\.\d+)?($|[\\/\s_.-])') {
+        Add-Issue "$Label contains a release/version token: $Value"
+    }
+}
+
+function Get-DependencyNames {
+    param($Component)
+    $value = Get-PropertyValue $Component 'dependsOn'
+    if ($null -eq $value) { return @() }
+    return @($value | ForEach-Object { [string]$_ })
+}
+
+$issues = [System.Collections.Generic.List[string]]::new()
+$resolvedPolicies = [System.Collections.Generic.List[object]]::new()
+$planItems = [System.Collections.Generic.List[object]]::new()
+
+try {
+    $manifestPath = (Resolve-Path -LiteralPath $Manifest).Path
+}
+catch {
+    Write-Error "Solution manifest does not exist: $Manifest"
+    exit 2
+}
+
+$manifestDirectory = Split-Path -Parent $manifestPath
+$solution = Read-JsonFile $manifestPath 'Solution'
+if ($null -eq $solution) {
+    Write-Error ($issues -join [Environment]::NewLine)
+    exit 2
+}
+
+if ((Get-PropertyValue $solution 'schemaVersion') -ne 1) {
+    Add-Issue 'schemaVersion must be 1.'
+}
+
+$solutionName = [string](Get-PropertyValue $solution 'name')
+if ([string]::IsNullOrWhiteSpace($solutionName)) { Add-Issue 'name is required.' }
+
+$application = Get-PropertyValue $solution 'application'
+$rootCategoryPath = [string](Get-PropertyValue $application 'rootCategoryPath')
+if ([string]::IsNullOrWhiteSpace($rootCategoryPath)) {
+    Add-Issue 'application.rootCategoryPath is required.'
+}
+
+$policies = Get-PropertyValue $solution 'policies'
+if ((Get-PropertyValue $policies 'versionFreeNames') -ne $false) {
+    Test-VersionFreeName $solutionName 'Solution name'
+    Test-VersionFreeName $rootCategoryPath 'Root category path'
+}
+
+$components = Get-PropertyValue $solution 'components'
+if ($null -eq $components) { Add-Issue 'components is required.' }
+
+$smartObjects = Get-PropertyValue $components 'smartObjects'
+$forms = Get-PropertyValue $components 'forms'
+$workflows = @(Get-PropertyValue $components 'workflows')
+if ($workflows.Count -eq 1 -and $null -eq $workflows[0]) { $workflows = @() }
+if ($null -eq $smartObjects -and $null -eq $forms -and $workflows.Count -eq 0) {
+    Add-Issue 'At least one component is required.'
+}
+
+$smartObjectsPath = $null
+$formsPath = $null
+$smartObjectsManifest = $null
+$formsManifest = $null
+
+if ($null -ne $smartObjects) {
+    $smartObjectsPath = Resolve-ComponentManifest $smartObjects 'components.smartObjects'
+    if ($null -ne $smartObjectsPath) {
+        $smartObjectsManifest = Read-JsonFile $smartObjectsPath 'SmartObjects'
+        $planItems.Add([pscustomobject]@{
+            order = 1; component = 'smartObjects'; skill = 'k2-sql-smartobjects'
+            manifest = $smartObjectsPath; dependsOn = @()
+            planCommand = "& '<k2-sql-smartobjects-root>\scripts\k2sql.ps1' plan --manifest '$smartObjectsPath'"
+        })
+    }
+}
+
+if ($null -ne $forms) {
+    $formsPath = Resolve-ComponentManifest $forms 'components.forms'
+    if ($null -ne $formsPath) {
+        $formsManifest = Read-JsonFile $formsPath 'SmartForms'
+        $formDependencies = Get-DependencyNames $forms
+        foreach ($dependency in $formDependencies) {
+            if ($dependency -ne 'smartObjects') { Add-Issue "components.forms has unknown dependency '$dependency'." }
+        }
+        if ($null -ne $smartObjects -and $formDependencies -notcontains 'smartObjects') {
+            Add-Issue 'components.forms.dependsOn must contain smartObjects when both components are present.'
+        }
+        $planItems.Add([pscustomobject]@{
+            order = 2; component = 'forms'; skill = 'k2-smartforms'
+            manifest = $formsPath; dependsOn = $formDependencies
+            planCommand = "& '<k2-smartforms-root>\scripts\k2forms.ps1' plan --manifest '$formsPath'"
+        })
+    }
+}
+
+$formNames = @()
+if ($null -ne $formsManifest) {
+    $formsApplication = Get-PropertyValue $formsManifest 'application'
+    $formsRoot = [string](Get-PropertyValue $formsApplication 'rootCategoryPath')
+    if ($formsRoot -ne $rootCategoryPath) {
+        Add-Issue "SmartForms rootCategoryPath '$formsRoot' does not match solution root '$rootCategoryPath'."
+    }
+
+    foreach ($form in @(Get-PropertyValue $formsApplication 'forms')) {
+        $formName = [string](Get-PropertyValue $form 'name')
+        if (-not [string]::IsNullOrWhiteSpace($formName)) { $formNames += $formName }
+        if ((Get-PropertyValue $policies 'versionFreeNames') -ne $false) {
+            Test-VersionFreeName $formName 'Form name'
+        }
+        if ((Get-PropertyValue $policies 'modernForms') -ne $false -and (Get-PropertyValue $form 'useLegacyTheme') -eq $true) {
+            Add-Issue "Form '$formName' enables legacy theme while policies.modernForms is true."
+        }
+    }
+
+    foreach ($view in @(Get-PropertyValue $formsApplication 'views')) {
+        if ((Get-PropertyValue $policies 'versionFreeNames') -ne $false) {
+            Test-VersionFreeName ([string](Get-PropertyValue $view 'name')) 'View name'
+        }
+    }
+}
+
+$workflowManifests = @{}
+$workflowNames = @()
+$workflowIndex = 0
+foreach ($workflowComponent in $workflows) {
+    $workflowIndex++
+    $declaredName = [string](Get-PropertyValue $workflowComponent 'name')
+    if ([string]::IsNullOrWhiteSpace($declaredName)) {
+        Add-Issue "components.workflows[$workflowIndex].name is required."
+        $declaredName = "workflow-$workflowIndex"
+    }
+    if ($workflowNames -contains $declaredName) { Add-Issue "Workflow component name is duplicated: $declaredName" }
+    $workflowNames += $declaredName
+
+    $workflowPath = Resolve-ComponentManifest $workflowComponent "workflow '$declaredName'"
+    if ($null -eq $workflowPath) { continue }
+    $workflowManifest = Read-JsonFile $workflowPath "Workflow '$declaredName'"
+    $workflowManifests[$declaredName] = [pscustomobject]@{ Path = $workflowPath; Value = $workflowManifest }
+
+    $workflowDependencies = Get-DependencyNames $workflowComponent
+    foreach ($dependency in $workflowDependencies) {
+        if ($dependency -notin @('smartObjects', 'forms')) {
+            Add-Issue "Workflow '$declaredName' has unknown dependency '$dependency'."
+        }
+    }
+    if ($null -ne $smartObjects -and $workflowDependencies -notcontains 'smartObjects') {
+        Add-Issue "Workflow '$declaredName' dependsOn must contain smartObjects."
+    }
+    if ($null -ne $forms -and $workflowDependencies -notcontains 'forms') {
+        Add-Issue "Workflow '$declaredName' dependsOn must contain forms."
+    }
+
+    $planItems.Add([pscustomobject]@{
+        order = 3; component = "workflow:$declaredName"; skill = 'k2-workflows'
+        manifest = $workflowPath; dependsOn = $workflowDependencies
+        planCommand = "& '<k2-workflows-root>\scripts\k2wf.ps1' plan '$workflowPath'"
+    })
+
+    if ($null -ne $workflowManifest) {
+        $workflowRoot = [string](Get-PropertyValue (Get-PropertyValue $workflowManifest 'application') 'rootCategoryPath')
+        if ($workflowRoot -ne $rootCategoryPath) {
+            Add-Issue "Workflow '$declaredName' rootCategoryPath '$workflowRoot' does not match solution root '$rootCategoryPath'."
+        }
+        $actualWorkflowName = [string](Get-PropertyValue (Get-PropertyValue $workflowManifest 'workflow') 'name')
+        if ($actualWorkflowName -ne $declaredName) {
+            Add-Issue "Workflow component name '$declaredName' does not match workflow manifest name '$actualWorkflowName'."
+        }
+        if ((Get-PropertyValue $policies 'versionFreeNames') -ne $false) {
+            Test-VersionFreeName $actualWorkflowName 'Workflow name'
+        }
+    }
+}
+
+$entries = @(Get-PropertyValue $policies 'workflowEntries')
+if ($entries.Count -eq 1 -and $null -eq $entries[0]) { $entries = @() }
+$entryWorkflowNames = @()
+foreach ($entry in $entries) {
+    $workflowName = [string](Get-PropertyValue $entry 'workflow')
+    $formName = [string](Get-PropertyValue $entry 'form')
+    $ownership = ([string](Get-PropertyValue $entry 'formOwnership')).ToLowerInvariant()
+    $requestedDefault = ([string](Get-PropertyValue $entry 'startStateDefault')).ToLowerInvariant()
+
+    if ($workflowNames -notcontains $workflowName) { Add-Issue "workflowEntries references unknown workflow '$workflowName'." }
+    if ($entryWorkflowNames -contains $workflowName) { Add-Issue "workflowEntries contains duplicate policy for workflow '$workflowName'." }
+    $entryWorkflowNames += $workflowName
+    if ($formNames -notcontains $formName) { Add-Issue "workflowEntries references unknown form '$formName'." }
+    if ($ownership -notin @('dedicated', 'shared')) { Add-Issue "Workflow '$workflowName' formOwnership must be dedicated or shared." }
+    if ($requestedDefault -notin @('auto', 'true', 'false')) { Add-Issue "Workflow '$workflowName' startStateDefault must be auto, true, or false." }
+
+    $resolvedDefault = $null
+    if ($requestedDefault -eq 'true') { $resolvedDefault = $true }
+    elseif ($requestedDefault -eq 'false') { $resolvedDefault = $false }
+    elseif ($ownership -eq 'dedicated') { $resolvedDefault = $true }
+    elseif ($ownership -eq 'shared') { Add-Issue "Workflow '$workflowName' uses startStateDefault=auto on a shared form; choose true or false explicitly." }
+
+    $resolvedPolicies.Add([pscustomobject]@{
+        workflow = $workflowName; form = $formName; formOwnership = $ownership
+        requestedStartStateDefault = $requestedDefault; resolvedStartStateDefault = $resolvedDefault
+        taskStateDefault = $false
+    })
+
+    if ($workflowManifests.ContainsKey($workflowName) -and $null -ne $workflowManifests[$workflowName].Value) {
+        $workflowDefinition = Get-PropertyValue $workflowManifests[$workflowName].Value 'workflow'
+        $smartForms = Get-PropertyValue $workflowDefinition 'smartForms'
+        $manifestForm = [string](Get-PropertyValue $smartForms 'form')
+        if ($manifestForm -ne $formName) {
+            Add-Issue "Workflow '$workflowName' integrates form '$manifestForm', not policy form '$formName'."
+        }
+        if ($null -ne $resolvedDefault) {
+            $manifestDefault = Get-PropertyValue $smartForms 'makeStartStateDefault'
+            if ($manifestDefault -isnot [bool] -or $manifestDefault -ne $resolvedDefault) {
+                Add-Issue "Workflow '$workflowName' must set workflow.smartForms.makeStartStateDefault=$($resolvedDefault.ToString().ToLowerInvariant()) to satisfy solution policy."
+            }
+        }
+    }
+}
+
+foreach ($workflowName in $workflowNames) {
+    if (-not $workflowManifests.ContainsKey($workflowName) -or $null -eq $workflowManifests[$workflowName].Value) { continue }
+    $workflowDefinition = Get-PropertyValue $workflowManifests[$workflowName].Value 'workflow'
+    if ($null -ne (Get-PropertyValue $workflowDefinition 'smartForms') -and $entryWorkflowNames -notcontains $workflowName) {
+        Add-Issue "SmartForms-integrated workflow '$workflowName' requires a policies.workflowEntries item."
+    }
+}
+
+$result = [pscustomobject]@{
+    valid = ($issues.Count -eq 0)
+    solution = $solutionName
+    manifest = $manifestPath
+    rootCategoryPath = $rootCategoryPath
+    issues = @($issues)
+    resolvedPolicies = @($resolvedPolicies)
+    plan = @($planItems | Sort-Object order, component)
+}
+
+if ($Output -eq 'json') {
+    $result | ConvertTo-Json -Depth 8
+}
+else {
+    Write-Output "K2 solution: $solutionName"
+    Write-Output "Root category: $rootCategoryPath"
+    if ($Command -eq 'plan') {
+        Write-Output 'Dependency-ordered specialist plan:'
+        foreach ($item in $result.plan) {
+            Write-Output ('  {0}. {1} -> ${2} ({3})' -f $item.order, $item.component, $item.skill, $item.planCommand)
+        }
+        if ($result.resolvedPolicies.Count -gt 0) {
+            Write-Output 'Resolved workflow entry policies:'
+            foreach ($policy in $result.resolvedPolicies) {
+                Write-Output ("  {0}: form={1}, ownership={2}, startDefault={3}, taskDefault=false" -f $policy.workflow, $policy.form, $policy.formOwnership, $policy.resolvedStartStateDefault)
+            }
+        }
+    }
+    if ($issues.Count -gt 0) {
+        Write-Output 'Validation issues:'
+        foreach ($issue in $issues) { Write-Output "  - $issue" }
+    }
+    else {
+        Write-Output 'Validation passed.'
+    }
+}
+
+if ($issues.Count -gt 0) { exit 1 }

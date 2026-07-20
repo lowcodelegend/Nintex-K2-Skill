@@ -1,0 +1,5 @@
+interface:
+  display_name: "K2 Solution Builder"
+  short_description: "Orchestrate complete self-hosted K2 Five solutions"
+  default_prompt: "Use $k2-builder to plan, build, and verify a complete K2 Five solution across SQL SmartObjects, SmartForms, and HTML5 workflows."
+

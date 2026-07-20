@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "name": "Solution Name",
+  "application": {
+    "rootCategoryPath": "K2 Skills\\Solution Name"
+  },
+  "components": {
+    "smartObjects": {
+      "manifest": "manifest.json"
+    },
+    "forms": {
+      "manifest": "smartforms-manifest.json",
+      "dependsOn": ["smartObjects"]
+    },
+    "workflows": [
+      {
+        "name": "Request Approval",
+        "manifest": "workflow-manifest.json",
+        "dependsOn": ["smartObjects", "forms"]
+      }
+    ]
+  },
+  "policies": {
+    "versionFreeNames": true,
+    "modernForms": true,
+    "workflowEntries": [
+      {
+        "workflow": "Request Approval",
+        "form": "Request Management",
+        "formOwnership": "dedicated",
+        "startStateDefault": "auto"
+      }
+    ]
+  },
+  "verification": {
+    "runtimeBaseUrl": "https://k2.example.test/Runtime",
+    "scenarios": [
+      {
+        "name": "Submit and approve a request",
+        "entryForm": "Request Management",
+        "steps": [
+          "open the ordinary form URL without a state query parameter",
+          "create a valid request",
+          "prove the request row was saved",
+          "prove exactly one workflow instance started",
+          "prove the expected participant received the task",
+          "approve the task",
+          "prove the request status became Approved"
+        ]
+      }
+    ]
+  }
+}

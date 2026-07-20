@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "solution": "Solution Name",
+  "deployedAtUtc": "YYYY-MM-DDTHH:mm:ssZ",
+  "environment": "environment-name",
+  "sourceRevision": "git-commit",
+  "manifestChecksums": {},
+  "artifacts": {
+    "serviceInstances": [],
+    "smartObjects": [],
+    "views": [],
+    "forms": [],
+    "workflows": []
+  },
+  "runtimeUrls": [],
+  "verification": {
+    "specialistChecks": [],
+    "endToEndScenarios": []
+  },
+  "rollbackNotes": []
+}

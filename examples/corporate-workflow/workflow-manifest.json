@@ -51,7 +51,7 @@
       "startState": "CW Request Approval Start",
       "taskState": "CW Request Approval Task",
       "startRuleContains": "Create Button",
-      "makeStartStateDefault": false,
+      "makeStartStateDefault": true,
       "workflowStripLocation": "bottom"
     }
   }

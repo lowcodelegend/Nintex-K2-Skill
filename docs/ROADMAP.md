@@ -12,6 +12,12 @@ The target solution flow is:
 
 The SQL SmartObjects, SmartForms, and workflow skills should evolve from repeatable full generation/replacement into safe iterative reconcilers. Each tool should be able to import or discover the current artifact state, compare it semantically with manifest intent, preview a dependency-aware patch, modify only tool-owned elements, preserve compatible unmanaged Designer work, detect drift and edit conflicts, verify the result, and retain an export/version checkpoint for rollback. This is a mid-horizon goal, not a capability of the current releases.
 
+## K2 solution builder — v0.1 scaffold implemented
+
+The `k2-builder` meta-skill now defines a solution manifest, dependency-ordered specialist plan, cross-artifact contracts, workflow entry-state policy, end-to-end verification gates, and deployment-ledger shape. Its PowerShell planner validates manifest references, shared category and artifact names, modern-theme policy, specialist dependencies, and the dedicated/shared form default-state decision without mutating K2.
+
+Next increments should execute and aggregate structured specialist plans, capture a deployment ledger automatically, add authenticated browser scenarios, reconcile runtime form-state rules rather than only manifest intent, and coordinate safe reverse-order cleanup. Full semantic iterative reconciliation remains the mid-horizon goal shared with the three specialist skills.
+
 ## Sub-skills
 
 ### 1. K2 SQL SmartObjects — implemented baseline
