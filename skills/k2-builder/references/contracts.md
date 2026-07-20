@@ -43,6 +43,13 @@ A typical request workflow must establish all of the following:
 - SmartForms Start integration starts the workflow after the form's create/save action succeeds.
 - SmartForms Task integration opens the correct task state with its Serial Number context and exposes the configured task actions.
 
+## Workflow application shell
+
+- Separate the primary request List view and request capture/details view into named tabs for ordinary workflow applications.
+- Add a `My Tasks` tab backed by K2's native Worklist control when users should see and open their allocated tasks from the application shell. Do not replace the Worklist with an application task table; that table may be a business audit model but is not the K2 worklist.
+- Preserve native SmartForms Start/Task integration on the same form. Deploy forms before workflows, then reapply workflow integration after any form replacement.
+- Authenticated-browser test tab rendering, list-to-details loading, Worklist population, and opening a task. Record any unexecuted interaction as errata.
+
 ## Form-state invariant
 
 For a dedicated request-entry form:

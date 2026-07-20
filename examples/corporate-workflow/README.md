@@ -28,7 +28,7 @@ Because this fixture is explicitly disposable, it can be removed with:
 
 ## SmartForms baseline
 
-`smartforms-manifest.json` generates modern-mode Lithium CRUD screens over the deployed request, approval-task, request-type, and request-priority SmartObjects. Request and task editors use SmartObject-backed dropdowns for eight controlled/foreign-key properties. Ordinary UX uses the solution's `Views` and `Forms` folders; request-type and request-priority administration uses `Admin\Views` and `Admin\Forms`. K2 handles artifact versions internally, so names and folders remain version-free.
+`smartforms-manifest.json` generates modern-mode Lithium CRUD screens over the deployed request, approval-task, request-type, and request-priority SmartObjects. Request Management has `Requests`, `Request Details`, and `My Tasks` tabs; My Tasks is K2's native Worklist control and opens selected task URLs. Approval Task Management separates its list and details into two tabs. Request and task editors use SmartObject-backed dropdowns for eight controlled/foreign-key properties. Ordinary UX uses the solution's `Views` and `Forms` folders; request-type and request-priority administration uses `Admin\Views` and `Admin\Forms`. K2 handles artifact versions internally, so names and folders remain version-free.
 
 ```powershell
 $formsSkillRoot = Join-Path $env:USERPROFILE '.codex\skills\k2-smartforms'
@@ -39,7 +39,7 @@ $formsSkillRoot = Join-Path $env:USERPROFILE '.codex\skills\k2-smartforms'
 
 Example runtime URL:
 
-`https://spk2.trials.demome.tech/Runtime/Runtime/Form/CWF.Approval+Task+Management/`
+`https://spk2.trials.demome.tech/Runtime/Runtime/Form/CWF.Request+Management/`
 
 ## Workflow baseline
 

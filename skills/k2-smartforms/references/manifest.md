@@ -103,4 +103,39 @@ Supported view types are `capture`, `list`, `content`, and `capture-list`. Suppo
 
 Supported form options are `no-tabs`. Supported behaviors are `load-form-list-click`, `refresh-list-form-submit`, and `refresh-list-form-load`.
 
-When expected artifacts are omitted, verification defaults to every declared view and form. Runtime routes use `<runtimeBaseUrl>/Runtime/Form/<URL-encoded-form-name>/`; an unauthenticated CLI may verify the route up to the environment's interactive authentication redirect.
+## Tabs and Worklist
+
+Use `form.tabs` to assign every declared form view to one named tab exactly once. A tab contains either `views` or one `worklist`, never both. Do not combine `tabs` with `options: ["no-tabs"]`.
+
+```json
+{
+  "name": "EXP.Expense Management",
+  "views": ["EXP.Expense Editor", "EXP.Expense List"],
+  "tabs": [
+    { "name": "Expenses", "views": ["EXP.Expense List"] },
+    { "name": "Expense Details", "views": ["EXP.Expense Editor"] },
+    {
+      "name": "My Tasks",
+      "worklist": {
+        "rows": 20,
+        "refreshIntervalSeconds": 300,
+        "showToolbar": true,
+        "showFilter": true,
+        "showSearch": false,
+        "enableSearch": true,
+        "height": "445px",
+        "openTaskInNewWindow": true,
+        "actions": ["viewWorkflow", "sleep", "redirect", "release", "share"]
+      }
+    }
+  ],
+  "options": [],
+  "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]
+}
+```
+
+The CLI validates that the installed environment registers the native `Worklist` control. It generates a grid with Folio, Task Start Date, and Workflow Name columns plus a click rule that opens the selected Worklist item URL. Supported action-menu entries are `viewWorkflow`, `sleep`, `redirect`, `release`, and `share`. Set a zero refresh interval only when automatic refresh should be disabled.
+
+Tabs must have stable, version-free names. Version 0.3 supports one Worklist tab per form. It loads the current K2 user's default worklist across processes; process-specific Worklist filters, workflow-specific SmartObjects, and fixed users are not configured.
+
+When expected artifacts are omitted, verification defaults to every declared view and form. Verification checks tab order/content, native Worklist properties, and its click-to-open-task rule. Runtime routes use `<runtimeBaseUrl>/Runtime/Form/<URL-encoded-form-name>/`; an unauthenticated CLI may verify the route up to the environment's interactive authentication redirect, which is not an interactive Worklist test.

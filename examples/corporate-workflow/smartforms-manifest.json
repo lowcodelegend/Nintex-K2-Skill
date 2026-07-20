@@ -211,13 +211,35 @@
       {
         "name": "CWF.Request Management",
         "views": ["CWF.Request Editor", "CWF.Request List"],
-        "options": ["no-tabs"],
+        "tabs": [
+          { "name": "Requests", "views": ["CWF.Request List"] },
+          { "name": "Request Details", "views": ["CWF.Request Editor"] },
+          {
+            "name": "My Tasks",
+            "worklist": {
+              "rows": 20,
+              "refreshIntervalSeconds": 300,
+              "showToolbar": true,
+              "showFilter": true,
+              "showSearch": false,
+              "enableSearch": true,
+              "height": "445px",
+              "openTaskInNewWindow": true,
+              "actions": ["viewWorkflow", "sleep", "redirect", "release", "share"]
+            }
+          }
+        ],
+        "options": [],
         "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]
       },
       {
         "name": "CWF.Approval Task Management",
         "views": ["CWF.Approval Task Editor", "CWF.Approval Task List"],
-        "options": ["no-tabs"],
+        "tabs": [
+          { "name": "Tasks", "views": ["CWF.Approval Task List"] },
+          { "name": "Task Details", "views": ["CWF.Approval Task Editor"] }
+        ],
+        "options": [],
         "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]
       },
       {

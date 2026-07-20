@@ -12,9 +12,9 @@ The target solution flow is:
 
 The SQL SmartObjects, SmartForms, and workflow skills should evolve from repeatable full generation/replacement into safe iterative reconcilers. Each tool should be able to import or discover the current artifact state, compare it semantically with manifest intent, preview a dependency-aware patch, modify only tool-owned elements, preserve compatible unmanaged Designer work, detect drift and edit conflicts, verify the result, and retain an export/version checkpoint for rollback. This is a mid-horizon goal, not a capability of the current releases.
 
-## K2 solution builder — v0.6.1 transparent deployment handoff implemented
+## K2 solution builder — v0.7 workflow application shell implemented
 
-The `k2-builder` meta-skill defines a solution manifest, dependency-ordered specialist plan, cross-artifact contracts, workflow entry-state policy, lookup/administration policy, end-to-end verification gates, and deployment-ledger shape. Its PowerShell planner validates manifest references, the required three- or four-letter solution namespace (including K2-sanitized generated SmartObject names), one shared solution root with fixed `Data`, ordinary `Views`/`Forms`, `Admin\Views`/`Admin\Forms`, and solution-specific WFs children, lookup declarations/bindings, modern-theme policy, specialist dependencies, and the dedicated/shared form default-state decision without mutating K2. Its `k2env` CLI persists non-secret machine/user-level K2 profiles under `CODEX_HOME`, discovers K2 and IIS facts once, and uses quick validation to avoid repeating that investigation for each project. The v2 deployment ledger and mandatory user handoff now itemize source, SQL, K2, integration, and Runtime artifacts and expose manual intervention, custom-code gaps, placeholders, partial configuration, unsupported requirements, known limitations, and skipped verification as explicit errata.
+The `k2-builder` meta-skill defines a solution manifest, dependency-ordered specialist plan, cross-artifact contracts, workflow entry-state policy, lookup/administration policy, end-to-end verification gates, and deployment-ledger shape. Its workflow application shell now prefers separate list/details tabs and an optional native K2 Worklist/My Tasks tab while preserving SmartForms Start/Task integration. Its PowerShell planner validates manifest references, the required solution namespace, shared category structure, lookup declarations/bindings, modern-theme policy, dependencies, and default-state decisions. Its `k2env` CLI persists non-secret machine/user-level K2 profiles under `CODEX_HOME`. The v2 deployment ledger and mandatory user handoff itemize artifacts and expose manual intervention, custom-code gaps, placeholders, partial configuration, unsupported requirements, known limitations, and skipped verification as explicit errata.
 
 Next increments should execute and aggregate structured specialist plans, capture a deployment ledger automatically, add authenticated browser scenarios, reconcile runtime form-state rules rather than only manifest intent, and coordinate safe reverse-order cleanup. Full semantic iterative reconciliation remains the mid-horizon goal shared with the three specialist skills.
 
@@ -39,9 +39,9 @@ Next increments:
 
 Create advanced/composite SmartObjects with controlled names, properties, methods, defaults, associations, and mappings to service objects. Cover cases where automatic generation is too coarse.
 
-### 3. K2 SmartForms builder — v0.2 lookups and Admin areas implemented
+### 3. K2 SmartForms builder — v0.3 tabs and native Worklist implemented
 
-The tool creates checked-in capture/list/content/editable-list views and multi-view forms from declarative manifests using supported K2 generation APIs. It validates SmartObjects, properties, methods, themes, explicit modern/legacy theme mode, stable version-free naming, collisions, and dependencies; converts declared capture fields into SmartObject-backed dropdowns; separates ordinary artifacts from `Admin` CRUD UX; and supports safe planning, exact replacement/cleanup, definition verification, and runtime-route probes. The corporate workflow fixture proves eight views, four modern-mode Lithium forms, eight dropdown bindings, and two Admin pages.
+The tool creates checked-in capture/list/content/editable-list views and multi-view forms from declarative manifests using supported K2 generation APIs. It validates SmartObjects, properties, methods, themes, explicit modern/legacy theme mode, stable version-free naming, collisions, and dependencies; converts declared capture fields into SmartObject-backed dropdowns; creates named tabs and a native K2 Worklist with click-to-open-task behavior; separates ordinary artifacts from `Admin` CRUD UX; and supports safe planning, exact replacement/cleanup, definition verification, and runtime-route probes. The corporate fixture proves eight views, four modern-mode Lithium forms, eight dropdown bindings, two tabbed workflow screens, one Worklist tab, and two Admin pages.
 
 Next increments:
 
@@ -52,6 +52,8 @@ Next increments:
 - Preserve or export existing artifacts before replacement and add rollback.
 - Add authenticated browser automation for visual, accessibility, and full CRUD tests.
 - Add workflow start/action rules after the workflow-builder contract exists.
+- Add optional list-row selection rules that automatically activate the details tab.
+- Add declarative process/activity filters for native Worklist tabs.
 - **Mid-horizon iterative improvement:** import existing form/view definitions with stable artifact, control, and rule identities; track tool ownership; patch only declared layout, control, method, and rule changes; preserve unmanaged Designer customizations; surface merge conflicts before deployment; and support export-backed rollback.
 
 ### 4. K2 workflow builder — v0.6 implemented

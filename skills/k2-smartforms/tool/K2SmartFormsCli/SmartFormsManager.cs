@@ -30,6 +30,14 @@ namespace K2SmartFormsCli
                 var themes = manager.GetThemes().Themes.Cast<Theme>().Select(x => x.Name).OrderBy(x => x).ToList();
                 if (!themes.Contains(_manifest.Application.Theme, StringComparer.OrdinalIgnoreCase))
                     throw new CliException("K2 theme not found: " + _manifest.Application.Theme + ". Available: " + string.Join(", ", themes.ToArray()));
+                var worklistForms = _manifest.Application.Forms.Where(x => x.Tabs.Any(t => t.Worklist != null)).ToList();
+                if (worklistForms.Count > 0)
+                {
+                    var worklistControl = manager.GetControlTypes().ControlTypes.Cast<ControlTypeInfo>().FirstOrDefault(x => string.Equals(x.Name, "Worklist", StringComparison.OrdinalIgnoreCase));
+                    if (worklistControl == null)
+                        throw new CliException("The native K2 Worklist control is not registered; required by form(s): " + string.Join(", ", worklistForms.Select(x => x.Name).ToArray()));
+                    Console.WriteLine("K2 control input: OK (Worklist, " + worklistControl.FullName + ")");
+                }
                 Console.WriteLine("K2 SmartForms connection: OK (" + elapsed.TotalMilliseconds.ToString("0") + " ms, theme " + _manifest.Application.Theme + ")");
                 return 0;
             });
@@ -309,9 +317,10 @@ namespace K2SmartFormsCli
                         var formGenerator = new FormGenerator(ParseFormOptions(form.Options), ParseFormBehaviors(form.Behaviors), _manifest.Application.Theme);
                         var generated = generator.Generate(formGenerator, form.Views.ToArray(), form.Name);
                         var definition = FormThemeDefinition.SetUseLegacyTheme(generated.ToXml(), form.UseLegacyTheme);
+                        definition = FormLayoutDefinition.Apply(definition, form);
                         manager.DeployForms(definition, _manifest.Application.GetFormCategoryPath(form), _manifest.Application.CheckIn);
                         var info = manager.GetForm(form.Name);
-                        Console.WriteLine("Form: deployed (" + form.Name + ", " + info.Guid + ", theme " + info.Theme.Name + ", legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant() + ")");
+                        Console.WriteLine("Form: deployed (" + form.Name + ", " + info.Guid + ", theme " + info.Theme.Name + ", legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant() + ", tabs=" + form.Tabs.Count + ", worklist=" + form.Tabs.Any(x => x.Worklist != null).ToString().ToLowerInvariant() + ")");
                     }
                 }
                 return 0;
@@ -357,6 +366,7 @@ namespace K2SmartFormsCli
                         throw new CliException("K2 Form does not explicitly set UseLegacyTheme: " + expected);
                     if (useLegacyTheme.Value != declaredForm.UseLegacyTheme)
                         throw new CliException("K2 Form UseLegacyTheme is " + useLegacyTheme.Value.ToString().ToLowerInvariant() + ", expected " + declaredForm.UseLegacyTheme.ToString().ToLowerInvariant() + ": " + expected);
+                    FormLayoutDefinition.Verify(definition, declaredForm);
                     foreach (var viewName in declaredForm.Views)
                     {
                         var viewGuid = manager.GetView(viewName).Guid.ToString();
@@ -424,7 +434,7 @@ namespace K2SmartFormsCli
             request.AllowAutoRedirect = false;
             request.Timeout = 30000;
             request.ReadWriteTimeout = 30000;
-            request.UserAgent = "k2forms/0.2.0";
+            request.UserAgent = "k2forms/0.3.0";
             try
             {
                 using (var response = (HttpWebResponse)request.GetResponse())

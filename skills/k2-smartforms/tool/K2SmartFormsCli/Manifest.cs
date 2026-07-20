@@ -128,6 +128,7 @@ namespace K2SmartFormsCli
                 if (form.Views == null) form.Views = new List<string>();
                 if (form.Options == null) form.Options = new List<string>();
                 if (form.Behaviors == null) form.Behaviors = new List<string>();
+                if (form.Tabs == null) form.Tabs = new List<FormTabDefinition>();
                 RequireArtifactName(form.Name, "form.name");
                 RejectVersionToken(form.Name, "form.name");
                 if (form.Views.Count == 0) throw new CliException("Form '" + form.Name + "' must reference at least one view.");
@@ -137,6 +138,7 @@ namespace K2SmartFormsCli
                 ValidateValues(form.Options, AllowedFormOptions, "form option", form.Name);
                 ValidateValues(form.Behaviors, AllowedFormBehaviors, "form behavior", form.Name);
                 form.Area = NormalizeArea(form.Area, "form", form.Name);
+                ValidateTabs(form);
             }
 
             foreach (var lookup in Application.Lookups.Where(x => !string.IsNullOrWhiteSpace(x.AdminForm)))
@@ -169,6 +171,57 @@ namespace K2SmartFormsCli
         private static readonly HashSet<string> AllowedFormOptions = NewSet("no-tabs");
         private static readonly HashSet<string> AllowedFormBehaviors = NewSet("load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load");
         private static readonly HashSet<string> AllowedAreas = NewSet("application", "admin");
+        private static readonly HashSet<string> AllowedWorklistActions = NewSet("viewWorkflow", "sleep", "redirect", "release", "share");
+
+        private static void ValidateTabs(FormDefinition form)
+        {
+            if (form.Tabs.Count == 0) return;
+            if (form.Options.Contains("no-tabs", StringComparer.OrdinalIgnoreCase))
+                throw new CliException("Form '" + form.Name + "' cannot combine tabs with the no-tabs option.");
+            if (form.Tabs.Count < 2)
+                throw new CliException("Form '" + form.Name + "' must declare at least two tabs when form.tabs is used.");
+
+            EnsureUniqueValues(form.Tabs.Select(x => x == null ? null : x.Name), "tab name", form.Name);
+            var placedViews = new List<string>();
+            var worklistCount = 0;
+            foreach (var tab in form.Tabs)
+            {
+                if (tab == null) throw new CliException("Form '" + form.Name + "' tabs cannot contain null entries.");
+                if (tab.Views == null) tab.Views = new List<string>();
+                RequireArtifactName(tab.Name, "form.tabs.name");
+                RejectVersionToken(tab.Name, "form.tabs.name");
+                EnsureUniqueValues(tab.Views, "tab view reference", form.Name + " / " + tab.Name);
+                var hasViews = tab.Views.Count > 0;
+                var hasWorklist = tab.Worklist != null;
+                if (hasViews == hasWorklist)
+                    throw new CliException("Form '" + form.Name + "' tab '" + tab.Name + "' must contain either views or one worklist, but not both.");
+                foreach (var viewName in tab.Views)
+                {
+                    if (!form.Views.Contains(viewName, StringComparer.OrdinalIgnoreCase))
+                        throw new CliException("Form '" + form.Name + "' tab '" + tab.Name + "' references a view not declared in form.views: " + viewName);
+                    placedViews.Add(viewName);
+                }
+                if (hasWorklist)
+                {
+                    worklistCount++;
+                    var worklist = tab.Worklist;
+                    if (worklist.Rows < 1 || worklist.Rows > 200)
+                        throw new CliException("Form '" + form.Name + "' worklist rows must be between 1 and 200.");
+                    if (worklist.RefreshIntervalSeconds < 0)
+                        throw new CliException("Form '" + form.Name + "' worklist refreshIntervalSeconds cannot be negative.");
+                    Require(worklist.Height, "form.tabs.worklist.height");
+                    if (worklist.Actions == null) worklist.Actions = new List<string>();
+                    EnsureUniqueValues(worklist.Actions, "worklist action", form.Name + " / " + tab.Name);
+                    ValidateValues(worklist.Actions, AllowedWorklistActions, "worklist action", form.Name + " / " + tab.Name);
+                }
+            }
+            EnsureUniqueValues(placedViews, "tabbed view placement", form.Name);
+            var omitted = form.Views.Where(x => !placedViews.Contains(x, StringComparer.OrdinalIgnoreCase)).ToArray();
+            if (omitted.Length > 0)
+                throw new CliException("Form '" + form.Name + "' tabs do not place declared view(s): " + string.Join(", ", omitted));
+            if (worklistCount > 1)
+                throw new CliException("Form '" + form.Name + "' supports at most one Worklist tab.");
+        }
 
         private static string NormalizeArea(string value, string kind, string owner)
         {
@@ -332,6 +385,7 @@ namespace K2SmartFormsCli
         public List<string> Options { get; set; }
         public List<string> Behaviors { get; set; }
         public string Area { get; set; }
+        public List<FormTabDefinition> Tabs { get; set; }
 
         public FormDefinition()
         {
@@ -339,6 +393,41 @@ namespace K2SmartFormsCli
             Options = new List<string>();
             Behaviors = new List<string>();
             Area = "application";
+            Tabs = new List<FormTabDefinition>();
+        }
+    }
+
+    public sealed class FormTabDefinition
+    {
+        public string Name { get; set; }
+        public List<string> Views { get; set; }
+        public WorklistDefinition Worklist { get; set; }
+
+        public FormTabDefinition() { Views = new List<string>(); }
+    }
+
+    public sealed class WorklistDefinition
+    {
+        public int Rows { get; set; }
+        public int RefreshIntervalSeconds { get; set; }
+        public bool ShowToolbar { get; set; }
+        public bool ShowFilter { get; set; }
+        public bool ShowSearch { get; set; }
+        public bool EnableSearch { get; set; }
+        public string Height { get; set; }
+        public bool OpenTaskInNewWindow { get; set; }
+        public List<string> Actions { get; set; }
+
+        public WorklistDefinition()
+        {
+            Rows = 20;
+            RefreshIntervalSeconds = 300;
+            ShowToolbar = true;
+            ShowFilter = true;
+            EnableSearch = true;
+            Height = "445px";
+            OpenTaskInNewWindow = true;
+            Actions = new List<string> { "viewWorkflow", "sleep", "redirect", "release", "share" };
         }
     }
 

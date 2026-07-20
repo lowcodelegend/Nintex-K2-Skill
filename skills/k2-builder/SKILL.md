@@ -41,6 +41,7 @@ Stop on the first failed layer. Do not deploy dependent layers. Preserve success
 - For a dedicated request-entry form, resolve `startStateDefault=auto` to true. The Start state must be the only default state, and the Task state must never be default.
 - For a shared existing form, require an explicit entry-state choice. Do not silently change its default state.
 - Verify that using Create from the ordinary form URL both saves the request and starts the workflow when the Start state is meant to be default.
+- Prefer a tabbed application shell for ordinary workflow UX: request list, request details, and—when users should act inside the application—a My Tasks tab using K2's native Worklist control. Keep administrative CRUD compact unless it benefits from tabs.
 - Treat transparent handoff as part of generation. Do not describe a solution as complete while hiding placeholders, manual steps, custom-code requirements, partial configuration, or unexecuted tests in prose or logs.
 
 ## Capability boundary

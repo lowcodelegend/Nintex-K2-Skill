@@ -1,12 +1,20 @@
-# SmartForms v0.1 design guide
+# SmartForms v0.3 design guide
 
 ## CRUD shape
 
-Use a capture view for one record and a list view for browsing. Place the editor before the list in a no-tabs form, then enable:
+Use a capture view for one record and a list view for browsing. For compact administration pages, place the editor before the list in a no-tabs form. For ordinary workflow applications, prefer a tabbed shell with the list first, details second, and an optional My Tasks Worklist tab. Enable:
 
 - `load-form-list-click` to load the selected list row into the editor;
 - `refresh-list-form-submit` to refresh after create/update;
 - `refresh-list-form-load` to refresh when the form opens.
+
+The standard workflow shell is:
+
+1. `<Entity plural>` — the List view;
+2. `<Entity> Details` — the capture/edit view;
+3. `My Tasks` — the native K2 Worklist control when the application should surface the current user's tasks.
+
+List selection loads the details view's data but v0.3 does not automatically select the details tab. Record that UX limitation when it materially affects the application.
 
 For capture views, select the SmartObject's Create, Read, Update, and Delete methods. For list views, set the parameterless List method as `defaultListMethod`.
 
@@ -27,6 +35,8 @@ Use an installed theme; `Lithium` is the tested K2 Five 5.10 default for this sk
 Capture-view options `editable`, `labels-left`, `colon-labels`, and `toolbar` produce a compact conventional editor. Use `toolbar` on list views.
 
 Automatic generation creates controls and standard SmartObject method rules. It does not replace visual review. Test keyboard navigation, focus order, labels, required-state messaging, contrast, phone/tablet layout, long values, empty states, and destructive actions.
+
+The Worklist tab uses the installed K2 `Worklist` control, not a custom control or copied task table. Keep its filtering and toolbar available by default, open selected tasks through the control's Worklist item URL, and verify with an authenticated user who has at least one task. A route-level authentication redirect does not prove that the Worklist rendered or opened a task.
 
 ## Naming and categories
 
