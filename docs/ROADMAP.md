@@ -39,9 +39,9 @@ Next increments:
 
 Create advanced/composite SmartObjects with controlled names, properties, methods, defaults, associations, and mappings to service objects. Cover cases where automatic generation is too coarse.
 
-### 3. K2 SmartForms builder — v0.4.1 tabs, Worklist, and Admin UX implemented
+### 3. K2 SmartForms builder — v0.5 view titles, tabs, Worklist, and Admin UX implemented
 
-The tool creates checked-in capture/list/content/editable-list views and multi-view forms from declarative manifests using supported K2 generation APIs. It converts declared capture fields into SmartObject-backed dropdowns, creates named tabs and a native K2 Worklist, separates ordinary artifacts from `Admin` CRUD UX, and verifies modern Style Profiles. The corporate fixture adds approval-matrix rule Admin views/form and uses the `PSF Nintex` Style Profile through system name `PSF UX v1`.
+The tool creates checked-in capture/list/content/editable-list views and multi-view forms from declarative manifests using supported K2 generation APIs. It sets and verifies a visible title for every form view instance, with friendly overrides and reasoned suppression. It converts declared capture fields into SmartObject-backed dropdowns, creates named tabs and a native K2 Worklist, separates ordinary artifacts from `Admin` CRUD UX, and verifies modern Style Profiles. The corporate fixture adds approval-matrix rule Admin views/form and uses the `PSF Nintex` Style Profile through system name `PSF UX v1`.
 
 Next increments:
 

@@ -97,6 +97,33 @@ Set `area` on each view/form to `application` (the default) or `admin`. Admin ar
 
 Each form's optional `useLegacyTheme` defaults to `false`. The CLI writes the K2 `UseLegacyTheme` property explicitly and verifies it after deployment. Keep the default for Style Profile rendering; set it to `true` only when legacy named-theme compatibility is intentional.
 
+## Form view titles
+
+Every view added to a form receives a K2 view-instance title. The default is the declared view name. Use `viewTitles` for friendlier visible labels:
+
+```json
+{
+  "name": "EXP.Expense Management",
+  "views": ["EXP.Expense Editor", "EXP.Expense List"],
+  "viewTitles": {
+    "EXP.Expense Editor": "Expense Details",
+    "EXP.Expense List": "Expenses"
+  }
+}
+```
+
+If a deliberate layout should have no title, use `untitledViews` and provide the reason as its value. A view cannot appear in both maps.
+
+```json
+{
+  "untitledViews": {
+    "EXP.Inline Summary": "The surrounding summary card already provides the same heading."
+  }
+}
+```
+
+Blank `viewTitles` values are invalid. Deployment writes the `Title` property on the view's AreaItem control, and verification checks every effective title or explicit suppression.
+
 For capture and capture-list views, `properties` must contain every required input property reported by every method in `methods`. The `all-properties` option also satisfies this check. Validation uses live SmartObject metadata and fails before deployment with the view, method, and omitted property names. SQL column defaults are not treated as SmartObject input defaults.
 
 Supported view types are `capture`, `list`, `content`, and `capture-list`. Supported options are `display-controls`, `all-properties`, `all-methods`, `labels-left`, `colon-labels`, `toolbar`, and `editable`. Editable types require `editable`.
@@ -136,6 +163,6 @@ Use `form.tabs` to assign every declared form view to one named tab exactly once
 
 The CLI validates that the installed environment registers the native `Worklist` control. It generates a grid with Folio, Task Start Date, and Workflow Name columns plus a click rule that opens the selected Worklist item URL. Supported action-menu entries are `viewWorkflow`, `sleep`, `redirect`, `release`, and `share`. Set a zero refresh interval only when automatic refresh should be disabled.
 
-Tabs must have stable, version-free names. Version 0.4 supports one Worklist tab per form. It loads the current K2 user's default worklist across processes; process-specific Worklist filters, workflow-specific SmartObjects, and fixed users are not configured.
+Tabs must have stable, version-free names. Version 0.5 supports one Worklist tab per form. It loads the current K2 user's default worklist across processes; process-specific Worklist filters, workflow-specific SmartObjects, and fixed users are not configured.
 
 When expected artifacts are omitted, verification defaults to every declared view and form. Verification checks tab order/content, native Worklist properties, and its click-to-open-task rule. Runtime routes use `<runtimeBaseUrl>/Runtime/Form/<URL-encoded-form-name>/`; an unauthenticated CLI may verify the route up to the environment's interactive authentication redirect, which is not an interactive Worklist test.

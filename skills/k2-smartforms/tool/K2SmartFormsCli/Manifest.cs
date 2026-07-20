@@ -129,12 +129,30 @@ namespace K2SmartFormsCli
                 if (form.Options == null) form.Options = new List<string>();
                 if (form.Behaviors == null) form.Behaviors = new List<string>();
                 if (form.Tabs == null) form.Tabs = new List<FormTabDefinition>();
+                if (form.ViewTitles == null) form.ViewTitles = new Dictionary<string, string>();
+                if (form.UntitledViews == null) form.UntitledViews = new Dictionary<string, string>();
                 RequireArtifactName(form.Name, "form.name");
                 RejectVersionToken(form.Name, "form.name");
                 if (form.Views.Count == 0) throw new CliException("Form '" + form.Name + "' must reference at least one view.");
                 EnsureUniqueValues(form.Views, "view reference", form.Name);
                 foreach (var viewName in form.Views)
                     if (!viewNames.Contains(viewName)) throw new CliException("Form '" + form.Name + "' references undeclared view '" + viewName + "'.");
+                foreach (var item in form.ViewTitles)
+                {
+                    if (!form.Views.Contains(item.Key, StringComparer.OrdinalIgnoreCase))
+                        throw new CliException("Form '" + form.Name + "' declares a title for a view not present on the form: " + item.Key);
+                    if (string.IsNullOrWhiteSpace(item.Value))
+                        throw new CliException("Form '" + form.Name + "' viewTitles values must be non-empty. Use untitledViews with a reason to suppress a title: " + item.Key);
+                }
+                foreach (var item in form.UntitledViews)
+                {
+                    if (!form.Views.Contains(item.Key, StringComparer.OrdinalIgnoreCase))
+                        throw new CliException("Form '" + form.Name + "' declares an untitled exception for a view not present on the form: " + item.Key);
+                    if (string.IsNullOrWhiteSpace(item.Value))
+                        throw new CliException("Form '" + form.Name + "' untitledViews must explain why the title is suppressed: " + item.Key);
+                    if (form.ViewTitles.Keys.Contains(item.Key, StringComparer.OrdinalIgnoreCase))
+                        throw new CliException("Form '" + form.Name + "' cannot both title and suppress the same view: " + item.Key);
+                }
                 ValidateValues(form.Options, AllowedFormOptions, "form option", form.Name);
                 ValidateValues(form.Behaviors, AllowedFormBehaviors, "form behavior", form.Name);
                 form.Area = NormalizeArea(form.Area, "form", form.Name);
@@ -387,6 +405,8 @@ namespace K2SmartFormsCli
         public List<string> Behaviors { get; set; }
         public string Area { get; set; }
         public List<FormTabDefinition> Tabs { get; set; }
+        public Dictionary<string, string> ViewTitles { get; set; }
+        public Dictionary<string, string> UntitledViews { get; set; }
 
         public FormDefinition()
         {
@@ -395,6 +415,15 @@ namespace K2SmartFormsCli
             Behaviors = new List<string>();
             Area = "application";
             Tabs = new List<FormTabDefinition>();
+            ViewTitles = new Dictionary<string, string>();
+            UntitledViews = new Dictionary<string, string>();
+        }
+
+        public string ResolveViewTitle(string viewName)
+        {
+            if (UntitledViews.Keys.Contains(viewName, StringComparer.OrdinalIgnoreCase)) return string.Empty;
+            var custom = ViewTitles.FirstOrDefault(x => string.Equals(x.Key, viewName, StringComparison.OrdinalIgnoreCase));
+            return string.IsNullOrWhiteSpace(custom.Key) ? viewName : custom.Value;
         }
     }
 

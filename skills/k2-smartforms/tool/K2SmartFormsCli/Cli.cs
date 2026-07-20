@@ -103,7 +103,7 @@ namespace K2SmartFormsCli
             }
             foreach (var form in manifest.Application.Forms)
             {
-                Console.WriteLine("    form views: " + form.Name + " <= [" + string.Join(", ", form.Views.ToArray()) + "], category=" + manifest.Application.GetFormCategoryPath(form) + ", legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant() + ", tabs=" + form.Tabs.Count + ", worklist=" + form.Tabs.Any(x => x.Worklist != null).ToString().ToLowerInvariant());
+                Console.WriteLine("    form views: " + form.Name + " <= [" + string.Join(", ", form.Views.Select(x => x + " title='" + form.ResolveViewTitle(x) + "'").ToArray()) + "], category=" + manifest.Application.GetFormCategoryPath(form) + ", legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant() + ", tabs=" + form.Tabs.Count + ", worklist=" + form.Tabs.Any(x => x.Worklist != null).ToString().ToLowerInvariant());
                 foreach (var tab in form.Tabs)
                     Console.WriteLine("      tab: " + tab.Name + " <= " + (tab.Worklist != null ? "native Worklist control" : "[" + string.Join(", ", tab.Views.ToArray()) + "]"));
             }
@@ -173,7 +173,7 @@ namespace K2SmartFormsCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2forms 0.4.1");
+            Console.WriteLine("k2forms 0.5.0");
         }
 
         private static void PrintHelp()

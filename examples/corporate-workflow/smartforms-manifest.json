@@ -260,6 +260,10 @@
       {
         "name": "CWF.Request Management",
         "views": ["CWF.Request Editor", "CWF.Request List"],
+        "viewTitles": {
+          "CWF.Request Editor": "Request Details",
+          "CWF.Request List": "Requests"
+        },
         "tabs": [
           { "name": "Requests", "views": ["CWF.Request List"] },
           { "name": "Request Details", "views": ["CWF.Request Editor"] },
@@ -284,6 +288,10 @@
       {
         "name": "CWF.Approval Task Management",
         "views": ["CWF.Approval Task Editor", "CWF.Approval Task List"],
+        "viewTitles": {
+          "CWF.Approval Task Editor": "Task Details",
+          "CWF.Approval Task List": "Approval Tasks"
+        },
         "tabs": [
           { "name": "Tasks", "views": ["CWF.Approval Task List"] },
           { "name": "Task Details", "views": ["CWF.Approval Task Editor"] }
@@ -294,6 +302,10 @@
       {
         "name": "CWF.Request Type Administration",
         "views": ["CWF.Request Type Editor", "CWF.Request Type List"],
+        "viewTitles": {
+          "CWF.Request Type Editor": "Request Type Details",
+          "CWF.Request Type List": "Request Types"
+        },
         "area": "admin",
         "options": ["no-tabs"],
         "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]
@@ -301,6 +313,10 @@
       {
         "name": "CWF.Request Priority Administration",
         "views": ["CWF.Request Priority Editor", "CWF.Request Priority List"],
+        "viewTitles": {
+          "CWF.Request Priority Editor": "Priority Details",
+          "CWF.Request Priority List": "Request Priorities"
+        },
         "area": "admin",
         "options": ["no-tabs"],
         "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]
@@ -308,6 +324,10 @@
       {
         "name": "CWF.Approval Matrix Administration",
         "views": ["CWF.Approval Matrix Rule Editor", "CWF.Approval Matrix Rule List"],
+        "viewTitles": {
+          "CWF.Approval Matrix Rule Editor": "Approval Rule Details",
+          "CWF.Approval Matrix Rule List": "Approval Rules"
+        },
         "area": "admin",
         "options": ["no-tabs"],
         "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]

@@ -9,9 +9,10 @@ namespace K2SmartFormsCli
     {
         public static string Apply(string xml, FormDefinition definition)
         {
-            if (definition.Tabs.Count == 0) return xml;
             var document = Parse(xml);
             var form = FindForm(document);
+            ApplyViewTitles(form, definition);
+            if (definition.Tabs.Count == 0) return document.ToString(SaveOptions.DisableFormatting);
             form.SetAttributeValue("Layout", "TabControl");
             var controls = RequiredChild(form, "Controls");
             var panels = RequiredChild(form, "Panels");
@@ -53,9 +54,10 @@ namespace K2SmartFormsCli
 
         public static void Verify(string xml, FormDefinition definition)
         {
-            if (definition.Tabs.Count == 0) return;
             var document = Parse(xml);
             var form = FindForm(document);
+            VerifyViewTitles(form, definition);
+            if (definition.Tabs.Count == 0) return;
             if (!string.Equals((string)form.Attribute("Layout"), "TabControl", StringComparison.OrdinalIgnoreCase))
                 throw new CliException("K2 Form '" + definition.Name + "' has multiple tabs but Layout is '" + (string)form.Attribute("Layout") + "', expected 'TabControl'.");
             var controls = RequiredChild(form, "Controls");
@@ -73,6 +75,37 @@ namespace K2SmartFormsCli
                 if (!actualViews.SequenceEqual(expected.Views, StringComparer.OrdinalIgnoreCase))
                     throw new CliException("K2 Form '" + definition.Name + "' tab '" + expected.Name + "' has the wrong view layout.");
                 if (expected.Worklist != null) VerifyWorklist(form, controls, panel, definition, expected);
+            }
+        }
+
+        private static void ApplyViewTitles(XElement form, FormDefinition definition)
+        {
+            var controls = RequiredChild(form, "Controls");
+            foreach (var viewName in definition.Views)
+            {
+                var item = form.Descendants().FirstOrDefault(x => x.Name.LocalName == "Item" && string.Equals((string)x.Attribute("ViewName"), viewName, StringComparison.OrdinalIgnoreCase));
+                if (item == null) throw new CliException("Generated form '" + definition.Name + "' has no layout item for view '" + viewName + "'.");
+                var id = (string)item.Attribute("ID");
+                var control = controls.Elements().FirstOrDefault(x => x.Name.LocalName == "Control" && string.Equals((string)x.Attribute("ID"), id, StringComparison.OrdinalIgnoreCase));
+                if (control == null) throw new CliException("Generated form '" + definition.Name + "' has no AreaItem control for view '" + viewName + "'.");
+                SetProperty(control, "Title", definition.ResolveViewTitle(viewName));
+            }
+        }
+
+        private static void VerifyViewTitles(XElement form, FormDefinition definition)
+        {
+            var controls = RequiredChild(form, "Controls");
+            foreach (var viewName in definition.Views)
+            {
+                var item = form.Descendants().FirstOrDefault(x => x.Name.LocalName == "Item" && string.Equals((string)x.Attribute("ViewName"), viewName, StringComparison.OrdinalIgnoreCase));
+                if (item == null) throw new CliException("K2 Form '" + definition.Name + "' has no layout item for view '" + viewName + "'.");
+                var id = (string)item.Attribute("ID");
+                var control = controls.Elements().FirstOrDefault(x => x.Name.LocalName == "Control" && string.Equals((string)x.Attribute("ID"), id, StringComparison.OrdinalIgnoreCase));
+                if (control == null) throw new CliException("K2 Form '" + definition.Name + "' has no AreaItem control for view '" + viewName + "'.");
+                var expected = definition.ResolveViewTitle(viewName);
+                var actual = ReadProperty(control, "Title") ?? string.Empty;
+                if (!string.Equals(actual, expected, StringComparison.Ordinal))
+                    throw new CliException("K2 Form '" + definition.Name + "' view '" + viewName + "' has title '" + actual + "', expected '" + expected + "'.");
             }
         }
 
@@ -203,6 +236,43 @@ namespace K2SmartFormsCli
             }
             property.Add(new XElement(ns + "Value", value));
             return property;
+        }
+
+        private static void SetProperty(XElement control, string name, string value)
+        {
+            var properties = control.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
+            if (properties == null)
+            {
+                properties = new XElement(control.Name.Namespace + "Properties");
+                control.Add(properties);
+            }
+            var property = properties.Elements().FirstOrDefault(x => x.Name.LocalName == "Property" && string.Equals(ChildValue(x, "Name"), name, StringComparison.OrdinalIgnoreCase));
+            if (property == null)
+            {
+                properties.Add(Property(control.Name.Namespace, name, value, true));
+                return;
+            }
+            SetChildValue(property, "DisplayValue", value);
+            SetChildValue(property, "NameValue", value);
+            SetChildValue(property, "Value", value);
+        }
+
+        private static string ReadProperty(XElement control, string name)
+        {
+            return control.Descendants().Where(x => x.Name.LocalName == "Property")
+                .Where(x => string.Equals(ChildValue(x, "Name"), name, StringComparison.OrdinalIgnoreCase))
+                .Select(x => ChildValue(x, "Value")).FirstOrDefault();
+        }
+
+        private static void SetChildValue(XElement parent, string name, string value)
+        {
+            var child = parent.Elements().FirstOrDefault(x => x.Name.LocalName == name);
+            if (child == null)
+            {
+                child = new XElement(parent.Name.Namespace + name);
+                parent.Add(child);
+            }
+            child.Value = value ?? string.Empty;
         }
 
         private static void AssertProperty(XElement control, string name, string expected, FormDefinition form, FormTabDefinition tab)
