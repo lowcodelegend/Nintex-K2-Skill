@@ -99,6 +99,15 @@ namespace K2WorkflowCli
             if (existing.HasValue && !_manifest.Workflow.ReplaceExisting)
                 throw new CliException("Workflow already exists. Set workflow.replaceExisting to true to update it: " + _manifest.Workflow.ProcessFullName);
             var processId = existing ?? 0;
+
+            // SaveKprx can check out an integrated form as part of publishing. Reconcile an existing
+            // workflow's tool-owned integration first so the management provider does not race that lock.
+            if (existing.HasValue && _manifest.Workflow.SmartForms != null)
+            {
+                if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost).Load(_manifest.Workflow);
+                new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost).Integrate(_manifest.Workflow, _smartForm);
+            }
+
             var jsonId = Guid.NewGuid().ToString();
             if (existing.HasValue)
             {
