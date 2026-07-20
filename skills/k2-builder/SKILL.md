@@ -1,6 +1,6 @@
 ---
 name: k2-builder
-description: Orchestrate complete self-hosted Nintex K2 Five solutions across SQL-backed SmartObjects, modern SmartForms, and HTML5 workflows. Use when turning solution requirements into an ordered K2 artifact graph, coordinating the k2-sql-smartobjects, k2-smartforms, and k2-workflows skills, enforcing cross-artifact defaults such as workflow form states, or planning and verifying an end-to-end K2 application. Do not use as a replacement for the specialist skills or for unsupported K2 artifact types.
+description: Orchestrate complete self-hosted Nintex K2 Five solutions across SQL-backed SmartObjects, modern SmartForms, and HTML5 workflows, with durable per-user K2 environment discovery and profiles. Use when configuring or validating a reusable K2 environment profile, turning solution requirements into an ordered K2 artifact graph, coordinating the k2-sql-smartobjects, k2-smartforms, and k2-workflows skills, enforcing cross-artifact defaults such as workflow form states, or planning and verifying an end-to-end K2 application. Do not use as a replacement for the specialist skills or for unsupported K2 artifact types.
 ---
 
 # K2 Solution Builder
@@ -13,9 +13,13 @@ Build a complete K2 solution by coordinating the installed specialist skills:
 
 Keep the specialist manifests authoritative for their own artifact types. Use the solution manifest for dependencies, shared policy, entry points, and end-to-end scenarios; do not duplicate specialist implementation details in it.
 
+## Environment bootstrap
+
+Before investigating K2, read [environment-profiles.md](references/environment-profiles.md) and run `scripts/k2env.ps1 validate` for the selected/default profile. When it passes, run `show --output json`, reuse those values in every specialist manifest, and do not repeat environment discovery. On first use, run `discover --name <stable-name> --default`; refresh only after an expected K2, IIS, or host change. Keep profiles and secrets out of projects and skill folders.
+
 ## Build workflow
 
-1. Read [solution-manifest.md](references/solution-manifest.md) and create or update a solution manifest beside the specialist manifests. Copy [solution-manifest.template.json](assets/solution-manifest.template.json) when starting from scratch.
+1. Resolve and validate the durable K2 environment profile, then read [solution-manifest.md](references/solution-manifest.md) and create or update a solution manifest beside the specialist manifests. Copy [solution-manifest.template.json](assets/solution-manifest.template.json) when starting from scratch.
 2. Read [contracts.md](references/contracts.md) and resolve every cross-artifact decision before mutation.
 3. Run `scripts/k2build.ps1 validate -Manifest <solution-manifest.json>`.
 4. Run `scripts/k2build.ps1 plan -Manifest <solution-manifest.json>` and present the non-mutating, dependency-ordered plan.

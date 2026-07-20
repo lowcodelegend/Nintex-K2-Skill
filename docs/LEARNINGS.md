@@ -12,6 +12,8 @@
 
 No supplied password is stored in the repository or CLI output. Integrated authentication was sufficient throughout development and testing.
 
+The reusable environment profile now lives under `%CODEX_HOME%\k2`, outside projects and installed skill payloads. `k2env` discovers the install path/build from the registry and K2 assembly, derives public SmartForms URLs from IIS, records only the current identity name and integrated-authentication mode, and performs inexpensive port/route validation on later runs. Clean skill replacement therefore cannot erase learned environment facts.
+
 ## Supported K2 API path
 
 The tool uses supported client/management APIs on port 5555 rather than altering the K2 database:

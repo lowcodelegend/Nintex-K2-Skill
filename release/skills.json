@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "suiteName": "k2-skills",
-  "suiteVersion": "0.8.5",
+  "suiteVersion": "0.9.0",
   "skills": [
     {
       "name": "k2-sql-smartobjects",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "platform": "win-x64",
       "buildScript": "skills/k2-sql-smartobjects/scripts/build.ps1",
       "buildParameters": {
@@ -19,12 +19,12 @@
       "versionCommand": {
         "path": "skills/k2-sql-smartobjects/tool/K2SqlCli/bin/Release/k2sql.exe",
         "arguments": ["version"],
-        "expectedOutput": "k2sql 0.1.1"
+        "expectedOutput": "k2sql 0.1.2"
       }
     },
     {
       "name": "k2-smartforms",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "platform": "win-x64",
       "buildScript": "skills/k2-smartforms/scripts/build.ps1",
       "buildParameters": {
@@ -38,12 +38,12 @@
       "versionCommand": {
         "path": "skills/k2-smartforms/tool/K2SmartFormsCli/bin/Release/k2forms.exe",
         "arguments": ["version"],
-        "expectedOutput": "k2forms 0.1.4"
+        "expectedOutput": "k2forms 0.1.5"
       }
     },
     {
       "name": "k2-workflows",
-      "version": "0.5.4",
+      "version": "0.5.5",
       "platform": "win-x64",
       "buildScript": "skills/k2-workflows/scripts/build.ps1",
       "buildParameters": {
@@ -57,22 +57,25 @@
       "versionCommand": {
         "path": "skills/k2-workflows/tool/K2WorkflowCli/bin/Release/k2wf.exe",
         "arguments": ["version"],
-        "expectedOutput": "k2wf 0.5.4"
+        "expectedOutput": "k2wf 0.5.5"
       }
     },
     {
       "name": "k2-builder",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "platform": "win-x64",
       "buildScript": "skills/k2-builder/scripts/build.ps1",
       "buildParameters": {
         "Configuration": "Release"
       },
-      "builtFiles": [],
+      "builtFiles": [
+        "skills/k2-builder/tool/K2EnvironmentCli/bin/Release/k2env.exe",
+        "skills/k2-builder/tool/K2EnvironmentCli/bin/Release/k2env.exe.config"
+      ],
       "versionCommand": {
         "path": "skills/k2-builder/scripts/k2build.ps1",
         "arguments": ["version"],
-        "expectedOutput": "k2build 0.1.0"
+        "expectedOutput": "k2build 0.2.0"
       }
     }
   ]

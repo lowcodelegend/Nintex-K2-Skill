@@ -9,7 +9,7 @@ Use `scripts/k2wf.ps1`; do not write to the K2 database or invoke legacy workflo
 
 ## Workflow
 
-1. Run `scripts/k2wf.ps1 doctor` and report the detected identity and JSON authoring model.
+1. If the installed sibling `k2-builder` skill provides `scripts/k2env.ps1`, validate and load its selected/default environment profile before performing environment discovery; explicit requirements override profile values. Then run `scripts/k2wf.ps1 doctor` and report the detected identity and JSON authoring model.
 2. Read [references/manifest.md](references/manifest.md) and create a manifest. Keep names and category paths free of version numbers; K2 owns artifact versions.
 3. Run `plan`, review exact category/name/action, then run `render` when JSON review is useful.
 4. Run `deploy ... --confirm` only after the plan. A published workflow creates a K2 runtime major version; a draft remains designer JSON only.
