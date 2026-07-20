@@ -64,4 +64,4 @@ The CLI performs deployment in this order:
 
 It discovers K2 from `K2_INSTALL_DIR`, the SourceCode registry key, or `C:\Program Files\K2`. It builds as a 64-bit .NET Framework executable and resolves the installed K2 client assemblies at runtime.
 
-Read [references/cli.md](references/cli.md) for commands, exit codes, authentication, and cleanup details. Start from the repository fixture at `examples/request-management` when a concrete model is useful.
+Read [references/cli.md](references/cli.md) for commands, exit codes, authentication, and cleanup details. When the sibling `k2-builder` skill is installed, copy its bundled SQL-only fixture with `../k2-builder/scripts/copy-example.ps1 -Name request-management -Destination <empty-project-folder>` when a concrete model is useful.

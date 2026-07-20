@@ -19,7 +19,7 @@ Before investigating K2, read [environment-profiles.md](references/environment-p
 
 ## Build workflow
 
-1. Resolve and validate the durable K2 environment profile, then read [solution-manifest.md](references/solution-manifest.md) and create or update a solution manifest beside the specialist manifests. Copy [solution-manifest.template.json](assets/solution-manifest.template.json) when starting from scratch.
+1. Resolve and validate the durable K2 environment profile, then read [solution-manifest.md](references/solution-manifest.md) and create or update a solution manifest beside the specialist manifests. Copy [solution-manifest.template.json](assets/solution-manifest.template.json) when starting from scratch. When a concrete starting point is useful, run `scripts/copy-example.ps1 -Name corporate-workflow -Destination <empty-project-folder>` for the complete three-layer fixture or use `request-management` for a SQL-only fixture. Treat copied examples as templates: adapt names and environment choices, plan first, and never deploy them blindly.
 2. Read [contracts.md](references/contracts.md) and resolve every cross-artifact decision—including threshold, dimensional, or multi-stage approval routing—before mutation.
 3. Run `scripts/k2build.ps1 validate -Manifest <solution-manifest.json>`.
 4. Run `scripts/k2build.ps1 plan -Manifest <solution-manifest.json>` and present the non-mutating, dependency-ordered plan.
