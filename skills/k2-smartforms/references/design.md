@@ -30,7 +30,7 @@ For every business-managed lookup, generate capture/list administration UX and s
 
 ## Presentation
 
-Use an installed theme; `Lithium` is the tested K2 Five 5.10 default for this skill. Theme selection and theme mode are separate K2 properties: a form can report `Lithium` while still using legacy theme mode. New forms default to modern mode through an explicit `UseLegacyTheme=false` form-control property. Set a form's `useLegacyTheme` to `true` only for intentional compatibility with older styling.
+Use an installed theme; `Lithium` is the tested K2 Five 5.10 default for this skill. Theme selection, theme mode, and style profile are separate K2 properties: a form can report `Lithium`, use modern mode, and also apply a named Style Profile. New forms default to modern mode through an explicit `UseLegacyTheme=false` form-control property. Set a form's `useLegacyTheme` to `true` only for intentional compatibility with older styling. Prefer the durable environment profile's selected default Style Profile unless the solution explicitly overrides it; an explicit environment choice of none means do not apply one.
 
 Capture-view options `editable`, `labels-left`, `colon-labels`, and `toolbar` produce a compact conventional editor. Use `toolbar` on list views.
 

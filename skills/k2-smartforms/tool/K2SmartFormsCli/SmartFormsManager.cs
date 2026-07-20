@@ -30,6 +30,7 @@ namespace K2SmartFormsCli
                 var themes = manager.GetThemes().Themes.Cast<Theme>().Select(x => x.Name).OrderBy(x => x).ToList();
                 if (!themes.Contains(_manifest.Application.Theme, StringComparer.OrdinalIgnoreCase))
                     throw new CliException("K2 theme not found: " + _manifest.Application.Theme + ". Available: " + string.Join(", ", themes.ToArray()));
+                var styleProfile = ResolveStyleProfile(manager);
                 var worklistForms = _manifest.Application.Forms.Where(x => x.Tabs.Any(t => t.Worklist != null)).ToList();
                 if (worklistForms.Count > 0)
                 {
@@ -38,7 +39,7 @@ namespace K2SmartFormsCli
                         throw new CliException("The native K2 Worklist control is not registered; required by form(s): " + string.Join(", ", worklistForms.Select(x => x.Name).ToArray()));
                     Console.WriteLine("K2 control input: OK (Worklist, " + worklistControl.FullName + ")");
                 }
-                Console.WriteLine("K2 SmartForms connection: OK (" + elapsed.TotalMilliseconds.ToString("0") + " ms, theme " + _manifest.Application.Theme + ")");
+                Console.WriteLine("K2 SmartForms connection: OK (" + elapsed.TotalMilliseconds.ToString("0") + " ms, theme " + _manifest.Application.Theme + ", styleProfile=" + (styleProfile == null ? "none" : styleProfile.DisplayName + " [" + styleProfile.Name + "]") + ")");
                 return 0;
             });
 
@@ -192,7 +193,9 @@ namespace K2SmartFormsCli
                         continue;
                     }
                     var info = manager.GetForm(form.Name);
-                    var useLegacyTheme = FormThemeDefinition.ReadUseLegacyTheme(manager.GetFormDefinition(info.Guid));
+                    var definition = manager.GetFormDefinition(info.Guid);
+                    var useLegacyTheme = FormThemeDefinition.ReadUseLegacyTheme(definition);
+                    var styleProfile = FormThemeDefinition.ReadStyleProfile(definition);
                     result.Add(new ArtifactState
                     {
                         Kind = "Form",
@@ -203,7 +206,8 @@ namespace K2SmartFormsCli
                         Version = info.Version,
                         CheckedOut = info.IsCheckedOut,
                         Type = info.Type.ToString(),
-                        UseLegacyTheme = useLegacyTheme
+                        UseLegacyTheme = useLegacyTheme,
+                        StyleProfile = styleProfile == null ? null : styleProfile.Name
                     });
                 }
                 return result;
@@ -274,6 +278,7 @@ namespace K2SmartFormsCli
 
             WithFormsManager(delegate(FormsManager manager)
             {
+                var styleProfile = ResolveStyleProfile(manager);
                 if (existing.Count > 0)
                 {
                     foreach (var form in _manifest.Application.Forms)
@@ -317,10 +322,11 @@ namespace K2SmartFormsCli
                         var formGenerator = new FormGenerator(ParseFormOptions(form.Options), ParseFormBehaviors(form.Behaviors), _manifest.Application.Theme);
                         var generated = generator.Generate(formGenerator, form.Views.ToArray(), form.Name);
                         var definition = FormThemeDefinition.SetUseLegacyTheme(generated.ToXml(), form.UseLegacyTheme);
+                        if (styleProfile != null) definition = FormThemeDefinition.SetStyleProfile(definition, styleProfile.Guid, styleProfile.Name);
                         definition = FormLayoutDefinition.Apply(definition, form);
                         manager.DeployForms(definition, _manifest.Application.GetFormCategoryPath(form), _manifest.Application.CheckIn);
                         var info = manager.GetForm(form.Name);
-                        Console.WriteLine("Form: deployed (" + form.Name + ", " + info.Guid + ", theme " + info.Theme.Name + ", legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant() + ", tabs=" + form.Tabs.Count + ", worklist=" + form.Tabs.Any(x => x.Worklist != null).ToString().ToLowerInvariant() + ")");
+                        Console.WriteLine("Form: deployed (" + form.Name + ", " + info.Guid + ", theme " + info.Theme.Name + ", styleProfile=" + (styleProfile == null ? "none" : styleProfile.Name) + ", legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant() + ", tabs=" + form.Tabs.Count + ", worklist=" + form.Tabs.Any(x => x.Worklist != null).ToString().ToLowerInvariant() + ")");
                     }
                 }
                 return 0;
@@ -333,6 +339,7 @@ namespace K2SmartFormsCli
             var lookupSources = LoadLookupRuntimeSources();
             WithFormsManager(delegate(FormsManager manager)
             {
+                var expectedStyleProfile = ResolveStyleProfile(manager);
                 foreach (var expected in _manifest.Verification.ExpectedViews)
                 {
                     if (!manager.CheckViewExists(expected)) throw new CliException("Expected K2 View is missing: " + expected);
@@ -366,6 +373,11 @@ namespace K2SmartFormsCli
                         throw new CliException("K2 Form does not explicitly set UseLegacyTheme: " + expected);
                     if (useLegacyTheme.Value != declaredForm.UseLegacyTheme)
                         throw new CliException("K2 Form UseLegacyTheme is " + useLegacyTheme.Value.ToString().ToLowerInvariant() + ", expected " + declaredForm.UseLegacyTheme.ToString().ToLowerInvariant() + ": " + expected);
+                    var actualStyleProfile = FormThemeDefinition.ReadStyleProfile(definition);
+                    if (expectedStyleProfile == null && actualStyleProfile != null)
+                        throw new CliException("K2 Form has style profile '" + actualStyleProfile.Name + "' but the manifest expects none: " + expected);
+                    if (expectedStyleProfile != null && (actualStyleProfile == null || actualStyleProfile.Guid != expectedStyleProfile.Guid))
+                        throw new CliException("K2 Form style profile does not match '" + expectedStyleProfile.DisplayName + "' [" + expectedStyleProfile.Name + "]: " + expected);
                     FormLayoutDefinition.Verify(definition, declaredForm);
                     foreach (var viewName in declaredForm.Views)
                     {
@@ -373,7 +385,7 @@ namespace K2SmartFormsCli
                         if (definition.IndexOf(viewGuid, StringComparison.OrdinalIgnoreCase) < 0)
                             throw new CliException("K2 Form '" + expected + "' does not reference expected view '" + viewName + "'.");
                     }
-                    Console.WriteLine("Form verification: OK (" + expected + ", " + info.Guid + ", v" + info.Version + ", theme " + info.Theme.Name + ", legacyTheme=" + useLegacyTheme.Value.ToString().ToLowerInvariant() + ")");
+                    Console.WriteLine("Form verification: OK (" + expected + ", " + info.Guid + ", v" + info.Version + ", theme " + info.Theme.Name + ", styleProfile=" + (actualStyleProfile == null ? "none" : actualStyleProfile.Name) + ", legacyTheme=" + useLegacyTheme.Value.ToString().ToLowerInvariant() + ")");
                     runtimeForms.Add(expected);
                 }
                 return 0;
@@ -434,7 +446,7 @@ namespace K2SmartFormsCli
             request.AllowAutoRedirect = false;
             request.Timeout = 30000;
             request.ReadWriteTimeout = 30000;
-            request.UserAgent = "k2forms/0.3.1";
+            request.UserAgent = "k2forms/0.4.0";
             try
             {
                 using (var response = (HttpWebResponse)request.GetResponse())
@@ -495,6 +507,20 @@ namespace K2SmartFormsCli
                 }
                 manager.Dispose();
             }
+        }
+
+        private StyleProfileInfo ResolveStyleProfile(FormsManager manager)
+        {
+            var value = _manifest.Application.StyleProfile;
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            Guid guid;
+            var profiles = manager.GetStyleProfiles().StyleProfiles.Cast<StyleProfileInfo>().Where(x =>
+                (Guid.TryParse(value, out guid) && x.Guid == guid) ||
+                string.Equals(x.Name, value, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(x.DisplayName, value, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (profiles.Count == 0) throw new CliException("K2 style profile not found: " + value + ". Available: " + string.Join(", ", manager.GetStyleProfiles().StyleProfiles.Cast<StyleProfileInfo>().Select(x => x.DisplayName + " [" + x.Name + "]").ToArray()));
+            if (profiles.Count > 1) throw new CliException("K2 style profile is ambiguous; use its GUID: " + value);
+            return profiles[0];
         }
 
         private T WithSmartObjectServer<T>(Func<SmartObjectClientServer, T> action)
@@ -610,6 +636,7 @@ namespace K2SmartFormsCli
         public bool CheckedOut { get; set; }
         public string Type { get; set; }
         public bool? UseLegacyTheme { get; set; }
+        public string StyleProfile { get; set; }
 
         public static ArtifactState Absent(string kind, string name)
         {

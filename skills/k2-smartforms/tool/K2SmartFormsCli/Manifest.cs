@@ -323,6 +323,7 @@ namespace K2SmartFormsCli
         public string RootCategoryPath { get; set; }
         public string CategoryPath { get; set; }
         public string Theme { get; set; }
+        public string StyleProfile { get; set; }
         public bool ReplaceExisting { get; set; }
         public bool CheckIn { get; set; }
         public List<ViewDefinition> Views { get; set; }

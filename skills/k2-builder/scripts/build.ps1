@@ -12,11 +12,18 @@ $skillRoot = Split-Path -Parent $PSScriptRoot
 $entryPoint = Join-Path $PSScriptRoot 'k2build.ps1'
 $environmentProject = Join-Path $skillRoot 'tool\K2EnvironmentCli\K2EnvironmentCli.csproj'
 $msbuild = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe'
+$k2InstallDir = $env:K2_INSTALL_DIR
+if ([string]::IsNullOrWhiteSpace($k2InstallDir)) {
+    $k2InstallDir = (Get-ItemProperty 'HKLM:\SOFTWARE\SourceCode\blackpearl\blackpearl Core' -ErrorAction SilentlyContinue).InstallDir
+}
+if ([string]::IsNullOrWhiteSpace($k2InstallDir) -or -not (Test-Path -LiteralPath $k2InstallDir -PathType Container)) {
+    throw 'K2 installation not found. Set K2_INSTALL_DIR.'
+}
 if (-not (Test-Path -LiteralPath $msbuild -PathType Leaf)) {
     throw "MSBuild not found at $msbuild"
 }
 $target = if ($Clean) { 'Rebuild' } else { 'Build' }
-$buildOutput = & $msbuild $environmentProject "/t:$target" "/p:Configuration=$Configuration" /nologo /verbosity:quiet 2>&1
+$buildOutput = & $msbuild $environmentProject "/t:$target" "/p:Configuration=$Configuration" "/p:K2InstallDir=$($k2InstallDir.TrimEnd('\'))" /nologo /verbosity:quiet 2>&1
 if ($LASTEXITCODE -ne 0) {
     $buildOutput | Write-Error
     exit $LASTEXITCODE
@@ -56,13 +63,13 @@ if ($agentContent -notmatch '(?m)^\s*default_prompt:\s*"Use \$k2-builder .+"\s*$
 }
 
 $actualVersion = (& $entryPoint version | Out-String).Trim()
-if ($actualVersion -cne 'k2build 0.7.0') {
+if ($actualVersion -cne 'k2build 0.8.0') {
     throw "Unexpected k2build version output: $actualVersion"
 }
 $environmentExecutable = Join-Path $skillRoot "tool\K2EnvironmentCli\bin\$Configuration\k2env.exe"
 $environmentVersion = (& $environmentExecutable version | Out-String).Trim()
-if ($environmentVersion -cne 'k2env 0.1.0') {
+if ($environmentVersion -cne 'k2env 0.2.0') {
     throw "Unexpected k2env version output: $environmentVersion"
 }
 
-Write-Output "k2-builder 0.7.0 validation passed ($Configuration); k2env 0.1.0 built at $environmentExecutable."
+Write-Output "k2-builder 0.8.0 validation passed ($Configuration); k2env 0.2.0 built at $environmentExecutable."

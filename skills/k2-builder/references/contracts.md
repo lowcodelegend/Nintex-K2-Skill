@@ -50,6 +50,13 @@ A typical request workflow must establish all of the following:
 - Preserve native SmartForms Start/Task integration on the same form. Deploy forms before workflows, then reapply workflow integration after any form replacement.
 - Authenticated-browser test tab rendering, list-to-details loading, Worklist population, and opening a task. Record any unexecuted interaction as errata.
 
+## SmartForms presentation contract
+
+- Resolve Style Profile precedence before generating forms: explicit solution/SmartForms manifest value, then the durable environment default, then deliberate none.
+- When environment selection is still `unselected`, present the discovered profiles and ask the user; do not infer a default from an unrelated existing application.
+- Put the selected profile's stable system name in `application.styleProfile`. Keep `application.theme` and `useLegacyTheme=false` explicit because theme, Style Profile, and rendering mode are separate K2 settings.
+- Verify the deployed form definition contains the selected Style Profile GUID and system name.
+
 ## Form-state invariant
 
 For a dedicated request-entry form:
@@ -66,7 +73,7 @@ For a shared form, never infer a default-state change. Choose and record one of:
 
 1. Run every selected specialist's `doctor` and `plan` command.
 2. Verify the database objects, Service Instance, every generated SmartObject's `<root>\Data` placement, and representative SmartObject methods.
-3. Verify form/view deployment, modern theme mode, required method input mappings, and browser CRUD behavior.
+3. Verify form/view deployment, selected Style Profile, modern theme mode, required method input mappings, and browser CRUD behavior.
 4. Verify workflow JSON shape, publication/version, SmartObject method mappings, dynamic recipients, task notification, and SmartForms integration.
 5. Execute each end-to-end scenario from the ordinary Runtime entry URL.
 6. Correlate the saved request identifier, workflow instance, worklist task, selected action, and final status. Do not accept independent smoke tests as equivalent evidence.

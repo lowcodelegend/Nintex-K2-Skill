@@ -9,6 +9,8 @@ using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
 using System.Xml.Linq;
+using SourceCode.Forms.Management;
+using SourceCode.Hosting.Client.BaseAPI;
 
 namespace K2EnvironmentCli
 {
@@ -32,6 +34,7 @@ namespace K2EnvironmentCli
             var host = string.IsNullOrWhiteSpace(hostOverride) ? "localhost" : hostOverride.Trim();
             var webBase = !string.IsNullOrWhiteSpace(baseUrlOverride) ? NormalizeBaseUrl(baseUrlOverride) :
                 iis != null ? iis.BaseUrl : "http://" + (string.IsNullOrWhiteSpace(domain) ? machine : machine + "." + domain);
+            var smartForms = DiscoverSmartForms(host, sources);
 
             return new EnvironmentProfile
             {
@@ -49,6 +52,7 @@ namespace K2EnvironmentCli
                     Runtime = CombineUrl(webBase, iis == null ? "/Runtime" : iis.RuntimePath),
                     Management = CombineUrl(webBase, iis == null ? "/Management" : iis.ManagementPath)
                 },
+                SmartForms = smartForms,
                 Fingerprint = new EnvironmentFingerprint
                 {
                     Machine = machine, Domain = domain, K2InstallId = Hash(machine + "|" + install.ToUpperInvariant() + "|" + version)
@@ -61,6 +65,60 @@ namespace K2EnvironmentCli
                 CreatedUtc = DateTime.UtcNow.ToString("o"),
                 LastValidatedUtc = null
             };
+        }
+
+        private static SmartFormsSettings DiscoverSmartForms(string host, List<string> sources)
+        {
+            var builder = new SCConnectionStringBuilder
+            {
+                Authenticate = true,
+                Host = host,
+                Port = 5555,
+                Integrated = true,
+                IsPrimaryLogin = true,
+                SecurityLabelName = "K2"
+            };
+            using (var manager = new FormsManager())
+            {
+                manager.CreateConnection();
+                try
+                {
+                    manager.Connection.Open(builder.ConnectionString);
+                    var themes = manager.GetThemes().Themes.Cast<Theme>().Select(x => x.Name).OrderBy(x => x).ToList();
+                    var profiles = manager.GetStyleProfiles().StyleProfiles.Cast<StyleProfileInfo>()
+                        .OrderBy(x => x.DisplayName).ThenBy(x => x.Name)
+                        .Select(x => new StyleProfileSettings
+                        {
+                            Guid = x.Guid,
+                            Name = x.Name,
+                            DisplayName = x.DisplayName,
+                            CategoryPath = x.CategoryPath,
+                            IsSystem = x.IsSystem,
+                            IsInternal = x.IsInternal,
+                            Version = x.Version
+                        }).ToList();
+                    sources.Add("K2 FormsManager themes and style profiles");
+                    return new SmartFormsSettings
+                    {
+                        Themes = themes,
+                        StyleProfiles = profiles,
+                        StyleProfileSelection = profiles.Count == 0 ? "none" : "unselected",
+                        DefaultStyleProfile = null
+                    };
+                }
+                catch (Exception ex)
+                {
+                    throw new CliException("K2 SmartForms metadata discovery failed: " + ex.GetBaseException().Message);
+                }
+                finally
+                {
+                    if (manager.Connection != null)
+                    {
+                        manager.Connection.Close();
+                        manager.DeleteConnection();
+                    }
+                }
+            }
         }
 
         private static string ResolveInstallDirectory(string value, List<string> sources)

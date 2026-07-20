@@ -9,10 +9,30 @@ namespace K2EnvironmentCli
         public string Name { get; set; }
         public K2Settings K2 { get; set; }
         public UrlSettings Urls { get; set; }
+        public SmartFormsSettings SmartForms { get; set; }
         public EnvironmentFingerprint Fingerprint { get; set; }
         public DiscoveryMetadata Discovery { get; set; }
         public string CreatedUtc { get; set; }
         public string LastValidatedUtc { get; set; }
+    }
+
+    public sealed class SmartFormsSettings
+    {
+        public List<string> Themes { get; set; }
+        public List<StyleProfileSettings> StyleProfiles { get; set; }
+        public string StyleProfileSelection { get; set; }
+        public StyleProfileSettings DefaultStyleProfile { get; set; }
+    }
+
+    public sealed class StyleProfileSettings
+    {
+        public Guid Guid { get; set; }
+        public string Name { get; set; }
+        public string DisplayName { get; set; }
+        public string CategoryPath { get; set; }
+        public bool IsSystem { get; set; }
+        public bool IsInternal { get; set; }
+        public int Version { get; set; }
     }
 
     public sealed class K2Settings

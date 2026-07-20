@@ -15,7 +15,7 @@ Keep the specialist manifests authoritative for their own artifact types. Use th
 
 ## Environment bootstrap
 
-Before investigating K2, read [environment-profiles.md](references/environment-profiles.md) and run `scripts/k2env.ps1 validate` for the selected/default profile. When it passes, run `show --output json`, reuse those values in every specialist manifest, and do not repeat environment discovery. On first use, run `discover --name <stable-name> --default`; refresh only after an expected K2, IIS, or host change. Keep profiles and secrets out of projects and skill folders.
+Before investigating K2, read [environment-profiles.md](references/environment-profiles.md) and run `scripts/k2env.ps1 validate` for the selected/default profile. When it passes, run `show --output json`, reuse those values in every specialist manifest, and do not repeat environment discovery. On first use, run `discover --name <stable-name> --default`; it inventories installed SmartForms themes and style profiles. If `smartForms.styleProfileSelection` is `unselected`, show the discovered display name, system name, and category for each choice, ask the user once which should be the environment default (including an explicit no-style-profile choice), and persist the answer with `set-style-profile`. Refresh only after an expected K2, IIS, or host change. Keep profiles and secrets out of projects and skill folders.
 
 ## Build workflow
 
@@ -37,6 +37,7 @@ Stop on the first failed layer. Do not deploy dependent layers. Preserve success
 - Use the same main solution folder for every K2 layer. Put generated SmartObjects under `<root>\Data`, ordinary views/forms under `<root>\Views` and `<root>\Forms`, administrative lookup UX under `<root>\Admin\Views` and `<root>\Admin\Forms`, and workflows under `<root>\<root-leaf> WFs`. Never use a workflow category named `Workflow` or `Workflows` because those generic names interact badly with K2's workflow folder system.
 - Prefer lookup tables and foreign keys for user-selected controlled values. For small applications, default to meaningful code/text foreign keys to avoid heavy normalization; normalize to surrogate lookup IDs on request. For complex applications, default to normalized lookup keys. Give business-managed lookups SmartObject-backed dropdowns and Admin CRUD UX; explicitly classify external/system lookups that should not be administered.
 - Generate SmartForms with `useLegacyTheme=false` unless legacy compatibility is an explicit requirement.
+- Apply an explicit solution/manifest style profile when supplied; otherwise use the environment profile's selected default. A deliberate environment selection of `none` means omit the form StyleProfile property. Never guess while selection remains `unselected`. Theme, modern/legacy mode, and style profile are independent settings.
 - Use dynamic workflow identities such as Originator and Originator Manager instead of fixed users or email addresses unless the requirement is explicitly fixed.
 - For a dedicated request-entry form, resolve `startStateDefault=auto` to true. The Start state must be the only default state, and the Task state must never be default.
 - For a shared existing form, require an explicit entry-state choice. Do not silently change its default state.

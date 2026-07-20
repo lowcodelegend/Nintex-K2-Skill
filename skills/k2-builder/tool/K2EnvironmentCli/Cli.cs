@@ -7,7 +7,7 @@ namespace K2EnvironmentCli
 {
     internal static class Cli
     {
-        public const string Version = "0.1.0";
+        public const string Version = "0.2.0";
 
         public static int Run(string[] args)
         {
@@ -22,6 +22,7 @@ namespace K2EnvironmentCli
             if (command == "show") return Show(store, options);
             if (command == "validate") return Validate(store, options);
             if (command == "set-default") return SetDefault(store, options);
+            if (command == "set-style-profile") return SetStyleProfile(store, options);
             throw new CliException("Unknown command: " + command);
         }
 
@@ -30,7 +31,10 @@ namespace K2EnvironmentCli
             var name = options.Require("name");
             if (!overwrite && File.Exists(store.ProfilePath(name)))
                 throw new CliException("Environment profile already exists: " + store.ProfilePath(name) + ". Use refresh to replace it.");
+            EnvironmentProfile previous = null;
+            if (overwrite && File.Exists(store.ProfilePath(name))) previous = store.Read(name);
             var profile = Discovery.Discover(name, options.Get("install-dir"), options.Get("host"), options.Get("base-url"));
+            PreserveStyleProfileSelection(previous, profile);
             var validation = Validator.Validate(profile, store.ProfilePath(profile.Name));
             profile.LastValidatedUtc = validation.Valid ? validation.ValidatedUtc : null;
             if (options.IsJson) Console.WriteLine(PrettyJson.Serialize(new { profile = profile, validation = validation, persisted = validation.Valid }));
@@ -90,6 +94,52 @@ namespace K2EnvironmentCli
             Console.WriteLine("Default K2 environment: " + name); return 0;
         }
 
+        private static int SetStyleProfile(ProfileStore store, Options options)
+        {
+            var name = store.ResolveName(options.Get("name"));
+            var profile = store.Read(name);
+            if (profile.SmartForms == null || profile.SmartForms.StyleProfiles == null)
+                throw new CliException("Profile has no discovered SmartForms style profiles. Run refresh first: " + name);
+            if (options.Has("no-style-profile"))
+            {
+                if (!string.IsNullOrWhiteSpace(options.Get("style-profile"))) throw new CliException("Use either --style-profile or --no-style-profile, not both.");
+                profile.SmartForms.StyleProfileSelection = "none";
+                profile.SmartForms.DefaultStyleProfile = null;
+            }
+            else
+            {
+                var value = options.Require("style-profile");
+                Guid guid;
+                var matches = profile.SmartForms.StyleProfiles.Where(x =>
+                    (Guid.TryParse(value, out guid) && x.Guid == guid) ||
+                    string.Equals(x.Name, value, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(x.DisplayName, value, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (matches.Count == 0) throw new CliException("Style profile not found: " + value + ". Available: " + string.Join(", ", profile.SmartForms.StyleProfiles.Select(x => x.DisplayName + " [" + x.Name + "]").ToArray()));
+                if (matches.Count > 1) throw new CliException("Style profile selection is ambiguous; use its GUID: " + value);
+                profile.SmartForms.StyleProfileSelection = "selected";
+                profile.SmartForms.DefaultStyleProfile = matches[0];
+            }
+            store.Write(profile, true);
+            Console.WriteLine("Default SmartForms style profile: " + (profile.SmartForms.DefaultStyleProfile == null ? "(none)" : profile.SmartForms.DefaultStyleProfile.DisplayName + " [" + profile.SmartForms.DefaultStyleProfile.Name + "]"));
+            return 0;
+        }
+
+        private static void PreserveStyleProfileSelection(EnvironmentProfile previous, EnvironmentProfile current)
+        {
+            if (previous == null || previous.SmartForms == null || current.SmartForms == null) return;
+            if (string.Equals(previous.SmartForms.StyleProfileSelection, "none", StringComparison.OrdinalIgnoreCase))
+            {
+                current.SmartForms.StyleProfileSelection = "none";
+                return;
+            }
+            var selected = previous.SmartForms.DefaultStyleProfile;
+            if (!string.Equals(previous.SmartForms.StyleProfileSelection, "selected", StringComparison.OrdinalIgnoreCase) || selected == null) return;
+            var refreshed = current.SmartForms.StyleProfiles.FirstOrDefault(x => x.Guid == selected.Guid);
+            if (refreshed == null) return;
+            current.SmartForms.StyleProfileSelection = "selected";
+            current.SmartForms.DefaultStyleProfile = refreshed;
+        }
+
         private static void WriteProfile(EnvironmentProfile profile, string path, bool json)
         {
             if (json) { Console.WriteLine(PrettyJson.Serialize(profile)); return; }
@@ -100,6 +150,15 @@ namespace K2EnvironmentCli
             Console.WriteLine("Install: " + profile.K2.InstallDirectory);
             Console.WriteLine("Designer: " + profile.Urls.Designer);
             Console.WriteLine("Runtime: " + profile.Urls.Runtime);
+            if (profile.SmartForms != null)
+            {
+                Console.WriteLine("Themes: " + string.Join(", ", (profile.SmartForms.Themes ?? new List<string>()).ToArray()));
+                Console.WriteLine("Style profiles:");
+                foreach (var item in profile.SmartForms.StyleProfiles ?? new List<StyleProfileSettings>())
+                    Console.WriteLine("  " + item.DisplayName + " [" + item.Name + "] - " + item.CategoryPath + " (" + item.Guid + ")");
+                var selected = profile.SmartForms.DefaultStyleProfile;
+                Console.WriteLine("Default style profile: " + (profile.SmartForms.StyleProfileSelection == "unselected" ? "(selection required)" : selected == null ? "(none)" : selected.DisplayName + " [" + selected.Name + "]"));
+            }
         }
 
         private static void WriteValidation(ValidationResult result, bool json)
@@ -120,6 +179,7 @@ namespace K2EnvironmentCli
             Console.WriteLine("  validate [--name NAME] [--output json]");
             Console.WriteLine("  list [--output json]");
             Console.WriteLine("  set-default --name NAME");
+            Console.WriteLine("  set-style-profile [--name NAME] (--style-profile NAME_OR_GUID | --no-style-profile)");
             Console.WriteLine("Common: --root PATH overrides the default %CODEX_HOME%\\k2 store.");
         }
     }
@@ -141,7 +201,7 @@ namespace K2EnvironmentCli
                 var token = args[i];
                 if (!token.StartsWith("--")) throw new CliException("Unexpected argument: " + token);
                 var name = token.Substring(2);
-                if (name == "default") { result._switches.Add(name); continue; }
+                if (name == "default" || name == "no-style-profile") { result._switches.Add(name); continue; }
                 if (i + 1 >= args.Length || args[i + 1].StartsWith("--")) throw new CliException("Missing value for --" + name + ".");
                 result._values[name] = args[++i];
             }

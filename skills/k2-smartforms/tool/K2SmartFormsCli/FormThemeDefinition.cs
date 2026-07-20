@@ -6,7 +6,8 @@ namespace K2SmartFormsCli
 {
     internal static class FormThemeDefinition
     {
-        private const string PropertyName = "UseLegacyTheme";
+        private const string LegacyThemePropertyName = "UseLegacyTheme";
+        private const string StyleProfilePropertyName = "StyleProfile";
 
         public static string SetUseLegacyTheme(string definition, bool useLegacyTheme)
         {
@@ -19,9 +20,9 @@ namespace K2SmartFormsCli
                 control.Add(properties);
             }
 
-            var matching = properties.Elements().Where(IsLegacyThemeProperty).ToList();
+            var matching = properties.Elements().Where(x => IsProperty(x, LegacyThemePropertyName)).ToList();
             if (matching.Count > 1)
-                throw new CliException("Generated K2 form definition contains duplicate " + PropertyName + " properties.");
+                throw new CliException("Generated K2 form definition contains duplicate " + LegacyThemePropertyName + " properties.");
 
             var property = matching.SingleOrDefault();
             if (property == null)
@@ -30,7 +31,7 @@ namespace K2SmartFormsCli
                 properties.Add(property);
             }
 
-            SetValue(property, "Name", PropertyName);
+            SetValue(property, "Name", LegacyThemePropertyName);
             SetValue(property, "DisplayValue", useLegacyTheme.ToString().ToLowerInvariant());
             SetValue(property, "NameValue", useLegacyTheme.ToString().ToLowerInvariant());
             SetValue(property, "Value", useLegacyTheme.ToString().ToLowerInvariant());
@@ -44,16 +45,59 @@ namespace K2SmartFormsCli
             var properties = control.Elements().SingleOrDefault(x => x.Name.LocalName == "Properties");
             if (properties == null) return null;
 
-            var matching = properties.Elements().Where(IsLegacyThemeProperty).ToList();
+            var matching = properties.Elements().Where(x => IsProperty(x, LegacyThemePropertyName)).ToList();
             if (matching.Count == 0) return null;
             if (matching.Count > 1)
-                throw new CliException("K2 form definition contains duplicate " + PropertyName + " properties.");
+                throw new CliException("K2 form definition contains duplicate " + LegacyThemePropertyName + " properties.");
 
             var valueElement = matching[0].Elements().FirstOrDefault(x => x.Name.LocalName == "Value");
             bool value;
             if (valueElement == null || !bool.TryParse(valueElement.Value, out value))
-                throw new CliException("K2 form definition has an invalid " + PropertyName + " value.");
+                throw new CliException("K2 form definition has an invalid " + LegacyThemePropertyName + " value.");
             return value;
+        }
+
+        public static string SetStyleProfile(string definition, Guid guid, string name)
+        {
+            if (guid == Guid.Empty) throw new CliException("K2 style profile GUID is empty.");
+            if (string.IsNullOrWhiteSpace(name)) throw new CliException("K2 style profile name is empty.");
+            var document = Parse(definition);
+            var control = FindFormControl(document);
+            var properties = control.Elements().SingleOrDefault(x => x.Name.LocalName == "Properties");
+            if (properties == null)
+            {
+                properties = new XElement(control.Name.Namespace + "Properties");
+                control.Add(properties);
+            }
+            var matching = properties.Elements().Where(x => IsProperty(x, StyleProfilePropertyName)).ToList();
+            if (matching.Count > 1) throw new CliException("Generated K2 form definition contains duplicate " + StyleProfilePropertyName + " properties.");
+            var property = matching.SingleOrDefault();
+            if (property == null)
+            {
+                property = new XElement(properties.Name.Namespace + "Property");
+                properties.Add(property);
+            }
+            SetValue(property, "Name", StyleProfilePropertyName);
+            SetValue(property, "DisplayValue", name);
+            SetValue(property, "NameValue", name);
+            SetValue(property, "Value", guid.ToString());
+            return document.ToString(SaveOptions.DisableFormatting);
+        }
+
+        public static FormStyleProfileReference ReadStyleProfile(string definition)
+        {
+            var document = Parse(definition);
+            var control = FindFormControl(document);
+            var properties = control.Elements().SingleOrDefault(x => x.Name.LocalName == "Properties");
+            if (properties == null) return null;
+            var matching = properties.Elements().Where(x => IsProperty(x, StyleProfilePropertyName)).ToList();
+            if (matching.Count == 0) return null;
+            if (matching.Count > 1) throw new CliException("K2 form definition contains duplicate " + StyleProfilePropertyName + " properties.");
+            var value = matching[0].Elements().FirstOrDefault(x => x.Name.LocalName == "Value");
+            var name = matching[0].Elements().FirstOrDefault(x => x.Name.LocalName == "NameValue");
+            Guid guid;
+            if (value == null || !Guid.TryParse(value.Value, out guid)) throw new CliException("K2 form definition has an invalid StyleProfile GUID.");
+            return new FormStyleProfileReference { Guid = guid, Name = name == null ? null : name.Value };
         }
 
         private static XDocument Parse(string definition)
@@ -80,11 +124,11 @@ namespace K2SmartFormsCli
             return controls[0];
         }
 
-        private static bool IsLegacyThemeProperty(XElement property)
+        private static bool IsProperty(XElement property, string propertyName)
         {
             if (property.Name.LocalName != "Property") return false;
             var name = property.Elements().FirstOrDefault(x => x.Name.LocalName == "Name");
-            return name != null && name.Value.Equals(PropertyName, StringComparison.OrdinalIgnoreCase);
+            return name != null && name.Value.Equals(propertyName, StringComparison.OrdinalIgnoreCase);
         }
 
         private static void SetValue(XElement property, string elementName, string value)
@@ -97,5 +141,11 @@ namespace K2SmartFormsCli
             }
             element.Value = value;
         }
+    }
+
+    internal sealed class FormStyleProfileReference
+    {
+        public Guid Guid { get; set; }
+        public string Name { get; set; }
     }
 }

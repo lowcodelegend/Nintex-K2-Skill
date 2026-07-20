@@ -58,7 +58,7 @@
 
 `k2` supports integrated authentication by default. For explicit AD authentication, set `integrated` false plus `domain`, `userName`, and `passwordEnvironmentVariable`; never store the password itself.
 
-`application.rootCategoryPath` is the stable application root. It must not contain a version segment or end in `Forms`, `Views`, or `Admin`. The CLI derives `<root>\Views`, `<root>\Forms`, `<root>\Admin\Views`, and `<root>\Admin\Forms`. Form and view names must not contain version tokens because K2 maintains internal artifact versions. `theme` must match an installed K2 theme. `checkIn` should normally remain true.
+`application.rootCategoryPath` is the stable application root. It must not contain a version segment or end in `Forms`, `Views`, or `Admin`. The CLI derives `<root>\Views`, `<root>\Forms`, `<root>\Admin\Views`, and `<root>\Admin\Forms`. Form and view names must not contain version tokens because K2 maintains internal artifact versions. `theme` must match an installed K2 theme. Optional `styleProfile` accepts an unambiguous installed Style Profile system name, display name, or GUID; prefer the system name stored by `k2env`. The CLI writes the StyleProfile GUID/name into every generated form and verifies it independently from theme and legacy-theme mode. `checkIn` should normally remain true.
 
 ## Lookup sources and controls
 
@@ -136,6 +136,6 @@ Use `form.tabs` to assign every declared form view to one named tab exactly once
 
 The CLI validates that the installed environment registers the native `Worklist` control. It generates a grid with Folio, Task Start Date, and Workflow Name columns plus a click rule that opens the selected Worklist item URL. Supported action-menu entries are `viewWorkflow`, `sleep`, `redirect`, `release`, and `share`. Set a zero refresh interval only when automatic refresh should be disabled.
 
-Tabs must have stable, version-free names. Version 0.3 supports one Worklist tab per form. It loads the current K2 user's default worklist across processes; process-specific Worklist filters, workflow-specific SmartObjects, and fixed users are not configured.
+Tabs must have stable, version-free names. Version 0.4 supports one Worklist tab per form. It loads the current K2 user's default worklist across processes; process-specific Worklist filters, workflow-specific SmartObjects, and fixed users are not configured.
 
 When expected artifacts are omitted, verification defaults to every declared view and form. Verification checks tab order/content, native Worklist properties, and its click-to-open-task rule. Runtime routes use `<runtimeBaseUrl>/Runtime/Form/<URL-encoded-form-name>/`; an unauthenticated CLI may verify the route up to the environment's interactive authentication redirect, which is not an interactive Worklist test.

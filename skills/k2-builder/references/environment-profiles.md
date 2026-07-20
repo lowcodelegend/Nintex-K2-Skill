@@ -17,7 +17,16 @@ Run discovery once on a self-hosted K2 machine. It reads the K2 installation reg
 & '<k2-builder-root>\scripts\k2env.ps1' discover --name spk2-local --default
 ```
 
-Discovery does not query or modify K2 databases and never writes credentials. Supply `--install-dir`, `--host`, or `--base-url` only to override an incorrectly inferred value.
+Discovery also queries the supported K2 `FormsManager` API for installed themes and style profiles; it does not query or modify K2 databases and never writes credentials. Supply `--install-dir`, `--host`, or `--base-url` only to override an incorrectly inferred value.
+
+After first discovery, inspect `smartForms.styleProfiles`. If `smartForms.styleProfileSelection` is `unselected`, present each profile's display name, system name, category, and GUID and ask which should apply to newly generated forms by default. Persist either the exact selection or a deliberate opt-out:
+
+```powershell
+& '<k2-builder-root>\scripts\k2env.ps1' set-style-profile --name spk2-local --style-profile 'PSF UX v1'
+& '<k2-builder-root>\scripts\k2env.ps1' set-style-profile --name spk2-local --no-style-profile
+```
+
+The selector accepts an unambiguous display name, system name, or GUID. `refresh` re-inventories the server and preserves a selected profile by GUID, or preserves an explicit `none`; if the selected profile disappeared, selection returns to `unselected`.
 
 ## Reuse
 
@@ -32,7 +41,7 @@ If validation passes, use the stored values and do not repeat full discovery. Ap
 
 `explicit user/manifest value → selected environment profile → tool default`
 
-The environment profile supplies K2 host, ports, integrated-authentication mode, security label, install directory, detected product build, Designer host token, and public base URLs. It does not replace application-specific SQL database settings.
+The environment profile supplies K2 host, ports, integrated-authentication mode, security label, install directory, detected product build, Designer host token, public base URLs, installed SmartForms themes/style profiles, and the chosen default style profile. For SmartForms use `explicit manifest styleProfile → selected environment default → none`; stop and ask when selection is still `unselected`. It does not replace application-specific SQL database settings.
 
 ## Maintenance
 

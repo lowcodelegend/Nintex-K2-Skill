@@ -88,6 +88,7 @@ namespace K2SmartFormsCli
                 Console.WriteLine("  Admin forms category: " + manifest.Application.AdminFormsCategoryPath);
             }
             Console.WriteLine("  Theme: " + manifest.Application.Theme);
+            Console.WriteLine("  Style profile: " + (string.IsNullOrWhiteSpace(manifest.Application.StyleProfile) ? "(none)" : manifest.Application.StyleProfile));
             foreach (var state in states)
             {
                 string action;
@@ -123,7 +124,7 @@ namespace K2SmartFormsCli
                     Console.WriteLine(state.Kind + ": absent (" + state.Name + ")");
                     continue;
                 }
-                var themeMode = state.Kind == "Form" ? ", legacyTheme=" + (state.UseLegacyTheme.HasValue ? state.UseLegacyTheme.Value.ToString().ToLowerInvariant() : "<unset>") : string.Empty;
+                var themeMode = state.Kind == "Form" ? ", styleProfile=" + (string.IsNullOrWhiteSpace(state.StyleProfile) ? "none" : state.StyleProfile) + ", legacyTheme=" + (state.UseLegacyTheme.HasValue ? state.UseLegacyTheme.Value.ToString().ToLowerInvariant() : "<unset>") : string.Empty;
                 Console.WriteLine(state.Kind + ": " + state.Name + " (" + state.Guid + ", v" + state.Version + ", " + state.Type + ", category " + state.CategoryPath + ", checkedOut=" + state.CheckedOut + themeMode + ")");
             }
         }
@@ -172,7 +173,7 @@ namespace K2SmartFormsCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2forms 0.3.1");
+            Console.WriteLine("k2forms 0.4.0");
         }
 
         private static void PrintHelp()

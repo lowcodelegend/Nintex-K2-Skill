@@ -28,6 +28,15 @@ namespace K2EnvironmentCli
 
             if (profile.K2 != null)
                 CheckTcp(checks, "management-port", profile.K2.Host, profile.K2.ManagementPort);
+            var hasSmartFormsMetadata = profile.SmartForms != null && profile.SmartForms.Themes != null && profile.SmartForms.StyleProfiles != null;
+            Check(checks, "smartforms-metadata", hasSmartFormsMetadata,
+                hasSmartFormsMetadata ? profile.SmartForms.Themes.Count + " theme(s), " + profile.SmartForms.StyleProfiles.Count + " style profile(s)" : "missing; refresh the environment profile");
+            if (hasSmartFormsMetadata && string.Equals(profile.SmartForms.StyleProfileSelection, "selected", StringComparison.OrdinalIgnoreCase))
+            {
+                var selected = profile.SmartForms.DefaultStyleProfile;
+                var exists = selected != null && profile.SmartForms.StyleProfiles.Exists(x => x.Guid == selected.Guid);
+                Check(checks, "default-style-profile", exists, exists ? selected.DisplayName + " [" + selected.Name + "]" : "selected style profile is no longer available; refresh and select again");
+            }
             if (profile.Urls != null)
             {
                 CheckUrl(checks, "designer-url", profile.Urls.Designer);
@@ -65,7 +74,7 @@ namespace K2EnvironmentCli
                 if (!Uri.TryCreate(url, UriKind.Absolute, out parsed)) throw new Exception("invalid absolute URL");
                 var request = (HttpWebRequest)WebRequest.Create(parsed);
                 request.Method = "GET"; request.AllowAutoRedirect = false; request.Timeout = 5000;
-                request.UseDefaultCredentials = true; request.UserAgent = "k2env/0.1.0";
+                request.UseDefaultCredentials = true; request.UserAgent = "k2env/0.2.0";
                 try
                 {
                     using (var response = (HttpWebResponse)request.GetResponse())
