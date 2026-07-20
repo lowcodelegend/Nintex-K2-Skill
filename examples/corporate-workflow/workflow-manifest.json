@@ -37,7 +37,14 @@
       "name": "Review Corporate Request",
       "assignees": ["$originatorManager"],
       "instructions": "Review the corporate request and select an outcome.",
-      "actions": ["Approve", "Reject"]
+      "actions": ["Approve", "Reject"],
+      "notification": {
+        "enabled": true,
+        "from": "$environment:From Address",
+        "subject": "You have a new workflow task for {{request.Title}}",
+        "body": "Dear {{task.participantName}},<br><br>This corporate request requires your review.<br>Title: {{request.Title}}<br>Description: {{request.Description}}<br>Amount: {{request.Amount}}<br><br>{{task.worklistLink}}",
+        "richText": true
+      }
     },
     "smartForms": {
       "form": "CW Request Management",

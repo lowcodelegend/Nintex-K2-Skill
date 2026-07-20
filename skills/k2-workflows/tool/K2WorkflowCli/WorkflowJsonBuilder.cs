@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -26,7 +27,7 @@ namespace K2WorkflowCli
             var integrated = smartForm != null;
             if (integrated) return BuildSmartFormsApproval(workflow, smartObject, smartForm);
             var smartObjectExternalId = integrated ? 1 : 2;
-            var environmentExternalId = integrated ? 3 : 0;
+            var environmentExternalId = 3;
             var formExternalId = integrated ? 4 : 0;
             var nodes = Arr(
                 Activity("Start", 1, 56, "StartStep", null, true, false, null, LinkReference(1), null, null),
@@ -35,7 +36,7 @@ namespace K2WorkflowCli
                 Activity(workflow.Email.Name, 3, 504, "DefaultStep", "emailStep", false, false,
                     LinkReference(2), LinkReference(3), EmailEvent(workflow.Email, environmentExternalId), null),
                 Activity(workflow.UserTask.Name, 4, 728, "DefaultStep", "userTaskStep", false, false,
-                    LinkReference(3), LinkReference(4), UserTaskEvent(workflow.UserTask, update.IdentifierDataField, 4, smartForm, formExternalId, integrated ? workflow.SmartForms.TaskState : null), UserTaskActivityConfiguration(workflow.UserTask, 4, integrated)),
+                    LinkReference(3), LinkReference(4), UserTaskEvent(workflow.UserTask, update.IdentifierDataField, 4, smartObject, smartForm, formExternalId, integrated ? workflow.SmartForms.TaskState : null, environmentExternalId), UserTaskActivityConfiguration(workflow.UserTask, 4, integrated)),
                 Activity("End", 5, 952, "EndStep", "endStep", false, true, LinkReference(4), null, null, null));
             var root = Obj(
                 "nodes", nodes,
@@ -44,7 +45,7 @@ namespace K2WorkflowCli
                 "ui", Component(50004),
                 "externalReferenceDefinitions", integrated
                     ? Arr(ExternalSmartObject(smartObject, true, 1), SmartObjectServiceFunctions(2), EnvironmentField(EnvironmentFieldName(workflow.Email.From), 3), SmartFormReference(smartForm, 4))
-                    : Arr(SmartObjectServiceFunctions(1), ExternalSmartObject(smartObject, false, 2)),
+                    : Arr(SmartObjectServiceFunctions(1), ExternalSmartObject(smartObject, false, 2), EnvironmentField(EnvironmentFieldName(workflow.Email.From), 3)),
                 "trackedReferences", Arr(), "systemName", workflow.Name, "title", workflow.Name, "componentId", 50001);
             return root.ToString(Formatting.None);
         }
@@ -60,7 +61,7 @@ namespace K2WorkflowCli
                     SmartObjectEvent(Default(update.Name, "Status Update - Pending"), update, smartObject, 1, true),
                     EmailEvent(workflow.Email, 3)),
                 Activity(workflow.UserTask.Name, 3, 336, "DefaultStep", "userTaskStep", false, false,
-                    LinkReference(2), LinkReference(3), UserTaskEvent(workflow.UserTask, update.IdentifierDataField, 3, smartForm, 4, workflow.SmartForms.TaskState), UserTaskActivityConfiguration(workflow.UserTask, 3, true)),
+                    LinkReference(2), LinkReference(3), UserTaskEvent(workflow.UserTask, update.IdentifierDataField, 3, smartObject, smartForm, 4, workflow.SmartForms.TaskState, 3), UserTaskActivityConfiguration(workflow.UserTask, 3, true)),
                 DecisionActivity(4, 504),
                 BranchActivity("Status Update - Rejected", 5, 252, 504, "leftPorts", LinkReference(5),
                     SmartObjectEvent(rejected.Name, rejected, smartObject, 1, true),
@@ -107,36 +108,43 @@ namespace K2WorkflowCli
                 methodReference + ".inputs[{\"internalId\":" + smartObject.Identifier.InternalId + "}]");
             values[smartObject.Status.SystemName] = Mapping(LiteralExpression(settings.StatusValue), methodReference + ".inputs[{\"internalId\":" + smartObject.Status.InternalId + "}]");
             var controls = new JObject();
-            AddControl(controls, "kdReturnOnlyKeys", LiteralExpression("true"));
-            AddControl(controls, "SmartObject", LiteralExpression("radReference"));
-            AddControl(controls, "kdDefaultLoad", LiteralExpression(smartObject.DefaultLoadMethod));
-            AddControl(controls, "cbbMethods", ExternalExpression(methodReference));
-            AddControl(controls, "radReference", LiteralExpression("radReference"));
-            AddControl(controls, "kdReturnDefaultLoadProperties", LiteralExpression("true"));
-            AddControl(controls, "spSmartObject", ExternalExpression(objectReference));
+            AddControl(controls, "spSmartObject", ExternalExpression(objectReference, smartObject.DisplayName));
+            AddControl(controls, "cbbMethods", ExternalExpression(methodReference, smartObject.MethodDisplayName));
+            controls["pmInputs"] = Obj("values", values, "componentId", 60000);
+            AddControl(controls, "radOutputs", LiteralExpression("radOutputs"));
+            controls["pmOutputs"] = Component(60000);
+            AddControl(controls, "radNoOutputs", LiteralExpression("radNoOutputs"));
+            controls["loOptions"] = Obj("listOptions", Obj("filterOption", "all", "direction", "ascending", "componentId", 50011), "componentId", 60000);
             AddControl(controls, "cbxExternalSystem", LiteralExpression("false"));
-            AddControl(controls, "kdDelete", LiteralExpression("delete"));
-            AddControl(controls, "kdList", LiteralExpression("list"));
-            AddControl(controls, "kdMethodType", LiteralExpression("update"));
-            AddControl(controls, "kdMethodPropertiesType", LiteralExpression("return"));
             AddControl(controls, "cbxContinueOnError", LiteralExpression("false"));
-            AddControl(controls, "DefaultLoad", LiteralExpression(smartObject.DefaultLoadMethod));
-            AddControl(controls, "kdExecute", LiteralExpression("execute"));
-            AddControl(controls, "kdRead", LiteralExpression("read"));
-            AddControl(controls, "kdTrue", LiteralExpression("true"));
             AddControl(controls, "cbxEnableRequiredFieldsValidation", LiteralExpression("true"));
+            AddControl(controls, "SmartObject", LiteralExpression("radNoOutputs"));
+            AddControl(controls, "btnLearnMore", Component(10008));
+            AddControl(controls, "DefaultLoad", LiteralExpression(smartObject.DefaultLoadMethod));
+            AddControl(controls, "kdDefaultLoad", LiteralExpression(smartObject.DefaultLoadMethod));
+            AddControl(controls, "Empty", Component(10008));
+            AddControl(controls, "kdMethodPropertiesType", LiteralExpression("return"));
+            AddControl(controls, "kdReturnDefaultLoadProperties", LiteralExpression("true"));
+            AddControl(controls, "kdReturnOnlyKeys", LiteralExpression("true"));
+            AddControl(controls, "kdMethodType", LiteralExpression("update"));
             AddControl(controls, "kdCreate", LiteralExpression("create"));
+            AddControl(controls, "kdRead", LiteralExpression("read"));
+            AddControl(controls, "kdList", LiteralExpression("list"));
+            AddControl(controls, "kdDelete", LiteralExpression("delete"));
+            AddControl(controls, "kdExecute", LiteralExpression("execute"));
             AddControl(controls, "kdDefaultMethodType", LiteralExpression("read"));
-            controls["pmInputs"] = Obj("values", values, "value", Component(10008), "filterValue", Component(80016), "listOptions", Component(50011), "componentId", 60000);
+            AddControl(controls, "kdEmpty", Component(10008));
+            AddControl(controls, "kdTrue", LiteralExpression("true"));
+            AddControl(controls, "radReference", LiteralExpression("radReference"));
             return Obj(
                 "wizardId", 3176,
-                "wizardDefinition", SmartObjectWizardDefinition(smartObject),
+                "wizardDefinition", SmartObjectWizardDefinition(smartObject, itemReference ? 2 : 1),
                 "ui", Obj("icon", "smartObjectWizardStep", "template", "SmartWizardStep", "componentId", 30027),
-                "configuration", Obj("controlValues", controls, "exceptionSettings", Component(50012), "componentId", 30012),
+                "configuration", Obj("controlValues", controls, "exceptionSettings", Obj("logException", true, "componentId", 50012), "componentId", 30012),
                 "systemName", title, "title", title, "internalId", 1, "componentId", 30011);
         }
 
-        private static JObject SmartObjectWizardDefinition(SmartObjectDescriptor smartObject)
+        private static JObject SmartObjectWizardDefinition(SmartObjectDescriptor smartObject, int serviceFunctionsExternalId)
         {
             JObject definition;
             try
@@ -163,6 +171,13 @@ namespace K2WorkflowCli
             definition["smartObjectMethod"] = smartObject.MethodSystemName;
             definition["smartObjectDefaultLoadMethod"] = smartObject.DefaultLoadMethod;
             definition["smartObjectMethodType"] = smartObject.MethodType;
+            foreach (var mapping in (definition["smartObjectMappings"] as JArray ?? new JArray()).OfType<JObject>())
+            {
+                var methods = mapping["methods"] as JArray;
+                var methodName = methods == null || methods.Count == 0 ? string.Empty : Convert.ToString(methods[0]["name"]);
+                if (methodName.StartsWith("GetSmartObject", StringComparison.Ordinal) || string.Equals(methodName, "GetDefaultLoadMethod", StringComparison.Ordinal))
+                    mapping["smartObjectName"] = "root.externalReferenceDefinitions[{\"internalId\":" + serviceFunctionsExternalId + "}]";
+            }
             foreach (var value in definition.DescendantsAndSelf().OfType<JValue>().Where(x => x.Type == JTokenType.String && Convert.ToString(x.Value) == "__SMARTOBJECT_DISPLAY_NAME__"))
                 value.Value = smartObject.DisplayName;
             foreach (var control in definition.DescendantsAndSelf().OfType<JObject>().Where(x => x["name"] != null))
@@ -198,7 +213,64 @@ namespace K2WorkflowCli
                 "configuration", configuration, "systemName", email.Name, "title", email.Name, "internalId", 1, "componentId", 30004);
         }
 
-        private static JObject UserTaskEvent(UserTaskSettings task, string identifierDataField, int nodeId, SmartFormsIntegrationDescriptor smartForm, int formExternalId, string taskState)
+        private static JObject TaskNotification(TaskNotificationSettings notification, SmartObjectDescriptor smartObject, int environmentExternalId)
+        {
+            var from = notification.From.StartsWith("$environment:", StringComparison.OrdinalIgnoreCase)
+                ? EnvironmentExpression(notification.From.Substring(13), environmentExternalId)
+                : LiteralExpression(notification.From);
+            var body = TaskNotificationExpression(notification.Body, smartObject);
+            if (notification.RichText) body["richText"] = true;
+            return Obj(
+                "from", from, "cc", Arr(Component(10008)), "bcc", Arr(Component(10008)),
+                "subject", TaskNotificationExpression(notification.Subject, smartObject), "body", body,
+                "exceptionSettings", Obj("logException", true, "componentId", 50012), "componentId", 30006);
+        }
+
+        private static JObject TaskNotificationExpression(string template, SmartObjectDescriptor smartObject)
+        {
+            var fields = new JArray();
+            var tokenPattern = new Regex(@"{{\s*(request\.([A-Za-z_][A-Za-z0-9_]*)|task\.participantName|task\.worklistLink)\s*}}", RegexOptions.IgnoreCase);
+            var position = 0;
+            foreach (Match match in tokenPattern.Matches(template))
+            {
+                if (match.Index > position) fields.Add(LiteralField(template.Substring(position, match.Index - position), fields.Count + 1));
+                var token = match.Groups[1].Value;
+                if (token.StartsWith("request.", StringComparison.OrdinalIgnoreCase))
+                {
+                    var propertyName = match.Groups[2].Value;
+                    var property = smartObject.ReadReturns.FirstOrDefault(x => string.Equals(x.SystemName, propertyName, StringComparison.OrdinalIgnoreCase));
+                    if (property == null) throw new CliException("Task notification references a property that is not returned by the request SmartObject Read method: " + propertyName);
+                    fields.Add(ItemReferencePropertyField(1, smartObject.DisplayName, property.DisplayName, property.InternalId, fields.Count + 1));
+                }
+                else if (string.Equals(token, "task.participantName", StringComparison.OrdinalIgnoreCase))
+                    fields.Add(Obj("fieldName", "ActivityInstanceDestUserDisplayName", "parentName", "Task", "title", "Participant Name", "internalId", fields.Count + 1, "componentId", 10009));
+                else
+                    fields.Add(WorklistLinkField(fields.Count + 1));
+                position = match.Index + match.Length;
+            }
+            if (position < template.Length) fields.Add(LiteralField(template.Substring(position), fields.Count + 1));
+            var unsupported = Regex.Match(tokenPattern.Replace(template, string.Empty), @"{{.*?}}", RegexOptions.Singleline);
+            if (unsupported.Success) throw new CliException("Unsupported task notification token: " + unsupported.Value);
+            return Obj("smartFields", fields, "componentId", 10008);
+        }
+
+        private static JObject LiteralField(string value, int internalId)
+        {
+            return Obj("text", value, "internalId", internalId, "componentId", 10004);
+        }
+
+        private static JObject WorklistLinkField(int internalId)
+        {
+            return Obj(
+                "parameters", Arr(
+                    Obj("parameterType", "System.String", "title", "DisplayName", "value", LiteralExpression("Click to open worklist item"), "internalId", 1, "componentId", 10017),
+                    Obj("parameterType", "System.String", "title", "URL", "value", Obj("smartFields", Arr(Obj("fieldName", "WorkFlowItemContextData", "parentName", "Task", "title", "Worklist Item Link", "internalId", 1, "componentId", 10009)), "componentId", 10008), "internalId", 2, "componentId", 10017)),
+                "functionName", "CreateHyperlink", "assemblyId", 2, "className", "SourceCode.Workflow.Functions.HTMLHelper",
+                "methodReturnType", "System.String", "title", "Worklist Item Link", "returnType", 1,
+                "internalId", internalId, "componentId", 10002);
+        }
+
+        private static JObject UserTaskEvent(UserTaskSettings task, string identifierDataField, int nodeId, SmartObjectDescriptor smartObject, SmartFormsIntegrationDescriptor smartForm, int formExternalId, string taskState, int environmentExternalId)
         {
             var actions = new JArray();
             for (var i = 0; i < task.Actions.Count; i++)
@@ -225,8 +297,12 @@ namespace K2WorkflowCli
                 : Arr(
                     Obj("name", TaskParameterName("SerialNo", true), "value", TaskSerialNumber(), "internalId", 1, "componentId", 30018),
                     Obj("name", TaskParameterName("_state", false, "State"), "value", LiteralExpression(taskState), "internalId", 2, "componentId", 30018));
-            var notification = Obj("from", Component(10008), "cc", Arr(), "bcc", Arr(), "subject", Component(10008),
-                "body", Component(10008), "exceptionSettings", Component(50012), "componentId", 30006);
+            var notificationSettings = task.Notification;
+            var sendNotification = notificationSettings != null && notificationSettings.Enabled;
+            var notification = sendNotification
+                ? TaskNotification(notificationSettings, smartObject, environmentExternalId)
+                : Obj("from", Component(10008), "cc", Arr(), "bcc", Arr(), "subject", Component(10008),
+                    "body", Component(10008), "exceptionSettings", Component(50012), "componentId", 30006);
             var configuration = Obj(
                 "instruction", MultiLineLiteralExpression(task.Instructions), "actions", actions, "actionStatementRuleType", 1,
                 "formConfiguration", smartForm == null
@@ -234,7 +310,7 @@ namespace K2WorkflowCli
                     : Obj("url", SmartFormExpression(formExternalId), "parameters", parameters, "componentId", 30016),
                 "destinationSets", destinations, "allRecipients", true, "slots", NumberExpression(1),
                 "votingResolveGroupsToIndividuals", true, "timeLine", Deadline(), "reminder", Obj("deadlines", Arr()),
-                "emailConfiguration", notification, "sendNotification", false,
+                "emailConfiguration", notification, "sendNotification", sendNotification,
                 "exceptionSettings", Component(50012), "componentId", 30010);
             if (smartForm != null)
                 configuration["votingRuleConsensusSelectedOutcomeReference"] = "root.nodes[{\"internalId\":" + nodeId + "}].configuration.outcomes[{\"internalId\":1}]";
@@ -505,24 +581,28 @@ namespace K2WorkflowCli
         }
 
         private static JObject Mapping(JObject value, string tokenReference) { return Obj("value", value, "tokenReference", tokenReference, "componentId", 60043); }
-        private static void AddControl(JObject controls, string name, JObject value) { controls[name] = Obj("value", value, "filterValue", Component(80016), "listOptions", Component(50011), "componentId", 60000); }
+        private static void AddControl(JObject controls, string name, JObject value) { controls[name] = Obj("value", value, "componentId", 60000); }
         private static JObject LiteralExpression(string value) { return Obj("smartFields", Arr(Obj("text", value, "internalId", 1, "componentId", 10004)), "componentId", 10008); }
         private static JObject MultiLineLiteralExpression(string value) { var result = LiteralExpression(value); result["multiLine"] = true; return result; }
         private static JObject DataFieldExpression(int id) { return Obj("smartFields", Arr(Obj("dataFieldReference", "root.configuration.dataFields[{\"internalId\":" + id + "}]", "internalId", 1, "componentId", 10000)), "componentId", 10008); }
         private static JObject ItemReferencePropertyExpression(int itemId, string itemTitle, string propertyTitle, int propertyId)
         {
-            return Obj("smartFields", Arr(Obj(
+            return Obj("smartFields", Arr(ItemReferencePropertyField(itemId, itemTitle, propertyTitle, propertyId, 1)), "componentId", 10008);
+        }
+        private static JObject ItemReferencePropertyField(int itemId, string itemTitle, string propertyTitle, int propertyId, int internalId)
+        {
+            return Obj(
                 "externalReferencePropertyReference", "root.externalReferenceDefinitions[{\"internalId\":1}].methods[{\"internalId\":1}].returns[{\"internalId\":" + propertyId + "}]",
                 "itemReferenceDefinitionReference", "root.configuration.itemReferences[{\"internalId\":" + itemId + "}]",
                 "smartObjectPropertyReference", "root.configuration.itemReferences[{\"internalId\":" + itemId + "}].propertyReferences[{\"internalId\":" + propertyId + "}]",
                 "customItemReferenceTitle", itemTitle, "title", propertyTitle, "customTitle", propertyTitle,
-                "internalId", 1, "componentId", 10011)), "componentId", 10008);
+                "internalId", internalId, "componentId", 10011);
         }
         private static JObject EnvironmentExpression(string name, int id) { return Obj("smartFields", Arr(Obj("environmentFieldReference", "root.externalReferenceDefinitions[{\"internalId\":" + id + "}]", "title", name, "internalId", 1, "componentId", 10001)), "componentId", 10008); }
         private static JObject OriginatorExpression() { var value = Obj("smartFields", Arr(Obj("fieldName", "ProcessOriginatorEmail", "parentName", "Originator's", "title", "Email", "customTitle", "Originator", "internalId", 1, "componentId", 10009)), "type", "Originator", "componentId", 10008); return value; }
         private static JObject OriginatorManagerExpression() { return Obj("smartFields", Arr(Obj("fieldName", "ProcessOriginatorManager", "parentName", "Originator's", "title", "Manager", "customTitle", "Originator's Manager", "internalId", 1, "componentId", 10009)), "type", "User", "componentId", 10008); }
         private static JObject SmartFormExpression(int id) { return Obj("smartFields", Arr(Obj("smartFormFieldReference", "root.externalReferenceDefinitions[{\"internalId\":" + id + "}]", "internalId", 1, "componentId", 10006)), "componentId", 10008); }
-        private static JObject ExternalExpression(string reference) { return Obj("smartFields", Arr(Obj("id", reference, "title", reference, "internalId", 1, "componentId", 10018)), "componentId", 10008); }
+        private static JObject ExternalExpression(string reference, string title) { return Obj("smartFields", Arr(Obj("id", reference, "title", title, "internalId", 1, "componentId", 10018)), "componentId", 10008); }
         private static JObject NumberExpression(int value) { return Obj("smartFields", Arr(Obj("value", value, "internalId", 1, "componentId", 10021)), "componentId", 10008); }
         private static JObject TaskParameterName(string name, bool serialNumber, string customTitle = null) { var result = LiteralExpression(name); if (serialNumber || customTitle != null) { ((JObject)((JArray)result["smartFields"])[0])["customTitle"] = serialNumber ? "Serial Number" : customTitle; result["type"] = "tworows"; } return result; }
         private static JObject TaskSerialNumber() { return Obj("smartFields", Arr(Obj("fieldName", "SerialNo", "parentName", "Task", "title", "Serial Number", "internalId", 1, "componentId", 10009)), "componentId", 10008); }

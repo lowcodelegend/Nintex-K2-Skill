@@ -19,6 +19,16 @@ namespace K2WorkflowCli
         private SmartObjectDescriptor _smartObject;
         private SmartFormsIntegrationDescriptor _smartForm;
 
+        private static JToken At(JToken token, params object[] path)
+        {
+            foreach (var part in path)
+            {
+                if (token == null) return null;
+                token = part is int ? token[(int)part] : token[Convert.ToString(part)];
+            }
+            return token;
+        }
+
         public WorkflowManager(WorkflowManifest manifest)
         {
             _manifest = manifest;
@@ -199,6 +209,48 @@ namespace K2WorkflowCli
                         throw new CliException("Saved SmartForms request-approval workflow does not have the expected six-node decision topology.");
                     if (components.Count(x => x == 30011) != 3 || components.Count(x => x == 30004) != 3 || components.Count(x => x == 30009) != 1)
                         throw new CliException("Saved SmartForms request-approval workflow does not contain three status updates, three emails, and one task.");
+                    if (_smartObject == null) _smartObject = SmartObjectMetadata.Load(_manifest.K2, _manifest.Workflow.RequestStatusUpdate);
+                    var statusEvents = nodes.SelectMany(x => (x["children"] as JArray) == null ? Enumerable.Empty<JObject>() : ((JArray)x["children"]).OfType<JObject>())
+                        .Where(x => (int?)x["componentId"] == 30011).ToArray();
+                    foreach (var statusEvent in statusEvents)
+                    {
+                        var controls = At(statusEvent, "configuration", "controlValues") as JObject;
+                        var mappings = At(controls, "pmInputs", "values") as JObject;
+                        var identifierMapping = mappings == null ? null : mappings[_smartObject.Identifier.SystemName] as JObject;
+                        var statusMapping = mappings == null ? null : mappings[_smartObject.Status.SystemName] as JObject;
+                        if (controls == null || mappings == null || identifierMapping == null || statusMapping == null)
+                            throw new CliException("A status update is not visibly mapped to both request identifier and Status properties.");
+                        if (!string.Equals(Convert.ToString(At(controls, "SmartObject", "value", "smartFields", 0, "text")), "radNoOutputs", StringComparison.Ordinal) ||
+                            !string.Equals(Convert.ToString(At(controls, "spSmartObject", "value", "smartFields", 0, "title")), _smartObject.DisplayName, StringComparison.Ordinal) ||
+                            !string.Equals(Convert.ToString(At(controls, "cbbMethods", "value", "smartFields", 0, "title")), _smartObject.MethodDisplayName, StringComparison.Ordinal))
+                            throw new CliException("A status update cannot be rehydrated by the SmartObject Method configuration panel.");
+                        if (!Convert.ToString(identifierMapping["tokenReference"]).EndsWith("[{\"internalId\":" + _smartObject.Identifier.InternalId + "}]", StringComparison.Ordinal) ||
+                            !Convert.ToString(statusMapping["tokenReference"]).EndsWith("[{\"internalId\":" + _smartObject.Status.InternalId + "}]", StringComparison.Ordinal))
+                            throw new CliException("A status update property mapper targets the wrong SmartObject Update inputs.");
+                        var wizardMappings = At(statusEvent, "wizardDefinition", "smartObjectMappings") as JArray;
+                        var serviceReference = "root.externalReferenceDefinitions[{\"internalId\":2}]";
+                        var serviceMappings = wizardMappings == null ? new JObject[0] : wizardMappings.OfType<JObject>().Where(x =>
+                        {
+                            var methodName = Convert.ToString(At(x, "methods", 0, "name"));
+                            return methodName.StartsWith("GetSmartObject", StringComparison.Ordinal) || string.Equals(methodName, "GetDefaultLoadMethod", StringComparison.Ordinal);
+                        }).ToArray();
+                        if (serviceMappings.Length != 4 || serviceMappings.Any(x => !string.Equals(Convert.ToString(x["smartObjectName"]), serviceReference, StringComparison.Ordinal)))
+                            throw new CliException("A status update wizard does not target the SmartObject Service Functions reference, so the Designer cannot load input properties.");
+                    }
+                    var taskEvent = nodes.SelectMany(x => (x["children"] as JArray) == null ? Enumerable.Empty<JObject>() : ((JArray)x["children"]).OfType<JObject>())
+                        .Single(x => (int?)x["componentId"] == 30009);
+                    if (_manifest.Workflow.UserTask.Notification != null && _manifest.Workflow.UserTask.Notification.Enabled)
+                    {
+                        var taskConfiguration = taskEvent["configuration"] as JObject;
+                        var emailConfiguration = At(taskConfiguration, "emailConfiguration") as JObject;
+                        var subjectFields = At(emailConfiguration, "subject", "smartFields") as JArray;
+                        var bodyFields = At(emailConfiguration, "body", "smartFields") as JArray;
+                        if ((bool?)At(taskConfiguration, "sendNotification") != true ||
+                            subjectFields == null || subjectFields.Count == 0 || bodyFields == null || bodyFields.Count == 0)
+                            throw new CliException("The User Task notification is not enabled with configured subject and body content.");
+                        if (_manifest.Workflow.UserTask.Notification.RichText && (bool?)At(emailConfiguration, "body", "richText") != true)
+                            throw new CliException("The User Task notification body is not configured as rich text.");
+                    }
                     var branchTitles = links.Select(x => Convert.ToString(x["title"])).Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
                     if (!branchTitles.Contains("Approved") || !branchTitles.Contains("Rejected"))
                         throw new CliException("Saved SmartForms request-approval workflow is missing Approved/Rejected decision branches.");

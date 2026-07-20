@@ -42,15 +42,15 @@ Next increments:
 - Add authenticated browser automation for visual, accessibility, and full CRUD tests.
 - Add workflow start/action rules after the workflow-builder contract exists.
 
-### 4. K2 workflow builder — v0.4 implemented
+### 4. K2 workflow builder — v0.5 implemented
 
-The builder creates, exports, saves, publishes, inspects, verifies, and safely removes K2 Five HTML5 Workflow Designer JSON definitions. Its request-approval baseline now recreates the Human-example topology: a primary SmartForms item reference; Pending, Approved, and Rejected status updates; Originator emails; a native task for the Originator's Manager; Approved/Rejected decision routing; and additive Start/Task form rules through the same providers as the browser wizard. Exact connector geometry renders immediately. Post-publish unlock no longer performs the read that silently checked the process out again, and a fresh browser profile opens the generated workflow on the first attempt.
+The builder creates, exports, saves, publishes, inspects, verifies, and safely removes K2 Five HTML5 Workflow Designer JSON definitions. Its request-approval baseline recreates the Human-example topology: a primary SmartForms item reference; Designer-visible Pending, Approved, and Rejected status mappings; Originator emails; a native task for the Originator's Manager with an optional customized built-in notification; Approved/Rejected decision routing; and additive Start/Task form rules through the same providers as the browser wizard. Exact connector geometry renders immediately. Post-publish unlock no longer performs the read that silently checked the process out again, and a fresh browser profile opens the generated workflow on the first attempt.
 
 Next increments:
 
 - Add rework loops and general split/merge routing beyond the two-outcome approval template.
-- Add SmartObject item references and property-driven recipients/content.
-- Add task notifications, reminders, deadlines, and escalations.
+- Add related/secondary SmartObject item references and property-driven recipients/content beyond the primary request reference.
+- Add task reminders, deadlines, and escalations.
 - Add subworkflows, exception paths, instance-start/task-action smoke tests, and rollback/import.
 
 ### 5. K2 categories and packaging

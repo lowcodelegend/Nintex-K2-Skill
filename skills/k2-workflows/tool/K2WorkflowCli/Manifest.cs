@@ -92,6 +92,16 @@ namespace K2WorkflowCli
             if (task.Actions.Distinct(StringComparer.OrdinalIgnoreCase).Count() != task.Actions.Count)
                 throw new CliException("workflow.userTask.actions must be unique.");
             if (string.IsNullOrWhiteSpace(task.RequestIdParameter)) task.RequestIdParameter = update.IdentifierDataField;
+            if (task.Notification != null && task.Notification.Enabled)
+            {
+                if (string.IsNullOrWhiteSpace(task.Notification.From)) task.Notification.From = email.From;
+                Required(task.Notification.Subject, "workflow.userTask.notification.subject");
+                Required(task.Notification.Body, "workflow.userTask.notification.body");
+                if (Workflow.SmartForms == null &&
+                    (task.Notification.Subject.IndexOf("{{request.", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     task.Notification.Body.IndexOf("{{request.", StringComparison.OrdinalIgnoreCase) >= 0))
+                    throw new CliException("Task notification request-property tokens require workflow.smartForms and its primary item reference.");
+            }
 
             if (Workflow.SmartForms != null)
             {
@@ -186,6 +196,16 @@ namespace K2WorkflowCli
         [JsonProperty("actions")] public List<string> Actions { get; set; }
         [JsonProperty("formUrl")] public string FormUrl { get; set; }
         [JsonProperty("requestIdParameter")] public string RequestIdParameter { get; set; }
+        [JsonProperty("notification")] public TaskNotificationSettings Notification { get; set; }
+    }
+
+    internal sealed class TaskNotificationSettings
+    {
+        [JsonProperty("enabled")] public bool Enabled { get; set; }
+        [JsonProperty("from")] public string From { get; set; }
+        [JsonProperty("subject")] public string Subject { get; set; }
+        [JsonProperty("body")] public string Body { get; set; }
+        [JsonProperty("richText")] public bool RichText { get; set; }
     }
 
     internal sealed class SmartFormsSettings

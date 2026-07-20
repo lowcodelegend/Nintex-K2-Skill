@@ -20,9 +20,9 @@ Use `scripts/k2wf.ps1`; do not write to the K2 database or invoke legacy workflo
 
 ## Generated workflows
 
-Use `workflow.kind=request-approval` for the preferred 101 baseline: SmartForm Start → Pending status plus Originator email → SmartForms User Task for Originator's Manager → Decision → Approved or Rejected status plus Originator email. Configure exactly two task actions and the pending/approved/rejected status values. The CLI discovers the form's primary Create reference, creates a primary workflow item reference, embeds a native SmartForm task reference, and uses K2's own integration providers to add workflow-specific Start and Task states/rules. Existing form states and rules are preserved. `deploy` is idempotent and `verify` proves the six-node/five-link topology and both form rules exist.
+Use `workflow.kind=request-approval` for the preferred 101 baseline: SmartForm Start → Pending status plus Originator email → SmartForms User Task for Originator's Manager → Decision → Approved or Rejected status plus Originator email. Configure exactly two task actions and the pending/approved/rejected status values. The CLI discovers the form's primary Create reference, creates a primary workflow item reference, embeds a native SmartForm task reference, and uses K2's own integration providers to add workflow-specific Start and Task states/rules. Existing form states and rules are preserved. `deploy` is idempotent and `verify` proves the six-node/five-link topology, visible identifier/status mappings, optional customized task notification, and both form rules exist.
 
-Use `$environment:From Address`, `$originator`, and `$originatorManager` for the standard dynamic fields. A literal `formUrl`/assignee/email remains available only as the lower-level fallback when `workflow.smartForms` is omitted. Prefer native SmartForms integration because it adds the StartProcess, LoadProcess, and ActionProcess rules required by K2's workflow wizard contract.
+Use `$environment:From Address`, `$originator`, and `$originatorManager` for the standard dynamic fields. Enable `userTask.notification` for K2's built-in task email, not a separate Email step. Notification templates support `{{request.<Property>}}`, `{{task.participantName}}`, and `{{task.worklistLink}}`; request tokens resolve against the primary SmartForms item reference. A literal `formUrl`/assignee/email remains available only as the lower-level fallback when `workflow.smartForms` is omitted. Prefer native SmartForms integration because it adds the StartProcess, LoadProcess, and ActionProcess rules required by K2's workflow wizard contract.
 
 Use `workflow.kind=start-end` for the minimal smoke-test baseline. Use `json-file` only with a definition produced by this K2 Five HTML5 designer schema; the CLI rejects non-JSON/legacy roots and normalizes the root name.
 
@@ -36,6 +36,6 @@ Read [references/design.md](references/design.md) before extending generated ste
 - Treat `deploy` and `cleanup` as mutations requiring explicit confirmation.
 - Cleanup refuses workflows with runtime instances and never deletes workflow log/instance data.
 - Preserve an existing workflow unless replacement is explicitly requested and reviewed.
-- Review email recipients, task assignment, target form/states, selected Start rule, status values, and primary SmartObject reference before publication.
+- Review email recipients, built-in task-notification content/tokens, task assignment, target form/states, selected Start rule, status values, and primary SmartObject reference before publication.
 - SmartForms integration mutates the selected form additively. Export or otherwise preserve business-critical forms before the first automated integration, and verify the generated workflow-specific states after deployment.
 - Do not confuse `SourceCode.WebDesigner.*` plus the modern designer client with legacy K2 Studio/K2 Designer authoring APIs.
