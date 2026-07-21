@@ -7,7 +7,7 @@ namespace K2EnvironmentCli
 {
     internal static class Cli
     {
-        public const string Version = "0.7.0";
+        public const string Version = "0.8.0";
 
         public static int Run(string[] args)
         {
@@ -27,6 +27,7 @@ namespace K2EnvironmentCli
             if (command == "inspect-framework") return InspectHeader(store, options);
             if (command == "set-common-header") return SetCommonHeader(store, options);
             if (command == "check-short-code") return CheckShortCode(store, options);
+            if (command == "inspect-short-code") return InspectShortCode(store, options);
             if (command == "reserve-short-code") return ReserveShortCode(store, options);
             if (command == "list-short-codes") return ListShortCodes(store, options);
             if (command == "release-short-code") return ReleaseShortCode(store, options);
@@ -61,7 +62,9 @@ namespace K2EnvironmentCli
         private static int Show(ProfileStore store, Options options)
         {
             var name = store.ResolveName(options.Get("name"));
-            WriteProfile(store.Read(name), store.ProfilePath(name), options.IsJson);
+            var profile = store.Read(name);
+            if (options.Has("summary")) WriteSummary(profile, store.ProfilePath(name), options.IsJson);
+            else WriteProfile(profile, store.ProfilePath(name), options.IsJson);
             return 0;
         }
 
@@ -109,17 +112,17 @@ namespace K2EnvironmentCli
             var profile = store.Read(name);
             var code = ShortCodeRegistry.NormalizeCode(options.Require("code"));
             var solution = ShortCodeRegistry.NormalizeSolutionName(code, options.Get("solution"), false);
+            var observed = ResolveObservation(store, profile, code, options.Has("live"));
             var registration = ShortCodeRegistry.Find(profile, code);
             if (registration != null)
             {
                 if (ShortCodeRegistry.SameSolution(registration, solution))
                 {
-                    Console.WriteLine("Short code " + code + " is reserved for this solution: " + registration.SolutionName);
+                    Console.WriteLine("Short code " + code + " is reserved for this solution: " + registration.SolutionName + (observed == null ? "." : " (" + observed.ArtifactCount + " live/cached Form/View artifact(s), inventory " + (profile.ObservedSolutionCodesUtc ?? "age unknown") + ")."));
                     return 0;
                 }
                 throw new CliException("Short code " + code + " is already reserved for '" + registration.SolutionName + "' in environment '" + name + "'.");
             }
-            var observed = ShortCodeRegistry.FindObserved(profile, code);
             if (observed != null)
                 throw new CliException("Short code " + code + " is already visible on " + observed.ArtifactCount + " K2 Form/View artifact(s) in environment '" + name + "'. Adopt it explicitly only when continuing that existing solution.");
             Console.WriteLine("Short code " + code + " is available in environment '" + name + "'.");
@@ -135,7 +138,7 @@ namespace K2EnvironmentCli
             var registration = ShortCodeRegistry.Find(profile, code);
             if (registration != null && !ShortCodeRegistry.SameSolution(registration, solution))
                 throw new CliException("Short code " + code + " is already reserved for '" + registration.SolutionName + "' in environment '" + name + "'.");
-            var observed = ShortCodeRegistry.FindObserved(profile, code);
+            var observed = ResolveObservation(store, profile, code, options.Has("live"));
             if (registration == null && observed != null && !options.Has("adopt-existing"))
                 throw new CliException("Short code " + code + " is already visible on " + observed.ArtifactCount + " K2 Form/View artifact(s). Use --adopt-existing only when '" + solution + "' is that existing solution.");
             var now = DateTime.UtcNow.ToString("o");
@@ -151,6 +154,51 @@ namespace K2EnvironmentCli
             store.Write(profile, true);
             Console.WriteLine("Short code " + code + " reserved for '" + solution + "' in environment '" + name + "'" + (observed == null ? "." : " (existing K2 use adopted)."));
             return 0;
+        }
+
+        private static int InspectShortCode(ProfileStore store, Options options)
+        {
+            var name = store.ResolveName(options.Get("name"));
+            var profile = store.Read(name);
+            var code = ShortCodeRegistry.NormalizeCode(options.Require("code"));
+            var artifacts = Discovery.InspectSolutionCode(profile.K2, code);
+            UpdateObservation(store, profile, code, artifacts);
+            var registration = ShortCodeRegistry.Find(profile, code);
+            if (options.IsJson)
+            {
+                Console.WriteLine(PrettyJson.Serialize(new { environment = name, code = code, capturedUtc = profile.ObservedSolutionCodesUtc, registration = registration, artifacts = artifacts }));
+                return 0;
+            }
+            Console.WriteLine("Live short-code inventory: " + code + " in environment '" + name + "' (" + artifacts.Count + " artifact(s), captured " + profile.ObservedSolutionCodesUtc + ")");
+            Console.WriteLine("  Reservation: " + (registration == null ? "(none)" : registration.SolutionName + (string.IsNullOrWhiteSpace(registration.RootCategoryPath) ? "" : " @ " + registration.RootCategoryPath)));
+            foreach (var item in artifacts)
+                Console.WriteLine("  " + item.Kind.ToUpperInvariant() + " " + item.Name + " @ " + item.CategoryPath + " (" + item.Guid + ", v" + item.Version + ", checkedOut=" + item.IsCheckedOut.ToString().ToLowerInvariant() + (item.IsCheckedOut ? ", owner=" + item.CheckedOutBy : "") + ")");
+            return 0;
+        }
+
+        private static ObservedSolutionCode ResolveObservation(ProfileStore store, EnvironmentProfile profile, string code, bool live)
+        {
+            if (!live) return ShortCodeRegistry.FindObserved(profile, code);
+            var artifacts = Discovery.InspectSolutionCode(profile.K2, code);
+            UpdateObservation(store, profile, code, artifacts);
+            return ShortCodeRegistry.FindObserved(profile, code);
+        }
+
+        private static void UpdateObservation(ProfileStore store, EnvironmentProfile profile, string code, List<LiveSolutionArtifact> artifacts)
+        {
+            var observations = ShortCodeRegistry.Observations(profile);
+            var current = observations.FirstOrDefault(x => string.Equals(x.Code, code, StringComparison.OrdinalIgnoreCase));
+            if (current != null) observations.Remove(current);
+            if (artifacts.Count > 0)
+            {
+                observations.Add(new ObservedSolutionCode
+                {
+                    Code = code, ArtifactCount = artifacts.Count,
+                    Samples = artifacts.Take(10).Select(x => x.Kind + ": " + (x.DisplayName ?? x.Name) + " @ " + (x.CategoryPath ?? "(no category)")).ToList()
+                });
+            }
+            profile.ObservedSolutionCodesUtc = DateTime.UtcNow.ToString("o");
+            store.Write(profile, true);
         }
 
         private static int ListShortCodes(ProfileStore store, Options options)
@@ -436,6 +484,40 @@ namespace K2EnvironmentCli
             }
         }
 
+        private static void WriteSummary(EnvironmentProfile profile, string path, bool json)
+        {
+            var style = profile.SmartForms == null ? null : profile.SmartForms.DefaultStyleProfile;
+            var header = profile.SmartForms == null ? null : profile.SmartForms.DefaultCommonHeader;
+            var summary = new
+            {
+                name = profile.Name,
+                profilePath = path,
+                lastValidatedUtc = profile.LastValidatedUtc,
+                k2 = new { profile.K2.Host, profile.K2.ManagementPort, profile.K2.WorkflowPort, profile.K2.DesignerHost, profile.K2.SecurityLabel, profile.K2.IntegratedAuthentication, profile.K2.Version },
+                urls = profile.Urls,
+                styleProfileSelection = profile.SmartForms == null ? null : profile.SmartForms.StyleProfileSelection,
+                styleProfile = style == null ? null : new { style.Guid, style.Name, style.DisplayName, style.CategoryPath },
+                commonHeaderSelection = profile.SmartForms == null ? null : profile.SmartForms.CommonHeaderSelection,
+                commonHeader = header == null ? null : new
+                {
+                    header.ViewGuid, header.ViewName, header.ViewDisplayName, header.CategoryPath, header.InstanceName,
+                    header.Title, header.IsCollapsible, header.ServerRules, header.ServerRulesBeforeControlTransfers,
+                    header.ServerLoadControlTransfers,
+                    footer = header.Footer == null ? null : new { header.Footer.ViewGuid, header.Footer.ViewName, header.Footer.ViewDisplayName, header.Footer.CategoryPath, header.Footer.Title }
+                },
+                shortCodeInventoryUtc = profile.ObservedSolutionCodesUtc,
+                reservedShortCodes = ShortCodeRegistry.Registrations(profile).Select(x => new { x.Code, x.SolutionName, x.RootCategoryPath }).ToList()
+            };
+            if (json) { Console.WriteLine(PrettyJson.Serialize(summary)); return; }
+            Console.WriteLine("K2 environment: " + profile.Name + " (validated " + (profile.LastValidatedUtc ?? "never") + ")");
+            Console.WriteLine("K2: " + profile.K2.Host + ":" + profile.K2.ManagementPort + ", version " + profile.K2.Version);
+            Console.WriteLine("Designer: " + profile.Urls.Designer);
+            Console.WriteLine("Runtime: " + profile.Urls.Runtime);
+            Console.WriteLine("Style profile: " + (style == null ? "(none)" : style.DisplayName + " [" + style.Name + "]"));
+            Console.WriteLine("Common framework: " + (header == null ? "(none)" : header.ViewDisplayName + " [" + header.ViewName + "]" + (header.Footer == null ? "" : " + " + header.Footer.ViewDisplayName)));
+            Console.WriteLine("Short-code inventory: " + (profile.ObservedSolutionCodesUtc ?? "unknown") + "; reservations=" + ShortCodeRegistry.Registrations(profile).Count);
+        }
+
         private static void WriteHeader(HeaderViewCandidate item, bool detailed)
         {
             Console.WriteLine("  " + item.DisplayName + " [" + item.Name + "] - " + item.CategoryPath + " (" + item.Guid + ", v" + item.Version + ", " + item.ConsumerFormCount + " consumer form(s))");
@@ -462,7 +544,7 @@ namespace K2EnvironmentCli
             Console.WriteLine("Commands:");
             Console.WriteLine("  discover --name NAME [--default] [--install-dir PATH] [--host HOST] [--base-url URL]");
             Console.WriteLine("  refresh  --name NAME [--install-dir PATH] [--host HOST] [--base-url URL]");
-            Console.WriteLine("  show [--name NAME] [--output json]");
+            Console.WriteLine("  show [--name NAME] [--summary] [--output json]");
             Console.WriteLine("  validate [--name NAME] [--output json]");
             Console.WriteLine("  list [--output json]");
             Console.WriteLine("  set-default --name NAME");
@@ -470,8 +552,9 @@ namespace K2EnvironmentCli
             Console.WriteLine("  inspect-header [--name NAME] --hint TEXT [--output json]");
             Console.WriteLine("  inspect-framework [--name NAME] --hint TEXT [--output json]");
             Console.WriteLine("  set-common-header [--name NAME] (--view NAME_OR_GUID [--footer NAME_OR_GUID] [--instance-name TEXT] [--title TEXT] [--collapsible true|false] [--initialize-event EVENT] [--server-rule EVENT ...] [--server-load-order transfers-then-rules|rules-then-transfers] [--footer-title TEXT] [--parameter NAME=VALUE ...] [--control-transfer CONTROL=VALUE ...] | --no-common-header)");
-            Console.WriteLine("  check-short-code [--name NAME] --code ABC [--solution 'ABC.Solution Name']");
-            Console.WriteLine("  reserve-short-code [--name NAME] --code ABC --solution 'ABC.Solution Name' [--root-category PATH] [--manifest PATH] [--adopt-existing]");
+            Console.WriteLine("  check-short-code [--name NAME] --code ABC [--solution 'ABC.Solution Name'] [--live]");
+            Console.WriteLine("  inspect-short-code [--name NAME] --code ABC [--output json]");
+            Console.WriteLine("  reserve-short-code [--name NAME] --code ABC --solution 'ABC.Solution Name' [--root-category PATH] [--manifest PATH] [--adopt-existing] [--live]");
             Console.WriteLine("  list-short-codes [--name NAME] [--output json]");
             Console.WriteLine("  release-short-code [--name NAME] --code ABC --solution 'ABC.Solution Name' --confirm");
             Console.WriteLine("Common: --root PATH overrides the default %CODEX_HOME%\\k2 store.");
@@ -496,7 +579,7 @@ namespace K2EnvironmentCli
                 var token = args[i];
                 if (!token.StartsWith("--")) throw new CliException("Unexpected argument: " + token);
                 var name = token.Substring(2);
-                if (name == "default" || name == "no-style-profile" || name == "no-common-header" || name == "adopt-existing" || name == "confirm") { result._switches.Add(name); continue; }
+                if (name == "default" || name == "no-style-profile" || name == "no-common-header" || name == "adopt-existing" || name == "confirm" || name == "summary" || name == "live") { result._switches.Add(name); continue; }
                 if (i + 1 >= args.Length || args[i + 1].StartsWith("--")) throw new CliException("Missing value for --" + name + ".");
                 List<string> values;
                 if (!result._values.TryGetValue(name, out values)) { values = new List<string>(); result._values[name] = values; }

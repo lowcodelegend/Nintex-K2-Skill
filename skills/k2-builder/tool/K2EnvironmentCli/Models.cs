@@ -12,6 +12,7 @@ namespace K2EnvironmentCli
         public SmartFormsSettings SmartForms { get; set; }
         public List<SolutionCodeRegistration> SolutionCodes { get; set; }
         public List<ObservedSolutionCode> ObservedSolutionCodes { get; set; }
+        public string ObservedSolutionCodesUtc { get; set; }
         public EnvironmentFingerprint Fingerprint { get; set; }
         public DiscoveryMetadata Discovery { get; set; }
         public string CreatedUtc { get; set; }
@@ -33,6 +34,18 @@ namespace K2EnvironmentCli
         public string Code { get; set; }
         public int ArtifactCount { get; set; }
         public List<string> Samples { get; set; }
+    }
+
+    public sealed class LiveSolutionArtifact
+    {
+        public string Kind { get; set; }
+        public Guid Guid { get; set; }
+        public string Name { get; set; }
+        public string DisplayName { get; set; }
+        public string CategoryPath { get; set; }
+        public int Version { get; set; }
+        public bool IsCheckedOut { get; set; }
+        public string CheckedOutBy { get; set; }
     }
 
     public sealed class SmartFormsSettings

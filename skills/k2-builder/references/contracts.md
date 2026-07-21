@@ -47,6 +47,8 @@ Declare the same relationship in SQL `masterDetails`, SmartForms `form.masterDet
 
 The complete-solution UX contract is one Form-level transaction: a capture/item master, native editable-list children, returned master identity, foreign-key transfer for `Added` rows, blank-key-gated and foreign-key-filtered List after Read, coordinated update of `Changed`/`Added`/`Removed` rows, and a success popup after persistence. Do not expose any master Item View button or detail Save/Refresh button that bypasses that transaction; retain child Add/Edit/Delete for staging. Default generated labels to bold and capture label/control widths to 40/60 (20/30/20/30 for four columns). Include disposable tests proving no List call for a blank master, two-row creation, reload isolation between two masters, mixed add/change/remove updates, hidden bypass actions, and both Create/Update feedback paths.
 
+When approval routing depends on a master total derived from details, make the persisted total authoritative and recompute it from saved child rows in the same transaction or a SQL method. Keep it read-only on forms. Never route on a separately editable amount that can diverge from the detail sum.
+
 Choose fields and views per stage. Keep workflow-managed status, audit, identity, and derived values read-only when visible. Split stages into different Forms when actors/security/actions differ materially; otherwise compose stage Views on one Form and use Form-level state/visibility rules. Prefer four-column label/control layouts only for wide screens with short related fields. Put transient rule variables in hidden `tblDebug` Data Labels. Use cascading lookups for dimensional dependencies and Admin forms for application-managed parent/child lookup values.
 
 The verification scenario must create at least two child rows, prove they share the returned parent key, reload only that parent's children, then add/change/remove rows and prove all three item states persisted. Record authenticated browser interaction as errata when it cannot be executed.
@@ -99,11 +101,19 @@ For a shared form, never infer a default-state change. Choose and record one of:
 
 ## Verification gates
 
-1. Run every selected specialist's `doctor` and `plan` command.
+1. Run each changed specialist's `doctor` and `plan` once. For a complete deployment, prefer `k2build deploy -Confirm`; do not repeat successful checks merely to collect duplicate output.
 2. Verify the database objects, Service Instance, every generated SmartObject's `<root>\Data` placement, and representative SmartObject methods.
 3. Verify form/view deployment, selected Style Profile, `useLegacyTheme=false`, required method input mappings, and browser CRUD behavior.
 4. Verify workflow JSON shape, publication/version, SmartObject method mappings, dynamic recipients, task notification, and SmartForms integration.
-5. Execute each end-to-end scenario from the ordinary Runtime entry URL.
+5. Execute each end-to-end scenario from the ordinary Runtime entry URL when authenticated interaction is available. Treat an authentication redirect only as `reachable-authentication-required`; record interactive scenarios as skipped instead of spending retries trying to turn route reachability into browser proof.
 6. Correlate the saved request identifier, workflow instance, worklist task, selected action, and final status. Do not accept independent smoke tests as equivalent evidence.
 
 Record verification evidence and every generated/deployed artifact in a deployment ledger. Complete the mandatory artifact inventory and errata handoff described in [deployment-handoff.md](deployment-handoff.md). Current tools do not provide atomic cross-layer rollback; stop on failure and do not mutate dependants.
+
+## Efficient recovery
+
+- After a partial SmartForms run, use `--resume`; use `--forms-only` when Views are known-good. Never repeat a full View replacement merely to retry Forms.
+- After an interrupted complete-solution run, use `k2build deploy -Confirm -Resume`; it verifies and reuses completed checkpoints.
+- Load `k2env show --summary --output json` in normal builds. Use full profile output only for environment administration.
+- Use live targeted short-code inspection before adoption. Do not refresh the entire environment solely to check one prefix.
+- Let workflow deployment perform its integrated-form check-in and verification; do not add a separate inspect/check-in/verify cycle unless it reports another checkout owner.

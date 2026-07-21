@@ -65,7 +65,7 @@ namespace K2SmartFormsCli
             };
         }
 
-        private static string NormalizeConditionDataType(string value)
+        internal static string NormalizeConditionDataType(string value)
         {
             if (string.Equals(value, "AutoNumber", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(value, "Autonumber", StringComparison.OrdinalIgnoreCase)) return "Number";

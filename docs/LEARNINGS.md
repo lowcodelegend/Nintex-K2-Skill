@@ -1,5 +1,14 @@
 # K2 Five environment and builder learnings
 
+## Fast generation and recovery
+
+- Render every View definition that can be rendered before deleting or replacing live artifacts. A generation defect should fail before K2 mutation whenever dependencies permit.
+- Treat a partial SmartForms deployment as a checkpoint: preserve successful identities and create only missing artifacts on resume; use Forms-only deployment when Views are known-good.
+- Finish workflow SmartForms integration as one operation: integrate, check in the form when the deployment identity owns it, assert check-in state, and release the workflow lock even when integration fails.
+- Use compact resolved environment output during routine generation. Keep broad inventories out of normal agent context and refresh short-code ownership with a targeted live query.
+- PowerShell wrappers used from other scripts must return control and preserve `$LASTEXITCODE`; a top-level `exit` turns a verification chain into a silent partial run.
+- An HTTP authentication redirect proves route reachability only. Report `reachable-authentication-required`, not authenticated rendering success.
+
 ## Local environment
 
 - Product: self-hosted K2 Five 5.10, installed product version `5.0010.1002.0`; current K2 assembly build `5.1019.25336.3`.

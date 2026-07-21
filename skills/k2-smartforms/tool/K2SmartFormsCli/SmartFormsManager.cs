@@ -285,16 +285,26 @@ namespace K2SmartFormsCli
             });
         }
 
-        public void Deploy()
+        public void Deploy(bool resume, bool formsOnly)
         {
             CheckConnectionAndInputs();
             var lookupSources = LoadLookupRuntimeSources();
             var states = GetArtifactStates();
-            var existing = states.Where(x => x.Exists).ToList();
-            if (existing.Count > 0 && !_manifest.Application.ReplaceExisting)
+            var selectedStates = formsOnly ? states.Where(x => string.Equals(x.Kind, "Form", StringComparison.OrdinalIgnoreCase)).ToList() : states;
+            var existing = selectedStates.Where(x => x.Exists).ToList();
+            if (existing.Count > 0 && !_manifest.Application.ReplaceExisting && !resume)
                 throw new CliException("Artifact(s) already exist and application.replaceExisting is false: " + string.Join(", ", existing.Select(x => x.Kind + " " + x.Name).ToArray()));
 
-            var dependencies = GetExternalDependencies();
+            if (formsOnly)
+            {
+                var missingViews = _manifest.Application.Views.Where(x => !states.Any(s => s.Exists && string.Equals(s.Kind, "View", StringComparison.OrdinalIgnoreCase) && string.Equals(s.Name, x.Name, StringComparison.OrdinalIgnoreCase))).Select(x => x.Name).ToList();
+                if (missingViews.Count > 0)
+                    throw new CliException("--forms-only requires every manifest View to exist: " + string.Join(", ", missingViews.ToArray()) + ". Use --resume to create only missing artifacts.");
+            }
+
+            IDictionary<string, IList<string>> dependencies = resume || formsOnly
+                ? new Dictionary<string, IList<string>>()
+                : GetExternalDependencies();
             if (dependencies.Count > 0)
             {
                 var details = dependencies.Select(x => x.Key + " -> " + string.Join(", ", x.Value.ToArray()));
@@ -305,7 +315,38 @@ namespace K2SmartFormsCli
             {
                 var styleProfile = ResolveStyleProfile(manager);
                 var commonHeader = ResolveCommonHeader(manager);
-                if (existing.Count > 0)
+                var renderedViews = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                if (!formsOnly)
+                {
+                    using (var renderer = new AutoGenerator(manager.Connection))
+                    {
+                        foreach (var view in _manifest.Application.Views)
+                        {
+                            if (resume && manager.CheckViewExists(view.Name)) continue;
+                            var viewGenerator = new ViewGenerator(ParseViewType(view.Type), ParseViewOptions(view.Options));
+                            if (view.Type == "capture" || view.Type == "capture-list") viewGenerator.InputProperties.AddRange(view.Properties);
+                            else viewGenerator.DisplayProperties.AddRange(view.Properties);
+                            viewGenerator.InstanceMethods.AddRange(view.Methods);
+                            if (!string.IsNullOrWhiteSpace(view.DefaultListMethod)) viewGenerator.DefaultListMethod = view.DefaultListMethod;
+                            var generated = renderer.Generate(viewGenerator, view.SmartObject, view.Name);
+                            var definition = ViewLookupDefinition.Apply(generated.ToXml(), view, lookupSources);
+                            var isMaster = _manifest.Application.Forms.Any(f => f.MasterDetail != null && string.Equals(f.MasterDetail.MasterView, view.Name, StringComparison.OrdinalIgnoreCase));
+                            var detailRelationships = _manifest.Application.Forms.Where(f => f.MasterDetail != null)
+                                .SelectMany(f => f.MasterDetail.Details).Where(d => string.Equals(d.View, view.Name, StringComparison.OrdinalIgnoreCase)).ToList();
+                            var isDetail = detailRelationships.Count > 0;
+                            definition = ViewPresentationDefinition.Apply(definition, view, isMaster, isDetail);
+                            if (isDetail) definition = MasterDetailRules.SuppressUnfilteredDetailLoads(definition, view.Name, detailRelationships);
+                            renderedViews[view.Name] = definition;
+                        }
+                    }
+                    Console.WriteLine("Pre-render validation: " + renderedViews.Count + " View definition(s) generated before K2 mutation.");
+                }
+                if (resume)
+                    Console.WriteLine("Resume mode: preserving existing manifest artifacts and creating only missing Views/Forms.");
+                else if (formsOnly)
+                    Console.WriteLine("Forms-only mode: preserving all Views and replacing only declared Forms.");
+
+                if (existing.Count > 0 && !resume)
                 {
                     foreach (var form in _manifest.Application.Forms)
                     {
@@ -314,7 +355,7 @@ namespace K2SmartFormsCli
                         manager.DeleteForm(info.Guid);
                         Console.WriteLine("Form: removed for replacement (" + form.Name + ", " + info.Guid + ")");
                     }
-                    foreach (var view in _manifest.Application.Views)
+                    foreach (var view in formsOnly ? new List<ViewDefinition>() : _manifest.Application.Views)
                     {
                         if (!manager.CheckViewExists(view.Name)) continue;
                         var info = manager.GetView(view.Name);
@@ -327,23 +368,14 @@ namespace K2SmartFormsCli
                 {
                     foreach (var view in _manifest.Application.Views)
                     {
-                        var viewGenerator = new ViewGenerator(ParseViewType(view.Type), ParseViewOptions(view.Options));
-                        if (view.Type == "capture" || view.Type == "capture-list")
-                            viewGenerator.InputProperties.AddRange(view.Properties);
-                        else
-                            viewGenerator.DisplayProperties.AddRange(view.Properties);
-                        viewGenerator.InstanceMethods.AddRange(view.Methods);
-                        if (!string.IsNullOrWhiteSpace(view.DefaultListMethod))
-                            viewGenerator.DefaultListMethod = view.DefaultListMethod;
-
-                        var generated = generator.Generate(viewGenerator, view.SmartObject, view.Name);
-                        var definition = ViewLookupDefinition.Apply(generated.ToXml(), view, lookupSources);
-                        var isMaster = _manifest.Application.Forms.Any(f => f.MasterDetail != null && string.Equals(f.MasterDetail.MasterView, view.Name, StringComparison.OrdinalIgnoreCase));
-                        var detailRelationships = _manifest.Application.Forms.Where(f => f.MasterDetail != null)
-                            .SelectMany(f => f.MasterDetail.Details).Where(d => string.Equals(d.View, view.Name, StringComparison.OrdinalIgnoreCase)).ToList();
-                        var isDetail = detailRelationships.Count > 0;
-                        definition = ViewPresentationDefinition.Apply(definition, view, isMaster, isDetail);
-                        if (isDetail) definition = MasterDetailRules.SuppressUnfilteredDetailLoads(definition, view.Name, detailRelationships);
+                        if (formsOnly) break;
+                        if (resume && manager.CheckViewExists(view.Name))
+                        {
+                            var existingView = manager.GetView(view.Name);
+                            Console.WriteLine("View: resumed existing (" + view.Name + ", " + existingView.Guid + ", v" + existingView.Version + ")");
+                            continue;
+                        }
+                        var definition = renderedViews[view.Name];
                         manager.DeployViews(definition, _manifest.Application.GetViewCategoryPath(view), _manifest.Application.CheckIn);
                         var info = manager.GetView(view.Name);
                         Console.WriteLine("View: deployed (" + view.Name + ", " + info.Guid + ", " + info.Type + ", category " + info.CategoryPath + ", " + view.LookupControls.Count + " lookup control(s))");
@@ -351,6 +383,12 @@ namespace K2SmartFormsCli
 
                     foreach (var form in _manifest.Application.Forms)
                     {
+                        if (resume && manager.CheckFormExists(form.Name))
+                        {
+                            var existingForm = manager.GetForm(form.Name);
+                            Console.WriteLine("Form: resumed existing (" + form.Name + ", " + existingForm.Guid + ", v" + existingForm.Version + ")");
+                            continue;
+                        }
                         var formGenerator = new FormGenerator(ParseFormOptions(form.Options), ParseFormBehaviors(form.Behaviors), _manifest.Application.Theme);
                         var formViews = commonHeader == null ? form.Views.ToArray() :
                             new[] { commonHeader.ViewName }.Concat(form.Views).Concat(commonHeader.Footer == null ? new string[0] : new[] { commonHeader.Footer.ViewName }).ToArray();
@@ -494,7 +532,7 @@ namespace K2SmartFormsCli
             request.AllowAutoRedirect = false;
             request.Timeout = 30000;
             request.ReadWriteTimeout = 30000;
-            request.UserAgent = "k2forms/0.13.0";
+            request.UserAgent = "k2forms/0.14.0";
             try
             {
                 using (var response = (HttpWebResponse)request.GetResponse())
@@ -505,7 +543,7 @@ namespace K2SmartFormsCli
                     {
                         var location = response.Headers[HttpResponseHeader.Location];
                         if (string.IsNullOrWhiteSpace(location)) throw new CliException("K2 runtime returned a redirect without a location for form " + formName + ".");
-                        Console.WriteLine("Runtime route test: OK (" + formName + ", HTTP " + code + " authentication redirect, " + stopwatch.ElapsedMilliseconds + " ms; interactive render skipped)");
+                        Console.WriteLine("Runtime route: reachable-authentication-required (" + formName + ", HTTP " + code + ", " + stopwatch.ElapsedMilliseconds + " ms; authenticated rendering and interaction not verified)");
                         return;
                     }
                     using (var stream = response.GetResponseStream())

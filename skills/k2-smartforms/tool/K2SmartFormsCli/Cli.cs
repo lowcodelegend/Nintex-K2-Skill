@@ -21,6 +21,15 @@ namespace K2SmartFormsCli
                 PrintVersion();
                 return 0;
             }
+            if (command == "selftest")
+            {
+                if (ResolvedMasterDetailRules.NormalizeConditionDataType("AutoNumber") != "Number" ||
+                    ResolvedMasterDetailRules.NormalizeConditionDataType("Autonumber") != "Number" ||
+                    ResolvedMasterDetailRules.NormalizeConditionDataType("AutoGuid") != "Guid")
+                    throw new CliException("Master-detail identity type normalization self-test failed.");
+                Console.WriteLine("SELFTEST SUCCEEDED: AutoNumber->Number, AutoGuid->Guid");
+                return 0;
+            }
 
             var manifest = SmartFormsManifest.Load(GetOption(options, "manifest", true));
             var manager = new SmartFormsManager(manifest);
@@ -40,7 +49,10 @@ namespace K2SmartFormsCli
 
                 case "deploy":
                     RequireConfirmation(options, "deploy");
-                    manager.Deploy();
+                    var resume = HasFlag(options, "resume");
+                    var formsOnly = HasFlag(options, "forms-only");
+                    if (resume && formsOnly) throw new CliException("Use either --resume or --forms-only, not both.");
+                    manager.Deploy(resume, formsOnly);
                     manager.Verify();
                     Console.WriteLine("DEPLOYMENT SUCCEEDED: " + manifest.Name);
                     return 0;
@@ -177,7 +189,7 @@ namespace K2SmartFormsCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2forms 0.13.0");
+            Console.WriteLine("k2forms 0.14.0");
         }
 
         private static void PrintHelp()
@@ -187,12 +199,13 @@ namespace K2SmartFormsCli
             Console.WriteLine("Usage:");
             Console.WriteLine("  k2forms doctor  --manifest <path>");
             Console.WriteLine("  k2forms plan    --manifest <path>");
-            Console.WriteLine("  k2forms deploy  --manifest <path> --confirm");
+            Console.WriteLine("  k2forms deploy  --manifest <path> --confirm [--resume | --forms-only]");
             Console.WriteLine("  k2forms verify  --manifest <path>");
             Console.WriteLine("  k2forms inspect --manifest <path>");
             Console.WriteLine("  k2forms checkin --manifest <path> --form <exact-name> --confirm");
             Console.WriteLine("  k2forms cleanup --manifest <path> --confirm");
             Console.WriteLine("  k2forms version");
+            Console.WriteLine("  k2forms selftest");
             Console.WriteLine();
             Console.WriteLine("Set K2FORMS_DEBUG=1 for exception details. Passwords must be supplied through manifest-named environment variables.");
         }

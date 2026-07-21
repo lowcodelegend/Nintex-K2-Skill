@@ -57,6 +57,7 @@ namespace K2EnvironmentCli
                 SmartForms = smartForms,
                 SolutionCodes = new List<SolutionCodeRegistration>(),
                 ObservedSolutionCodes = observedSolutionCodes,
+                ObservedSolutionCodesUtc = DateTime.UtcNow.ToString("o"),
                 Fingerprint = new EnvironmentFingerprint
                 {
                     Machine = machine, Domain = domain, K2InstallId = Hash(machine + "|" + install.ToUpperInvariant() + "|" + version)
@@ -169,6 +170,37 @@ namespace K2EnvironmentCli
                 if (code != null) return code;
             }
             return null;
+        }
+
+        public static List<LiveSolutionArtifact> InspectSolutionCode(K2Settings settings, string code)
+        {
+            using (var manager = OpenFormsManager(settings))
+            {
+                var forms = manager.GetForms().Forms.Cast<FormInfo>()
+                    .Where(x => MatchesSolutionCode(code, x.Name, x.DisplayName, x.CategoryPath))
+                    .Select(x => new LiveSolutionArtifact
+                    {
+                        Kind = "Form", Guid = x.Guid, Name = x.Name, DisplayName = x.DisplayName,
+                        CategoryPath = x.CategoryPath, Version = x.Version, IsCheckedOut = x.IsCheckedOut,
+                        CheckedOutBy = Convert.ToString(x.CheckedOutBy)
+                    });
+                var views = manager.GetViews().Views.Cast<ViewInfo>()
+                    .Where(x => MatchesSolutionCode(code, x.Name, x.DisplayName, x.CategoryPath))
+                    .Select(x => new LiveSolutionArtifact
+                    {
+                        Kind = "View", Guid = x.Guid, Name = x.Name, DisplayName = x.DisplayName,
+                        CategoryPath = x.CategoryPath, Version = x.Version, IsCheckedOut = x.IsCheckedOut,
+                        CheckedOutBy = Convert.ToString(x.CheckedOutBy)
+                    });
+                return forms.Concat(views).OrderBy(x => x.Kind).ThenBy(x => x.CategoryPath).ThenBy(x => x.Name).ToList();
+            }
+        }
+
+        private static bool MatchesSolutionCode(string code, string name, string displayName, string categoryPath)
+        {
+            return string.Equals(ExtractSolutionCode(name), code, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(ExtractSolutionCode(displayName), code, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(ExtractCategoryCode(categoryPath), code, StringComparison.OrdinalIgnoreCase);
         }
 
         public static List<HeaderViewCandidate> InspectHeaders(K2Settings settings, string hint)

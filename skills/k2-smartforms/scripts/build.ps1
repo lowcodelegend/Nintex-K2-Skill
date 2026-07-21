@@ -29,4 +29,6 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $output = Join-Path $skillRoot "tool\K2SmartFormsCli\bin\$Configuration\k2forms.exe"
+& $output selftest | Out-Host
+if ($LASTEXITCODE -ne 0) { throw "k2forms self-test failed with exit code $LASTEXITCODE." }
 Write-Output $output

@@ -46,7 +46,7 @@ Before investigating a K2 environment, validate the selected/default profile:
 
 ```powershell
 & '<k2-builder-root>\scripts\k2env.ps1' validate
-& '<k2-builder-root>\scripts\k2env.ps1' show --output json
+& '<k2-builder-root>\scripts\k2env.ps1' show --summary --output json
 ```
 
 If validation passes, use the stored values and do not repeat full discovery. Apply this precedence when creating specialist manifests:
@@ -60,12 +60,13 @@ The environment profile supplies K2 host, ports, integrated-authentication mode,
 Discovery and refresh inventory three- or four-letter prefixes already visible on K2 Forms and Views. Before creating any solution artifacts, check and reserve a code in the selected environment:
 
 ```powershell
-& '<k2-builder-root>\scripts\k2env.ps1' check-short-code --name spk2-local --code EXP --solution 'EXP.Expense Claims'
-& '<k2-builder-root>\scripts\k2env.ps1' reserve-short-code --name spk2-local --code EXP --solution 'EXP.Expense Claims' --root-category 'K2 Skills\EXP.Expense Claims' --manifest '.\solution-manifest.json'
+& '<k2-builder-root>\scripts\k2env.ps1' check-short-code --name spk2-local --code EXP --solution 'EXP.Expense Claims' --live
+& '<k2-builder-root>\scripts\k2env.ps1' inspect-short-code --name spk2-local --code EXP
+& '<k2-builder-root>\scripts\k2env.ps1' reserve-short-code --name spk2-local --code EXP --solution 'EXP.Expense Claims' --root-category 'K2 Skills\EXP.Expense Claims' --manifest '.\solution-manifest.json' --live
 & '<k2-builder-root>\scripts\k2env.ps1' list-short-codes --name spk2-local
 ```
 
-A reservation is idempotent only for the same solution name and rejects another solution. An observed but unreserved code also fails: use `--adopt-existing` only after proving the artifacts are the same solution created before the registry existed. `release-short-code` requires the matching solution name and `--confirm`; live artifacts can keep a released code observed and therefore unavailable. This is a basic guard based on the durable registry plus Forms/Views inventory, not a substitute for inspecting every external database or non-SmartForms repository.
+A reservation is idempotent only for the same solution name and rejects another solution. `--live` refreshes only the targeted prefix instead of trusting the age of broad discovery inventory. `inspect-short-code` reports live Form/View names, categories, GUIDs, versions, and checkout owners. An observed but unreserved code also fails: use `--adopt-existing` only after this inventory proves the artifacts are the same solution created before the registry existed. `release-short-code` requires the matching solution name and `--confirm`; live artifacts can keep a released code observed and therefore unavailable.
 
 ## Maintenance
 

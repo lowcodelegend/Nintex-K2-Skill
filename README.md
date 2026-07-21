@@ -55,6 +55,7 @@ Discover and persist this K2 environment once:
 ```powershell
 & "$builder\scripts\k2env.ps1" discover --name k2-local --default
 & "$builder\scripts\k2env.ps1" validate --name k2-local
+& "$builder\scripts\k2env.ps1" show --summary --output json
 ```
 
 Discovery inventories K2/IIS endpoints, Style Profiles, and likely common headers/footers. Complete the prompted defaults once; later projects reuse the non-secret profile.
@@ -69,6 +70,10 @@ Copy the bundled complete example and review its plan:
 Set-Location '.\my-k2-solution'
 & "$builder\scripts\k2build.ps1" validate -Manifest '.\solution-manifest.json'
 & "$builder\scripts\k2build.ps1" plan -Manifest '.\solution-manifest.json'
+& "$builder\scripts\k2build.ps1" deploy -Manifest '.\solution-manifest.json' -Confirm
+
+# Resume after an interrupted layer without replacing successful prerequisites
+& "$builder\scripts\k2build.ps1" deploy -Manifest '.\solution-manifest.json' -Confirm -Resume
 ```
 
 Or ask the agent to create a fresh solution:
@@ -87,8 +92,10 @@ Claude: /k2-builder create an expense approval solution with code EXP. Plan,
 
 - Discover, persist, list, show, validate, and refresh K2 environment profiles.
 - Inventory K2 version, endpoints, themes, Style Profiles, common framework views, and short-code use on existing Forms/Views.
+- Emit compact resolved environment JSON; inspect and refresh one short code live without full rediscovery.
 - Persist Style Profile and header/footer lifecycle choices, including rule calls, control transfers, titles, and ordering.
 - Validate and plan complete solution manifests with SQL → SmartObjects → SmartForms → workflow dependencies.
+- Deploy and verify complete solutions in dependency order, with resumable checkpoints.
 - Reserve unique 3–4 letter solution codes per environment; enforce version-free names, shared categories, workflow states, approval-matrix/Admin UX, and master-detail contracts.
 - Copy bundled `corporate-workflow`, `expense-claim`, and `request-management` examples into a project.
 
@@ -109,6 +116,7 @@ Claude: /k2-builder create an expense approval solution with code EXP. Plan,
 - Generate read-only controls, responsive four-column capture layouts, and hidden `tblDebug` Data Label variables.
 - Apply discovered shared headers/footers, view titles, initialization/server-load rules, combined control transfers, and footer ordering.
 - Plan, deploy, inspect, verify Runtime definitions/routes, check in exact forms, and dependency-safe cleanup/replace.
+- Resume partial generation without replacing successful artifacts, or regenerate Forms only while preserving View GUIDs.
 
 ### `k2wf`
 
@@ -116,7 +124,7 @@ Claude: /k2-builder create an expense approval solution with code EXP. Plan,
 - Generate request status updates, Originator emails, human tasks, customized task notifications, decisions, and Approved/Rejected paths.
 - Resolve threshold/dimensional/multi-stage approval matrices and loop through applicable stages.
 - Add native SmartForms Start/Task states and rules, including verified default Start-state behavior.
-- Plan, render, deploy, inspect, verify, unlock Designer artifacts, release locks after deployment, and clean up workflows without runtime instances.
+- Plan, render, deploy, inspect, verify, unlock Designer artifacts, automatically check in integrated forms, release locks, and clean up workflows without runtime instances.
 
 ### Packaging
 

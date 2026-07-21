@@ -45,7 +45,7 @@ Build checked-in SmartForms through the supported K2 `FormsManager` and `AutoGen
 9. Open every reported runtime vanity URL in an authenticated browser and exercise Create, Read/list-click, Update, and Delete against disposable data before calling the UX complete.
 10. Report view/form GUIDs, versions, types, categories, theme, definition checks, runtime-route results, browser tests, and any skipped interaction tests.
 
-If verification finds a manifest-declared form checked out after an intentional Designer or workflow-integration edit, inspect the exact artifact and use `checkin --manifest <path> --form <exact-name> --confirm`. This publishes the current definition without regenerating it. Review the reported checkout owner first; never use it to publish another designer's unreviewed work.
+After an interrupted deployment, rerun `deploy --manifest <path> --confirm --resume`; it preserves successful Views/Forms and creates only missing artifacts. If all Views are known-good and only Forms need regeneration, use `--forms-only` so View GUIDs remain stable. Use full replacement only for an intentional clean regeneration. If verification finds a manifest-declared form checked out after an external Designer edit, inspect the exact artifact and use `checkin --manifest <path> --form <exact-name> --confirm`. Review the checkout owner first; never publish another designer's unreviewed work.
 
 ## Safety
 

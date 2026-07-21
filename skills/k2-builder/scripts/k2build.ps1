@@ -1,25 +1,27 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('validate', 'plan', 'version')]
+    [ValidateSet('validate', 'plan', 'deploy', 'verify', 'version')]
     [string]$Command = 'validate',
 
     [string]$Manifest,
 
     [ValidateSet('text', 'json')]
-    [string]$Output = 'text'
+    [string]$Output = 'text',
+
+    [switch]$Confirm,
+    [switch]$Resume
 )
 
 $ErrorActionPreference = 'Stop'
 
 if ($Command -eq 'version') {
-    Write-Output 'k2build 0.18.3'
-    exit 0
+    Write-Output 'k2build 0.19.0'
+    return
 }
 
 if ([string]::IsNullOrWhiteSpace($Manifest)) {
-    Write-Error 'Manifest is required for validate and plan.'
-    exit 2
+    throw 'Manifest is required for validate, plan, deploy, and verify.'
 }
 
 function Add-Issue {
@@ -122,15 +124,13 @@ try {
     $manifestPath = (Resolve-Path -LiteralPath $Manifest).Path
 }
 catch {
-    Write-Error "Solution manifest does not exist: $Manifest"
-    exit 2
+    throw "Solution manifest does not exist: $Manifest"
 }
 
 $manifestDirectory = Split-Path -Parent $manifestPath
 $solution = Read-JsonFile $manifestPath 'Solution'
 if ($null -eq $solution) {
-    Write-Error ($issues -join [Environment]::NewLine)
-    exit 2
+    throw ($issues -join [Environment]::NewLine)
 }
 
 if ((Get-PropertyValue $solution 'schemaVersion') -ne 1) {
@@ -674,4 +674,62 @@ else {
     }
 }
 
-if ($issues.Count -gt 0) { exit 1 }
+if ($issues.Count -gt 0) { throw "K2 solution validation failed with $($issues.Count) issue(s)." }
+
+if ($Command -in @('deploy', 'verify')) {
+    if ($Output -ne 'text') { throw "$Command supports text output only; specialist structured deployment results are not yet available." }
+    if ($Command -eq 'deploy' -and -not $Confirm) { throw 'deploy changes SQL and K2 state. Review plan and rerun with -Confirm.' }
+
+    function Invoke-Specialist {
+        param($Item, [string]$Action, [switch]$ResumeForms)
+
+        $skillsRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+        $scriptPath = Join-Path $skillsRoot (Join-Path $Item.skill ('scripts\' + $(
+            if ($Item.skill -eq 'k2-sql-smartobjects') { 'k2sql.ps1' }
+            elseif ($Item.skill -eq 'k2-smartforms') { 'k2forms.ps1' }
+            else { 'k2wf.ps1' }
+        )))
+        if (-not (Test-Path -LiteralPath $scriptPath -PathType Leaf)) { throw "Specialist wrapper not found: $scriptPath" }
+
+        if ($Item.skill -eq 'k2-workflows') {
+            $arguments = @($Action, $Item.manifest)
+            if ($Action -eq 'deploy') { $arguments += '--confirm' }
+        }
+        else {
+            $arguments = @($Action, '--manifest', $Item.manifest)
+            if ($Action -eq 'deploy') { $arguments += '--confirm' }
+            if ($Action -eq 'deploy' -and $ResumeForms -and $Item.skill -eq 'k2-smartforms') { $arguments += '--resume' }
+        }
+
+        & $scriptPath @arguments
+        $code = $LASTEXITCODE
+        if ($code -ne 0) { throw "$($Item.component) $Action failed with exit code $code." }
+    }
+
+    $ordered = @($result.plan | Sort-Object order, component)
+    if ($Command -eq 'verify') {
+        foreach ($item in $ordered) {
+            Write-Output "Verifying checkpoint: $($item.component)"
+            Invoke-Specialist $item 'verify'
+        }
+        Write-Output "K2 solution verification succeeded: $solutionName"
+        return
+    }
+
+    foreach ($item in $ordered) {
+        if ($Resume) {
+            Write-Output "Resume checkpoint: verifying $($item.component)"
+            & {
+                try { Invoke-Specialist $item 'verify'; $script:checkpointVerified = $true }
+                catch { Write-Output "Resume checkpoint requires deployment: $($item.component) ($($_.Exception.Message))"; $script:checkpointVerified = $false }
+            }
+            if ($script:checkpointVerified) {
+                Write-Output "Resume checkpoint reused: $($item.component)"
+                continue
+            }
+        }
+        Write-Output "Deploying checkpoint: $($item.component)"
+        Invoke-Specialist $item 'deploy' -ResumeForms:($Resume -and $item.skill -eq 'k2-smartforms')
+    }
+    Write-Output "K2 solution deployment succeeded: $solutionName"
+}

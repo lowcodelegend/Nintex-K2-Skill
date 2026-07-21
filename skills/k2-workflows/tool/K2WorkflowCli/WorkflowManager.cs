@@ -144,13 +144,21 @@ namespace K2WorkflowCli
             if (result["ProcID"] != null) Console.WriteLine("Runtime process ID: " + Convert.ToString(result["ProcID"]));
             if (result["VersionNumber"] != null) Console.WriteLine("Runtime version: " + Convert.ToString(result["VersionNumber"]));
             var savedId = Convert.ToInt32(result["SavedId"]);
-            if (_manifest.Workflow.SmartForms != null)
+            try
             {
-                if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Load(_manifest.Workflow);
-                new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Integrate(_manifest.Workflow, _smartForm);
+                if (_manifest.Workflow.SmartForms != null)
+                {
+                    if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Load(_manifest.Workflow);
+                    var integration = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2);
+                    integration.Integrate(_manifest.Workflow, _smartForm);
+                    integration.CheckInAfterIntegration(_smartForm);
+                }
             }
-            Unlock(savedId);
-            Console.WriteLine("Released designer lock: " + _manifest.Workflow.ProcessFullName);
+            finally
+            {
+                Unlock(savedId);
+                Console.WriteLine("Released designer lock: " + _manifest.Workflow.ProcessFullName);
+            }
         }
 
         public void Unlock()

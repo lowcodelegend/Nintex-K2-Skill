@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Security.Principal;
 using System.Xml.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -90,7 +91,82 @@ namespace K2WorkflowCli
             if (workflow.SmartForms.MakeStartStateDefault && defaultStateIds.Count != 1)
                 throw new CliException("SmartForm must have exactly one default state when the workflow Start state is default: " + workflow.SmartForms.Form + ".");
 
+            AssertCheckedIn(form);
+
             Console.WriteLine("Verified SmartForm states: Start default=" + startIsDefault.ToString().ToLowerInvariant() + ", Task default=false");
+        }
+
+        public void CheckInAfterIntegration(SmartFormsIntegrationDescriptor form)
+        {
+            if (form == null) return;
+            WithFormsManager(delegate(FormsManager manager)
+            {
+                var info = manager.GetForm(new Guid(form.FormId));
+                if (!info.IsCheckedOut)
+                {
+                    Console.WriteLine("SmartForm integration check-in: already checked in (" + form.DisplayName + ", v" + info.Version + ")");
+                    return 0;
+                }
+
+                var owner = Convert.ToString(info.CheckedOutBy);
+                if (!IsCurrentIdentity(owner))
+                    throw new CliException("Integrated SmartForm remains checked out by '" + owner + "': " + form.DisplayName + ". Check in that user's reviewed changes, then rerun workflow deployment.");
+                manager.CheckInForm(info.Guid);
+                var checkedIn = manager.GetForm(info.Guid);
+                if (checkedIn.IsCheckedOut)
+                    throw new CliException("Integrated SmartForm remains checked out after automatic check-in: " + form.DisplayName + " (owner=" + checkedIn.CheckedOutBy + ").");
+                Console.WriteLine("SmartForm integration checked in: " + form.DisplayName + " (v" + checkedIn.Version + ")");
+                return 0;
+            });
+        }
+
+        private void AssertCheckedIn(SmartFormsIntegrationDescriptor form)
+        {
+            WithFormsManager(delegate(FormsManager manager)
+            {
+                var info = manager.GetForm(new Guid(form.FormId));
+                if (info.IsCheckedOut)
+                    throw new CliException("Integrated SmartForm is checked out by '" + info.CheckedOutBy + "': " + form.DisplayName + ". Workflow verification requires the form to be checked in.");
+                Console.WriteLine("Verified integrated SmartForm check-in state: checked in (" + form.DisplayName + ", v" + info.Version + ")");
+                return 0;
+            });
+        }
+
+        private static bool IsCurrentIdentity(string owner)
+        {
+            if (string.IsNullOrWhiteSpace(owner)) return true;
+            var current = WindowsIdentity.GetCurrent().Name ?? string.Empty;
+            Func<string, string> normalize = value => (value ?? string.Empty).Trim().Replace("K2:", string.Empty).Replace("K2\\", string.Empty);
+            return string.Equals(normalize(owner), normalize(current), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private T WithFormsManager<T>(Func<FormsManager, T> action)
+        {
+            var manager = new FormsManager();
+            try
+            {
+                manager.CreateConnection();
+                var connection = new SCConnectionStringBuilder
+                {
+                    Authenticate = true,
+                    Host = _k2.Host,
+                    Port = (uint)_k2.Port,
+                    Integrated = _k2.Integrated,
+                    IsPrimaryLogin = true,
+                    SecurityLabelName = _k2.SecurityLabel
+                };
+                manager.Connection.Open(connection.ConnectionString);
+                return action(manager);
+            }
+            finally
+            {
+                if (manager.Connection != null)
+                {
+                    manager.Connection.Close();
+                    manager.DeleteConnection();
+                }
+                manager.Dispose();
+            }
         }
 
         public void Remove(WorkflowSettings workflow, SmartFormsIntegrationDescriptor form)
@@ -176,36 +252,15 @@ namespace K2WorkflowCli
 
         private HashSet<string> GetDefaultStateIds(string formId)
         {
-            var manager = new FormsManager();
-            try
+            return WithFormsManager(delegate(FormsManager manager)
             {
-                manager.CreateConnection();
-                var connection = new SCConnectionStringBuilder
-                {
-                    Authenticate = true,
-                    Host = _k2.Host,
-                    Port = (uint)_k2.Port,
-                    Integrated = _k2.Integrated,
-                    IsPrimaryLogin = true,
-                    SecurityLabelName = _k2.SecurityLabel
-                };
-                manager.Connection.Open(connection.ConnectionString);
                 var definition = XDocument.Parse(manager.GetFormDefinition(new Guid(formId)));
                 return new HashSet<string>(definition.Descendants()
                     .Where(x => string.Equals(x.Name.LocalName, "State", StringComparison.OrdinalIgnoreCase) &&
                         string.Equals((string)x.Attribute("IsDefault"), "True", StringComparison.OrdinalIgnoreCase))
                     .Select(x => (string)x.Attribute("ID"))
                     .Where(x => !string.IsNullOrWhiteSpace(x)), StringComparer.OrdinalIgnoreCase);
-            }
-            finally
-            {
-                if (manager.Connection != null)
-                {
-                    manager.Connection.Close();
-                    manager.DeleteConnection();
-                }
-                manager.Dispose();
-            }
+            });
         }
 
         private void IntegrateTask(WorkflowSettings workflow, SmartFormsIntegrationDescriptor form)
