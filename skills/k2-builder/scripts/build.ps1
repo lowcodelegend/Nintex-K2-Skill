@@ -93,7 +93,7 @@ if ($agentContent -notmatch '(?m)^\s*default_prompt:\s*"Use \$k2-builder .+"\s*$
 }
 
 $actualVersion = (& $entryPoint version | Out-String).Trim()
-if ($actualVersion -cne 'k2build 0.21.0') {
+if ($actualVersion -cne 'k2build 0.22.0') {
     throw "Unexpected k2build version output: $actualVersion"
 }
 $environmentExecutable = Join-Path $skillRoot "tool\K2EnvironmentCli\bin\$Configuration\k2env.exe"
@@ -102,4 +102,4 @@ if ($environmentVersion -cne 'k2env 0.8.0') {
     throw "Unexpected k2env version output: $environmentVersion"
 }
 
-Write-Output "k2-builder 0.21.0 validation passed ($Configuration); k2env 0.8.0 built at $environmentExecutable."
+Write-Output "k2-builder 0.22.0 validation passed ($Configuration); k2env 0.8.0 built at $environmentExecutable."

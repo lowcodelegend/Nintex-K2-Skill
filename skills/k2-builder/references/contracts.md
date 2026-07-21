@@ -43,7 +43,7 @@ Treat any requirement for multiple line items, details, rows, allocations, attac
 - A Form-level update batch: child Update for `Changed`, Create for `Added`, and Delete for `Removed` rows.
 - No unfiltered child View List initialization. After master Read, a Form-level not-blank condition passes the master key into the child List foreign-key input. Cross-view coordination must never be placed on a View rule.
 
-Declare the same relationship in SQL `masterDetails`, SmartForms `form.masterDetail`, and solution `policies.masterDetails`; `k2build` rejects an incomplete cross-layer contract. Keep workflow status and the primary workflow reference on the master unless child-specific processing is an explicit requirement.
+Declare every relationship in SQL `masterDetails`, the containing SmartForms `form.masterDetail.details`, and solution `policies.masterDetails`; `k2build` rejects any child omitted at a layer. One Form may contain several child tables, and each must independently satisfy the key, persistence, load, lookup, and bypass-control invariants. Keep workflow status and the primary workflow reference on the master unless child-specific processing is an explicit requirement.
 
 The complete-solution UX contract is one Form-level transaction: a capture/item master, native editable-list children, returned master identity, foreign-key transfer for `Added` rows, blank-key-gated and foreign-key-filtered List after Read, coordinated update of `Changed`/`Added`/`Removed` rows, and a success popup after persistence. Do not expose any master Item View button or detail Save/Refresh button that bypasses that transaction; retain child Add/Edit/Delete for staging. Default generated labels to bold and capture label/control widths to 40/60 (20/30/20/30 for four columns). Include disposable tests proving no List call for a blank master, two-row creation, reload isolation between two masters, mixed add/change/remove updates, hidden bypass actions, and both Create/Update feedback paths.
 
@@ -61,17 +61,17 @@ A typical request workflow must establish all of the following:
 - The request exposes a writable status property and the workflow explicitly maps both identifier and status inputs for every status update.
 - Status values cover at least submission/pending, approved, and rejected outcomes using the application's vocabulary.
 - Notifications use workflow identities and reference values. Fixed recipients require an explicit business reason.
-- The user task has business actions and an enabled task notification when notification is required. For the current test/demo baseline, its effective participant is always the workflow Originator (`ProcessOriginatorFQN`), regardless of the requested production participant.
+- The user task has business actions and an enabled task notification when notification is required. Direct routing requires explicit `userTask.assignees` and generation/verification must use those identities exactly; matrix routing must omit direct assignees and use resolver output.
 - SmartForms Start integration starts the workflow after the form's create/save action succeeds.
 - SmartForms Task integration opens the correct task state with its Serial Number context and exposes the configured task actions.
 
 ## Approval-matrix contract
 
-Use a matrix when participants depend on amount, department, another request dimension, or stage. Keep the rules in an application SQL table and expose both that table and its resolver procedure as SmartObjects under `<root>\Data`. Use half-open amount bands, explicit priority, wildcard fallback rows, and a no-more-stages sentinel. Seed `$designer` as the deploying AD user's fully qualified K2 identity for test/demo unless the requirement provides explicit identities, and always record that placeholder in errata.
+Use a matrix when participants depend on amount, department, another request dimension, or stage. Keep the rules in an application SQL table and expose both that table and its resolver procedure as SmartObjects under `<root>\Data`. Use half-open amount bands, explicit priority, intentional wildcard rules, and a no-more-stages sentinel. Require explicit approver destinations. `$designer` is allowed only when the manifest deliberately requests the deploying identity; never add it automatically.
 
 Create Admin capture/list views and a maintenance form under `<root>\Admin` for every business-managed matrix. Bind normalized dimensions to lookup SmartObjects. The workflow must map the request amount/dimensions into the resolver, assign its task to the returned K2 destination string, loop approvals through later stages, reject immediately, and finish Approved only after `HasApprover=false`. The direct-task Originator override does not apply to matrix-routed tasks.
 
-End-to-end scenarios must cover exact threshold boundaries, each dimension-specific route, wildcard fallback, each stage, rejection, and the terminal no-more-stages result. The handoff must list every seed still pointing at the designer.
+End-to-end scenarios must cover exact threshold boundaries, each dimension-specific route, wildcard rules, each stage, rejection, and the terminal no-more-stages result. The handoff must identify any deliberately environment-bound `$designer` destination.
 
 ## Workflow application shell
 
@@ -84,7 +84,7 @@ End-to-end scenarios must cover exact threshold boundaries, each dimension-speci
 
 - Resolve Style Profile precedence before generating forms: explicit solution/SmartForms manifest value, then the durable environment default, then deliberate none.
 - When environment selection is still `unselected`, present the discovered profiles and ask the user; do not infer a default from an unrelated existing application.
-- Put the selected profile's stable system name in `application.styleProfile` and keep `useLegacyTheme=false` explicit. Named themes such as Lithium are legacy; keep `application.theme` only as generator-required fallback/compatibility metadata, not as the modern presentation choice.
+- Put the selected profile's stable system name in `application.styleProfile` and keep `useLegacyTheme=false` explicit. Named themes such as Lithium are legacy; `application.theme` remains required generator compatibility metadata, not the modern presentation choice.
 - Verify the deployed form definition contains the selected Style Profile GUID and system name.
 
 ## Form-state invariant
@@ -104,7 +104,7 @@ For a shared form, never infer a default-state change. Choose and record one of:
 1. Run each changed specialist's `doctor` and `plan` once. For a complete deployment, prefer `k2build deploy -Confirm`; do not repeat successful checks merely to collect duplicate output.
 2. Verify the database objects, Service Instance, every generated SmartObject's `<root>\Data` placement, and representative SmartObject methods.
 3. Verify form/view deployment, selected Style Profile, `useLegacyTheme=false`, required method input mappings (including explicit defaults for required read-only Create inputs), live dropdown bindings, and browser CRUD behavior.
-4. Verify workflow JSON shape, publication/version, SmartObject method mappings, dynamic recipients, task notification, and SmartForms integration; then re-run SmartForms verification against the final integrated Form definitions.
+4. Verify workflow JSON shape, publication/version, SmartObject method mappings, recipients, task notification, and SmartForms integration; then reconcile every declared master-detail child load against every final Form master-Read path. Re-run full SmartForms verification and workflow Start/Task integration verification after reconciliation.
 5. Execute each end-to-end scenario from the ordinary Runtime entry URL when authenticated interaction is available. Treat an authentication redirect only as `reachable-authentication-required`; record interactive scenarios as skipped instead of spending retries trying to turn route reachability into browser proof.
 6. Correlate the saved request identifier, workflow instance, worklist task, selected action, and final status. Do not accept independent smoke tests as equivalent evidence.
 

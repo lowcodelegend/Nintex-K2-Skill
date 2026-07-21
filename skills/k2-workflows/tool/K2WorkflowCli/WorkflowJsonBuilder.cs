@@ -419,12 +419,9 @@ namespace K2WorkflowCli
                 actions.Add(Obj("alwaysVisible", true, "continueWorkflow", true, "actionTitle", task.Actions[i],
                     "originalTitle", task.Actions[i], "internalId", i + 1, "componentId", 30019, "oldReference", reference));
             }
-            var effectiveAssignee = approvalMatrixAssigneeDataFieldId.HasValue ? DataFieldExpression(approvalMatrixAssigneeDataFieldId.Value) : OriginatorUserExpression();
-            effectiveAssignee["type"] = "User";
-            effectiveAssignee["isDynamic"] = true;
-            effectiveAssignee["internalId"] = 1;
-            var destinationTitle = approvalMatrixAssigneeDataFieldId.HasValue ? "Approval Matrix Approver" : "Originator";
-            var destinations = Arr(Obj("title", destinationTitle, "destinationItems", Arr(effectiveAssignee),
+            string destinationTitle;
+            var destinationItems = BuildTaskDestinationItems(task, approvalMatrixAssigneeDataFieldId, out destinationTitle);
+            var destinations = Arr(Obj("title", destinationTitle, "destinationItems", destinationItems,
                 "isRecipient", true, "internalId", 1, "componentId", 80010));
             var parameters = smartForm == null ? Arr(
                     Obj("name", TaskParameterName("SN", true), "value", TaskSerialNumber(), "internalId", 1, "componentId", 30018),
@@ -451,6 +448,32 @@ namespace K2WorkflowCli
                 configuration["votingRuleConsensusSelectedOutcomeReference"] = "root.nodes[{\"internalId\":" + nodeId + "}].configuration.outcomes[{\"internalId\":1}]";
             return Obj("wizardId", 3000, "ui", Obj("icon", "userTaskStep", "template", "DefaultStep"),
                 "configuration", configuration, "systemName", task.Name, "title", task.Name, "internalId", 1, "componentId", 30009);
+        }
+
+        internal static JArray BuildTaskDestinationItems(UserTaskSettings task, int? approvalMatrixAssigneeDataFieldId, out string destinationTitle)
+        {
+            var destinationItems = new JArray();
+            destinationTitle = "Approval Matrix Approver";
+            if (approvalMatrixAssigneeDataFieldId.HasValue)
+            {
+                var matrixAssignee = DataFieldExpression(approvalMatrixAssigneeDataFieldId.Value);
+                matrixAssignee["type"] = "User";
+                matrixAssignee["isDynamic"] = true;
+                matrixAssignee["internalId"] = 1;
+                destinationItems.Add(matrixAssignee);
+                return destinationItems;
+            }
+            destinationTitle = task.Assignees.Count == 1 ? task.Assignees[0] : "Manifest Assignees";
+            for (var i = 0; i < task.Assignees.Count; i++)
+            {
+                var isOriginator = string.Equals(task.Assignees[i], "$originator", StringComparison.OrdinalIgnoreCase);
+                var assignee = isOriginator ? OriginatorUserExpression() : LiteralExpression(task.Assignees[i]);
+                assignee["type"] = "User";
+                assignee["isDynamic"] = isOriginator;
+                assignee["internalId"] = i + 1;
+                destinationItems.Add(assignee);
+            }
+            return destinationItems;
         }
 
         private static JObject UserTaskActivityConfiguration(UserTaskSettings task, int nodeId, bool decisionRouting)

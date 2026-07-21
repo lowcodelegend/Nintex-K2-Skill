@@ -50,6 +50,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="RuntimeAssemblyResolver.cs" />
     <Compile Include="SmartObjectMetadata.cs" />
+    <Compile Include="SelfTests.cs" />
     <Compile Include="SmartFormsIntegration.cs" />
     <Compile Include="WorkflowJsonBuilder.cs" />
     <Compile Include="WorkflowManager.cs" />

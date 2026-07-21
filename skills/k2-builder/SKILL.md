@@ -45,9 +45,9 @@ It validates once, then removes workflows, manifest-owned Forms/Views (including
 
 Do not precede this path with discovery, inventory, specialist plans, per-artifact inspection, or independent verification. Investigate only a reported conflict. Cleanup retains empty K2 categories and the reservation unless separately requested.
 
-## Demo defaults
+## Defaults for underspecified requirements
 
-For an underspecified test/demo build:
+Use these modeling defaults only when the requirement does not decide the point:
 
 - model repeated rows as master-detail;
 - use the requested currency or `USD`, excluding tax unless requested;
@@ -56,9 +56,9 @@ For an underspecified test/demo build:
 - use `Draft`, `Pending Approval`, `Approved`, and `Rejected`;
 - make department/category business-managed lookups;
 - retain submitted records and hide destructive delete after submission;
-- apply the documented demo identity policies and record their errata.
+- require explicit direct-task assignees or explicit approval-matrix destinations.
 
-State these assumptions once. Ask only when production intent or security, money, retention, or routing would materially change.
+State these assumptions once. They may fill values, but must never remove or flatten requested tables, relationships, child collections, workflow stages, lookup controls, or Form behavior. A schema- or process-shape change requires explicit user approval. If a declared contract cannot be generated or reconciled, preserve it and report the blocker.
 
 ## Non-negotiable contracts
 
@@ -66,15 +66,15 @@ Use [contracts.md](references/contracts.md) as the detailed source. In particula
 
 - Prefix all solution-owned deployable/Designer-visible names with `<CODE>.`; keep versions out of names. Share one root with fixed `Data`, `Views`, `Forms`, `Admin`, and `<root-leaf> WFs` children. Never name the workflow child `Workflow` or `Workflows`.
 - Model controlled choices with lookup tables/foreign keys and business-managed Admin UX. Default small applications to meaningful code/text keys and complex applications to normalized surrogate keys unless requirements override.
-- Treat every repeated child collection as master-detail across SQL, SmartObjects, editable-list UX, Form-level persistence/load rules, and solution policy. One visible Form action owns the transaction; no unfiltered child List or bypass save controls.
+- Treat every repeated child collection as master-detail across SQL, SmartObjects, editable-list UX, Form-level persistence/load rules, and solution policy. Support every declared child table on the Form; one visible Form action owns the transaction, every master Read path reloads every child by parent key, and no unfiltered child List or bypass save control may remain after workflow integration.
 - Generate modern Forms with `useLegacyTheme=false`, the selected Style Profile, and the selected environment framework unless a reasoned opt-out is recorded. Follow the exact discovered header/footer lifecycle, mappings, and order; PSF conventions apply only after discovery and user selection.
-- Keep the workflow reference/status on the master unless child processing is required. For the demo baseline, direct human tasks route effectively to Originator and preserve requested production routing as errata; matrix tasks use resolver output and report `$designer` seeds.
+- Keep the workflow reference/status on the master unless child processing is required. Direct human tasks use the manifest's explicit assignees; matrix tasks use resolver output.
 - A dedicated request-entry Start state is the sole default; Task is never default. Shared Forms require an explicit entry-state decision. Verify ordinary-URL Create both saves and starts exactly one workflow.
 - Prefer list/details/My Tasks tabs for ordinary workflow UX and native K2 Worklist for tasks.
 - Never hide placeholders, manual work, unsupported requirements, limitations, or skipped verification.
 
 ## Boundary
 
-Treat the installed package—these instructions, linked references, examples, manifests, CLI help/plans, and structured output—as the capability contract. During ordinary builds do not inspect source, decompile binaries, trace providers, edit K2 databases, or substitute legacy workflow tooling. Unsupported behavior is errata, not an invitation to improvise.
+Treat the installed package—these instructions, linked references, examples, manifests, CLI help/plans, and structured output—as the capability contract. During ordinary builds do not inspect source, decompile binaries, trace providers, edit K2 databases, or substitute legacy workflow tooling. A failed layer or verification never authorizes dropping tables, moving child fields onto a master, removing lookups, simplifying workflow routing, or otherwise changing semantics. Preserve the manifests and successful prerequisites, use supported reconciliation/recovery, and report a blocker if the declared solution still cannot pass.
 
 Release packages contain compiled CLIs but no source or build scripts. Only an explicit repair/extension request authorizes work in the development repository; never edit an installed skill in place. Deployment is repeatable generation/replacement, not a semantic merge, so do not promise preservation of arbitrary Designer edits.

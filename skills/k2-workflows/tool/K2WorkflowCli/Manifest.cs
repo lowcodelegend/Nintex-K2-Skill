@@ -96,9 +96,17 @@ namespace K2WorkflowCli
             var task = Workflow.UserTask;
             if (task == null) throw new CliException("workflow.userTask is required for request-approval.");
             Required(task.Name, "workflow.userTask.name"); Required(task.Instructions, "workflow.userTask.instructions");
-            if (task.Assignees == null || task.Assignees.Count == 0) task.Assignees = new List<string> { "$originator" };
-            if (task.Assignees.Any(string.IsNullOrWhiteSpace))
-                throw new CliException("workflow.userTask.assignees must contain at least one K2 user/group identity.");
+            if (task.Assignees == null) task.Assignees = new List<string>();
+            if (Workflow.ApprovalMatrix == null)
+            {
+                if (task.Assignees.Count == 0 || task.Assignees.Any(string.IsNullOrWhiteSpace))
+                    throw new CliException("workflow.userTask.assignees must explicitly contain at least one K2 user/group identity for direct routing.");
+                var unsupportedAssignee = task.Assignees.FirstOrDefault(x => x.StartsWith("$", StringComparison.Ordinal) && !string.Equals(x, "$originator", StringComparison.OrdinalIgnoreCase));
+                if (unsupportedAssignee != null)
+                    throw new CliException("Unsupported workflow.userTask.assignees token '" + unsupportedAssignee + "'. Direct routing supports $originator or explicit K2 identity strings.");
+            }
+            else if (task.Assignees.Count > 0)
+                throw new CliException("workflow.userTask.assignees must be omitted when workflow.approvalMatrix is authoritative.");
             if (task.Actions == null || task.Actions.Count == 0 || task.Actions.Any(string.IsNullOrWhiteSpace))
                 throw new CliException("workflow.userTask.actions must contain at least one action.");
             if (task.Actions.Distinct(StringComparer.OrdinalIgnoreCase).Count() != task.Actions.Count)

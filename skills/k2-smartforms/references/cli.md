@@ -8,12 +8,13 @@
 | `plan --manifest` | No | Show creates, replacements, application/Admin categories, lookup bindings, tabs/Worklist, external dependencies, and verification scope. |
 | `deploy --manifest --confirm [--resume \| --forms-only]` | Yes | Generate and verify. `--resume` preserves existing declared artifacts and creates only missing ones; `--forms-only` preserves Views and replaces Forms only. |
 | `verify --manifest` | No | Validate live definitions, placed dropdown bindings, literal defaults, master-detail bypass controls/rules, tab order/content, Worklist properties/navigation rule, GUID references, category, theme, Style Profile, explicit legacy-theme mode, check-in state, and runtime routes. |
+| `reconcile --manifest --confirm` | Yes | Update each manifest-declared master-detail Form in place after native workflow integration: replace only declared detail List paths with one parent-key-filtered/not-blank load after every master Read path, preserve Form identity/category/states/non-detail actions, check in, and run full verification. Clean Forms are not versioned again. |
 | `inspect --manifest` | No | Print exact artifact GUIDs, versions, types, categories, Style Profile, legacy-theme mode, and checkout state. |
 | `checkin --manifest --form <exact-name> --confirm` | Yes | Check in one exact manifest-declared form without regenerating or replacing it; report its checkout owner and resulting version. |
 | `cleanup --manifest --confirm` | Destructive | Delete exact declared forms then views after environment-wide external dependency checks. |
 | `cleanup --manifest --confirm --manifest-only` | Destructive | Fast builder path: skip broad dependency discovery and delete exact declared Forms/Views from their owned category or strict-ancestor orphan category. |
 | `version` | No | Print the CLI version. |
-| `selftest` | No | Verify identity-key condition normalization (`AutoNumber`→`Number`, `AutoGuid`→`Guid`) without connecting to K2. |
+| `selftest` | No | Verify identity-key normalization, required/read-only inputs, lookup placement/defaults, bypass-button suppression, and idempotent multi-child workflow-state reconciliation without connecting to K2. |
 
 Exit `0` means success, `2` means manifest/usage/safety validation failed, and `1` means an unexpected K2, network, or runtime error occurred. Set `K2FORMS_DEBUG=1` for full exception details.
 

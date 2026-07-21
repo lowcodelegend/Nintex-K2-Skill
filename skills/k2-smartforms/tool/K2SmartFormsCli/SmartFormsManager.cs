@@ -319,6 +319,63 @@ namespace K2SmartFormsCli
             });
         }
 
+        public void ReconcileMasterDetail()
+        {
+            WithFormsManager(delegate(FormsManager manager)
+            {
+                foreach (var form in _manifest.Application.Forms.Where(x => x.MasterDetail != null))
+                {
+                    if (!manager.CheckFormExists(form.Name)) throw new CliException("K2 Form does not exist: " + form.Name);
+                    var info = manager.GetForm(form.Name);
+                    var expectedCategory = _manifest.Application.GetFormCategoryPath(form);
+                    if (!string.Equals(info.CategoryPath, expectedCategory, StringComparison.OrdinalIgnoreCase))
+                        throw new CliException("Refusing to reconcile Form '" + form.Name + "' in category '" + info.CategoryPath + "'; manifest owns '" + expectedCategory + "'.");
+                    if (info.IsCheckedOut && !IsCurrentIdentity(Convert.ToString(info.CheckedOutBy)))
+                        throw new CliException("Refusing to reconcile Form '" + form.Name + "' while it is checked out by '" + info.CheckedOutBy + "'.");
+
+                    var original = manager.GetFormDefinition(info.Guid);
+                    var relationship = ResolvedMasterDetailRules.Resolve(manager, form);
+                    bool changed;
+                    var reconciled = MasterDetailRules.ReconcileDetailLoads(original, form, relationship, out changed);
+                    if (!changed)
+                    {
+                        Console.WriteLine("Master-detail reconciliation: already converged (" + form.Name + ", " + relationship.Details.Count + " detail view(s), v" + info.Version + ")");
+                        continue;
+                    }
+
+                    var checkedOutHere = !info.IsCheckedOut;
+                    try
+                    {
+                        if (checkedOutHere) manager.CheckOutForm(info.Guid);
+                        manager.DeployForms(reconciled, expectedCategory, true);
+                    }
+                    catch
+                    {
+                        if (checkedOutHere)
+                        {
+                            var failed = manager.GetForm(info.Guid);
+                            if (failed.IsCheckedOut && IsCurrentIdentity(Convert.ToString(failed.CheckedOutBy)) &&
+                                string.Equals(manager.GetFormDefinition(info.Guid), original, StringComparison.Ordinal))
+                                manager.UndoFormCheckOut(info.Guid);
+                        }
+                        throw;
+                    }
+
+                    var updated = manager.GetForm(info.Guid);
+                    if (updated.Guid != info.Guid) throw new CliException("Master-detail reconciliation changed the Form identity: " + form.Name);
+                    if (updated.IsCheckedOut) throw new CliException("K2 Form remains checked out after master-detail reconciliation: " + form.Name);
+                    if (!string.Equals(updated.CategoryPath, expectedCategory, StringComparison.OrdinalIgnoreCase))
+                        throw new CliException("Master-detail reconciliation moved Form '" + form.Name + "' out of its manifest category.");
+                    var live = manager.GetFormDefinition(updated.Guid);
+                    MasterDetailRules.Verify(live, form, ResolvedMasterDetailRules.Resolve(manager, form));
+                    Console.WriteLine("Master-detail reconciliation: updated in place (" + form.Name + ", " + info.Guid + ", v" + info.Version + " -> v" + updated.Version + ", " + relationship.Details.Count + " detail view(s))");
+                }
+                return 0;
+            });
+            Verify();
+            Console.WriteLine("K2 SmartForms master-detail reconciliation: OK");
+        }
+
         public void Deploy(bool resume, bool formsOnly)
         {
             CheckConnectionAndInputs();
@@ -613,7 +670,7 @@ namespace K2SmartFormsCli
             request.AllowAutoRedirect = false;
             request.Timeout = 30000;
             request.ReadWriteTimeout = 30000;
-            request.UserAgent = "k2forms/0.16.0";
+            request.UserAgent = "k2forms/0.17.0";
             try
             {
                 using (var response = (HttpWebResponse)request.GetResponse())

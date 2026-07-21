@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Globalization;
 using System.Linq;
@@ -216,7 +217,7 @@ namespace K2WorkflowCli
                     .Select(x => (int?)x["componentId"]).ToArray();
                 foreach (var required in new[] { 30011, 30004, 30009 })
                     if (!components.Contains(required)) throw new CliException("Saved request-approval workflow is missing event component " + required + ".");
-                if (_manifest.Workflow.ApprovalMatrix == null) VerifyOriginatorTaskAssignment(root);
+                if (_manifest.Workflow.ApprovalMatrix == null) VerifyManifestTaskAssignment(root, _manifest.Workflow.UserTask.Assignees);
                 else VerifyApprovalMatrixTaskAssignment(root);
                 var linkPaths = ((JArray)root["links"]).OfType<JObject>().Select(x =>
                 {
@@ -319,14 +320,12 @@ namespace K2WorkflowCli
             if (_manifest.Workflow.ApprovalMatrix != null)
             {
                 Console.WriteLine("User Task effective assignee: approval matrix " + _manifest.Workflow.ApprovalMatrix.MatrixCode + "." + _manifest.Workflow.ApprovalMatrix.ApproverProperty);
-                Console.WriteLine("ERRATA [approval-matrix-demo-identities]: Generated matrix rows use the designing K2 identity for testing/demo and must be reviewed before production.");
                 return;
             }
-            Console.WriteLine("User Task effective assignee: $originator (ProcessOriginatorFQN)");
-            Console.WriteLine("ERRATA [test-demo-routing]: Human task assignment is forced to the workflow Originator for testing/demo; requested production routing is not applied.");
+            Console.WriteLine("User Task effective assignees: " + string.Join(", ", requested));
         }
 
-        private static void VerifyOriginatorTaskAssignment(JObject root)
+        private static void VerifyManifestTaskAssignment(JObject root, IList<string> expected)
         {
             var task = ((JArray)root["nodes"]).OfType<JObject>()
                 .SelectMany(x => (x["children"] as JArray) == null ? Enumerable.Empty<JObject>() : ((JArray)x["children"]).OfType<JObject>())
@@ -334,12 +333,20 @@ namespace K2WorkflowCli
             var destinations = At(task, "configuration", "destinationSets") as JArray;
             var firstSet = destinations == null ? null : destinations.OfType<JObject>().SingleOrDefault();
             var items = firstSet == null ? null : firstSet["destinationItems"] as JArray;
-            var item = items == null ? null : items.OfType<JObject>().SingleOrDefault();
-            if (firstSet == null || item == null ||
-                !string.Equals(Convert.ToString(firstSet["title"]), "Originator", StringComparison.Ordinal) ||
-                !string.Equals(Convert.ToString(At(item, "smartFields", 0, "fieldName")), "ProcessOriginatorFQN", StringComparison.Ordinal))
-                throw new CliException("The generated User Task is not assigned exclusively to the workflow Originator test/demo identity.");
-            Console.WriteLine("Verified User Task effective assignee: Originator (ProcessOriginatorFQN)");
+            var actual = items == null ? new JObject[0] : items.OfType<JObject>().ToArray();
+            if (firstSet == null || actual.Length != expected.Count)
+                throw new CliException("The generated User Task destination count does not match workflow.userTask.assignees.");
+            for (var i = 0; i < expected.Count; i++)
+            {
+                if (string.Equals(expected[i], "$originator", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!string.Equals(Convert.ToString(At(actual[i], "smartFields", 0, "fieldName")), "ProcessOriginatorFQN", StringComparison.Ordinal))
+                        throw new CliException("The generated User Task destination " + (i + 1) + " is not the declared $originator expression.");
+                }
+                else if (!string.Equals(Convert.ToString(At(actual[i], "smartFields", 0, "text")), expected[i], StringComparison.Ordinal))
+                    throw new CliException("The generated User Task destination " + (i + 1) + " does not match the declared K2 identity '" + expected[i] + "'.");
+            }
+            Console.WriteLine("Verified User Task effective assignees: " + string.Join(", ", expected));
         }
 
         private static void VerifyApprovalMatrixTaskAssignment(JObject root)

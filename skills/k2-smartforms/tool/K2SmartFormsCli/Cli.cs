@@ -59,6 +59,13 @@ namespace K2SmartFormsCli
                     Console.WriteLine("VERIFICATION SUCCEEDED: " + manifest.Name);
                     return 0;
 
+                case "reconcile":
+                    RequireConfirmation(options, "reconcile");
+                    manager.CheckConnectionAndInputs();
+                    manager.ReconcileMasterDetail();
+                    Console.WriteLine("RECONCILIATION SUCCEEDED: " + manifest.Name);
+                    return 0;
+
                 case "inspect":
                     Inspect(manager);
                     return 0;
@@ -185,7 +192,7 @@ namespace K2SmartFormsCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2forms 0.16.0");
+            Console.WriteLine("k2forms 0.17.0");
         }
 
         private static void PrintHelp()
@@ -197,6 +204,7 @@ namespace K2SmartFormsCli
             Console.WriteLine("  k2forms plan    --manifest <path>");
             Console.WriteLine("  k2forms deploy  --manifest <path> --confirm [--resume | --forms-only]");
             Console.WriteLine("  k2forms verify  --manifest <path>");
+            Console.WriteLine("  k2forms reconcile --manifest <path> --confirm");
             Console.WriteLine("  k2forms inspect --manifest <path>");
             Console.WriteLine("  k2forms checkin --manifest <path> --form <exact-name> --confirm");
             Console.WriteLine("  k2forms cleanup --manifest <path> --confirm [--manifest-only]");

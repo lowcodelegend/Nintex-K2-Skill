@@ -33,7 +33,7 @@ Declare the relationship on the Form. `k2forms` extends the generated Form rules
 1. The master Create action returns the generated key to the master View field.
 2. In the same batch, `Execute a View method for items that are in a specific state` calls child Create for every `Added` row and maps the master key to the child foreign key.
 3. Master Update batches child Update for `Changed`, Create for `Added`, and Delete for `Removed` rows.
-4. The detail View's generated unfiltered initialization/refresh List rules are removed. A separate Form handler runs only after master Read and only when the master key is not blank; it passes that key to the child List method as the foreign-key input.
+4. Every detail View's generated unfiltered initialization/refresh List rules are removed. A separate Form handler runs after every master Read path and only when the master key is not blank; it passes that key to every child List method as the corresponding foreign-key input. After native workflow integration creates Form states, `k2forms reconcile` restores this contract in place without regenerating the Form or changing its workflow states/actions.
 
 This follows K2's parent/child pattern: users stage lines with the editable-list Add/Edit/Delete controls, then persist the whole transaction through one Form-level Save button. A new/blank master must show an empty child list without invoking List; viewing an existing master must invoke exactly the filtered Form-level List path. Hide every generated master Item View button and the detail Save/Refresh controls so a partial or unfiltered View operation is not presented as a valid transaction; retain detail Add/Edit/Delete. End both successful Create and Update branches with a small informational popup after the persistence batch. Never rely on a View rule to coordinate another View. Test creation with two rows, confirm the generated parent key was transferred before child persistence, create a second master, reload each and prove row isolation, then test one added, one changed, and one removed row.
 
@@ -51,7 +51,7 @@ Approval matrices are business-managed configuration and therefore require Admin
 
 ## Presentation
 
-Use an installed Style Profile for modern K2 presentation. K2's named themes—including `Lithium`—are the legacy theme system; the manifest still supplies one because `FormGenerator` requires it as fallback/compatibility metadata. New forms must normally set a Style Profile and explicitly write `UseLegacyTheme=false`. Set `useLegacyTheme=true`, or omit a Style Profile, only for an intentional legacy-compatible application and report that exception. Prefer the durable environment profile's selected default Style Profile unless the solution explicitly overrides it.
+Use an installed Style Profile for modern K2 presentation. K2's named themes—including `Lithium`—are the legacy theme system; the manifest still supplies one as required `FormGenerator` compatibility metadata. New forms must normally set a Style Profile and explicitly write `UseLegacyTheme=false`. Set `useLegacyTheme=true`, or omit a Style Profile, only for an intentional legacy-compatible application and report that exception. Prefer the durable environment profile's selected default Style Profile unless the solution explicitly overrides it.
 
 ## Environment common frameworks
 

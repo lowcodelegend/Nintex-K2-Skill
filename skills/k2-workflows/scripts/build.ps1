@@ -11,4 +11,7 @@ if (-not (Test-Path -LiteralPath $msbuild -PathType Leaf)) { throw "MSBuild not 
 $target = if ($Clean) { 'Rebuild' } else { 'Build' }
 $output = & $msbuild $project "/t:$target" "/p:Configuration=$Configuration" "/p:K2InstallDir=$($k2InstallDir.TrimEnd('\'))" /nologo /verbosity:quiet 2>&1
 if ($LASTEXITCODE -ne 0) { $output | Write-Error; exit $LASTEXITCODE }
-Write-Output (Join-Path $skillRoot "tool\K2WorkflowCli\bin\$Configuration\k2wf.exe")
+$executable = Join-Path $skillRoot "tool\K2WorkflowCli\bin\$Configuration\k2wf.exe"
+& $executable selftest
+if ($LASTEXITCODE -ne 0) { throw "k2wf self-test failed with exit code $LASTEXITCODE." }
+Write-Output $executable

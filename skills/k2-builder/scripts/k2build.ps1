@@ -17,7 +17,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if ($Command -eq 'version') {
-    Write-Output 'k2build 0.21.0'
+    Write-Output 'k2build 0.22.0'
     return
 }
 
@@ -232,19 +232,6 @@ if ($null -ne $smartObjectsManifest) {
         Test-ShortCodePrefix $matrixCode 'Approval matrix code'
         Test-ShortCodePrefix ($matrixSchema + '.' + [string](Get-PropertyValue $matrix 'table')) 'Approval matrix table'
         Test-ShortCodePrefix ($matrixSchema + '.' + [string](Get-PropertyValue $matrix 'resolverProcedure')) 'Approval matrix resolver procedure'
-        $designerRules = @((Get-PropertyValue $matrix 'rules') | Where-Object { [string](Get-PropertyValue $_ 'approver') -eq '$designer' })
-        if ($designerRules.Count -gt 0) {
-            $errata.Add([pscustomobject]@{
-                id = 'approval-matrix-demo-identities'
-                category = 'placeholder'
-                severity = 'warning'
-                artifact = $matrixName
-                requestedAssignees = @($designerRules | ForEach-Object { [string](Get-PropertyValue $_ 'key') })
-                effectiveAssignee = '$designer (resolved to the deploying AD user as a K2 identity)'
-                description = 'Approval matrix seed rules use the designer identity for test/demo and must be reviewed before production.'
-                status = 'open'
-            })
-        }
     }
     $sqlMasterDetails = @(Get-PropertyValue $smartObjectsManifest 'masterDetails')
     if ($sqlMasterDetails.Count -eq 1 -and $null -eq $sqlMasterDetails[0]) { $sqlMasterDetails = @() }
@@ -433,8 +420,18 @@ foreach ($sqlRelationship in $sqlMasterDetails) {
 }
 foreach ($formRelationship in $formMasterDetails) {
     $formName = [string](Get-PropertyValue $formRelationship.Form 'name')
-    if (@($masterDetailPolicies | Where-Object { [string](Get-PropertyValue $_ 'form') -eq $formName }).Count -eq 0) {
-        Add-Issue "SmartForms master-detail form '$formName' requires a policies.masterDetails integration contract."
+    $contract = $formRelationship.Contract
+    foreach ($child in @(Get-PropertyValue $contract 'details')) {
+        $childView = [string](Get-PropertyValue $child 'view')
+        $childForeignKey = [string](Get-PropertyValue $child 'foreignKeyProperty')
+        $matches = @($masterDetailPolicies | Where-Object {
+            [string](Get-PropertyValue $_ 'form') -eq $formName -and
+            [string](Get-PropertyValue $_ 'detailView') -eq $childView -and
+            [string](Get-PropertyValue $_ 'foreignKey') -eq $childForeignKey
+        })
+        if ($matches.Count -ne 1) {
+            Add-Issue "SmartForms master-detail child '$formName' -> '$childView.$childForeignKey' requires exactly one policies.masterDetails integration contract."
+        }
     }
 }
 
@@ -512,23 +509,21 @@ foreach ($workflowComponent in $workflows) {
         if ($null -ne $userTask) {
             Test-ShortCodePrefix ([string](Get-PropertyValue $userTask 'name')) 'Workflow user-task name'
             $requestedAssignees = @(Get-PropertyValue $userTask 'assignees')
-            if ($requestedAssignees.Count -eq 0 -or ($requestedAssignees.Count -eq 1 -and $null -eq $requestedAssignees[0])) {
-                $requestedAssignees = @('$originator')
-            }
             $approvalMatrix = Get-PropertyValue $workflowDefinition 'approvalMatrix'
             if ($null -eq $approvalMatrix) {
-                $errata.Add([pscustomobject]@{
-                    id = 'workflow-test-demo-originator-routing'
-                    category = 'placeholder'
-                    severity = 'warning'
-                    artifact = $actualWorkflowName
-                    requestedAssignees = @($requestedAssignees)
-                    effectiveAssignee = '$originator'
-                    description = 'Human task assignment is forced to the workflow Originator for testing/demo; requested production routing is not applied.'
-                    status = 'open'
-                })
+                if ($requestedAssignees.Count -eq 0 -or ($requestedAssignees.Count -eq 1 -and $null -eq $requestedAssignees[0])) {
+                    Add-Issue "Workflow '$actualWorkflowName' must explicitly declare userTask.assignees when no approval matrix is present."
+                }
+                foreach ($assignee in $requestedAssignees) {
+                    if ([string]$assignee -match '^\$' -and [string]$assignee -cne '$originator') {
+                        Add-Issue "Workflow '$actualWorkflowName' uses unsupported direct assignee token '$assignee'; use `$originator or an explicit K2 identity."
+                    }
+                }
             }
             else {
+                if ($requestedAssignees.Count -gt 0 -and -not ($requestedAssignees.Count -eq 1 -and $null -eq $requestedAssignees[0])) {
+                    Add-Issue "Workflow '$actualWorkflowName' must omit userTask.assignees because its approval matrix is authoritative."
+                }
                 $matrixCode = [string](Get-PropertyValue $approvalMatrix 'matrixCode')
                 Test-SmartObjectPrefix ([string](Get-PropertyValue $approvalMatrix 'smartObject')) 'Workflow approval-matrix resolver SmartObject'
                 $matchingMatrix = @($approvalMatrices | Where-Object { [string](Get-PropertyValue $_ 'matrixCode') -eq $matrixCode })
@@ -705,7 +700,7 @@ if ($Command -in @('deploy', 'verify', 'cleanup')) {
         }
         else {
             $arguments = @($Action, '--manifest', $Item.manifest)
-            if ($Action -in @('deploy', 'cleanup')) { $arguments += '--confirm' }
+            if ($Action -in @('deploy', 'cleanup', 'reconcile')) { $arguments += '--confirm' }
             if ($Action -eq 'deploy' -and $ResumeForms -and $Item.skill -eq 'k2-smartforms') { $arguments += '--resume' }
             if ($Action -eq 'cleanup' -and $Item.skill -eq 'k2-smartforms') { $arguments += '--manifest-only' }
             if ($Action -eq 'cleanup' -and $Item.skill -eq 'k2-sql-smartobjects' -and $DropApplicationDatabase) { $arguments += '--drop-database' }
@@ -748,6 +743,17 @@ if ($Command -in @('deploy', 'verify', 'cleanup')) {
                 Write-Output "Resume checkpoint reused: $($item.component)"
                 continue
             }
+            if ($item.skill -eq 'k2-smartforms') {
+                Write-Output "Resume checkpoint: reconciling manifest-declared master-detail rules before regeneration"
+                & {
+                    try { Invoke-Specialist $item 'reconcile'; $script:checkpointVerified = $true }
+                    catch { Write-Output "Resume reconciliation requires deployment: $($item.component) ($($_.Exception.Message))"; $script:checkpointVerified = $false }
+                }
+                if ($script:checkpointVerified) {
+                    Write-Output "Resume checkpoint reconciled: $($item.component)"
+                    continue
+                }
+            }
         }
         Write-Output "Deploying checkpoint: $($item.component)"
         Invoke-Specialist $item 'deploy' -ResumeForms:($Resume -and $item.skill -eq 'k2-smartforms')
@@ -761,8 +767,15 @@ if ($Command -in @('deploy', 'verify', 'cleanup')) {
         if ($formsCheckpoint.Count -ne 1) {
             throw 'SmartForms-integrated workflows require exactly one forms checkpoint for final verification.'
         }
-        Write-Output 'Post-workflow checkpoint: verifying the final integrated SmartForms definitions'
-        Invoke-Specialist $formsCheckpoint[0] 'verify'
+        Write-Output 'Post-workflow checkpoint: reconciling all manifest-declared master-detail Read paths in the final integrated SmartForms definitions'
+        Invoke-Specialist $formsCheckpoint[0] 'reconcile'
+        foreach ($integrated in $integratedWorkflows) {
+            $workflowName = [string](Get-PropertyValue (Get-PropertyValue $integrated.Value 'workflow') 'name')
+            $workflowCheckpoint = @($ordered | Where-Object { $_.component -eq "workflow:$workflowName" })
+            if ($workflowCheckpoint.Count -ne 1) { throw "Integrated workflow checkpoint is ambiguous: $workflowName" }
+            Write-Output "Post-reconciliation checkpoint: verifying native Start/Task integration for $workflowName"
+            Invoke-Specialist $workflowCheckpoint[0] 'verify'
+        }
     }
     Write-Output "Final Builder verification gate: PASSED ($($ordered.Count) deployment checkpoint(s))"
     Write-Output "K2 solution deployment succeeded: $solutionName"

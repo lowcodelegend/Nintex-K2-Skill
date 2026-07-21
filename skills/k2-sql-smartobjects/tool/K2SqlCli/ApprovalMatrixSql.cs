@@ -30,8 +30,8 @@ namespace K2SqlCli
                 Console.WriteLine("  Approval matrix: upsert " + matrix.MatrixCode + " -> " + matrix.Schema + "." + matrix.Table +
                     ", resolver " + matrix.Schema + "." + matrix.ResolverProcedure + ", " + matrix.Rules.Count + " seeded rule(s)");
                 Console.WriteLine("    Dimensions: Amount" + (matrix.Dimensions.Count == 0 ? "" : ", " + string.Join(", ", matrix.Dimensions.Select(x => x.Name).ToArray())));
-                Console.WriteLine("    Demo approver token: $designer -> " + DesignerIdentity);
-                Console.WriteLine("    ERRATA [approval-matrix-demo-identities]: $designer approvers are testing/demo placeholders and must be reviewed before production.");
+                var boundRules = matrix.Rules.Count(x => string.Equals(x.Approver, "$designer", StringComparison.OrdinalIgnoreCase));
+                if (boundRules > 0) Console.WriteLine("    Explicit deployer-bound destinations: " + boundRules + " $designer rule(s) -> " + DesignerIdentity);
             }
         }
 
@@ -42,8 +42,9 @@ namespace K2SqlCli
                 EnsureTable(connection, commandTimeout, matrix);
                 EnsureResolver(connection, commandTimeout, matrix);
                 foreach (var rule in matrix.Rules) UpsertRule(connection, commandTimeout, matrix, rule);
-                Console.WriteLine("Approval matrix: applied (" + matrix.MatrixCode + ", " + matrix.Rules.Count + " seeded rule(s), designer=" + DesignerIdentity + ")");
-                Console.WriteLine("ERRATA [approval-matrix-demo-identities]: $designer approvers are testing/demo placeholders and must be reviewed before production.");
+                var boundRules = matrix.Rules.Count(x => string.Equals(x.Approver, "$designer", StringComparison.OrdinalIgnoreCase));
+                Console.WriteLine("Approval matrix: applied (" + matrix.MatrixCode + ", " + matrix.Rules.Count + " seeded rule(s)" +
+                    (boundRules == 0 ? string.Empty : ", explicit $designer destinations=" + boundRules + " -> " + DesignerIdentity) + ")");
             }
         }
 
