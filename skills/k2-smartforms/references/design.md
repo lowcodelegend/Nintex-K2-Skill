@@ -33,9 +33,9 @@ Declare the relationship on the Form. `k2forms` extends the generated Form rules
 1. The master Create action returns the generated key to the master View field.
 2. In the same batch, `Execute a View method for items that are in a specific state` calls child Create for every `Added` row and maps the master key to the child foreign key.
 3. Master Update batches child Update for `Changed`, Create for `Added`, and Delete for `Removed` rows.
-4. A master Read is followed by child List with the master key mapped as its foreign-key filter.
+4. The detail View's generated unfiltered initialization/refresh List rules are removed. A separate Form handler runs only after master Read and only when the master key is not blank; it passes that key to the child List method as the foreign-key input.
 
-This follows K2's parent/child pattern: users stage lines with the editable-list Add/Edit/Delete controls, then persist the whole transaction through one Form-level Save button. The CLI hides master Create/Read/Update/Delete and detail Save/Refresh buttons so a partial or unfiltered View operation is not presented as a valid transaction. Never rely on a View rule to coordinate another View. Test creation with two rows, confirm the generated parent key was transferred before child persistence, reload and confirm foreign-key filtering, then test one added, one changed, and one removed row.
+This follows K2's parent/child pattern: users stage lines with the editable-list Add/Edit/Delete controls, then persist the whole transaction through one Form-level Save button. A new/blank master must show an empty child list without invoking List; viewing an existing master must invoke exactly the filtered Form-level List path. The CLI hides master Create/Read/Update/Delete and detail Save/Refresh buttons so a partial or unfiltered View operation is not presented as a valid transaction. Never rely on a View rule to coordinate another View. Test creation with two rows, confirm the generated parent key was transferred before child persistence, create a second master, reload each and prove row isolation, then test one added, one changed, and one removed row.
 
 ## Property selection
 

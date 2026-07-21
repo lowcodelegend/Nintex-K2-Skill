@@ -41,11 +41,11 @@ Treat any requirement for multiple line items, details, rows, allocations, attac
 - A capture/item master View, an editable-list detail View, and a Form containing both. Controlled detail values use the shared lookup contract.
 - A Form-level create batch: master Create returns its key, then child Create runs once for each `Added` row with that key mapped to the child foreign key.
 - A Form-level update batch: child Update for `Changed`, Create for `Added`, and Delete for `Removed` rows.
-- A Form-level filtered child List after master Read. Cross-view coordination must never be placed on a View rule.
+- No unfiltered child View List initialization. After master Read, a Form-level not-blank condition passes the master key into the child List foreign-key input. Cross-view coordination must never be placed on a View rule.
 
 Declare the same relationship in SQL `masterDetails`, SmartForms `form.masterDetail`, and solution `policies.masterDetails`; `k2build` rejects an incomplete cross-layer contract. Keep workflow status and the primary workflow reference on the master unless child-specific processing is an explicit requirement.
 
-The complete-solution UX contract is one Form-level transaction: a capture/item master, native editable-list children, returned master identity, foreign-key transfer for `Added` rows, filtered List after Read, and coordinated update of `Changed`/`Added`/`Removed` rows. Do not expose master method buttons or detail Save/Refresh buttons that bypass that transaction. Include disposable tests for two-row creation, reload isolation between two masters, and mixed add/change/remove updates.
+The complete-solution UX contract is one Form-level transaction: a capture/item master, native editable-list children, returned master identity, foreign-key transfer for `Added` rows, blank-key-gated and foreign-key-filtered List after Read, and coordinated update of `Changed`/`Added`/`Removed` rows. Do not expose master method buttons or detail Save/Refresh buttons that bypass that transaction. Include disposable tests proving no List call for a blank master, two-row creation, reload isolation between two masters, and mixed add/change/remove updates.
 
 Choose fields and views per stage. Keep workflow-managed status, audit, identity, and derived values read-only when visible. Split stages into different Forms when actors/security/actions differ materially; otherwise compose stage Views on one Form and use Form-level state/visibility rules. Prefer four-column label/control layouts only for wide screens with short related fields. Put transient rule variables in hidden `tblDebug` Data Labels. Use cascading lookups for dimensional dependencies and Admin forms for application-managed parent/child lookup values.
 

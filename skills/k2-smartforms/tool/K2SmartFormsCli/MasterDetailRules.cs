@@ -61,8 +61,16 @@ namespace K2SmartFormsCli
                 Id = RequiredAttribute(field, "ID", viewName + "." + property),
                 Name = ChildValue(field, "Name") ?? property,
                 DisplayName = ChildValue(field, "FieldDisplayName") ?? property,
-                DataType = (string)field.Attribute("DataType") ?? "Text"
+                DataType = NormalizeConditionDataType((string)field.Attribute("DataType") ?? "Text")
             };
+        }
+
+        private static string NormalizeConditionDataType(string value)
+        {
+            if (string.Equals(value, "AutoNumber", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(value, "Autonumber", StringComparison.OrdinalIgnoreCase)) return "Number";
+            if (string.Equals(value, "AutoGuid", StringComparison.OrdinalIgnoreCase)) return "Guid";
+            return value;
         }
 
         private static string ResolveAction(XDocument document, string method, string state, string viewName)
@@ -123,6 +131,30 @@ namespace K2SmartFormsCli
 
     internal static class MasterDetailRules
     {
+        public static string SuppressUnfilteredDetailLoads(string xml, string viewName, IEnumerable<MasterDetailChildDefinition> relationships)
+        {
+            var methods = new HashSet<string>(relationships.Select(x => x.ListMethod), StringComparer.OrdinalIgnoreCase);
+            if (methods.Count == 0) return xml;
+            var document = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
+            var actions = document.Descendants().Where(x => x.Name.LocalName == "Action" &&
+                string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
+                x.Attribute("ItemState") == null && methods.Contains(ReadProperty(x, "Method"))).ToList();
+            foreach (var action in actions) RemoveActionAndEmptyHandler(action);
+            return document.ToString(SaveOptions.DisableFormatting);
+        }
+
+        public static void VerifyDetailViewLoads(string xml, string viewName, IEnumerable<MasterDetailChildDefinition> relationships)
+        {
+            var methods = new HashSet<string>(relationships.Select(x => x.ListMethod), StringComparer.OrdinalIgnoreCase);
+            if (methods.Count == 0) return;
+            var document = XDocument.Parse(xml);
+            var unfiltered = document.Descendants().Where(x => x.Name.LocalName == "Action" &&
+                string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
+                x.Attribute("ItemState") == null && methods.Contains(ReadProperty(x, "Method"))).ToList();
+            if (unfiltered.Count > 0)
+                throw new CliException("Master-detail View '" + viewName + "' contains an unfiltered List rule. Detail loading must be owned by the Form and supplied with the master key.");
+        }
+
         public static string Apply(string xml, FormDefinition formDefinition, ResolvedMasterDetailRules relationship)
         {
             if (relationship == null) return xml;
@@ -132,17 +164,22 @@ namespace K2SmartFormsCli
 
             AddFormSaveButton(form, formDefinition, relationship, masterInstance);
 
+            foreach (var child in relationship.Details)
+            {
+                var detailInstance = FindInstance(form, child.ViewGuid, child.ViewName, formDefinition.Name);
+                RemoveDetailListActions(form, child, detailInstance);
+            }
+
             var masterReads = FindMethodActions(form, masterInstance, relationship.Definition.MasterReadMethod, null).ToList();
             if (masterReads.Count == 0)
                 throw new CliException("Generated form '" + formDefinition.Name + "' has no master Read action for '" + relationship.MasterViewName + "'.");
-            foreach (var read in masterReads)
+            var readHandlers = masterReads.Select(x => x.Ancestors().FirstOrDefault(y => y.Name.LocalName == "Handler"))
+                .Where(x => x != null).Distinct().ToList();
+            if (readHandlers.Count == 0)
+                throw new CliException("Generated form '" + formDefinition.Name + "' has no rule handler for master Read action '" + relationship.Definition.MasterReadMethod + "'.");
+            foreach (var handler in readHandlers)
             {
-                var actions = read.Parent;
-                foreach (var child in relationship.Details)
-                {
-                    var detailInstance = FindInstance(form, child.ViewGuid, child.ViewName, formDefinition.Name);
-                    actions.Add(BuildListAction(form.Name.Namespace, child, masterInstance, relationship.MasterKey, detailInstance));
-                }
+                handler.AddAfterSelf(BuildFilteredListHandler(form, relationship, masterInstance, formDefinition.Name));
             }
             return document.ToString(SaveOptions.DisableFormatting);
         }
@@ -173,9 +210,15 @@ namespace K2SmartFormsCli
                     if (matches.Count == 0)
                         throw new CliException("K2 Form '" + formDefinition.Name + "' has no valid Form-level " + state + " persistence action for detail view '" + child.ViewName + "'.");
                 }
-                if (!FindMethodActions(form, detailInstance, child.Definition.ListMethod, null)
-                    .Any(x => HasMasterKeyMapping(x, masterInstance, relationship.MasterKey.Id, child.Definition.ForeignKeyProperty)))
-                    throw new CliException("K2 Form '" + formDefinition.Name + "' loads the master but has no filtered Form-level List action for detail view '" + child.ViewName + "'.");
+                var listActions = FindMethodActions(form, detailInstance, child.Definition.ListMethod, null).ToList();
+                if (listActions.Count == 0)
+                    throw new CliException("K2 Form '" + formDefinition.Name + "' loads the master but has no Form-level List action for detail view '" + child.ViewName + "'.");
+                if (listActions.Any(x => !HasMasterKeyMapping(x, masterInstance, relationship.MasterKey.Id, child.Definition.ForeignKeyProperty)))
+                    throw new CliException("K2 Form '" + formDefinition.Name + "' has an unfiltered List action for detail view '" + child.ViewName + "'. Every detail List must receive the master key as the foreign-key input.");
+                if (listActions.Any(x => !HasMasterKeyNotBlankCondition(x, masterInstance, relationship.MasterKey.Id)))
+                    throw new CliException("K2 Form '" + formDefinition.Name + "' has an ungated List action for detail view '" + child.ViewName + "'. Detail List actions must run only when the master key is not blank.");
+                if (listActions.Any(x => !FollowsMasterRead(x, masterInstance, relationship.Definition.MasterReadMethod)))
+                    throw new CliException("K2 Form '" + formDefinition.Name + "' has a detail List action that does not follow a master Read for view '" + child.ViewName + "'.");
             }
             Console.WriteLine("Master-detail form rules: OK (" + formDefinition.Name + ", master=" + relationship.MasterViewName + ", details=" + relationship.Details.Count + ")");
         }
@@ -251,16 +294,53 @@ namespace K2SmartFormsCli
                     actions.Add(BuildStateAction(ns, child, child.DeleteAction, "Removed", masterInstance, relationship.MasterKey, detailInstance));
                 }
             }
-            var conditionName = create ? "SimpleBlankViewFieldCondition" : "SimpleNotBlankViewFieldCondition";
-            var expression = create ? "IsBlank" : "IsNotBlank";
             return new XElement(ns + "Handler", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
                 new XElement(ns + "Properties", Property(ns, "HandlerName", "IfLogicalHandler", null, null), Property(ns, "Location", "form", null, null)),
-                new XElement(ns + "Conditions", new XElement(ns + "Condition", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()), new XAttribute("InstanceID", masterInstance),
-                    new XElement(ns + "Properties", Property(ns, "Location", "Form", null, null), Property(ns, "Name", conditionName, null, null)),
-                    new XElement(ns + "Expressions", new XElement(ns + expression,
-                        new XElement(ns + "Item", new XAttribute("SourceType", "ViewField"), new XAttribute("SourceName", relationship.MasterKey.Name),
-                            new XAttribute("SourceDisplayName", relationship.MasterKey.DisplayName), new XAttribute("SourceInstanceID", masterInstance),
-                            new XAttribute("SourceID", relationship.MasterKey.Id), new XAttribute("DataType", relationship.MasterKey.DataType)))))), actions);
+                new XElement(ns + "Conditions", BuildMasterKeyCondition(ns, masterInstance, relationship.MasterKey, !create)), actions);
+        }
+
+        private static XElement BuildFilteredListHandler(XElement form, ResolvedMasterDetailRules relationship, string masterInstance, string formName)
+        {
+            var ns = form.Name.Namespace;
+            var actions = new XElement(ns + "Actions");
+            foreach (var child in relationship.Details)
+            {
+                var detailInstance = FindInstance(form, child.ViewGuid, child.ViewName, formName);
+                actions.Add(BuildListAction(ns, child, masterInstance, relationship.MasterKey, detailInstance));
+            }
+            return new XElement(ns + "Handler", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                new XElement(ns + "Properties", Property(ns, "HandlerName", "IfLogicalHandler", null, null), Property(ns, "Location", "form", null, null)),
+                new XElement(ns + "Conditions", BuildMasterKeyCondition(ns, masterInstance, relationship.MasterKey, true)), actions);
+        }
+
+        private static XElement BuildMasterKeyCondition(XNamespace ns, string masterInstance, ResolvedViewField masterKey, bool notBlank)
+        {
+            var conditionName = notBlank ? "SimpleNotBlankViewFieldCondition" : "SimpleBlankViewFieldCondition";
+            var expression = notBlank ? "IsNotBlank" : "IsBlank";
+            return new XElement(ns + "Condition", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()), new XAttribute("InstanceID", masterInstance),
+                new XElement(ns + "Properties", Property(ns, "Location", "Form", null, null), Property(ns, "Name", conditionName, null, null)),
+                new XElement(ns + "Expressions", new XElement(ns + expression,
+                    new XElement(ns + "Item", new XAttribute("SourceType", "ViewField"), new XAttribute("SourceName", masterKey.Name),
+                        new XAttribute("SourceDisplayName", masterKey.DisplayName), new XAttribute("SourceInstanceID", masterInstance),
+                        new XAttribute("SourceID", masterKey.Id), new XAttribute("DataType", masterKey.DataType)))));
+        }
+
+        private static void RemoveDetailListActions(XElement form, ResolvedMasterDetailChild child, string detailInstance)
+        {
+            var actions = FindMethodActions(form, detailInstance, child.Definition.ListMethod, null).ToList();
+            foreach (var action in actions) RemoveActionAndEmptyHandler(action);
+        }
+
+        private static void RemoveActionAndEmptyHandler(XElement action)
+        {
+            var container = action.Parent;
+            action.Remove();
+            if (container == null || container.Elements().Any(x => x.Name.LocalName == "Action")) return;
+            var handler = container.Parent;
+            container.Remove();
+            if (handler != null && handler.Name.LocalName == "Handler" &&
+                !handler.Descendants().Any(x => x.Name.LocalName == "Action"))
+                handler.Remove();
         }
 
         private static XElement Control(XNamespace ns, string id, string type, string name, params XElement[] extraProperties)
@@ -423,6 +503,24 @@ namespace K2SmartFormsCli
                 string.Equals((string)x.Attribute("SourceInstanceID"), masterInstance, StringComparison.OrdinalIgnoreCase) &&
                 string.Equals((string)x.Attribute("SourceID"), masterFieldId, StringComparison.OrdinalIgnoreCase) &&
                 string.Equals((string)x.Attribute("TargetID"), target, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static bool HasMasterKeyNotBlankCondition(XElement action, string masterInstance, string masterFieldId)
+        {
+            var handler = action.Ancestors().FirstOrDefault(x => x.Name.LocalName == "Handler");
+            if (handler == null) return false;
+            return handler.Descendants().Any(x => x.Name.LocalName == "IsNotBlank" && x.Descendants().Any(y => y.Name.LocalName == "Item" &&
+                string.Equals((string)y.Attribute("SourceType"), "ViewField", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)y.Attribute("SourceInstanceID"), masterInstance, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)y.Attribute("SourceID"), masterFieldId, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        private static bool FollowsMasterRead(XElement action, string masterInstance, string masterReadMethod)
+        {
+            var handler = action.Ancestors().FirstOrDefault(x => x.Name.LocalName == "Handler");
+            if (handler == null || handler.Parent == null) return false;
+            return handler.ElementsBeforeSelf().Where(x => x.Name.LocalName == "Handler").Any(x =>
+                FindMethodActions(x, masterInstance, masterReadMethod, null).Any());
         }
 
         private static IEnumerable<XElement> FindMethodActions(XElement form, string instanceId, string method, string state)

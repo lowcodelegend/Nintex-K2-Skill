@@ -339,8 +339,11 @@ namespace K2SmartFormsCli
                         var generated = generator.Generate(viewGenerator, view.SmartObject, view.Name);
                         var definition = ViewLookupDefinition.Apply(generated.ToXml(), view, lookupSources);
                         var isMaster = _manifest.Application.Forms.Any(f => f.MasterDetail != null && string.Equals(f.MasterDetail.MasterView, view.Name, StringComparison.OrdinalIgnoreCase));
-                        var isDetail = _manifest.Application.Forms.Any(f => f.MasterDetail != null && f.MasterDetail.Details.Any(d => string.Equals(d.View, view.Name, StringComparison.OrdinalIgnoreCase)));
+                        var detailRelationships = _manifest.Application.Forms.Where(f => f.MasterDetail != null)
+                            .SelectMany(f => f.MasterDetail.Details).Where(d => string.Equals(d.View, view.Name, StringComparison.OrdinalIgnoreCase)).ToList();
+                        var isDetail = detailRelationships.Count > 0;
                         definition = ViewPresentationDefinition.Apply(definition, view, isMaster, isDetail);
+                        if (isDetail) definition = MasterDetailRules.SuppressUnfilteredDetailLoads(definition, view.Name, detailRelationships);
                         manager.DeployViews(definition, _manifest.Application.GetViewCategoryPath(view), _manifest.Application.CheckIn);
                         var info = manager.GetView(view.Name);
                         Console.WriteLine("View: deployed (" + view.Name + ", " + info.Guid + ", " + info.Type + ", category " + info.CategoryPath + ", " + view.LookupControls.Count + " lookup control(s))");
@@ -388,8 +391,11 @@ namespace K2SmartFormsCli
                     if (_manifest.Application.CheckIn && info.IsCheckedOut) throw new CliException("K2 View remains checked out: " + expected);
                     ViewLookupDefinition.Verify(definition, declaredView, lookupSources);
                     var isMaster = _manifest.Application.Forms.Any(f => f.MasterDetail != null && string.Equals(f.MasterDetail.MasterView, declaredView.Name, StringComparison.OrdinalIgnoreCase));
-                    var isDetail = _manifest.Application.Forms.Any(f => f.MasterDetail != null && f.MasterDetail.Details.Any(d => string.Equals(d.View, declaredView.Name, StringComparison.OrdinalIgnoreCase)));
+                    var detailRelationships = _manifest.Application.Forms.Where(f => f.MasterDetail != null)
+                        .SelectMany(f => f.MasterDetail.Details).Where(d => string.Equals(d.View, declaredView.Name, StringComparison.OrdinalIgnoreCase)).ToList();
+                    var isDetail = detailRelationships.Count > 0;
                     ViewPresentationDefinition.Verify(definition, declaredView, isMaster, isDetail);
+                    if (isDetail) MasterDetailRules.VerifyDetailViewLoads(definition, declaredView.Name, detailRelationships);
                     Console.WriteLine("View verification: OK (" + expected + ", " + info.Guid + ", v" + info.Version + ", " + info.Type + ")");
                 }
 
@@ -488,7 +494,7 @@ namespace K2SmartFormsCli
             request.AllowAutoRedirect = false;
             request.Timeout = 30000;
             request.ReadWriteTimeout = 30000;
-            request.UserAgent = "k2forms/0.12.0";
+            request.UserAgent = "k2forms/0.12.1";
             try
             {
                 using (var response = (HttpWebResponse)request.GetResponse())
