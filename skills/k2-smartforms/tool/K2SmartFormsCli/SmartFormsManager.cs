@@ -18,6 +18,7 @@ namespace K2SmartFormsCli
     internal sealed class SmartFormsManager
     {
         private readonly SmartFormsManifest _manifest;
+        private IDictionary<string, LookupRuntimeSource> _lookupSources;
 
         public SmartFormsManager(SmartFormsManifest manifest)
         {
@@ -116,6 +117,7 @@ namespace K2SmartFormsCli
 
         private IDictionary<string, LookupRuntimeSource> LoadLookupRuntimeSources()
         {
+            if (_lookupSources != null) return _lookupSources;
             return WithSmartObjectServer(delegate(SmartObjectClientServer server)
             {
                 var result = new Dictionary<string, LookupRuntimeSource>(StringComparer.OrdinalIgnoreCase);
@@ -150,9 +152,20 @@ namespace K2SmartFormsCli
                         DisplayPropertyType = displayProperty.Type.ToString()
                         ,PropertyNames = new HashSet<string>(smartObject.Properties.Cast<SmartProperty>().Select(x => x.Name), StringComparer.OrdinalIgnoreCase)
                     };
-                    Console.WriteLine("Lookup source: OK (" + source.Name + " <= " + smartObject.Name + "." + method.Name + ", value=" + valueProperty.Name + ", display=" + displayProperty.Name + ")");
+                    System.Data.DataTable table;
+                    try
+                    {
+                        smartObject.MethodToExecute = method.Name;
+                        table = server.ExecuteListDataTable(smartObject, 1, 1);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new CliException("Lookup '" + source.Name + "' List execution failed for " + smartObject.Name + "." + method.Name + ": " + ex.Message);
+                    }
+                    Console.WriteLine("Lookup source: OK (" + source.Name + " <= " + smartObject.Name + "." + method.Name + ", value=" + valueProperty.Name + ", display=" + displayProperty.Name + ", sampleRows=" + table.Rows.Count + ")");
                 }
-                return result;
+                _lookupSources = result;
+                return _lookupSources;
             });
         }
 
@@ -171,6 +184,8 @@ namespace K2SmartFormsCli
 
             foreach (var method in selectedMethods)
             {
+                ValidateRequiredReadOnlyCreateInputs(view, method.Name, method.Type.ToString(),
+                    method.RequiredProperties.Cast<SmartProperty>().Select(x => x.Name), externallySuppliedProperties);
                 var missing = method.RequiredProperties.Cast<SmartProperty>()
                     .Select(x => x.Name)
                     .Where(x => !effectiveProperties.Contains(x))
@@ -184,6 +199,24 @@ namespace K2SmartFormsCli
                     ". Add them to view.properties, use the all-properties option, or change the SmartObject method contract so those values are supplied outside the generated form. " +
                     "SQL DEFAULT constraints do not make generated K2 method inputs optional.");
             }
+        }
+
+        internal static void ValidateRequiredReadOnlyCreateInputs(ViewDefinition view, string methodName, string methodType,
+            IEnumerable<string> requiredProperties, IEnumerable<string> externallySuppliedProperties)
+        {
+            if (!string.Equals(methodType, "Create", StringComparison.OrdinalIgnoreCase)) return;
+            var externallySupplied = new HashSet<string>(externallySuppliedProperties ?? Enumerable.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+            var defaults = new HashSet<string>(view.DefaultValues.Keys, StringComparer.OrdinalIgnoreCase);
+            var unsafeProperties = requiredProperties
+                .Where(x => view.ReadOnlyProperties.Contains(x, StringComparer.OrdinalIgnoreCase))
+                .Where(x => !externallySupplied.Contains(x) && !defaults.Contains(x))
+                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            if (unsafeProperties.Count == 0) return;
+            throw new CliException(
+                "View '" + view.Name + "' selects Create method '" + methodName + "' on SmartObject '" + view.SmartObject +
+                "' but required input properties are read-only without a supplied value: " + string.Join(", ", unsafeProperties.ToArray()) +
+                ". Make them editable, add literal view.defaultValues, or supply the property through form.masterDetail. SQL DEFAULT constraints do not populate generated K2 method inputs.");
         }
 
         public IList<ArtifactState> GetArtifactStates()
@@ -580,7 +613,7 @@ namespace K2SmartFormsCli
             request.AllowAutoRedirect = false;
             request.Timeout = 30000;
             request.ReadWriteTimeout = 30000;
-            request.UserAgent = "k2forms/0.15.2";
+            request.UserAgent = "k2forms/0.16.0";
             try
             {
                 using (var response = (HttpWebResponse)request.GetResponse())

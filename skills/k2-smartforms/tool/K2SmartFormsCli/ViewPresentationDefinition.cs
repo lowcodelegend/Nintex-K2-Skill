@@ -21,8 +21,8 @@ namespace K2SmartFormsCli
                 var type = (string)control.Attribute("Type") ?? string.Empty;
                 if (string.Equals(type, "Label", StringComparison.OrdinalIgnoreCase)) SetBold(control);
                 var text = PropertyValue(control, "Text") ?? ChildValue(control, "Name") ?? string.Empty;
-                var hide = master && string.Equals(type, "Button", StringComparison.OrdinalIgnoreCase);
-                hide = hide || detail && string.Equals(type, "ToolBarButton", StringComparison.OrdinalIgnoreCase) &&
+                var hide = master && IsButtonControl(type);
+                hide = hide || detail && IsButtonControl(type) &&
                        (text.StartsWith("Save", StringComparison.OrdinalIgnoreCase) || text.StartsWith("Refresh", StringComparison.OrdinalIgnoreCase));
                 if (!hide) continue;
                 var properties = control.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
@@ -60,13 +60,18 @@ namespace K2SmartFormsCli
             {
                 var type = (string)control.Attribute("Type") ?? string.Empty;
                 var text = PropertyValue(control, "Text") ?? ChildValue(control, "Name") ?? string.Empty;
-                var targeted = master && string.Equals(type, "Button", StringComparison.OrdinalIgnoreCase);
-                targeted = targeted || detail && string.Equals(type, "ToolBarButton", StringComparison.OrdinalIgnoreCase) &&
+                var targeted = master && IsButtonControl(type);
+                targeted = targeted || detail && IsButtonControl(type) &&
                            (text.StartsWith("Save", StringComparison.OrdinalIgnoreCase) || text.StartsWith("Refresh", StringComparison.OrdinalIgnoreCase));
                 if (targeted && !string.Equals(PropertyValue(control, "IsVisible"), "false", StringComparison.OrdinalIgnoreCase)) offenders.Add(text);
             }
             if (offenders.Count > 0)
                 throw new CliException("Master-detail View '" + view.Name + "' exposes persistence buttons that bypass Form orchestration: " + string.Join(", ", offenders.ToArray()));
+        }
+
+        private static bool IsButtonControl(string type)
+        {
+            return !string.IsNullOrWhiteSpace(type) && type.EndsWith("Button", StringComparison.OrdinalIgnoreCase);
         }
 
         private static void ApplyFourColumnLayout(XDocument document, string viewName)

@@ -33,6 +33,7 @@
         "type": "capture",
         "properties": ["ExpenseClaimId", "ClaimTitle", "Department", "BusinessPurpose", "Status", "TotalAmount", "CreatedOn"],
         "readOnlyProperties": ["ExpenseClaimId", "Status", "TotalAmount", "CreatedOn"],
+        "defaultValues": { "Status": "Draft", "TotalAmount": "0" },
         "layoutColumns": 4,
         "hiddenVariables": [
           { "name": "dlbMode", "dataType": "Text", "defaultValue": "Create" },

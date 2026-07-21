@@ -1,6 +1,6 @@
 # Deployment handoff
 
-Treat the handoff as a required build artifact, not an optional summary. Populate the deployment ledger from actual plan, deployment, inspection, and verification output; do not infer successful creation from manifest intent.
+Treat the handoff as a required build artifact, not an optional summary. Populate the deployment ledger from actual plan, deployment, inspection, and verification output; do not infer successful creation from manifest intent. Set `verification.finalBuilderGate.status` to `passed` only when the final `k2build deploy` or `k2build verify` command exits 0 after workflow integration and the post-workflow SmartForms check. On any failure leave it `failed` or `pending`, identify the failed checkpoint, and keep the overall result `partial` or `failed`.
 
 ## Artifact inventory
 

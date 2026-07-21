@@ -28,7 +28,7 @@ Before naming artifacts, choose a three- or four-letter uppercase code, run `che
 3. Run `scripts/k2build.ps1 validate -Manifest <solution-manifest.json>`, then `plan` and present its dependency-ordered mutations and assumptions.
 4. A request to build/create/deploy authorizes `deploy ... -Confirm` after that checkpoint. Stop on the first failed layer and preserve successful prerequisites. After interruption use `-Resume`; use `k2forms ... --forms-only` only when Views are known-good.
 5. Exercise the declared end-to-end scenarios through the ordinary authenticated Runtime URL. CLI success is not browser proof.
-6. Record every source and live artifact, action (`created`, `updated`, `replaced`, or `reused`), identifier/version, source manifest, and verification result using [deployment-ledger.template.json](assets/deployment-ledger.template.json).
+6. Record every source and live artifact, action (`created`, `updated`, `replaced`, or `reused`), identifier/version, source manifest, and verification result using [deployment-ledger.template.json](assets/deployment-ledger.template.json). Mark the final Builder gate passed only from an exit-0 `k2build deploy`/`verify` run after workflow integration; never promote partial specialist evidence to a complete result.
 7. Read [deployment-handoff.md](references/deployment-handoff.md) before completion. Provide the itemized inventory and explicit errata register; write `None found` when empty.
 
 Do not repeat successful `doctor`, `plan`, `inspect`, or `verify` calls merely to collect output.

@@ -63,8 +63,19 @@ try {
 }
 
 $ledgerTemplate = Get-Content -LiteralPath (Join-Path $skillRoot 'assets\deployment-ledger.template.json') -Raw | ConvertFrom-Json
-if ($ledgerTemplate.schemaVersion -ne 2 -or $null -eq $ledgerTemplate.artifacts -or $null -eq $ledgerTemplate.errata) {
-    throw 'deployment-ledger.template.json must use schemaVersion 2 and contain artifact and errata arrays.'
+if ($ledgerTemplate.schemaVersion -ne 2 -or $null -eq $ledgerTemplate.artifacts -or $null -eq $ledgerTemplate.errata -or
+    $null -eq $ledgerTemplate.verification.finalBuilderGate -or $ledgerTemplate.verification.finalBuilderGate.status -ne 'pending') {
+    throw 'deployment-ledger.template.json must use schemaVersion 2, contain artifact and errata arrays, and initialize verification.finalBuilderGate as pending.'
+}
+$expenseManifest = Get-Content -LiteralPath (Join-Path $skillRoot 'assets\examples\expense-claim\smartforms-manifest.json') -Raw | ConvertFrom-Json
+$expenseMaster = @($expenseManifest.application.views | Where-Object { $_.name -eq 'EXP.Claim Editor' })
+$expenseLines = @($expenseManifest.application.views | Where-Object { $_.name -eq 'EXP.Claim Lines' })
+$expenseForm = @($expenseManifest.application.forms | Where-Object { $_.name -eq 'EXP.Expense Claims' })
+if ($expenseMaster.Count -ne 1 -or $expenseMaster[0].readOnlyProperties -notcontains 'Status' -or
+    $expenseMaster[0].defaultValues.Status -ne 'Draft' -or $expenseMaster[0].defaultValues.TotalAmount -ne '0' -or
+    $expenseLines.Count -ne 1 -or @($expenseLines[0].lookupControls | Where-Object { $_.property -eq 'CategoryCode' }).Count -ne 1 -or
+    $expenseForm.Count -ne 1 -or $expenseForm[0].masterDetail.saveButtonText -ne 'Save Claim') {
+    throw 'The bundled expense-claim regression must retain required/read-only defaults, the line Category dropdown, and Form-owned master-detail Save.'
 }
 $handoffReference = Join-Path $skillRoot 'references\deployment-handoff.md'
 if (-not (Test-Path -LiteralPath $handoffReference -PathType Leaf)) {
@@ -82,7 +93,7 @@ if ($agentContent -notmatch '(?m)^\s*default_prompt:\s*"Use \$k2-builder .+"\s*$
 }
 
 $actualVersion = (& $entryPoint version | Out-String).Trim()
-if ($actualVersion -cne 'k2build 0.20.2') {
+if ($actualVersion -cne 'k2build 0.21.0') {
     throw "Unexpected k2build version output: $actualVersion"
 }
 $environmentExecutable = Join-Path $skillRoot "tool\K2EnvironmentCli\bin\$Configuration\k2env.exe"
@@ -91,4 +102,4 @@ if ($environmentVersion -cne 'k2env 0.8.0') {
     throw "Unexpected k2env version output: $environmentVersion"
 }
 
-Write-Output "k2-builder 0.20.2 validation passed ($Configuration); k2env 0.8.0 built at $environmentExecutable."
+Write-Output "k2-builder 0.21.0 validation passed ($Configuration); k2env 0.8.0 built at $environmentExecutable."

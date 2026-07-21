@@ -4,10 +4,10 @@
 
 | Command | Mutates K2 | Behavior |
 | --- | --- | --- |
-| `doctor --manifest` | No | Validate JSON, K2 connectivity, theme, Style Profile, native Worklist registration, SmartObjects, lookup sources/types, methods, Admin contracts, tab layout, and required method-input coverage. |
+| `doctor --manifest` | No | Validate JSON, K2 connectivity, theme, Style Profile, native Worklist registration, SmartObjects, executable lookup Lists/types, methods, Admin contracts, tab layout, required method-input coverage, and required/read-only Create mappings. |
 | `plan --manifest` | No | Show creates, replacements, application/Admin categories, lookup bindings, tabs/Worklist, external dependencies, and verification scope. |
 | `deploy --manifest --confirm [--resume \| --forms-only]` | Yes | Generate and verify. `--resume` preserves existing declared artifacts and creates only missing ones; `--forms-only` preserves Views and replaces Forms only. |
-| `verify --manifest` | No | Validate definitions, dropdown bindings, tab order/content, Worklist properties/navigation rule, GUID references, category, theme, Style Profile, explicit legacy-theme mode, check-in state, and runtime routes. |
+| `verify --manifest` | No | Validate live definitions, placed dropdown bindings, literal defaults, master-detail bypass controls/rules, tab order/content, Worklist properties/navigation rule, GUID references, category, theme, Style Profile, explicit legacy-theme mode, check-in state, and runtime routes. |
 | `inspect --manifest` | No | Print exact artifact GUIDs, versions, types, categories, Style Profile, legacy-theme mode, and checkout state. |
 | `checkin --manifest --form <exact-name> --confirm` | Yes | Check in one exact manifest-declared form without regenerating or replacing it; report its checkout owner and resulting version. |
 | `cleanup --manifest --confirm` | Destructive | Delete exact declared forms then views after environment-wide external dependency checks. |

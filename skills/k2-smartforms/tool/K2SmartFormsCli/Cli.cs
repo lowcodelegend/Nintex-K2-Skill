@@ -23,11 +23,7 @@ namespace K2SmartFormsCli
             }
             if (command == "selftest")
             {
-                if (ResolvedMasterDetailRules.NormalizeConditionDataType("AutoNumber") != "Number" ||
-                    ResolvedMasterDetailRules.NormalizeConditionDataType("Autonumber") != "Number" ||
-                    ResolvedMasterDetailRules.NormalizeConditionDataType("AutoGuid") != "Guid")
-                    throw new CliException("Master-detail identity type normalization self-test failed.");
-                Console.WriteLine("SELFTEST SUCCEEDED: AutoNumber->Number, AutoGuid->Guid");
+                SelfTests.Run();
                 return 0;
             }
 
@@ -189,7 +185,7 @@ namespace K2SmartFormsCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2forms 0.15.2");
+            Console.WriteLine("k2forms 0.16.0");
         }
 
         private static void PrintHelp()

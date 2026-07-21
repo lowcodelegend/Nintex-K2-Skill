@@ -17,7 +17,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if ($Command -eq 'version') {
-    Write-Output 'k2build 0.20.2'
+    Write-Output 'k2build 0.21.0'
     return
 }
 
@@ -732,6 +732,7 @@ if ($Command -in @('deploy', 'verify', 'cleanup')) {
             Write-Output "Verifying checkpoint: $($item.component)"
             Invoke-Specialist $item 'verify'
         }
+        Write-Output "Final Builder verification gate: PASSED ($($ordered.Count) checkpoint(s))"
         Write-Output "K2 solution verification succeeded: $solutionName"
         return
     }
@@ -751,5 +752,18 @@ if ($Command -in @('deploy', 'verify', 'cleanup')) {
         Write-Output "Deploying checkpoint: $($item.component)"
         Invoke-Specialist $item 'deploy' -ResumeForms:($Resume -and $item.skill -eq 'k2-smartforms')
     }
+    $integratedWorkflows = @($workflowManifests.Values | Where-Object {
+        $null -ne $_.Value -and
+        $null -ne (Get-PropertyValue (Get-PropertyValue $_.Value 'workflow') 'smartForms')
+    })
+    if ($integratedWorkflows.Count -gt 0) {
+        $formsCheckpoint = @($ordered | Where-Object { $_.skill -eq 'k2-smartforms' })
+        if ($formsCheckpoint.Count -ne 1) {
+            throw 'SmartForms-integrated workflows require exactly one forms checkpoint for final verification.'
+        }
+        Write-Output 'Post-workflow checkpoint: verifying the final integrated SmartForms definitions'
+        Invoke-Specialist $formsCheckpoint[0] 'verify'
+    }
+    Write-Output "Final Builder verification gate: PASSED ($($ordered.Count) deployment checkpoint(s))"
     Write-Output "K2 solution deployment succeeded: $solutionName"
 }

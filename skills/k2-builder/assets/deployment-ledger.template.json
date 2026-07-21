@@ -23,6 +23,11 @@
   ],
   "runtimeUrls": [],
   "verification": {
+    "finalBuilderGate": {
+      "command": null,
+      "status": "pending",
+      "completedAtUtc": null
+    },
     "specialistChecks": [],
     "endToEndScenarios": []
   },

@@ -11,7 +11,7 @@ Build checked-in Forms/Views through supported K2 APIs; never edit K2 databases 
 
 1. Confirm self-hosted K2 Five and existing SmartObjects. If `$k2-builder` is installed, validate its selected environment profile before discovery. Resolve the Style Profile and common-framework selections; stop while either is `unselected`.
 2. Read [design.md](references/design.md) and [manifest.md](references/manifest.md). Create a stable, version-free manifest under one application root.
-3. Select fields, methods, layout, read-only state, lookups, cascades, titles, tabs, and Form composition for each user/process stage. Every capture View must include each selected method's required properties except a master-detail foreign key supplied by the Form.
+3. Select fields, methods, layout, read-only state, literal defaults, lookups, cascades, titles, tabs, and Form composition for each user/process stage. Every capture View must include each selected method's required properties except a master-detail foreign key supplied by the Form. Keep required Create inputs editable or supply intentional system values with `defaultValues`.
 4. Run `scripts/k2forms.ps1 doctor --manifest <path>`, then `plan` and review categories, collisions, replacement, dependencies, framework, and verification scope.
 5. Deploy with `deploy --manifest <path> --confirm`; it verifies in the same run. Use separate `verify`/`inspect` only for drift diagnosis or evidence.
 6. Browser-test authenticated Create, Read/list-click, Update, Delete, lookup loading, responsive behavior, and any Worklist/task flow. Report GUIDs, versions, categories, Style Profile/theme mode, rule checks, URLs, and skipped tests.

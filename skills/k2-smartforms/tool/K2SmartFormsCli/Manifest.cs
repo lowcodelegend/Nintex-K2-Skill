@@ -112,6 +112,7 @@ namespace K2SmartFormsCli
                 if (view.Options == null) view.Options = new List<string>();
                 if (view.LookupControls == null) view.LookupControls = new List<LookupControlDefinition>();
                 if (view.ReadOnlyProperties == null) view.ReadOnlyProperties = new List<string>();
+                if (view.DefaultValues == null) view.DefaultValues = new Dictionary<string, string>();
                 if (view.HiddenVariables == null) view.HiddenVariables = new List<HiddenVariableDefinition>();
                 RequireArtifactName(view.Name, "view.name");
                 RejectVersionToken(view.Name, "view.name");
@@ -139,6 +140,17 @@ namespace K2SmartFormsCli
                 foreach (var property in view.ReadOnlyProperties)
                     if (!view.Properties.Contains(property, StringComparer.OrdinalIgnoreCase))
                         throw new CliException("View '" + view.Name + "' readOnlyProperties entry is not selected in view.properties: " + property);
+                foreach (var value in view.DefaultValues)
+                {
+                    if (string.IsNullOrWhiteSpace(value.Key))
+                        throw new CliException("View '" + view.Name + "' defaultValues contains an empty property name.");
+                    if (!view.Properties.Contains(value.Key, StringComparer.OrdinalIgnoreCase))
+                        throw new CliException("View '" + view.Name + "' defaultValues entry is not selected in view.properties: " + value.Key);
+                    if (value.Value == null)
+                        throw new CliException("View '" + view.Name + "' defaultValues must use an explicit string value for property '" + value.Key + "'.");
+                }
+                if (view.DefaultValues.Count > 0 && view.Type != "capture" && view.Type != "capture-list")
+                    throw new CliException("View '" + view.Name + "' defaultValues are supported only on capture or capture-list views.");
                 if ((view.Type == "list" || view.Type == "content") && string.IsNullOrWhiteSpace(view.DefaultListMethod))
                     view.DefaultListMethod = "List";
                 view.Area = NormalizeArea(view.Area, "view", view.Name);
@@ -164,6 +176,10 @@ namespace K2SmartFormsCli
                             throw new CliException("View '" + view.Name + "' cascading lookup parent is not selected in view.properties: " + control.Cascade.ParentProperty);
                     }
                 }
+                var lookupProperties = new HashSet<string>(view.LookupControls.Select(x => x.Property), StringComparer.OrdinalIgnoreCase);
+                var defaultedLookups = view.DefaultValues.Keys.Where(lookupProperties.Contains).ToList();
+                if (defaultedLookups.Count > 0)
+                    throw new CliException("View '" + view.Name + "' defaultValues cannot initialize lookup controls: " + string.Join(", ", defaultedLookups.ToArray()) + ". Keep the lookup editable; declarative default selection is not supported.");
             }
 
             var viewNames = new HashSet<string>(Application.Views.Select(x => x.Name), StringComparer.OrdinalIgnoreCase);
@@ -539,6 +555,7 @@ namespace K2SmartFormsCli
         public string Area { get; set; }
         public List<LookupControlDefinition> LookupControls { get; set; }
         public List<string> ReadOnlyProperties { get; set; }
+        public Dictionary<string, string> DefaultValues { get; set; }
         public int LayoutColumns { get; set; }
         public List<HiddenVariableDefinition> HiddenVariables { get; set; }
 
@@ -551,6 +568,7 @@ namespace K2SmartFormsCli
             Area = "application";
             LookupControls = new List<LookupControlDefinition>();
             ReadOnlyProperties = new List<string>();
+            DefaultValues = new Dictionary<string, string>();
             LayoutColumns = 2;
             HiddenVariables = new List<HiddenVariableDefinition>();
         }

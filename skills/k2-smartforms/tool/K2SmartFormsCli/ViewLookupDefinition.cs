@@ -16,7 +16,7 @@ namespace K2SmartFormsCli
 
         public static string Apply(string xml, ViewDefinition view, IDictionary<string, LookupRuntimeSource> sources)
         {
-            if (view.LookupControls.Count == 0 && view.ReadOnlyProperties.Count == 0) return xml;
+            if (view.LookupControls.Count == 0 && view.ReadOnlyProperties.Count == 0 && view.DefaultValues.Count == 0) return xml;
             var document = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
             foreach (var binding in view.LookupControls)
             {
@@ -51,13 +51,14 @@ namespace K2SmartFormsCli
                     SetProperty(properties, "ChildJoinProperty", binding.Cascade.ChildJoinProperty, binding.Cascade.ChildJoinProperty, binding.Cascade.ChildJoinProperty);
                 }
             }
+            ApplyDefaultValues(document, view);
             ApplyReadOnly(document, view);
             return document.ToString(SaveOptions.DisableFormatting);
         }
 
         public static void Verify(string xml, ViewDefinition view, IDictionary<string, LookupRuntimeSource> sources)
         {
-            if (view.LookupControls.Count == 0 && view.ReadOnlyProperties.Count == 0) return;
+            if (view.LookupControls.Count == 0 && view.ReadOnlyProperties.Count == 0 && view.DefaultValues.Count == 0) return;
             var document = XDocument.Parse(xml);
             foreach (var binding in view.LookupControls)
             {
@@ -67,6 +68,7 @@ namespace K2SmartFormsCli
                 var control = FindEditableControl(document, view, binding.Property);
                 if (!string.Equals((string)control.Attribute("Type"), "DropDown", StringComparison.OrdinalIgnoreCase))
                     throw new CliException("View '" + view.Name + "' property '" + binding.Property + "' is not a DropDown control.");
+                VerifyControlPlacement(document, control, view, binding.Property);
                 var properties = control.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
                 AssertProperty(properties, "DataSourceType", "SmartObject", view, binding);
                 AssertProperty(properties, "AssociationSO", source.SmartObjectGuid.ToString(), view, binding);
@@ -84,7 +86,32 @@ namespace K2SmartFormsCli
                     AssertProperty(properties, "ChildJoinProperty", binding.Cascade.ChildJoinProperty, view, binding);
                 }
             }
+            VerifyDefaultValues(document, view);
             VerifyReadOnly(document, view);
+        }
+
+        private static void ApplyDefaultValues(XDocument document, ViewDefinition view)
+        {
+            foreach (var value in view.DefaultValues)
+            {
+                var control = FindEditableControl(document, view, value.Key);
+                var properties = control.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
+                if (properties == null) { properties = new XElement(control.Name.Namespace + "Properties"); control.Add(properties); }
+                foreach (var old in properties.Elements().Where(x => x.Name.LocalName == "Property" && string.Equals(GetPropertyName(x), "Text", StringComparison.OrdinalIgnoreCase)).ToList()) old.Remove();
+                SetProperty(properties, "Text", value.Value, value.Value, value.Value);
+            }
+        }
+
+        private static void VerifyDefaultValues(XDocument document, ViewDefinition view)
+        {
+            foreach (var value in view.DefaultValues)
+            {
+                var control = FindEditableControl(document, view, value.Key);
+                VerifyControlPlacement(document, control, view, value.Key);
+                var properties = control.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
+                if (!string.Equals(GetPropertyValue(properties, "Text"), value.Value, StringComparison.Ordinal))
+                    throw new CliException("View '" + view.Name + "' property '" + value.Key + "' does not have the configured default value.");
+            }
         }
 
         private static void ApplyReadOnly(XDocument document, ViewDefinition view)
@@ -129,6 +156,17 @@ namespace K2SmartFormsCli
             if (candidates.Count != 1)
                 throw new CliException("Generated view '" + view.Name + "' has " + candidates.Count + " editable controls for lookup property '" + propertyName + "'; expected one. Candidates: " + string.Join("; ", candidates.Select(x => ((string)x.Attribute("Type") ?? "<type>") + "/" + (ChildValue(x, "Name") ?? (string)x.Attribute("ID"))).ToArray()));
             return candidates[0];
+        }
+
+        private static void VerifyControlPlacement(XDocument document, XElement control, ViewDefinition view, string propertyName)
+        {
+            var id = (string)control.Attribute("ID");
+            var placed = !string.IsNullOrWhiteSpace(id) && document.Descendants().Any(x =>
+                x.Name.LocalName == "Control" &&
+                !object.ReferenceEquals(x, control) &&
+                string.Equals((string)x.Attribute("ID"), id, StringComparison.OrdinalIgnoreCase));
+            if (!placed)
+                throw new CliException("View '" + view.Name + "' property '" + propertyName + "' has a configured control that is not placed in the live View layout.");
         }
 
         private static string ChildValue(XElement parent, string name)

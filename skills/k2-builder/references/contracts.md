@@ -103,8 +103,8 @@ For a shared form, never infer a default-state change. Choose and record one of:
 
 1. Run each changed specialist's `doctor` and `plan` once. For a complete deployment, prefer `k2build deploy -Confirm`; do not repeat successful checks merely to collect duplicate output.
 2. Verify the database objects, Service Instance, every generated SmartObject's `<root>\Data` placement, and representative SmartObject methods.
-3. Verify form/view deployment, selected Style Profile, `useLegacyTheme=false`, required method input mappings, and browser CRUD behavior.
-4. Verify workflow JSON shape, publication/version, SmartObject method mappings, dynamic recipients, task notification, and SmartForms integration.
+3. Verify form/view deployment, selected Style Profile, `useLegacyTheme=false`, required method input mappings (including explicit defaults for required read-only Create inputs), live dropdown bindings, and browser CRUD behavior.
+4. Verify workflow JSON shape, publication/version, SmartObject method mappings, dynamic recipients, task notification, and SmartForms integration; then re-run SmartForms verification against the final integrated Form definitions.
 5. Execute each end-to-end scenario from the ordinary Runtime entry URL when authenticated interaction is available. Treat an authentication redirect only as `reachable-authentication-required`; record interactive scenarios as skipped instead of spending retries trying to turn route reachability into browser proof.
 6. Correlate the saved request identifier, workflow instance, worklist task, selected action, and final status. Do not accept independent smoke tests as equivalent evidence.
 

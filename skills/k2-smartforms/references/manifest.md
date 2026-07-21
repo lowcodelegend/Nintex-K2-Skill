@@ -23,6 +23,7 @@
         "type": "capture",
         "properties": ["ExpenseId", "Title", "Amount", "Status"],
         "readOnlyProperties": ["ExpenseId", "Status"],
+        "defaultValues": { "Status": "Draft" },
         "layoutColumns": 4,
         "hiddenVariables": [{ "name": "dlbMode", "dataType": "Text", "defaultValue": "Create" }],
         "methods": ["Create", "Read", "Update", "Delete"],
@@ -185,6 +186,8 @@ For capture and capture-list views, `properties` must contain every required inp
 Supported view types are `capture`, `list`, `content`, and `capture-list`. Supported options are `display-controls`, `all-properties`, `all-methods`, `labels-left`, `colon-labels`, `toolbar`, and `editable`. Editable types require `editable`.
 
 `readOnlyProperties` names selected capture/capture-list properties whose controls remain visible with K2 `IsReadOnly=true`. Use it for generated keys, workflow status, audit timestamps/users, and calculated values. It does not supply required method inputs.
+
+`defaultValues` maps selected non-lookup capture/capture-list properties to literal initial control values. Use it when a required Create input is intentionally system-managed and read-only, such as `{ "Status": "Draft", "TotalAmount": "0" }`. The CLI writes and verifies the live control value and rejects a required read-only Create input without this mapping or a `form.masterDetail` foreign-key supply. Keep lookup/user-selectable values editable and never put secrets in defaults.
 
 `layoutColumns` defaults to `2`. Capture Views use bold labels and 40/60 label/control widths. Setting `4` repacks short field rows as label/control/label/control with 20/30/20/30 widths; Memo rows remain full-width. Do not use it merely to make a dense View smaller.
 
