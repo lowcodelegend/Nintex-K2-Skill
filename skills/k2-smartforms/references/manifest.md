@@ -186,7 +186,7 @@ Supported view types are `capture`, `list`, `content`, and `capture-list`. Suppo
 
 `readOnlyProperties` names selected capture/capture-list properties whose controls remain visible with K2 `IsReadOnly=true`. Use it for generated keys, workflow status, audit timestamps/users, and calculated values. It does not supply required method inputs.
 
-`layoutColumns` defaults to `2`. On capture Views, `4` repacks short field rows as label/control/label/control with 18/32/18/32 widths; Memo rows remain full-width. Do not use it merely to make a dense View smaller.
+`layoutColumns` defaults to `2`. Capture Views use bold labels and 40/60 label/control widths. Setting `4` repacks short field rows as label/control/label/control with 20/30/20/30 widths; Memo rows remain full-width. Do not use it merely to make a dense View smaller.
 
 `hiddenVariables` adds named Data Label controls inside a hidden `tblDebug` table:
 
@@ -213,6 +213,8 @@ Declare one master and one or more editable-list children on a Form:
   "masterUpdateMethod": "Update",
   "masterReadMethod": "Read",
   "saveButtonText": "Save Claim",
+  "successMessageTitle": "Expense claim saved",
+  "successMessageBody": "The expense claim and its line items were saved successfully.",
   "details": [
     {
       "view": "EXP.Claim Lines",
@@ -226,7 +228,7 @@ Declare one master and one or more editable-list children on a Form:
 }
 ```
 
-The master must be a `capture` View containing its key and selected Create/Update/Read methods. Each detail must be `capture-list` with `editable` and selected Create/Update/Delete/List methods. The CLI adds one Form-level button (`saveButtonText`, default `Save`) with Create and Update branches based on whether the master key is blank. Create maps the returned SmartObject identity to the master View field before child foreign-key use; Update processes `Changed`, `Added`, and `Removed` states. The CLI removes the detail View's unfiltered List initialization/refresh actions. After master Read, a separate Form handler tests that the master key is not blank and passes it to the detail foreign-key List input. The CLI hides master Create/Read/Update/Delete buttons plus detail Save/Refresh buttons, while retaining detail Add/Edit/Delete controls for item-state editing. Verification rejects unfiltered or ungated detail List actions, missing returned-key mappings, and persistence outside the Form Save event.
+The master must be a `capture` View containing its key and selected Create/Update/Read methods. Each detail must be `capture-list` with `editable` and selected Create/Update/Delete/List methods. The CLI adds one Form-level button (`saveButtonText`, default `Save`) with Create and Update branches based on whether the master key is blank. `successMessageTitle` and `successMessageBody` customize the small informational popup that executes last after either successful persistence branch; their defaults are `Saved` and `The record and its line items were saved successfully.` Create maps the returned SmartObject identity to the master View field before child foreign-key use; Update processes `Changed`, `Added`, and `Removed` states. The CLI removes the detail View's unfiltered List initialization/refresh actions. After master Read, a separate Form handler tests that the master key is not blank and passes it to the detail foreign-key List input. The CLI hides every generated master Item View button plus detail Save/Refresh buttons, while retaining detail Add/Edit/Delete controls for item-state editing. Verification rejects unfiltered or ungated detail List actions, visible bypass buttons, missing success feedback or returned-key mappings, and persistence outside the Form Save event.
 
 `capture-list` is a manifest intent: the CLI uses K2's List generator with editable mode, producing the native editable-list View and item-state rules. On complete solution forms, combine it with a list tab and `listClickTabNavigation` so a selected master is read before its child List runs.
 
@@ -268,6 +270,6 @@ The CLI validates that the installed environment registers the native `Worklist`
 
 `listClickTabNavigation` is a generic list/detail navigation contract. Each entry names a declared list `sourceView` and a different existing `targetTab`. It requires the `load-form-list-click` behavior. On the source View's `ListClick` rule, the CLI preserves the generated SmartObject `Read` action and appends one native synchronous `Focus` action targeting the destination tab Panel. Verification requires exactly one matching action and proves that it follows the Read. Use it when selecting an item should drill into a details/editor tab—for example, a workflow request list opening `Request Details`. Multiple list views may each target their own tab, but each source view may appear only once.
 
-Tabs must have stable, version-free names. Version 0.12 supports one Worklist tab per form. It loads the current K2 user's default worklist across processes; process-specific Worklist filters, workflow-specific SmartObjects, and fixed users are not configured.
+Tabs must have stable, version-free names. Version 0.13 supports one Worklist tab per form. It loads the current K2 user's default worklist across processes; process-specific Worklist filters, workflow-specific SmartObjects, and fixed users are not configured.
 
 When expected artifacts are omitted, verification defaults to every declared view and form. Verification checks tab order/content, list-click Read-before-tab-focus behavior, native Worklist properties, its click-to-open-task rule, and any resolved common framework's header-first/footer-last placement and titles, initialization bindings, server-load control targets/values/order, and explicit server-rule calls. Runtime routes use `<runtimeBaseUrl>/Runtime/Form/<URL-encoded-form-name>/`; an unauthenticated CLI may verify the route up to the environment's interactive authentication redirect, which is not an interactive Worklist test.

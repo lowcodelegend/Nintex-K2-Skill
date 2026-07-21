@@ -9,16 +9,19 @@ namespace K2SmartFormsCli
     {
         public static string Apply(string xml, ViewDefinition view, bool master, bool detail)
         {
-            if (!master && !detail && view.LayoutColumns != 4 && view.HiddenVariables.Count == 0) return xml;
             var document = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
-            if (view.LayoutColumns == 4) ApplyFourColumnLayout(document, view.Name);
+            if (view.Type == "capture")
+            {
+                if (view.LayoutColumns == 4) ApplyFourColumnLayout(document, view.Name);
+                else ApplyTwoColumnLayout(document, view.Name);
+            }
             if (view.HiddenVariables.Count > 0) AddHiddenVariables(document, view);
             foreach (var control in document.Descendants().Where(x => x.Name.LocalName == "Control"))
             {
                 var type = (string)control.Attribute("Type") ?? string.Empty;
+                if (string.Equals(type, "Label", StringComparison.OrdinalIgnoreCase)) SetBold(control);
                 var text = PropertyValue(control, "Text") ?? ChildValue(control, "Name") ?? string.Empty;
-                var hide = master && string.Equals(type, "Button", StringComparison.OrdinalIgnoreCase) &&
-                           new[] { "Create", "Read", "Update", "Delete" }.Any(x => text.StartsWith(x, StringComparison.OrdinalIgnoreCase));
+                var hide = master && string.Equals(type, "Button", StringComparison.OrdinalIgnoreCase);
                 hide = hide || detail && string.Equals(type, "ToolBarButton", StringComparison.OrdinalIgnoreCase) &&
                        (text.StartsWith("Save", StringComparison.OrdinalIgnoreCase) || text.StartsWith("Refresh", StringComparison.OrdinalIgnoreCase));
                 if (!hide) continue;
@@ -32,12 +35,17 @@ namespace K2SmartFormsCli
         public static void Verify(string xml, ViewDefinition view, bool master, bool detail)
         {
             var document = XDocument.Parse(xml);
-            if (view.LayoutColumns == 4)
+            if (view.Type == "capture")
             {
                 var body = FindBodyGrid(document, view.Name);
-                if (body.Elements().First(x => x.Name.LocalName == "Columns").Elements().Count() != 4)
-                    throw new CliException("View '" + view.Name + "' does not have the requested four-column layout.");
+                var expected = view.LayoutColumns == 4 ? new[] { "20%", "30%", "20%", "30%" } : new[] { "40%", "60%" };
+                var actual = body.Elements().First(x => x.Name.LocalName == "Columns").Elements()
+                    .Select(x => (string)x.Attribute("Size") ?? string.Empty).ToArray();
+                if (!actual.SequenceEqual(expected, StringComparer.OrdinalIgnoreCase))
+                    throw new CliException("View '" + view.Name + "' label/control column widths are " + string.Join("/", actual) + ", expected " + string.Join("/", expected) + ".");
             }
+            var labels = document.Descendants().Where(x => x.Name.LocalName == "Control" && string.Equals((string)x.Attribute("Type"), "Label", StringComparison.OrdinalIgnoreCase)).ToList();
+            if (labels.Any(x => !IsBold(x))) throw new CliException("View '" + view.Name + "' contains a label that is not bold.");
             if (view.HiddenVariables.Count > 0)
             {
                 var debug = document.Descendants().FirstOrDefault(x => x.Name.LocalName == "Control" && string.Equals(ChildValue(x, "Name"), "tblDebug", StringComparison.OrdinalIgnoreCase));
@@ -52,8 +60,7 @@ namespace K2SmartFormsCli
             {
                 var type = (string)control.Attribute("Type") ?? string.Empty;
                 var text = PropertyValue(control, "Text") ?? ChildValue(control, "Name") ?? string.Empty;
-                var targeted = master && string.Equals(type, "Button", StringComparison.OrdinalIgnoreCase) &&
-                               new[] { "Create", "Read", "Update", "Delete" }.Any(x => text.StartsWith(x, StringComparison.OrdinalIgnoreCase));
+                var targeted = master && string.Equals(type, "Button", StringComparison.OrdinalIgnoreCase);
                 targeted = targeted || detail && string.Equals(type, "ToolBarButton", StringComparison.OrdinalIgnoreCase) &&
                            (text.StartsWith("Save", StringComparison.OrdinalIgnoreCase) || text.StartsWith("Refresh", StringComparison.OrdinalIgnoreCase));
                 if (targeted && !string.Equals(PropertyValue(control, "IsVisible"), "false", StringComparison.OrdinalIgnoreCase)) offenders.Add(text);
@@ -67,11 +74,16 @@ namespace K2SmartFormsCli
             var grid = FindBodyGrid(document, viewName);
             var columns = grid.Elements().First(x => x.Name.LocalName == "Columns");
             var ns = grid.Name.Namespace;
-            columns.ReplaceNodes(
-                new XElement(ns + "Column", new XAttribute("ID", NewId()), new XAttribute("Size", "18%")),
-                new XElement(ns + "Column", new XAttribute("ID", NewId()), new XAttribute("Size", "32%")),
-                new XElement(ns + "Column", new XAttribute("ID", NewId()), new XAttribute("Size", "18%")),
-                new XElement(ns + "Column", new XAttribute("ID", NewId()), new XAttribute("Size", "32%")));
+            var existingColumns = columns.Elements().Where(x => x.Name.LocalName == "Column").ToList();
+            if (existingColumns.Count != 2) throw new CliException("Generated capture View '" + viewName + "' does not have the expected two-column source layout.");
+            SetColumnSize(document, existingColumns[0], "20%", 0);
+            SetColumnSize(document, existingColumns[1], "30%", 1);
+            var third = new XElement(ns + "Column", new XAttribute("ID", NewId()));
+            var fourth = new XElement(ns + "Column", new XAttribute("ID", NewId()));
+            columns.Add(third);
+            columns.Add(fourth);
+            SetColumnSize(document, third, "20%", 2);
+            SetColumnSize(document, fourth, "30%", 3);
             var controls = document.Descendants().First(x => x.Name.LocalName == "View").Elements().First(x => x.Name.LocalName == "Controls")
                 .Elements().Where(x => x.Name.LocalName == "Control").ToDictionary(x => (string)x.Attribute("ID"), StringComparer.OrdinalIgnoreCase);
             var rows = grid.Elements().First(x => x.Name.LocalName == "Rows");
@@ -88,6 +100,63 @@ namespace K2SmartFormsCli
                 var cells = row.Descendants().First(x => x.Name.LocalName == "Cells").Elements().ToList();
                 if (cells.Count == 2) cells[1].SetAttributeValue("ColumnSpan", "3");
             }
+        }
+
+        private static void ApplyTwoColumnLayout(XDocument document, string viewName)
+        {
+            var grid = FindBodyGrid(document, viewName);
+            var columns = grid.Elements().First(x => x.Name.LocalName == "Columns").Elements().Where(x => x.Name.LocalName == "Column").ToList();
+            if (columns.Count != 2) throw new CliException("Generated capture View '" + viewName + "' does not have the expected two-column layout.");
+            SetColumnSize(document, columns[0], "40%", 0);
+            SetColumnSize(document, columns[1], "60%", 1);
+        }
+
+        private static void SetColumnSize(XDocument document, XElement column, string size, int index)
+        {
+            column.SetAttributeValue("Size", size);
+            var root = document.Descendants().First(x => x.Name.LocalName == "View");
+            var controls = root.Elements().First(x => x.Name.LocalName == "Controls");
+            var id = (string)column.Attribute("ID");
+            var control = controls.Elements().FirstOrDefault(x => x.Name.LocalName == "Control" && string.Equals((string)x.Attribute("ID"), id, StringComparison.OrdinalIgnoreCase));
+            if (control == null)
+            {
+                controls.Add(Control(root.Name.Namespace, id, "Column", "Column" + index + " Column", "Size", size));
+                return;
+            }
+            var properties = control.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
+            if (properties == null) { properties = new XElement(root.Name.Namespace + "Properties"); control.Add(properties); }
+            SetProperty(properties, "Size", size);
+        }
+
+        private static void SetBold(XElement control)
+        {
+            var ns = control.Name.Namespace;
+            var styles = control.Elements().FirstOrDefault(x => x.Name.LocalName == "Styles");
+            if (styles == null)
+            {
+                styles = new XElement(ns + "Styles");
+                var properties = control.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
+                if (properties == null) control.Add(styles); else properties.AddBeforeSelf(styles);
+            }
+            var style = styles.Elements().FirstOrDefault(x => x.Name.LocalName == "Style" && string.Equals((string)x.Attribute("IsDefault"), "True", StringComparison.OrdinalIgnoreCase));
+            if (style == null)
+            {
+                style = new XElement(ns + "Style", new XAttribute("IsDefault", "True"));
+                styles.Add(style);
+            }
+            var font = style.Elements().FirstOrDefault(x => x.Name.LocalName == "Font");
+            if (font == null) { font = new XElement(ns + "Font"); style.AddFirst(font); }
+            var weight = font.Elements().FirstOrDefault(x => x.Name.LocalName == "Weight");
+            if (weight == null) font.Add(new XElement(ns + "Weight", "Bold")); else weight.Value = "Bold";
+        }
+
+        private static bool IsBold(XElement control)
+        {
+            return control.Elements().Where(x => x.Name.LocalName == "Styles").SelectMany(x => x.Elements())
+                .Where(x => x.Name.LocalName == "Style" && string.Equals((string)x.Attribute("IsDefault"), "True", StringComparison.OrdinalIgnoreCase))
+                .SelectMany(x => x.Elements().Where(y => y.Name.LocalName == "Font"))
+                .SelectMany(x => x.Elements().Where(y => y.Name.LocalName == "Weight"))
+                .Any(x => string.Equals(x.Value, "Bold", StringComparison.OrdinalIgnoreCase));
         }
 
         private static bool IsFieldPairRow(XElement row, IDictionary<string, XElement> controls)

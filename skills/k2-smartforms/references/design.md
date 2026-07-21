@@ -1,4 +1,4 @@
-# SmartForms v0.12 design guide
+# SmartForms v0.13 design guide
 
 ## CRUD shape
 
@@ -35,7 +35,7 @@ Declare the relationship on the Form. `k2forms` extends the generated Form rules
 3. Master Update batches child Update for `Changed`, Create for `Added`, and Delete for `Removed` rows.
 4. The detail View's generated unfiltered initialization/refresh List rules are removed. A separate Form handler runs only after master Read and only when the master key is not blank; it passes that key to the child List method as the foreign-key input.
 
-This follows K2's parent/child pattern: users stage lines with the editable-list Add/Edit/Delete controls, then persist the whole transaction through one Form-level Save button. A new/blank master must show an empty child list without invoking List; viewing an existing master must invoke exactly the filtered Form-level List path. The CLI hides master Create/Read/Update/Delete and detail Save/Refresh buttons so a partial or unfiltered View operation is not presented as a valid transaction. Never rely on a View rule to coordinate another View. Test creation with two rows, confirm the generated parent key was transferred before child persistence, create a second master, reload each and prove row isolation, then test one added, one changed, and one removed row.
+This follows K2's parent/child pattern: users stage lines with the editable-list Add/Edit/Delete controls, then persist the whole transaction through one Form-level Save button. A new/blank master must show an empty child list without invoking List; viewing an existing master must invoke exactly the filtered Form-level List path. Hide every generated master Item View button and the detail Save/Refresh controls so a partial or unfiltered View operation is not presented as a valid transaction; retain detail Add/Edit/Delete. End both successful Create and Update branches with a small informational popup after the persistence batch. Never rely on a View rule to coordinate another View. Test creation with two rows, confirm the generated parent key was transferred before child persistence, create a second master, reload each and prove row isolation, then test one added, one changed, and one removed row.
 
 ## Property selection
 
@@ -61,9 +61,9 @@ Unless a form has a concrete exception, `k2forms` reads the selected environment
 
 The discovered PSF convention uses `PSF.FrameworkHeader` plus `PSF.FrameworkFooter` and Style Profile `PSF UX v1`. When selected, the header instance name is exactly `Header`, its visible title is blank, and it is non-collapsible. Form server load first calls header `ServerPreRender`, then one transfer action sets the form name on `Main Header Data Label` and application name on `Sub Header Data Label`; those values are not header parameters. The footer remains last. Apply this only after live discovery and user selection.
 
-Capture-view options `editable`, `labels-left`, `colon-labels`, and `toolbar` produce a compact conventional editor. Use `toolbar` on list views.
+Capture-view options `editable`, `labels-left`, `colon-labels`, and `toolbar` produce a compact conventional editor. Use `toolbar` on list views. Generated labels are bold by default. A two-column capture layout uses 40% for labels and 60% for controls so input space is prioritized.
 
-A conventional K2 capture layout has two columns: label and control. Set `layoutColumns: 4` only when the form is wide and most adjacent fields are short, related values; this yields label/control/label/control. Memo/narrative rows remain full-width. Prefer the default two-column layout for long text, attachments, narrow task forms, mixed-height controls, or mobile-heavy use.
+A conventional K2 capture layout has two columns: label and control at 40/60. Set `layoutColumns: 4` only when the form is wide and most adjacent fields are short, related values; this yields label/control/label/control at 20/30/20/30. Memo/narrative rows remain full-width. Prefer the default two-column layout for long text, attachments, narrow task forms, mixed-height controls, or mobile-heavy use.
 
 Use `hiddenVariables` for rule state that must remain available to the Context Browser without appearing to users. The CLI creates hidden `tblDebug` with named Data Label controls. Use meaningful names such as `dlbMode`, `dlbValidationStatus`, or `dlbCalculatedTotal`; do not treat hidden labels as durable business storage, and do not put secrets in them.
 

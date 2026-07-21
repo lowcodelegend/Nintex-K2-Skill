@@ -194,6 +194,7 @@ namespace K2SmartFormsCli
             if (saveEvent == null) throw new CliException("K2 Form '" + formDefinition.Name + "' has no Form-level master-detail Save button rule.");
             VerifyBatch(form, saveEvent, masterInstance, relationship.Definition.MasterCreateMethod, relationship.Details, new[] { "Added" }, relationship.MasterKey, formDefinition.Name);
             VerifyBatch(form, saveEvent, masterInstance, relationship.Definition.MasterUpdateMethod, relationship.Details, new[] { "Changed", "Added", "Removed" }, relationship.MasterKey, formDefinition.Name);
+            VerifySuccessMessages(saveEvent, masterInstance, relationship, formDefinition.Name);
             var create = FindMethodActions(saveEvent, masterInstance, relationship.Definition.MasterCreateMethod, null).First();
             if (!HasMasterKeyResult(create, masterInstance, relationship.MasterKey.Id))
                 throw new CliException("K2 Form '" + formDefinition.Name + "' Form-level Create does not transfer the generated master key back to the master View field.");
@@ -294,9 +295,32 @@ namespace K2SmartFormsCli
                     actions.Add(BuildStateAction(ns, child, child.DeleteAction, "Removed", masterInstance, relationship.MasterKey, detailInstance));
                 }
             }
+            actions.Add(BuildSuccessMessage(ns, relationship.Definition.SuccessMessageTitle, relationship.Definition.SuccessMessageBody));
             return new XElement(ns + "Handler", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
                 new XElement(ns + "Properties", Property(ns, "HandlerName", "IfLogicalHandler", null, null), Property(ns, "Location", "form", null, null)),
                 new XElement(ns + "Conditions", BuildMasterKeyCondition(ns, masterInstance, relationship.MasterKey, !create)), actions);
+        }
+
+        private static XElement BuildSuccessMessage(XNamespace ns, string title, string body)
+        {
+            return new XElement(ns + "Action", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                new XAttribute("Type", "ShowMessage"), new XAttribute("ExecutionType", "Synchronous"),
+                new XElement(ns + "Properties",
+                    Property(ns, "Location", "Form", null, null),
+                    Property(ns, "MessageLocation", "Popup", null, null)),
+                new XElement(ns + "Parameters",
+                    MessageParameter(ns, "Size", "small"),
+                    MessageParameter(ns, "Type", "info"),
+                    MessageParameter(ns, "Title", title),
+                    MessageParameter(ns, "Body", body)));
+        }
+
+        private static XElement MessageParameter(XNamespace ns, string target, string value)
+        {
+            return new XElement(ns + "Parameter", new XAttribute("SourceID", "Sources"), new XAttribute("SourceType", "Value"),
+                new XAttribute("TargetID", target), new XAttribute("TargetName", target), new XAttribute("TargetType", "MessageProperty"),
+                new XElement(ns + "SourceValue", new XAttribute(XNamespace.Xml + "space", "preserve"),
+                    new XElement(ns + "Source", new XAttribute("SourceType", "Value"), value)));
         }
 
         private static XElement BuildFilteredListHandler(XElement form, ResolvedMasterDetailRules relationship, string masterInstance, string formName)
@@ -495,6 +519,36 @@ namespace K2SmartFormsCli
                     if (match == null) throw new CliException("K2 Form '" + formName + "' master method '" + masterMethod + "' is missing batch detail action " + child.ViewName + "/" + state + ".");
                 }
             }
+        }
+
+        private static void VerifySuccessMessages(XElement saveEvent, string masterInstance, ResolvedMasterDetailRules relationship, string formName)
+        {
+            foreach (var method in new[] { relationship.Definition.MasterCreateMethod, relationship.Definition.MasterUpdateMethod })
+            {
+                var master = FindMethodActions(saveEvent, masterInstance, method, null).FirstOrDefault();
+                if (master == null || master.Parent == null) throw new CliException("K2 Form '" + formName + "' has no " + method + " persistence branch for success feedback.");
+                var actions = master.Parent.Elements().Where(x => x.Name.LocalName == "Action").ToList();
+                var message = actions.LastOrDefault();
+                if (message == null || !string.Equals((string)message.Attribute("Type"), "ShowMessage", StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals((string)message.Attribute("ExecutionType"), "Synchronous", StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals(ReadProperty(message, "Location"), "Form", StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals(ReadProperty(message, "MessageLocation"), "Popup", StringComparison.OrdinalIgnoreCase) ||
+                    !HasMessageValue(message, "Type", "info") ||
+                    !HasMessageValue(message, "Title", relationship.Definition.SuccessMessageTitle) ||
+                    !HasMessageValue(message, "Body", relationship.Definition.SuccessMessageBody))
+                    throw new CliException("K2 Form '" + formName + "' " + method + " branch does not finish with the configured success popup.");
+            }
+        }
+
+        private static bool HasMessageValue(XElement action, string target, string expected)
+        {
+            var parameter = action.Elements().Where(x => x.Name.LocalName == "Parameters").SelectMany(x => x.Elements())
+                .FirstOrDefault(x => x.Name.LocalName == "Parameter" && string.Equals((string)x.Attribute("TargetType"), "MessageProperty", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals((string)x.Attribute("TargetID"), target, StringComparison.OrdinalIgnoreCase));
+            if (parameter == null) return false;
+            var value = string.Concat(parameter.Descendants().Where(x => x.Name.LocalName == "Source" &&
+                string.Equals((string)x.Attribute("SourceType"), "Value", StringComparison.OrdinalIgnoreCase)).Select(x => x.Value).ToArray());
+            return string.Equals(value, expected, StringComparison.Ordinal);
         }
 
         private static bool HasMasterKeyMapping(XElement action, string masterInstance, string masterFieldId, string target)

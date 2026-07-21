@@ -12,7 +12,7 @@ The target solution flow is:
 
 The SQL SmartObjects, SmartForms, and workflow skills should evolve from repeatable full generation/replacement into safe iterative reconcilers. Each tool should be able to import or discover the current artifact state, compare it semantically with manifest intent, preview a dependency-aware patch, modify only tool-owned elements, preserve compatible unmanaged Designer work, detect drift and edit conflicts, verify the result, and retain an export/version checkpoint for rollback. This is a mid-horizon goal, not a capability of the current releases.
 
-## K2 solution builder — v0.18.2 isolated master-detail loading implemented
+## K2 solution builder — v0.18.3 master-detail feedback and presentation implemented
 
 The `k2-builder` meta-skill defines a solution manifest, dependency-ordered specialist plan, cross-artifact contracts, workflow entry-state policy, lookup/administration policy, approval-matrix contract, end-to-end verification gates, and deployment-ledger shape. Its planner cross-checks SQL master-detail relationships against capture/editable-list Form contracts. Its `k2env` CLI persists non-secret environment Style Profile/common-framework contracts and now inventories existing Form/View prefixes plus reserves each 3–4 letter solution code to one solution name.
 
@@ -39,12 +39,13 @@ Next increments:
 
 Create advanced/composite SmartObjects with controlled names, properties, methods, defaults, associations, and mappings to service objects. Cover cases where automatic generation is too coarse.
 
-### 3. K2 SmartForms builder — v0.12.1 gated master-detail loading implemented
+### 3. K2 SmartForms builder — v0.13 master-detail feedback and presentation implemented
 
-The tool creates checked-in capture/list/content/editable-list views and multi-view forms using supported K2 APIs. It creates one Form-level master-detail Save transaction with returned-key transfer and child item-state persistence. Detail Views no longer inherit an unfiltered List-on-initialize path: loading occurs only after master Read, behind a nonblank-key condition, with the key passed to the foreign-key input. Verification rejects every unfiltered or ungated List action. It also supports cascading dropdowns, read-only properties, four-column capture layouts, and hidden `tblDebug` variables. The bundled expense-claim fixture expresses the cross-layer contract and a disposable live regression proved its generated definitions.
+The tool creates checked-in capture/list/content/editable-list views and multi-view forms using supported K2 APIs. Its Form-level master-detail transaction includes returned-key transfer, child item-state persistence, guarded/filtered loading, a configurable final success popup, and structural hiding of generated master buttons plus detail Save/Refresh. Generated labels are bold; capture grids use verified 40/60 or 20/30/20/30 label/control widths. It also supports cascading dropdowns, read-only properties, and hidden `tblDebug` variables. The bundled expense-claim fixture expresses the cross-layer contract and a disposable live regression proved its deployed definitions.
 
 Next increments:
 
+- Add a declarative generic Form command bar so ordinary non-master-detail CRUD forms can also replace View-level persistence buttons safely; key and method selection must remain explicit for composite/natural-key SmartObjects.
 - Add multi-property display templates, default sorting, active-row filters, and clearing/refresh rules for changed cascade parents.
 - Control required/hidden business fields and validation messages beyond the implemented read-only/variable controls.
 - Add declarative Form-state/status conditions for stage-specific View visibility and enablement; until then, prefer separate stage Forms when the difference is material and report manual visibility rules as errata.

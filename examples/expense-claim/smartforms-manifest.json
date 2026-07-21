@@ -68,6 +68,9 @@
           "masterCreateMethod": "Create",
           "masterUpdateMethod": "Update",
           "masterReadMethod": "Read",
+          "saveButtonText": "Save Claim",
+          "successMessageTitle": "Expense claim saved",
+          "successMessageBody": "The expense claim and its line items were saved successfully.",
           "details": [
             {
               "view": "EXP.Claim Lines",

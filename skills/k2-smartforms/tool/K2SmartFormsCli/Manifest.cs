@@ -249,6 +249,9 @@ namespace K2SmartFormsCli
             Require(relationship.MasterCreateMethod, "form.masterDetail.masterCreateMethod");
             Require(relationship.MasterUpdateMethod, "form.masterDetail.masterUpdateMethod");
             Require(relationship.MasterReadMethod, "form.masterDetail.masterReadMethod");
+            Require(relationship.SaveButtonText, "form.masterDetail.saveButtonText");
+            Require(relationship.SuccessMessageTitle, "form.masterDetail.successMessageTitle");
+            Require(relationship.SuccessMessageBody, "form.masterDetail.successMessageBody");
             if (!form.Views.Contains(relationship.MasterView, StringComparer.OrdinalIgnoreCase))
                 throw new CliException("Form '" + form.Name + "' masterDetail.masterView is not present on the form: " + relationship.MasterView);
             var master = views.Single(x => string.Equals(x.Name, relationship.MasterView, StringComparison.OrdinalIgnoreCase));
@@ -603,6 +606,8 @@ namespace K2SmartFormsCli
         public string MasterUpdateMethod { get; set; }
         public string MasterReadMethod { get; set; }
         public string SaveButtonText { get; set; }
+        public string SuccessMessageTitle { get; set; }
+        public string SuccessMessageBody { get; set; }
         public List<MasterDetailChildDefinition> Details { get; set; }
 
         public MasterDetailFormDefinition()
@@ -611,6 +616,8 @@ namespace K2SmartFormsCli
             MasterUpdateMethod = "Update";
             MasterReadMethod = "Read";
             SaveButtonText = "Save";
+            SuccessMessageTitle = "Saved";
+            SuccessMessageBody = "The record and its line items were saved successfully.";
             Details = new List<MasterDetailChildDefinition>();
         }
     }

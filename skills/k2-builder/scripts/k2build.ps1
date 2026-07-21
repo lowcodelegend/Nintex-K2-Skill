@@ -13,7 +13,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if ($Command -eq 'version') {
-    Write-Output 'k2build 0.18.2'
+    Write-Output 'k2build 0.18.3'
     exit 0
 }
 

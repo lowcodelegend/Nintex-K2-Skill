@@ -494,7 +494,7 @@ namespace K2SmartFormsCli
             request.AllowAutoRedirect = false;
             request.Timeout = 30000;
             request.ReadWriteTimeout = 30000;
-            request.UserAgent = "k2forms/0.12.1";
+            request.UserAgent = "k2forms/0.13.0";
             try
             {
                 using (var response = (HttpWebResponse)request.GetResponse())
