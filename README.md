@@ -4,7 +4,12 @@ Build self-hosted K2 Five applications from manifests, not clicks. Four portable
 
 Windows x64 only. Requires K2 Five installed locally, PowerShell 5.1+, .NET Framework, SQL Server access, and normally integrated AD authentication. It does not target Nintex Automation Cloud or legacy K2 Studio workflows.
 
+> [!WARNING]
+> Use this toolkit only in a K2 development environment, preferably a dedicated single-user VM. Generation, replacement, workflow publication, and cleanup can make broad changes to K2 and application databases; it is not intended to run directly against shared test, staging, or production environments. Install and run Codex or Claude Code on the K2 VM itself so the agent can use the locally installed K2 assemblies, Windows identity, registry configuration, IIS metadata, and management endpoints.
+
 ## Install
+
+Perform these steps from PowerShell on the K2 development VM after installing Codex or Claude Code there.
 
 Clone and package the suite:
 
