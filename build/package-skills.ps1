@@ -94,10 +94,16 @@ function Test-ExcludedRelativePath {
     param([Parameter(Mandatory = $true)][string]$RelativePath)
     $normalized = $RelativePath.Replace('/', '\')
     $segments = $normalized.Split([char[]]'\', [StringSplitOptions]::RemoveEmptyEntries)
+    if ($segments.Count -gt 0 -and $segments[0] -eq 'tool') {
+        return $true
+    }
     if ($segments | Where-Object { $_ -in @('.git', '.vs', '.vscode', '.idea', 'bin', 'obj', 'TestResults', '.tmp', '.tools') }) {
         return $true
     }
     $leaf = if ($segments.Count -eq 0) { '' } else { $segments[-1] }
+    if ($normalized -match '^scripts\\build\.ps1$') {
+        return $true
+    }
     if ($leaf -match '^(Thumbs\.db|Desktop\.ini)$' -or
         $leaf -match '\.(user|suo|pdb|trx|local\.json|secrets\.json)$' -or
         $leaf -match '^\.env(?:\..*)?$') {
@@ -147,6 +153,8 @@ function Assert-PackageContent {
     param([Parameter(Mandatory = $true)][string]$StageRoot)
     $forbidden = @(Get-ChildItem -LiteralPath $StageRoot -Recurse -File -Force | Where-Object {
         $_.Name -match '^SourceCode\..*\.dll$' -or
+        $_.Name -match '\.(cs|csproj|sln|resx)$' -or
+        $_.FullName -match '[\\/]scripts[\\/]build\.ps1$' -or
         $_.Name -match '\.(secrets\.json|local\.json|user|suo|pdb|trx)$' -or
         $_.Name -match '^\.env(?:\..*)?$'
     })

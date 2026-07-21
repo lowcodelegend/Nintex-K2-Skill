@@ -6,8 +6,10 @@ Maintain suite and skill versions in `release/skills.json`. Each skill entry dec
 
 - The skill name, semantic version, and target platform.
 - An optional build script and named PowerShell parameters.
-- Build outputs to add after ordinary `bin` and `obj` directories are excluded.
+- Build outputs to add after the entire development `tool` tree is excluded.
 - An optional executable version check that prevents release metadata and tool versions from drifting.
+
+Release archives are operational packages, not development checkouts. They include the declared compiled executables/configuration, runtime wrappers, capability references, and examples. They exclude .NET source, project/solution/resource files, and `scripts/build.ps1`. Source and build support remain in the Git repository for explicit tool development.
 
 Do not declare or package K2's `SourceCode.*.dll` assemblies. The CLIs resolve those proprietary assemblies from the target K2 installation.
 
@@ -38,7 +40,7 @@ release.json
 SHA256SUMS
 ```
 
-The packager validates skill metadata, builds declared tools, verifies tool versions, rejects forbidden files, creates sorted ZIP entries with fixed timestamps, and writes SHA-256 checksums. The suite archive contains all selected skills; with one selected skill it is intentionally content-identical to that skill archive.
+The packager validates skill metadata, builds declared tools, verifies tool versions, rejects source and other forbidden files, creates sorted ZIP entries with fixed timestamps, and writes SHA-256 checksums. The suite archive contains all selected skills; with one selected skill it is intentionally content-identical to that skill archive.
 
 ## Install packages
 
@@ -81,5 +83,6 @@ Use `-BackupId '<directory-name>'` to select a specific backup. Rollback preserv
 3. Commit the release changes.
 4. Run the packager without `-AllowDirty`.
 5. Inspect `release.json` and verify `SHA256SUMS` independently.
-6. Install the suite ZIP into a disposable root and run each packaged tool's version/doctor command.
-7. Publish the ZIPs, checksum sidecars, release manifest, and `SHA256SUMS` together.
+6. Confirm the ZIP contains no `.cs`, `.csproj`, `.sln`, `.resx`, or `scripts/build.ps1` entries.
+7. Install the suite ZIP into a disposable root and run each packaged tool's version/doctor command.
+8. Publish the ZIPs, checksum sidecars, release manifest, and `SHA256SUMS` together.

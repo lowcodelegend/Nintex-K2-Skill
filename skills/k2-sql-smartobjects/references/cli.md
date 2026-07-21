@@ -1,13 +1,12 @@
 # k2sql CLI reference
 
-## Build and launch
+## Launch
 
 ```powershell
-& '<skill-root>\scripts\build.ps1' -Configuration Release
 & '<skill-root>\scripts\k2sql.ps1' <command> --manifest '<path>'
 ```
 
-The wrapper builds on first use. Set `K2_INSTALL_DIR` only if K2 is installed outside its registered/default location. Set `K2SQL_DEBUG=1` to print full exception details.
+The release includes the compiled CLI. Set `K2_INSTALL_DIR` only if K2 is installed outside its registered/default location. Set `K2SQL_DEBUG=1` to print full exception details. If the executable is absent, reinstall the release; do not rebuild or investigate implementation source during normal use.
 
 ## Commands
 

@@ -17,10 +17,9 @@ Deploy a SQL model and its K2 SQL Server Service Instance as one repeatable unit
    Prefer lookup tables plus foreign keys for user-selected controlled values. Keep code/text foreign keys for small applications unless normalization is requested; prefer surrogate lookup keys for complex applications. Coordinate lookup controls and administrative UX with `$k2-smartforms`.
    When requirements contain repeatable line items/details, create a separate detail table rather than flattening or omitting the collection. Give both tables single stable primary keys, make the master key generated (normally `IDENTITY`), add the child foreign key and a leading index, then declare the relationship under `masterDetails`. Coordinate its editable-list and Form-level save/load rules with `$k2-smartforms`.
 4. Keep passwords out of JSON and SQL. Name an environment variable in the manifest when explicit credentials are unavoidable.
-5. Build and diagnose the CLI:
+5. Diagnose the target with the bundled compiled CLI:
 
    ```powershell
-   & '<skill-root>\scripts\build.ps1' -Configuration Release
    & '<skill-root>\scripts\k2sql.ps1' doctor --manifest '<manifest.json>'
    ```
 
@@ -66,3 +65,5 @@ The CLI performs deployment in this order:
 It discovers K2 from `K2_INSTALL_DIR`, the SourceCode registry key, or `C:\Program Files\K2`. It builds as a 64-bit .NET Framework executable and resolves the installed K2 client assemblies at runtime.
 
 Read [references/cli.md](references/cli.md) for commands, exit codes, authentication, and cleanup details. The sibling builder bundles `request-management` for SQL-only work and `expense-claim` for a verified master-detail model.
+
+Treat this document, the linked references, CLI `help`, manifests, plans, and structured command output as the capability contract. During ordinary use, do not search for C# source, inspect/decompile the executable, or infer unsupported behavior from implementation details. The operational package intentionally excludes .NET source, project files, and build scripts. If the documented CLI cannot express a requirement, report it as unsupported or coordinate a documented manual step. Clone `https://github.com/lowcodelegend/Nintex-K2-Skill` only when the user explicitly asks to extend or repair the CLI; never develop inside the installed skill.

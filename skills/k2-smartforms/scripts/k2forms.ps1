@@ -9,7 +9,12 @@ $ErrorActionPreference = 'Stop'
 $skillRoot = Split-Path -Parent $PSScriptRoot
 $executable = Join-Path $skillRoot 'tool\K2SmartFormsCli\bin\Release\k2forms.exe'
 if ($Rebuild -or -not (Test-Path -LiteralPath $executable -PathType Leaf)) {
-    & (Join-Path $PSScriptRoot 'build.ps1') -Configuration Release -Clean:$Rebuild | Out-Host
+    $buildScript = Join-Path $PSScriptRoot 'build.ps1'
+    $project = Join-Path $skillRoot 'tool\K2SmartFormsCli\K2SmartFormsCli.csproj'
+    if (-not (Test-Path -LiteralPath $buildScript -PathType Leaf) -or -not (Test-Path -LiteralPath $project -PathType Leaf)) {
+        throw 'This operational skill package does not include .NET source or build support. Reinstall a complete release, or clone https://github.com/lowcodelegend/Nintex-K2-Skill only when explicitly extending the CLI.'
+    }
+    & $buildScript -Configuration Release -Clean:$Rebuild | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "k2forms build failed with exit code $LASTEXITCODE." }
 }
 

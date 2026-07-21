@@ -139,6 +139,9 @@ Claude: /k2-builder create an expense approval solution with code EXP. Plan,
 
 - Build deterministic per-skill and suite ZIPs with SHA-256 sidecars and a release manifest.
 - Install atomically to Codex, Claude Code, or a custom skill root with automatic backup and rollback.
+- Ship operational skills with compiled CLIs, capability references, wrappers, and examples—but without C# source, project files, or build scripts.
+
+Installed skills are deliberately an operational boundary: agents should use the documented manifest/CLI capabilities and report unsupported requirements instead of reading implementation internals. Source remains available in this repository for explicit CLI/skill development; do that work in a repository clone and install a newly packaged release, never by editing an active skill installation.
 
 The tools never modify the K2 database directly. Mutating commands require explicit confirmation. Generated UX remains a baseline that should be reviewed in Designer and exercised in an authenticated browser before production use.
 

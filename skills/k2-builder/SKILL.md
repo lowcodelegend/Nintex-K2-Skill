@@ -80,4 +80,8 @@ For the known PSF bundle, only after live discovery confirms all three artifacts
 
 ## Capability boundary
 
+Treat the installed skills as an operational product. Use `SKILL.md`, the linked references, CLI `help`, manifests, examples, plans, and structured command output as the complete capability contract. Do not search for or inspect C# implementation files, decompile binaries, trace provider internals, or locate a repository checkout during an ordinary solution build. If a requested behavior is absent from the documented contract, report it as unsupported or errata instead of reverse-engineering an ad hoc path.
+
+The release package intentionally contains compiled .NET CLIs but no .NET source, project files, or build scripts. Only when the user explicitly asks to extend or repair a CLI may an agent clone `https://github.com/lowcodelegend/Nintex-K2-Skill`, work and test in that development checkout, and produce a new packaged release. Never self-modify the installed skill directory.
+
 Treat current specialist deployment as repeatable generation/replacement, not ownership-aware semantic merge. Never promise preservation of arbitrary manual Designer edits. Iterative reconciliation is a mid-horizon roadmap capability. Do not edit K2 databases directly or substitute legacy XML workflow tooling for the HTML5 JSON workflow path.

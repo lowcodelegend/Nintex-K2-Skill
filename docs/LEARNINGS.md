@@ -1,5 +1,7 @@
 # K2 Five environment and builder learnings
 
+- Installed skills work best as operational packages: ship concise capability contracts, examples, wrappers, and compiled CLIs, but omit .NET source/projects/build scripts. This prevents ordinary solution-generation agents from spending tokens reverse-engineering internals or inventing unsupported paths. Explicit CLI expansion belongs in a repository clone followed by a new package/install cycle.
+
 ## Fast generation and recovery
 
 - Render every View definition that can be rendered before deleting or replacing live artifacts. A generation defect should fail before K2 mutation whenever dependencies permit.

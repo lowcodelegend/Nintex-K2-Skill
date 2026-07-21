@@ -33,7 +33,9 @@ Use `workflow.kind=start-end` for the minimal smoke-test baseline. Use `json-fil
 
 The CLI creates the solution-specific `application.workflowCategoryName` subcategory beneath an existing application root. When omitted it defaults to `<application root leaf> WFs`; complete-solution manifests must declare that value explicitly. It rejects generic `Workflow`/`Workflows` category names, will not create an application root or version folder, and refuses replacement unless `replaceExisting=true`.
 
-Read [references/design.md](references/design.md) before extending generated steps or touching provider internals. Read [references/cli.md](references/cli.md) for commands and cleanup behavior.
+Read [references/design.md](references/design.md) before selecting among the supported generated steps. Read [references/cli.md](references/cli.md) for commands and cleanup behavior.
+
+Treat this document, the linked references, CLI `help`, manifests, rendered JSON, plans, and structured command output as the capability contract. During ordinary use, do not search for C# source, inspect/decompile the executable, or reverse-engineer SmartForms/provider internals. The operational package intentionally excludes .NET source, project files, and build scripts. If the manifest contract cannot express a workflow or integration, report it as unsupported or errata. Clone `https://github.com/lowcodelegend/Nintex-K2-Skill` only when the user explicitly asks to extend or repair the CLI; never develop inside the installed skill.
 
 ## Safety
 

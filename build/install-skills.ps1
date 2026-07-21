@@ -65,6 +65,8 @@ function Get-SkillName {
     }
     $forbidden = @(Get-ChildItem -LiteralPath $SkillDirectory -Recurse -File -Force | Where-Object {
         $_.Name -match '^SourceCode\..*\.dll$' -or
+        $_.Name -match '\.(cs|csproj|sln|resx)$' -or
+        $_.FullName -match '[\\/]scripts[\\/]build\.ps1$' -or
         $_.Name -match '\.(secrets\.json|local\.json|user|suo|pdb|trx)$' -or
         $_.Name -match '^\.env(?:\..*)?$'
     })
