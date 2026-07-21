@@ -17,7 +17,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if ($Command -eq 'version') {
-    Write-Output 'k2build 0.20.0'
+    Write-Output 'k2build 0.20.2'
     return
 }
 
@@ -696,7 +696,12 @@ if ($Command -in @('deploy', 'verify', 'cleanup')) {
         if ($Item.skill -eq 'k2-workflows') {
             $arguments = @($Action, $Item.manifest)
             if ($Action -in @('deploy', 'cleanup')) { $arguments += '--confirm' }
-            if ($Action -eq 'cleanup') { $arguments += '--delete-deployed' }
+            if ($Action -eq 'cleanup') {
+                $arguments += '--delete-deployed'
+                $workflowName = ([string]$Item.component) -replace '^workflow:', ''
+                $ownedIntegration = @($result.resolvedPolicies | Where-Object { $_.workflow -eq $workflowName -and $formNames -contains $_.form })
+                if ($ownedIntegration.Count -eq 1) { $arguments += '--defer-smartforms-integration' }
+            }
         }
         else {
             $arguments = @($Action, '--manifest', $Item.manifest)

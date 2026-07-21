@@ -5,45 +5,33 @@ description: Build, publish, inspect, verify, and clean up K2 Five HTML5 Workflo
 
 # K2 Five workflows
 
-Use `scripts/k2wf.ps1`; do not write to the K2 database or invoke legacy workflow authoring assemblies. This skill targets the HTML5 Workflow Designer JSON model and its `SaveKprx` publication path.
+Use `scripts/k2wf.ps1` for the HTML5 Designer JSON/`SaveKprx` path; never author through legacy workflow APIs or edit K2 databases.
 
 ## Workflow
 
-1. If the installed sibling `k2-builder` skill provides `scripts/k2env.ps1`, validate and load its selected/default environment profile before performing environment discovery; explicit requirements override profile values. Then run `scripts/k2wf.ps1 doctor` and report the detected identity and JSON authoring model.
-2. Read [references/manifest.md](references/manifest.md) and create a manifest. Keep names and category paths free of version numbers; K2 owns artifact versions.
-   When this belongs to a complete solution, prefix the manifest, category leaf, workflow, Designer-visible step names, referenced SmartObject/form, and generated Start/Task states with the solution's `<CODE>.` namespace. Set `application.workflowCategoryName` to `<application root leaf> WFs`; never use `Workflow` or `Workflows` as the workflow category name. Leave standard action/status values unprefixed.
-3. Run `plan`, review exact category/name/action, then run `render` when JSON review is useful.
-4. Run `deploy ... --confirm` only after the plan. It deploys and verifies in one command. A published workflow creates a K2 runtime major version; a draft remains designer JSON only.
-5. Use separate `inspect` or `verify` only for drift diagnosis or evidence collection. Deployment verification proves saved JSON, the runtime process definition, assignment/topology, SmartForms states/defaults, and that the integrated form is checked in. Deployment automatically checks in a form changed by integration when the current identity owns its checkout; if another identity owns it, stop with that owner rather than publishing unreviewed work.
-6. For an authorized disposable workflow, run `cleanup ... --confirm --delete-deployed`. Cleanup checks runtime instances once and is idempotent when both Designer/runtime definitions are absent; do not follow success with redundant `inspect`.
+1. If `$k2-builder` is installed, validate its selected environment profile before discovery. Run `doctor` and report the resolved identity and authoring model.
+2. Read [manifest.md](references/manifest.md) and [design.md](references/design.md). Create a stable, version-free manifest. For complete solutions use the shared `<CODE>.` namespace and workflow child `<application root leaf> WFs`; never `Workflow` or `Workflows`.
+3. Run `plan`; use `render` only when JSON review is useful. Review category/name, status mappings, recipients, task actions/notification, requested versus effective assignment, SmartForm/rules, and primary request reference.
+4. Run `deploy ... --confirm`; it saves/publishes, integrates SmartForms, verifies, checks in a same-owner Form draft, and releases the workflow lock. Use separate `inspect`/`verify` only for drift or evidence.
+5. For an authorized disposable workflow, run `cleanup ... --confirm --delete-deployed`. It checks instances once, refuses live instances, removes integration, deletes runtime definitions without log data, and removes Designer JSON. Builder cleanup may defer integration only when it will delete the exact manifest-owned Form next.
 
-`deploy` checks in its integrated SmartForm, then explicitly releases the HTML5 designer lock with K2's resolved AD identity after every successful save/publish. If a prior tool/browser session left a workflow locked, run `unlock <manifest> --confirm`, then refresh the Designer page. Do not inspect through `GetUserProcessKprx` or `GetProcessJson`: on K2 Five 5.10 those reads check the process out again. The CLI's read commands use `GetProcessInfo` plus `GetProcessDefinitionPerVersion` instead.
-
-For an existing tool-owned SmartForms Start integration, `deploy` compares the runtime default flag with `makeStartStateDefault`. When they differ, it updates that flag in place using the existing state, rule, handler, action, and item-reference IDs before publishing (to avoid the form checkout created by `SaveKprx`), then verification requires exactly one default state when Start is default.
+If a browser/tool session left a lock, run `unlock <manifest> --confirm` and refresh Designer. Do not inspect with `GetUserProcessKprx` or `GetProcessJson`; on K2 Five 5.10 those reads reacquire the lock. CLI reads are non-locking.
 
 ## Generated workflows
 
-Use `workflow.kind=request-approval` for the preferred 101 baseline: SmartForm Start → Pending status plus Originator email → SmartForms User Task → Decision → Approved or Rejected status plus Originator email. Without `workflow.approvalMatrix`, the CLI forces the task's effective destination to workflow Originator (`ProcessOriginatorFQN`) for testing/demo even when `userTask.assignees` records a different production requirement. Configure exactly two task actions and the pending/approved/rejected status values. The CLI discovers the form's primary Create reference, creates a primary workflow item reference, embeds a native SmartForm task reference, and uses K2's own integration providers to add workflow-specific Start and Task states/rules. Existing form states and rules are preserved.
+- `request-approval` is the preferred baseline: SmartForm Start → Pending status/Originator email → User Task → decision → Approved or Rejected status/Originator email. Configure exactly two actions and all three status values.
+- Without `approvalMatrix`, generated human tasks route effectively to workflow Originator (`ProcessOriginatorFQN`) for test/demo, while `userTask.assignees` records production intent. Preserve the required placeholder erratum.
+- With threshold, dimension, or stage routing, read [approval-matrices.md](references/approval-matrices.md). The resolver's `ApproverValue` drives the task and Approve loops until `HasApprover=false`; report any `$designer` seeds instead of the direct-Originator erratum.
+- Use `$environment:From Address` and `$originator` for demo dynamic fields. Prefer built-in `userTask.notification`; its templates support `{{request.<Property>}}`, `{{task.participantName}}`, and `{{task.worklistLink}}`.
+- Prefer native SmartForms integration because it creates StartProcess, LoadProcess, and ActionProcess rules. The Form must expose the request SmartObject as its primary Create reference. Deployment reconciles an existing tool-owned Start default in place and requires Task never be default.
+- Use `start-end` only for a minimal smoke test. Use `json-file` only for compatible HTML5 Designer JSON.
 
-For threshold, department, other dimensional, or multi-stage routing, read [references/approval-matrices.md](references/approval-matrices.md) and set `workflow.approvalMatrix`. The generated task destination then comes from the resolver's `ApproverValue`, not the Originator override. The built-in task notification follows that resolved participant. Matrix seed values may still resolve to the deploying designer for test/demo, so preserve the corresponding SQL/builder erratum.
+## Safety and boundary
 
-Use `$environment:From Address` and `$originator` for the effective test/demo dynamic fields. Keep the manifest's requested assignee as production-intent documentation, but do not claim it is active. Enable `userTask.notification` for K2's built-in task email, not a separate Email step. Notification templates support `{{request.<Property>}}`, `{{task.participantName}}`, and `{{task.worklistLink}}`; request tokens resolve against the primary SmartForms item reference. A literal `formUrl` remains available only as the lower-level fallback when `workflow.smartForms` is omitted. Prefer native SmartForms integration because it adds the StartProcess, LoadProcess, and ActionProcess rules required by K2's workflow wizard contract.
+- Use integrated AD authentication; never store credentials.
+- Treat deploy/cleanup as confirmed mutations. Preserve existing workflows unless replacement is explicit.
+- SmartForms integration is additive and mutates the selected Form; preserve business-critical Forms before first integration and verify generated states.
+- Cleanup is idempotent, bounded when recovering same-owner Form drafts, and refuses foreign checkouts or workflows with runtime instances.
+- The solution root must already exist. The CLI creates only its workflow child and refuses replacement unless `replaceExisting=true`.
 
-Use `workflow.kind=start-end` for the minimal smoke-test baseline. Use `json-file` only with a definition produced by this K2 Five HTML5 designer schema; the CLI rejects non-JSON/legacy roots and normalizes the root name.
-
-The CLI creates the solution-specific `application.workflowCategoryName` subcategory beneath an existing application root. When omitted it defaults to `<application root leaf> WFs`; complete-solution manifests must declare that value explicitly. It rejects generic `Workflow`/`Workflows` category names, will not create an application root or version folder, and refuses replacement unless `replaceExisting=true`.
-
-Read [references/design.md](references/design.md) before selecting among the supported generated steps. Read [references/cli.md](references/cli.md) for commands and cleanup behavior.
-
-Treat this document, the linked references, CLI `help`, manifests, rendered JSON, plans, and structured command output as the capability contract. During ordinary use, do not search for C# source, inspect/decompile the executable, or reverse-engineer SmartForms/provider internals. The operational package intentionally excludes .NET source, project files, and build scripts. If the manifest contract cannot express a workflow or integration, report it as unsupported or errata. Clone `https://github.com/lowcodelegend/Nintex-K2-Skill` only when the user explicitly asks to extend or repair the CLI; never develop inside the installed skill.
-
-## Safety
-
-- Use integrated AD authentication; never store credentials in manifests, scripts, output, or commits.
-- Treat `deploy` and `cleanup` as mutations requiring explicit confirmation.
-- Cleanup refuses workflows with runtime instances and never deletes workflow log/instance data.
-- Preserve an existing workflow unless replacement is explicitly requested and reviewed.
-- Review email recipients, built-in task-notification content/tokens, task assignment, target form/states, selected Start rule, status values, and primary SmartObject reference before publication.
-- Emit and preserve a `placeholder` erratum for every direct human task: list requested assignees, effective `$originator` routing, impact, and the need to restore production assignment before go-live. For matrix-routed tasks, instead carry forward `approval-matrix-demo-identities` whenever any seed uses `$designer`.
-- SmartForms integration mutates the selected form additively. Export or otherwise preserve business-critical forms before the first automated integration, and verify the generated workflow-specific states after deployment.
-- Do not confuse `SourceCode.WebDesigner.*` plus the modern designer client with legacy K2 Studio/K2 Designer authoring APIs.
+Read [cli.md](references/cli.md) for exact commands/cleanup and the design reference for the tested compatibility boundary. Treat installed instructions, references, manifests, rendered JSON, plans, and output as the capability contract. During ordinary work do not inspect source, decompile, or reverse-engineer providers. Unsupported behavior is errata. Only an explicit repair request authorizes development-repository changes; never edit an installed skill in place.

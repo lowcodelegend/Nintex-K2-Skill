@@ -10,7 +10,7 @@ namespace K2WorkflowCli
         {
             if (args.Length == 0 || Has(args, "--help") || Has(args, "-h")) { Help(); return 0; }
             var command = args[0].ToLowerInvariant();
-            if (command == "version") { Console.WriteLine("k2wf 0.9.1"); return 0; }
+            if (command == "version") { Console.WriteLine("k2wf 0.9.3"); return 0; }
             if (command == "doctor") { WorkflowManager.Doctor(); return 0; }
             if (args.Length < 2) throw new CliException("A manifest path is required.");
             var manifest = WorkflowManifest.Load(args[1]);
@@ -37,7 +37,7 @@ namespace K2WorkflowCli
                     case "inspect": manager.Inspect(); return 0;
                     case "verify": manager.Verify(); return 0;
                     case "unlock": RequireConfirm(args); manager.Unlock(); return 0;
-                    case "cleanup": RequireConfirm(args); manager.Cleanup(Has(args, "--delete-deployed")); return 0;
+                    case "cleanup": RequireConfirm(args); manager.Cleanup(Has(args, "--delete-deployed"), Has(args, "--defer-smartforms-integration")); return 0;
                     default: throw new CliException("Unknown command: " + command);
                 }
             }
@@ -52,7 +52,7 @@ namespace K2WorkflowCli
         private static void RequireConfirm(string[] args) { if (!Has(args, "--confirm")) throw new CliException("This command changes K2. Re-run with --confirm after reviewing plan."); }
         private static void Help()
         {
-            Console.WriteLine("k2wf 0.9.1 - K2 Five HTML5 Workflow Designer JSON CLI");
+            Console.WriteLine("k2wf 0.9.3 - K2 Five HTML5 Workflow Designer JSON CLI");
             Console.WriteLine("Commands:");
             Console.WriteLine("  doctor");
             Console.WriteLine("  plan <manifest.json>");
@@ -62,7 +62,7 @@ namespace K2WorkflowCli
             Console.WriteLine("  inspect <manifest.json>");
             Console.WriteLine("  verify <manifest.json>");
             Console.WriteLine("  unlock <manifest.json> --confirm");
-            Console.WriteLine("  cleanup <manifest.json> --confirm [--delete-deployed]");
+            Console.WriteLine("  cleanup <manifest.json> --confirm [--delete-deployed] [--defer-smartforms-integration]");
             Console.WriteLine("  version");
         }
     }

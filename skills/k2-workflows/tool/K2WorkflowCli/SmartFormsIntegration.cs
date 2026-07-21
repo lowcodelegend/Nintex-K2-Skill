@@ -39,22 +39,51 @@ namespace K2WorkflowCli
 
         public SmartFormsIntegrationDescriptor Load(WorkflowSettings workflow)
         {
+            return LoadCore(workflow, true);
+        }
+
+        public SmartFormsIntegrationDescriptor LoadForCleanup(WorkflowSettings workflow)
+        {
+            if (workflow.SmartForms == null) return null;
+            return WithFormsManager(delegate(FormsManager manager)
+            {
+                if (!manager.CheckFormExists(workflow.SmartForms.Form))
+                {
+                    Console.WriteLine("Integrated SmartForm is already absent: " + workflow.SmartForms.Form);
+                    return null;
+                }
+                var info = manager.GetForm(workflow.SmartForms.Form);
+                return new SmartFormsIntegrationDescriptor
+                {
+                    FormId = info.Guid.ToString(),
+                    SystemName = info.Name,
+                    DisplayName = info.Name
+                };
+            });
+        }
+
+        private SmartFormsIntegrationDescriptor LoadCore(WorkflowSettings workflow, bool requirePrimaryItemReference)
+        {
             if (workflow.SmartForms == null) return null;
             var form = JObject.Parse(InvokeData("GetFormCategoryAndName", _host, workflow.SmartForms.Form));
             var id = Convert.ToString(form["id"]);
             if (string.IsNullOrWhiteSpace(id)) throw new CliException("SmartForm was not found: " + workflow.SmartForms.Form);
-            var content = GetContent(id, workflow.ProcessFullName, true);
-            var primary = (content["itemReferences"] as JArray ?? new JArray()).OfType<JObject>()
-                .FirstOrDefault(x => (bool?)x["primary"] == true &&
-                    string.Equals(Convert.ToString(x["smartObjectName"]), workflow.RequestStatusUpdate.SmartObject, StringComparison.OrdinalIgnoreCase));
-            if (primary == null)
-                throw new CliException("The SmartForm does not expose the configured request SmartObject as its primary Create reference: " + workflow.RequestStatusUpdate.SmartObject);
+            JObject primary = null;
+            if (requirePrimaryItemReference)
+            {
+                var content = GetContent(id, workflow.ProcessFullName, true);
+                primary = (content["itemReferences"] as JArray ?? new JArray()).OfType<JObject>()
+                    .FirstOrDefault(x => (bool?)x["primary"] == true &&
+                        string.Equals(Convert.ToString(x["smartObjectName"]), workflow.RequestStatusUpdate.SmartObject, StringComparison.OrdinalIgnoreCase));
+                if (primary == null)
+                    throw new CliException("The SmartForm does not expose the configured request SmartObject as its primary Create reference: " + workflow.RequestStatusUpdate.SmartObject);
+            }
             return new SmartFormsIntegrationDescriptor
             {
                 FormId = id,
                 SystemName = Convert.ToString(form["systemName"]),
                 DisplayName = Convert.ToString(form["displayName"]),
-                PrimaryItemReference = (JObject)primary.DeepClone()
+                PrimaryItemReference = primary == null ? null : (JObject)primary.DeepClone()
             };
         }
 
@@ -99,24 +128,30 @@ namespace K2WorkflowCli
         public void CheckInAfterIntegration(SmartFormsIntegrationDescriptor form)
         {
             if (form == null) return;
-            WithFormsManager(delegate(FormsManager manager)
+            CheckInOwnedForm(form, "integration");
+        }
+
+        private bool CheckInOwnedForm(SmartFormsIntegrationDescriptor form, string operation)
+        {
+            if (form == null) return false;
+            return WithFormsManager(delegate(FormsManager manager)
             {
                 var info = manager.GetForm(new Guid(form.FormId));
                 if (!info.IsCheckedOut)
                 {
-                    Console.WriteLine("SmartForm integration check-in: already checked in (" + form.DisplayName + ", v" + info.Version + ")");
-                    return 0;
+                    return false;
                 }
 
                 var owner = Convert.ToString(info.CheckedOutBy);
                 if (!IsCurrentIdentity(owner))
-                    throw new CliException("Integrated SmartForm remains checked out by '" + owner + "': " + form.DisplayName + ". Check in that user's reviewed changes, then rerun workflow deployment.");
+                    throw new CliException("Integrated SmartForm is checked out by '" + owner + "' during workflow " + operation + ": " + form.DisplayName + ". The CLI will not publish another user's draft.");
+                Console.WriteLine("SmartForm " + operation + " check-in: " + form.DisplayName + " (v" + info.Version + ", owner=" + owner + ")");
                 manager.CheckInForm(info.Guid);
                 var checkedIn = manager.GetForm(info.Guid);
                 if (checkedIn.IsCheckedOut)
-                    throw new CliException("Integrated SmartForm remains checked out after automatic check-in: " + form.DisplayName + " (owner=" + checkedIn.CheckedOutBy + ").");
-                Console.WriteLine("SmartForm integration checked in: " + form.DisplayName + " (v" + checkedIn.Version + ")");
-                return 0;
+                    throw new CliException("Integrated SmartForm remains checked out after workflow " + operation + " check-in: " + form.DisplayName + " (owner=" + checkedIn.CheckedOutBy + ").");
+                Console.WriteLine("SmartForm " + operation + " checked in: " + form.DisplayName + " (v" + checkedIn.Version + ")");
+                return true;
             });
         }
 
@@ -172,21 +207,64 @@ namespace K2WorkflowCli
         public void Remove(WorkflowSettings workflow, SmartFormsIntegrationDescriptor form)
         {
             if (form == null) return;
-            RemoveOne(form.FormId, workflow.ProcessFullName + "\\Task", false, workflow.SmartForms.TaskState);
-            RemoveOne(form.FormId, workflow.ProcessFullName, true, workflow.SmartForms.StartState);
+            // A previous interrupted provider call may have left a tool-owned draft. Publish it once
+            // before continuing so the next provider call starts from a stable Form version.
+            CheckInOwnedForm(form, "cleanup recovery");
+            RemoveOne(form, workflow.ProcessFullName + "\\Task", false, workflow.SmartForms.TaskState);
+            RemoveOne(form, workflow.ProcessFullName, true, workflow.SmartForms.StartState);
+            AssertCheckedIn(form);
         }
 
-        private void RemoveOne(string formId, string fqn, bool start, string expectedStateName)
+        private void RemoveOne(SmartFormsIntegrationDescriptor form, string fqn, bool start, string expectedStateName)
         {
-            var content = GetContent(formId, fqn, start);
-            var actionId = Nested(content, "workflowAction", "id");
-            var stateId = Convert.ToString(content["workflowActionStateId"]);
-            if (string.IsNullOrWhiteSpace(actionId)) return;
-            var states = JArray.Parse(InvokeData("GetFormStates", _host, formId));
-            var state = states.OfType<JObject>().FirstOrDefault(x => string.Equals(Convert.ToString(x["id"]), stateId, StringComparison.OrdinalIgnoreCase));
-            var deleteState = state != null && string.Equals(Convert.ToString(state["name"]), expectedStateName, StringComparison.Ordinal);
-            InvokeManagement("RemoveWorkflowIntegration", _host, formId, actionId, stateId, true, deleteState, true, fqn);
-            Console.WriteLine("Removed SmartForm integration: " + fqn);
+            const int maximumAttempts = 6;
+            for (var attempt = 1; attempt <= maximumAttempts; attempt++)
+            {
+                var content = GetContent(form.FormId, fqn, start);
+                var actionId = Nested(content, "workflowAction", "id");
+                var stateId = Convert.ToString(content["workflowActionStateId"]);
+                if (string.IsNullOrWhiteSpace(actionId))
+                {
+                    Console.WriteLine((attempt == 1 ? "SmartForm integration already absent: " : "Removed SmartForm integration: ") + fqn);
+                    return;
+                }
+
+                var states = JArray.Parse(InvokeData("GetFormStates", _host, form.FormId));
+                var state = states.OfType<JObject>().FirstOrDefault(x => string.Equals(Convert.ToString(x["id"]), stateId, StringComparison.OrdinalIgnoreCase));
+                var deleteState = state != null && string.Equals(Convert.ToString(state["name"]), expectedStateName, StringComparison.Ordinal);
+                CliException providerFailure = null;
+                try
+                {
+                    InvokeManagement("RemoveWorkflowIntegration", _host, form.FormId, actionId, stateId, true, deleteState, true, fqn);
+                }
+                catch (CliException ex)
+                {
+                    providerFailure = ex;
+                }
+
+                // K2 can commit part of RemoveWorkflowIntegration and then report its own checkout as
+                // foreign. Check in only this identity's draft, re-read the exact action, and continue
+                // in-process instead of requiring a full agent/CLI retry for every Form version.
+                var recoveredCheckout = CheckInOwnedForm(form, "cleanup recovery");
+                var remaining = GetContent(form.FormId, fqn, start);
+                if (string.IsNullOrWhiteSpace(Nested(remaining, "workflowAction", "id")))
+                {
+                    Console.WriteLine("Removed SmartForm integration: " + fqn);
+                    return;
+                }
+
+                if (!recoveredCheckout)
+                {
+                    if (providerFailure != null) throw providerFailure;
+                    throw new CliException("SmartForms provider reported success but the workflow integration remains: " + fqn + ".");
+                }
+                if (attempt == maximumAttempts)
+                {
+                    var detail = providerFailure == null ? string.Empty : " Last provider error: " + providerFailure.Message;
+                    throw new CliException("SmartForm workflow integration did not converge after " + maximumAttempts + " bounded recovery attempts: " + fqn + "." + detail);
+                }
+                Console.WriteLine("Retrying SmartForm integration removal after owned-draft check-in (attempt " + (attempt + 1) + "/" + maximumAttempts + "): " + fqn);
+            }
         }
 
         private void IntegrateStart(WorkflowSettings workflow, SmartFormsIntegrationDescriptor form)

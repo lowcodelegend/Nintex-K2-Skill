@@ -26,8 +26,6 @@ Some concrete on-prem provider namespaces contain the word `Legacy`. They are ad
 - Connector `ui.path` values are absolute canvas coordinates, not reusable relative shapes. Derive every path from its source/destination activity coordinates or Designer initially hides the line until it recomputes the route.
 - Native integration is a cross-artifact contract. A Start form rule executes `StartProcess` and maps the primary Create reference; a Task state loads by `SerialNo` and submits the selected action. Use `SmartFormsManagementProvider.UpdateForm`/`PublishClientEvent`, the same providers called by the HTML5 wizard, rather than replacing form XML.
 
-## Extension plan
+## Boundary
 
-Keep `start-end` immutable as the smoke-test template. The typed `request-approval` builder uses the Human-example six-node topology: a primary SmartForms item reference, Designer-visible pending/approved/rejected request mappings, three Originator emails, an Originator-assigned test/demo task with optional customized built-in notification, Approved/Rejected decision routing, native Start/Task form rules, and explicit absolute connector geometry. Add rework loops next, followed by reminders/escalations and subworkflows.
-
-Do not accept arbitrary component IDs or opaque fragments in the high-level manifest. Raw `json-file` remains an expert escape hatch and must be schema validated.
+Keep `start-end` immutable as the smoke-test template. `request-approval` owns its tested topology and does not accept arbitrary component IDs or opaque fragments. Raw `json-file` remains the schema-validated expert escape hatch.

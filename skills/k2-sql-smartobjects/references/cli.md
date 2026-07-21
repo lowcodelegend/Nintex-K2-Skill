@@ -35,4 +35,4 @@ Never place a password value in a manifest, script, repository, or command line.
 
 ## Known boundary
 
-Generation currently covers all SQL service objects discovered in the target database. Isolate solution objects in a dedicated database or ensure generating all exposed objects is acceptable. Selective service-object generation is a planned enhancement.
+Generation covers all SQL service objects discovered in the target database; selective generation is unsupported. Isolate solution objects in a dedicated database or ensure generating every exposed object is acceptable.

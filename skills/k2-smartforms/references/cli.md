@@ -11,7 +11,7 @@
 | `inspect --manifest` | No | Print exact artifact GUIDs, versions, types, categories, Style Profile, legacy-theme mode, and checkout state. |
 | `checkin --manifest --form <exact-name> --confirm` | Yes | Check in one exact manifest-declared form without regenerating or replacing it; report its checkout owner and resulting version. |
 | `cleanup --manifest --confirm` | Destructive | Delete exact declared forms then views after environment-wide external dependency checks. |
-| `cleanup --manifest --confirm --manifest-only` | Destructive | Fast builder path: skip broad dependency discovery, require live categories to match manifest ownership, then delete exact declared Forms/Views. |
+| `cleanup --manifest --confirm --manifest-only` | Destructive | Fast builder path: skip broad dependency discovery and delete exact declared Forms/Views from their owned category or strict-ancestor orphan category. |
 | `version` | No | Print the CLI version. |
 | `selftest` | No | Verify identity-key condition normalization (`AutoNumber`→`Number`, `AutoGuid`→`Guid`) without connecting to K2. |
 
@@ -23,4 +23,4 @@ Use `checkin` when verification finds a deliberately preserved form checked out 
 
 Prefer `--resume` after a partial deployment instead of repeating a full replacement. It treats existing artifacts as interruption checkpoints and the final verifier still checks the complete manifest. Use `--forms-only` when Views are known-good and stable GUIDs matter; it fails fast if any declared View is absent.
 
-Use `--manifest-only` only when a validated solution manifest is the ownership boundary. It avoids one external-Form lookup per View and relies on K2 to reject any remaining dependency violation during deletion.
+Use `--manifest-only` only when a validated solution manifest is the ownership boundary. It avoids one external-Form lookup per View, accepts only the expected or a strict-ancestor orphan category, and relies on K2 to reject remaining dependency violations. It discards current-identity cleanup drafts but refuses foreign checkouts.

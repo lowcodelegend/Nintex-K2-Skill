@@ -11,6 +11,7 @@
 - PowerShell wrappers used from other scripts must return control and preserve `$LASTEXITCODE`; a top-level `exit` turns a verification chain into a silent partial run.
 - An HTTP authentication redirect proves route reachability only. Report `reachable-authentication-required`, not authenticated rendering success.
 - Complete-solution cleanup should use the existing manifests as its ownership ledger. Validate locally once, tear down in reverse dependency order, and investigate only concrete deletion conflicts; broad discovery and repeated inspect/verify passes add latency without improving ordinary generated-solution cleanup.
+- SmartForms workflow-integration removal can commit a partial Form draft and then report its own checkout as foreign. Cleanup must check in only the current identity's draft, re-read the exact integration action, and retry in-process with a hard bound; separate agent-driven check-in/cleanup retries create needless Form versions and latency. Its Form lookup must not load deployment-only primary SmartObject metadata, which may already be stale during teardown. Manifest-owned Form/View deletion should discard a current-identity draft but refuse a foreign checkout. When interrupted category deletion orphans an exact manifest artifact into a strict ancestor category, manifest-only cleanup may delete it there while still rejecting unrelated category mismatches.
 
 ## Local environment
 

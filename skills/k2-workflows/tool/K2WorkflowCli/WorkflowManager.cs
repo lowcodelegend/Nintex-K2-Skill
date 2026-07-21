@@ -374,11 +374,15 @@ namespace K2WorkflowCli
             Console.WriteLine("Verified approval matrix resolver mappings and multi-stage loop: " + _manifest.Workflow.ApprovalMatrix.MatrixCode);
         }
 
-        public void Cleanup(bool deleteDeployed)
+        public void Cleanup(bool deleteDeployed, bool deferSmartFormsIntegration)
         {
             var id = GetProcessId();
             if (!deleteDeployed && _manifest.Workflow.Publish)
                 throw new CliException("Cleanup of a published workflow requires --delete-deployed.");
+            if (deferSmartFormsIntegration && _manifest.Workflow.SmartForms == null)
+                throw new CliException("--defer-smartforms-integration requires workflow.smartForms.");
+            if (deferSmartFormsIntegration && !deleteDeployed)
+                throw new CliException("--defer-smartforms-integration requires --delete-deployed.");
             var runtimeExists = false;
             if (deleteDeployed)
             {
@@ -392,12 +396,14 @@ namespace K2WorkflowCli
                     }
                 }
             }
-            if (!id.HasValue && !runtimeExists) { Console.WriteLine("Workflow is already absent: " + _manifest.Workflow.ProcessFullName); return; }
-            if (deleteDeployed && _manifest.Workflow.SmartForms != null)
+            if (deleteDeployed && _manifest.Workflow.SmartForms != null && !deferSmartFormsIntegration)
             {
-                if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Load(_manifest.Workflow);
+                if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).LoadForCleanup(_manifest.Workflow);
                 new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Remove(_manifest.Workflow, _smartForm);
             }
+            else if (deleteDeployed && deferSmartFormsIntegration)
+                Console.WriteLine("Deferred SmartForm integration removal to manifest-owned Form deletion: " + _manifest.Workflow.SmartForms.Form);
+            if (!id.HasValue && !runtimeExists) { Console.WriteLine("Workflow definitions are already absent: " + _manifest.Workflow.ProcessFullName); return; }
             if (runtimeExists)
             {
                 using (var runtime = new RuntimeWorkflowManager()) runtime.DeleteAllDefinitions(_manifest.Workflow.ProcessFullName);
@@ -405,8 +411,10 @@ namespace K2WorkflowCli
             if (id.HasValue)
             {
                 var category = FindCategory(_manifest.Application.WorkflowCategoryPath);
-                if (category == null) throw new CliException("Workflow category was not found: " + _manifest.Application.WorkflowCategoryPath);
-                Invoke("DeleteProcessById", _manifest.K2.DesignerHost, id.Value, _userName, (int)category["id"]);
+                var categoryId = category == null ? GetProcessCategoryId(id.Value) : (int?)category["id"];
+                if (!categoryId.HasValue) throw new CliException("Workflow category was not found and the process has no recoverable category ID: " + _manifest.Application.WorkflowCategoryPath);
+                if (category == null) Console.WriteLine("Workflow category link is already absent; using process category ID " + categoryId.Value + " for deletion.");
+                Invoke("DeleteProcessById", _manifest.K2.DesignerHost, id.Value, _userName, categoryId.Value);
             }
             Console.WriteLine("Deleted workflow: " + _manifest.Workflow.ProcessFullName);
         }
@@ -456,9 +464,7 @@ namespace K2WorkflowCli
 
         private object GetProcessInfo(int id)
         {
-            object metadata;
-            try { metadata = _clientType.GetMethod("GetProcessInfo", new[] { typeof(int) }).Invoke(_client, new object[] { id }); }
-            catch (TargetInvocationException ex) { throw new CliException(ex.GetBaseException().Message); }
+            var metadata = GetProcessMetadata(id);
             var version = GetStringProperty(metadata, "Version");
             if (string.IsNullOrWhiteSpace(version))
                 version = GetStringProperty(metadata, "MajorNo") + "." + GetStringProperty(metadata, "MinorNo");
@@ -467,6 +473,27 @@ namespace K2WorkflowCli
             catch (TargetInvocationException ex) { throw new CliException(ex.GetBaseException().Message); }
             if (definition == null) throw new CliException("K2 did not return workflow version " + version + " for process " + id + ".");
             return definition;
+        }
+
+        private object GetProcessMetadata(int id)
+        {
+            try { return _clientType.GetMethod("GetProcessInfo", new[] { typeof(int) }).Invoke(_client, new object[] { id }); }
+            catch (TargetInvocationException ex) { throw new CliException(ex.GetBaseException().Message); }
+        }
+
+        private int? GetProcessCategoryId(int id)
+        {
+            var metadata = GetProcessMetadata(id);
+            foreach (var name in new[] { "CategoryId", "CategoryID", "Category" })
+            {
+                var property = metadata.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase);
+                if (property == null) continue;
+                int value;
+                if (int.TryParse(Convert.ToString(property.GetValue(metadata, null)), NumberStyles.Integer, CultureInfo.InvariantCulture, out value)) return value;
+            }
+            if (Environment.GetEnvironmentVariable("K2WF_DEBUG") == "1")
+                Console.WriteLine("Process metadata properties: " + string.Join(", ", metadata.GetType().GetProperties().Select(x => x.Name + "=" + Convert.ToString(x.GetValue(metadata, null))).ToArray()));
+            return null;
         }
         private void Unlock(int processId)
         {

@@ -1,4 +1,4 @@
-# SmartForms v0.13 design guide
+# SmartForms design guide
 
 ## CRUD shape
 

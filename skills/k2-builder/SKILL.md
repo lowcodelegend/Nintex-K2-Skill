@@ -3,85 +3,78 @@ name: k2-builder
 description: Orchestrate, verify, and clean up complete self-hosted Nintex K2 Five solutions across SQL-backed SmartObjects, modern SmartForms, and HTML5 workflows, with durable K2 environment profiles. Use when turning requirements into an ordered artifact graph, coordinating specialist skills, designing lookup, approval-matrix, or master-detail contracts, enforcing cross-artifact defaults, verifying an end-to-end application, or tearing down a generated solution from its manifest. Do not use as a replacement for the specialist skills or for unsupported K2 artifact types.
 ---
 
-# K2 Solution Builder
+# K2 solution builder
 
-Build a complete K2 solution by coordinating the installed specialist skills:
+Coordinate the installed specialists in dependency order:
 
-1. Use `$k2-sql-smartobjects` for SQL schema, data, Service Instances, and generated SmartObjects.
-2. Use `$k2-smartforms` for modern SmartForms views, forms, rules, and runtime CRUD verification.
-3. Use `$k2-workflows` for HTML5 Designer JSON workflows, publication, SmartForms integration, and workflow verification.
+1. `$k2-sql-smartobjects` for SQL, Service Instances, and generated SmartObjects.
+2. `$k2-smartforms` for Views, Forms, rules, and runtime CRUD.
+3. `$k2-workflows` for HTML5 workflows and SmartForms integration.
 
-Keep the specialist manifests authoritative for their own artifact types. Use the solution manifest for dependencies, shared policy, entry points, and end-to-end scenarios; do not duplicate specialist implementation details in it.
+Specialist manifests remain authoritative for their artifacts. The solution manifest owns dependencies, shared policy, entry points, scenarios, and cleanup scope.
 
-## Environment bootstrap
+## Environment
 
-Before investigating K2, read [environment-profiles.md](references/environment-profiles.md) and run `scripts/k2env.ps1 validate` for the selected/default profile. When it passes, run `show --summary --output json`, reuse those resolved values in every specialist manifest, and do not load the full inventories or repeat environment discovery. On first use, run `discover --name <stable-name> --default`; it inventories installed SmartForms themes, Style Profiles, and likely common framework views (headers and footers). Resolve both three-state choices before building forms. For an unselected Style Profile, show display/system name and category, ask once, and persist `set-style-profile`. For an unselected common framework, first run `inspect-framework --hint psf`; if a PSF-named profile/header/footer are present, ask whether the user wants that bundle, but never assume they exist or should be selected. Otherwise ask for a name/category hint. Inspect the exact views, callable initialization/server rules, parameters, controls, reference-form mappings, and required layout order. Persist the agreed header, optional footer, parameter templates, server-load control transfers, titles, and server-rule calls with `set-common-header`; persist a deliberate opt-out with `--no-common-header`. Refresh only after an expected K2, IIS, or host change. Keep profiles and secrets out of projects and skill folders.
+Before K2 discovery, read [environment-profiles.md](references/environment-profiles.md), run `scripts/k2env.ps1 validate`, then `show --summary --output json`; reuse those resolved values without reloading full inventories. On first use run `discover --name <stable-name> --default`.
 
-## Build workflow
+Resolve both three-state SmartForms choices before generating Forms. For an unselected Style Profile, show discovered choices and persist `set-style-profile`. For an unselected common framework, inspect `psf` first, ask about a discovered PSF bundle without assuming it, inspect exact lifecycle/layout mappings, then persist `set-common-header` or `--no-common-header`. Refresh only after an expected environment change. Keep profiles and secrets outside projects and skills.
 
-1. Resolve and validate the durable K2 environment profile. Before naming artifacts, choose a candidate code and run `scripts/k2env.ps1 check-short-code --code ABC --solution 'ABC.Solution Name' --live`, then reserve it with `reserve-short-code --live`; do not proceed on a collision. Before `--adopt-existing`, use `inspect-short-code --code ABC` to prove live ownership rather than trusting cached observations. Then read [solution-manifest.md](references/solution-manifest.md) and create or update a solution manifest beside the specialist manifests. Copy [solution-manifest.template.json](assets/solution-manifest.template.json) when starting from scratch. Use `scripts/copy-example.ps1`: `corporate-workflow` is the three-layer fixture, `expense-claim` is the SQL/SmartForms master-detail fixture, and `request-management` is SQL-only. Treat examples as templates: adapt names and environment choices, plan first, and never deploy them blindly. Never reconstruct or guess an example filename: copy the example and use the exact paths declared by its manifests. `copy-example.ps1` validates every declared SQL/component file before and after copying.
-2. Read [contracts.md](references/contracts.md) and resolve cross-artifact decisions before mutation. For a demo build with underspecified business details, apply the fast demo contract below, state assumptions once, and continue; do not turn ordinary defaults into a long clarification loop.
-3. Run `scripts/k2build.ps1 validate -Manifest <solution-manifest.json>`.
-4. Run `scripts/k2build.ps1 plan -Manifest <solution-manifest.json>` and present the non-mutating, dependency-ordered plan.
-5. When the user asked to build/create/deploy, treat the coherent plan as a non-blocking checkpoint and run `scripts/k2build.ps1 deploy -Manifest <solution-manifest.json> -Confirm`. It deploys in dependency order and uses each specialist's built-in verification. After an interrupted run, add `-Resume`; it verifies checkpoints, reuses successful layers, and tells SmartForms to create only missing artifacts. Use `k2forms deploy ... --forms-only` for targeted Form regeneration over known-good Views. Do not repeat `doctor`, `plan`, and `verify` after an already successful deploy unless diagnosing drift or collecting specific evidence.
-6. Run the solution manifest's end-to-end scenarios against the normal Runtime URL. A CLI deployment result alone is not completion.
-7. Record every generated or deployed source, SQL, SmartObject, SmartForms, workflow, category, integration, and Runtime artifact. Include its action (`created`, `updated`, `replaced`, or `reused`), location, identifier/version when available, source manifest, and verification result. Use [deployment-ledger.template.json](assets/deployment-ledger.template.json) as the starting shape.
-8. Before declaring completion, read [deployment-handoff.md](references/deployment-handoff.md). Present the complete artifact inventory and an explicit errata register covering manual intervention, custom code, placeholders, partial configuration, unsupported requirements, known limitations, and skipped verification. State `None found` when the register is empty; never omit it.
+Before naming artifacts, choose a three- or four-letter uppercase code, run `check-short-code --code ABC --solution 'ABC.Name' --live`, and reserve it with `reserve-short-code --live`. Before `--adopt-existing`, prove ownership with `inspect-short-code`.
 
-Stop on the first failed layer. Do not deploy dependent layers. Preserve successfully deployed prerequisites by default and report the exact remediation; clean up only when explicitly requested, in reverse dependency order.
+## Build
+
+1. Read [solution-manifest.md](references/solution-manifest.md) and [contracts.md](references/contracts.md). Create the solution manifest beside its specialist manifests. Start from [solution-manifest.template.json](assets/solution-manifest.template.json), or use `scripts/copy-example.ps1` for `corporate-workflow`, `expense-claim`, or `request-management`; adapt examples and never deploy them blindly.
+2. Resolve every lookup, approval-matrix, master-detail, form-state, presentation, identity, and ownership decision required by the contracts.
+3. Run `scripts/k2build.ps1 validate -Manifest <solution-manifest.json>`, then `plan` and present its dependency-ordered mutations and assumptions.
+4. A request to build/create/deploy authorizes `deploy ... -Confirm` after that checkpoint. Stop on the first failed layer and preserve successful prerequisites. After interruption use `-Resume`; use `k2forms ... --forms-only` only when Views are known-good.
+5. Exercise the declared end-to-end scenarios through the ordinary authenticated Runtime URL. CLI success is not browser proof.
+6. Record every source and live artifact, action (`created`, `updated`, `replaced`, or `reused`), identifier/version, source manifest, and verification result using [deployment-ledger.template.json](assets/deployment-ledger.template.json).
+7. Read [deployment-handoff.md](references/deployment-handoff.md) before completion. Provide the itemized inventory and explicit errata register; write `None found` when empty.
+
+Do not repeat successful `doctor`, `plan`, `inspect`, or `verify` calls merely to collect output.
 
 ## Fast cleanup
 
-When the user asks to clean up a generated solution and its solution manifest is available, treat that manifest as the ownership ledger. Run one local manifest validation, then invoke:
+For a generated solution with its manifest, use that manifest as the ownership ledger:
 
 ```powershell
 & '<k2-builder-root>\scripts\k2build.ps1' cleanup -Manifest '<solution-manifest.json>' -Confirm
 ```
 
-This removes workflows/integration, Forms/Views, then generated SmartObjects/Service Instance in reverse dependency order. It preserves the application database and short-code reservation. Add `-DropDatabase` only when the user explicitly authorizes deletion of disposable application data.
+It validates once, then removes workflows, manifest-owned Forms/Views (including integration), and SmartObjects/Service Instance in reverse order. It preserves the database and short-code reservation; add `-DropDatabase` only with explicit authorization for disposable data.
 
-Do not run environment discovery, broad short-code inventory, specialist plans, per-artifact inspection, independent verification, or manual assembly/API exploration before this path. Let each cleanup command report absent artifacts, workflow instances, category mismatches, or K2 dependency failures. Investigate only that concrete blocker. Do not manually reproduce the manifest inventory in agent context; report concise layer results. Current cleanup intentionally retains empty K2 categories and the short-code reservation unless the user separately requests their removal or release.
+Do not precede this path with discovery, inventory, specialist plans, per-artifact inspection, or independent verification. Investigate only a reported conflict. Cleanup retains empty K2 categories and the reservation unless separately requested.
 
-## Fast demo contract
+## Demo defaults
 
-When a build request leaves business policy unspecified and is clearly for test/demo use, prefer a deterministic baseline over more questions:
+For an underspecified test/demo build:
 
-- infer repeated rows as master-detail and use one master Item View plus editable-list details;
-- use the specified currency or `USD`, with tax excluded unless requested;
-- derive and persist any approval-routing total from saved detail rows; never route on an independently editable total;
-- make receipts an optional reference field unless attachments are requested;
-- use `Draft`, `Pending Approval`, `Approved`, and `Rejected` statuses;
-- use department and category as managed lookups when present;
-- use the existing demo identity policies for tasks/matrix seeds and record them in errata;
-- preserve submitted records and hide destructive delete after submission.
+- model repeated rows as master-detail;
+- use the requested currency or `USD`, excluding tax unless requested;
+- persist routing totals derived from saved details and keep them read-only;
+- make receipts an optional reference unless attachments are requested;
+- use `Draft`, `Pending Approval`, `Approved`, and `Rejected`;
+- make department/category business-managed lookups;
+- retain submitted records and hide destructive delete after submission;
+- apply the documented demo identity policies and record their errata.
 
-List these assumptions once in the plan and handoff. Ask only when the request is production-oriented, conflicts with known requirements, or changes security, money, retention, or routing materially. A request to build/create/deploy authorizes continuing after the plan; a request to plan/review does not.
+State these assumptions once. Ask only when production intent or security, money, retention, or routing would materially change.
 
-## Required defaults
+## Non-negotiable contracts
 
-- Create an uppercase three- or four-letter solution short code before naming artifacts. Check and reserve it in the selected environment profile; a code may map to only one solution name. Treat codes observed on existing K2 Forms/Views as occupied unless explicitly adopting that same solution. Prefix every solution-owned deployable or Designer-visible name with `<CODE>.`; enforce the same code across SQL, SmartObjects, SmartForms, workflows, and the application category leaf. Do not prefix fixed `Views` or `Forms` subfolders or standard property/method/action/status vocabulary.
-- Keep release/version numbers out of K2 category, view, form, and workflow names. K2 owns artifact versions internally.
-- Use the same main solution folder for every K2 layer. Put generated SmartObjects under `<root>\Data`, ordinary views/forms under `<root>\Views` and `<root>\Forms`, administrative lookup UX under `<root>\Admin\Views` and `<root>\Admin\Forms`, and workflows under `<root>\<root-leaf> WFs`. Never use a workflow category named `Workflow` or `Workflows` because those generic names interact badly with K2's workflow folder system.
-- Prefer lookup tables and foreign keys for user-selected controlled values. For small applications, default to meaningful code/text foreign keys to avoid heavy normalization; normalize to surrogate lookup IDs on request. For complex applications, default to normalized lookup keys. Give business-managed lookups SmartObject-backed dropdowns and Admin CRUD UX; explicitly classify external/system lookups that should not be administered.
-- Treat plural business rows—line items, claim items, order lines, invoice lines, attachments, allocations, or repeated expenses—as a collection, not extra columns on the request header. Before planning, inventory every one-to-many child collection. For each, require a SQL detail table and generated detail SmartObject, an indexed foreign key to the identity/generated master key, a K2 editable-list detail View, and a capture/item master View. Never silently ship a header-only model when the requirements contain child rows.
-- Make a multi-View edit one Form-level transaction. Require a returned master identity, child foreign-key transfer, filtered child reload, one visible Form Save action, and success feedback after persistence; hide every View persistence control that can bypass it. Use bold labels and give controls more width than labels by default. Select fields, read-only state, layout density, lookup cascades, and Form/View composition for each process stage instead of cloning the full database shape onto every screen.
-- Put master-detail orchestration in Form rules. Create the master first and map its returned key; in the same K2 batch execute the detail Create method for rows in `Added` state with that key mapped to the child foreign key. On master update, batch `Changed`/Update, `Added`/Create, and `Removed`/Delete actions. Suppress every unfiltered detail View List rule. After master Read, and only when the master key is not blank, pass that key as the detail List foreign-key input. Keep workflow references on the master record unless the process explicitly needs a child reference. Browser-test a blank master plus two different masters with isolated lines, then add/change/remove after reload.
-- Generate new SmartForms in Style Profile mode with `useLegacyTheme=false`; the named K2 themes, including Lithium, belong to the legacy theme system.
-- Apply an explicit solution/manifest Style Profile when supplied; otherwise use the environment profile's selected default. Treat a deliberate environment selection of `none` as a legacy-compatibility exception and report it. Never guess while selection remains `unselected`. The manifest's legacy `theme` field remains required by K2 generation as fallback/compatibility metadata, but it is not the modern presentation choice.
-- Apply the selected environment common framework to every generated form unless the solution has a concrete reason to opt out. The SmartForms CLI consumes the profile automatically, places the header first and an optional paired footer in the final view position, applies their configured instance name/title/collapse behavior, calls the header initialization rule from Form initialization, and executes configured control transfers and View server rules in the discovered order from the Form's `When the server loads the Form` event. A server-side rule on a View does not fire automatically. Verify view order, instance settings, control targets, values, combined-transfer shape, call order, and event definition IDs; record any form-specific opt-out in errata.
+Use [contracts.md](references/contracts.md) as the detailed source. In particular:
 
-For the known PSF bundle, only after live discovery confirms all three artifacts and the user accepts them, use Style Profile `PSF UX v1`, header `PSF.FrameworkHeader`, and footer `PSF.FrameworkFooter`. The header view-instance name must be exactly `Header`, its visible title must be blank, and it must be non-collapsible. In the Form server-load rule call header rule `ServerPreRender` first, then use one transfer-data action to set `{{form.name}}` on `Main Header Data Label` and `{{application.name}}` on `Sub Header Data Label`; do not pass those strings through `HeaderText` or `SubheaderText` parameters. Keep the footer in the final view position, including after all solution views on tabbed forms. Retain only genuinely required initialization parameters such as `AppId={{solution.code}}` and `Debug=false`.
-- Force generated human-task steps to the workflow Originator for the current testing/demo baseline, even when requirements or specialist manifests request another participant. Preserve the requested assignment as production intent and add a `placeholder` warning to the deployment errata with requested versus effective routing. Do not present the solution as production-routed until this override is removed.
-- For a dedicated request-entry form, resolve `startStateDefault=auto` to true. The Start state must be the only default state, and the Task state must never be default.
-- For a shared existing form, require an explicit entry-state choice. Do not silently change its default state.
-- Verify that using Create from the ordinary form URL both saves the request and starts the workflow when the Start state is meant to be default.
-- Prefer a tabbed application shell for ordinary workflow UX: request list, request details, and—when users should act inside the application—a My Tasks tab using K2's native Worklist control. Keep administrative CRUD compact unless it benefits from tabs.
-- Treat transparent handoff as part of generation. Do not describe a solution as complete while hiding placeholders, manual steps, custom-code requirements, partial configuration, or unexecuted tests in prose or logs.
+- Prefix all solution-owned deployable/Designer-visible names with `<CODE>.`; keep versions out of names. Share one root with fixed `Data`, `Views`, `Forms`, `Admin`, and `<root-leaf> WFs` children. Never name the workflow child `Workflow` or `Workflows`.
+- Model controlled choices with lookup tables/foreign keys and business-managed Admin UX. Default small applications to meaningful code/text keys and complex applications to normalized surrogate keys unless requirements override.
+- Treat every repeated child collection as master-detail across SQL, SmartObjects, editable-list UX, Form-level persistence/load rules, and solution policy. One visible Form action owns the transaction; no unfiltered child List or bypass save controls.
+- Generate modern Forms with `useLegacyTheme=false`, the selected Style Profile, and the selected environment framework unless a reasoned opt-out is recorded. Follow the exact discovered header/footer lifecycle, mappings, and order; PSF conventions apply only after discovery and user selection.
+- Keep the workflow reference/status on the master unless child processing is required. For the demo baseline, direct human tasks route effectively to Originator and preserve requested production routing as errata; matrix tasks use resolver output and report `$designer` seeds.
+- A dedicated request-entry Start state is the sole default; Task is never default. Shared Forms require an explicit entry-state decision. Verify ordinary-URL Create both saves and starts exactly one workflow.
+- Prefer list/details/My Tasks tabs for ordinary workflow UX and native K2 Worklist for tasks.
+- Never hide placeholders, manual work, unsupported requirements, limitations, or skipped verification.
 
-## Capability boundary
+## Boundary
 
-Treat the installed skills as an operational product. Use `SKILL.md`, the linked references, CLI `help`, manifests, examples, plans, and structured command output as the complete capability contract. Do not search for or inspect C# implementation files, decompile binaries, trace provider internals, or locate a repository checkout during an ordinary solution build. If a requested behavior is absent from the documented contract, report it as unsupported or errata instead of reverse-engineering an ad hoc path.
+Treat the installed package—these instructions, linked references, examples, manifests, CLI help/plans, and structured output—as the capability contract. During ordinary builds do not inspect source, decompile binaries, trace providers, edit K2 databases, or substitute legacy workflow tooling. Unsupported behavior is errata, not an invitation to improvise.
 
-The release package intentionally contains compiled .NET CLIs but no .NET source, project files, or build scripts. Only when the user explicitly asks to extend or repair a CLI may an agent clone `https://github.com/lowcodelegend/Nintex-K2-Skill`, work and test in that development checkout, and produce a new packaged release. Never self-modify the installed skill directory.
-
-Treat current specialist deployment as repeatable generation/replacement, not ownership-aware semantic merge. Never promise preservation of arbitrary manual Designer edits. Iterative reconciliation is a mid-horizon roadmap capability. Do not edit K2 databases directly or substitute legacy XML workflow tooling for the HTML5 JSON workflow path.
+Release packages contain compiled CLIs but no source or build scripts. Only an explicit repair/extension request authorizes work in the development repository; never edit an installed skill in place. Deployment is repeatable generation/replacement, not a semantic merge, so do not promise preservation of arbitrary Designer edits.

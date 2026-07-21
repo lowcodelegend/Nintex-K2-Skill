@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Security.Principal;
 using System.Xml.Linq;
 using SourceCode.Forms.Authoring;
 using SourceCode.Forms.Management;
@@ -509,8 +510,19 @@ namespace K2SmartFormsCli
                     }
                     var info = manager.GetForm(form.Name);
                     var expectedCategory = _manifest.Application.GetFormCategoryPath(form);
-                    if (!string.Equals(info.CategoryPath, expectedCategory, StringComparison.OrdinalIgnoreCase))
+                    if (!IsOwnedOrOrphanedCategory(info.CategoryPath, expectedCategory, manifestOnly))
                         throw new CliException("Refusing to delete Form '" + form.Name + "' from category '" + info.CategoryPath + "'; manifest owns '" + expectedCategory + "'.");
+                    if (!string.Equals(info.CategoryPath, expectedCategory, StringComparison.OrdinalIgnoreCase))
+                        Console.WriteLine("Form: expected category link is absent; deleting exact manifest artifact from ancestor category '" + info.CategoryPath + "' (" + form.Name + ")");
+                    if (info.IsCheckedOut)
+                    {
+                        if (!IsCurrentIdentity(Convert.ToString(info.CheckedOutBy)))
+                            throw new CliException("Refusing to delete Form '" + form.Name + "' while it is checked out by '" + info.CheckedOutBy + "'.");
+                        manager.UndoFormCheckOut(info.Guid);
+                        info = manager.GetForm(info.Guid);
+                        if (info.IsCheckedOut) throw new CliException("K2 Form remains checked out after discarding the current identity's cleanup draft: " + form.Name);
+                        Console.WriteLine("Form: discarded current identity's checkout before deletion (" + form.Name + ")");
+                    }
                     manager.DeleteForm(info.Guid);
                     Console.WriteLine("Form: deleted (" + form.Name + ", " + info.Guid + ")");
                 }
@@ -523,13 +535,39 @@ namespace K2SmartFormsCli
                     }
                     var info = manager.GetView(view.Name);
                     var expectedCategory = _manifest.Application.GetViewCategoryPath(view);
-                    if (!string.Equals(info.CategoryPath, expectedCategory, StringComparison.OrdinalIgnoreCase))
+                    if (!IsOwnedOrOrphanedCategory(info.CategoryPath, expectedCategory, manifestOnly))
                         throw new CliException("Refusing to delete View '" + view.Name + "' from category '" + info.CategoryPath + "'; manifest owns '" + expectedCategory + "'.");
+                    if (!string.Equals(info.CategoryPath, expectedCategory, StringComparison.OrdinalIgnoreCase))
+                        Console.WriteLine("View: expected category link is absent; deleting exact manifest artifact from ancestor category '" + info.CategoryPath + "' (" + view.Name + ")");
+                    if (info.IsCheckedOut)
+                    {
+                        if (!IsCurrentIdentity(Convert.ToString(info.CheckedOutBy)))
+                            throw new CliException("Refusing to delete View '" + view.Name + "' while it is checked out by '" + info.CheckedOutBy + "'.");
+                        manager.UndoViewCheckOut(info.Guid);
+                        info = manager.GetView(info.Guid);
+                        if (info.IsCheckedOut) throw new CliException("K2 View remains checked out after discarding the current identity's cleanup draft: " + view.Name);
+                        Console.WriteLine("View: discarded current identity's checkout before deletion (" + view.Name + ")");
+                    }
                     manager.DeleteView(info.Guid);
                     Console.WriteLine("View: deleted (" + view.Name + ", " + info.Guid + ")");
                 }
                 return 0;
             });
+        }
+
+        private static bool IsCurrentIdentity(string owner)
+        {
+            if (string.IsNullOrWhiteSpace(owner)) return true;
+            var current = WindowsIdentity.GetCurrent().Name ?? string.Empty;
+            Func<string, string> normalize = value => (value ?? string.Empty).Trim().Replace("K2:", string.Empty).Replace("K2\\", string.Empty);
+            return string.Equals(normalize(owner), normalize(current), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsOwnedOrOrphanedCategory(string actual, string expected, bool manifestOnly)
+        {
+            if (string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase)) return true;
+            if (!manifestOnly || string.IsNullOrWhiteSpace(actual) || string.IsNullOrWhiteSpace(expected)) return false;
+            return expected.StartsWith(actual.TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase);
         }
 
         private void SmokeTestRuntime(string formName)
@@ -542,7 +580,7 @@ namespace K2SmartFormsCli
             request.AllowAutoRedirect = false;
             request.Timeout = 30000;
             request.ReadWriteTimeout = 30000;
-            request.UserAgent = "k2forms/0.15.0";
+            request.UserAgent = "k2forms/0.15.2";
             try
             {
                 using (var response = (HttpWebResponse)request.GetResponse())
