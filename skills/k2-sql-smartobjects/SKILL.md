@@ -49,7 +49,7 @@ Deploy a SQL model and its K2 SQL Server Service Instance as one repeatable unit
 
 - Never read from or modify K2's own database except through supported K2 APIs. The CLI only targets the application database named by the manifest.
 - Keep `deleteRemoved` false unless the user explicitly authorizes removal and dependent K2 artifacts have been assessed.
-- Treat `cleanup` as destructive. It force-deletes generated SmartObjects before the Service Instance. Use it only for disposable or explicitly retired artifacts after `inspect` confirms the exact target.
+- Treat `cleanup` as destructive. For a builder-validated solution manifest, invoke it directly in reverse-order cleanup; the exact Service Instance system name is the ownership boundary, so do not add a separate inspect cycle unless deletion reports a conflict. It force-deletes generated SmartObjects before the Service Instance.
 - Never use `cleanup --drop-database` against shared or production data. The CLI blocks SQL system databases and the default `K2` database, but it cannot infer business criticality.
 - Prefer `service-account` SQL authentication with a least-privilege database user. Use `impersonate` only when delegation and per-user SQL authorization are intentional.
 - Require primary keys on tables that need generated Create, Read, Update, and Delete methods.

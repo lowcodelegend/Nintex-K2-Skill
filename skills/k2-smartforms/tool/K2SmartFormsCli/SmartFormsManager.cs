@@ -485,14 +485,18 @@ namespace K2SmartFormsCli
             Console.WriteLine("K2 SmartForms verification: OK (" + _manifest.Verification.ExpectedViews.Count + " view(s), " + _manifest.Verification.ExpectedForms.Count + " form(s))");
         }
 
-        public void Cleanup()
+        public void Cleanup(bool manifestOnly)
         {
-            var dependencies = GetExternalDependencies();
-            if (dependencies.Count > 0)
+            if (!manifestOnly)
             {
-                var details = dependencies.Select(x => x.Key + " -> " + string.Join(", ", x.Value.ToArray()));
-                throw new CliException("Cannot delete views used by forms outside this manifest: " + string.Join("; ", details.ToArray()));
+                var dependencies = GetExternalDependencies();
+                if (dependencies.Count > 0)
+                {
+                    var details = dependencies.Select(x => x.Key + " -> " + string.Join(", ", x.Value.ToArray()));
+                    throw new CliException("Cannot delete views used by forms outside this manifest: " + string.Join("; ", details.ToArray()));
+                }
             }
+            else Console.WriteLine("Manifest-only cleanup: skipping environment-wide external Form dependency discovery.");
 
             WithFormsManager(delegate(FormsManager manager)
             {
@@ -504,6 +508,9 @@ namespace K2SmartFormsCli
                         continue;
                     }
                     var info = manager.GetForm(form.Name);
+                    var expectedCategory = _manifest.Application.GetFormCategoryPath(form);
+                    if (!string.Equals(info.CategoryPath, expectedCategory, StringComparison.OrdinalIgnoreCase))
+                        throw new CliException("Refusing to delete Form '" + form.Name + "' from category '" + info.CategoryPath + "'; manifest owns '" + expectedCategory + "'.");
                     manager.DeleteForm(info.Guid);
                     Console.WriteLine("Form: deleted (" + form.Name + ", " + info.Guid + ")");
                 }
@@ -515,6 +522,9 @@ namespace K2SmartFormsCli
                         continue;
                     }
                     var info = manager.GetView(view.Name);
+                    var expectedCategory = _manifest.Application.GetViewCategoryPath(view);
+                    if (!string.Equals(info.CategoryPath, expectedCategory, StringComparison.OrdinalIgnoreCase))
+                        throw new CliException("Refusing to delete View '" + view.Name + "' from category '" + info.CategoryPath + "'; manifest owns '" + expectedCategory + "'.");
                     manager.DeleteView(info.Guid);
                     Console.WriteLine("View: deleted (" + view.Name + ", " + info.Guid + ")");
                 }
@@ -532,7 +542,7 @@ namespace K2SmartFormsCli
             request.AllowAutoRedirect = false;
             request.Timeout = 30000;
             request.ReadWriteTimeout = 30000;
-            request.UserAgent = "k2forms/0.14.0";
+            request.UserAgent = "k2forms/0.15.0";
             try
             {
                 using (var response = (HttpWebResponse)request.GetResponse())

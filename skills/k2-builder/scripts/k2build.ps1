@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('validate', 'plan', 'deploy', 'verify', 'version')]
+    [ValidateSet('validate', 'plan', 'deploy', 'verify', 'cleanup', 'version')]
     [string]$Command = 'validate',
 
     [string]$Manifest,
@@ -10,18 +10,19 @@ param(
     [string]$Output = 'text',
 
     [switch]$Confirm,
-    [switch]$Resume
+    [switch]$Resume,
+    [switch]$DropDatabase
 )
 
 $ErrorActionPreference = 'Stop'
 
 if ($Command -eq 'version') {
-    Write-Output 'k2build 0.19.0'
+    Write-Output 'k2build 0.20.0'
     return
 }
 
 if ([string]::IsNullOrWhiteSpace($Manifest)) {
-    throw 'Manifest is required for validate, plan, deploy, and verify.'
+    throw 'Manifest is required for validate, plan, deploy, verify, and cleanup.'
 }
 
 function Add-Issue {
@@ -676,12 +677,13 @@ else {
 
 if ($issues.Count -gt 0) { throw "K2 solution validation failed with $($issues.Count) issue(s)." }
 
-if ($Command -in @('deploy', 'verify')) {
+if ($Command -in @('deploy', 'verify', 'cleanup')) {
     if ($Output -ne 'text') { throw "$Command supports text output only; specialist structured deployment results are not yet available." }
-    if ($Command -eq 'deploy' -and -not $Confirm) { throw 'deploy changes SQL and K2 state. Review plan and rerun with -Confirm.' }
+    if ($Command -in @('deploy', 'cleanup') -and -not $Confirm) { throw "$Command changes SQL and K2 state. Review the manifest and rerun with -Confirm." }
+    if ($DropDatabase -and $Command -ne 'cleanup') { throw '-DropDatabase is valid only with cleanup.' }
 
     function Invoke-Specialist {
-        param($Item, [string]$Action, [switch]$ResumeForms)
+        param($Item, [string]$Action, [switch]$ResumeForms, [switch]$DropApplicationDatabase)
 
         $skillsRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
         $scriptPath = Join-Path $skillsRoot (Join-Path $Item.skill ('scripts\' + $(
@@ -693,12 +695,15 @@ if ($Command -in @('deploy', 'verify')) {
 
         if ($Item.skill -eq 'k2-workflows') {
             $arguments = @($Action, $Item.manifest)
-            if ($Action -eq 'deploy') { $arguments += '--confirm' }
+            if ($Action -in @('deploy', 'cleanup')) { $arguments += '--confirm' }
+            if ($Action -eq 'cleanup') { $arguments += '--delete-deployed' }
         }
         else {
             $arguments = @($Action, '--manifest', $Item.manifest)
-            if ($Action -eq 'deploy') { $arguments += '--confirm' }
+            if ($Action -in @('deploy', 'cleanup')) { $arguments += '--confirm' }
             if ($Action -eq 'deploy' -and $ResumeForms -and $Item.skill -eq 'k2-smartforms') { $arguments += '--resume' }
+            if ($Action -eq 'cleanup' -and $Item.skill -eq 'k2-smartforms') { $arguments += '--manifest-only' }
+            if ($Action -eq 'cleanup' -and $Item.skill -eq 'k2-sql-smartobjects' -and $DropApplicationDatabase) { $arguments += '--drop-database' }
         }
 
         & $scriptPath @arguments
@@ -707,6 +712,16 @@ if ($Command -in @('deploy', 'verify')) {
     }
 
     $ordered = @($result.plan | Sort-Object order, component)
+    if ($Command -eq 'cleanup') {
+        foreach ($item in @($ordered | Sort-Object order, component -Descending)) {
+            Write-Output "Cleaning checkpoint: $($item.component)"
+            Invoke-Specialist $item 'cleanup' -DropApplicationDatabase:($DropDatabase -and $item.skill -eq 'k2-sql-smartobjects')
+        }
+        Write-Output "K2 solution cleanup succeeded: $solutionName"
+        Write-Output "Database: $(if ($DropDatabase) { 'dropped as requested' } else { 'preserved; use -DropDatabase only for disposable application data' })"
+        Write-Output 'Solution short-code reservation: preserved'
+        return
+    }
     if ($Command -eq 'verify') {
         foreach ($item in $ordered) {
             Write-Output "Verifying checkpoint: $($item.component)"

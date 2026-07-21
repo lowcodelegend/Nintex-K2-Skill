@@ -15,7 +15,7 @@ Use `scripts/k2wf.ps1`; do not write to the K2 database or invoke legacy workflo
 3. Run `plan`, review exact category/name/action, then run `render` when JSON review is useful.
 4. Run `deploy ... --confirm` only after the plan. It deploys and verifies in one command. A published workflow creates a K2 runtime major version; a draft remains designer JSON only.
 5. Use separate `inspect` or `verify` only for drift diagnosis or evidence collection. Deployment verification proves saved JSON, the runtime process definition, assignment/topology, SmartForms states/defaults, and that the integrated form is checked in. Deployment automatically checks in a form changed by integration when the current identity owns its checkout; if another identity owns it, stop with that owner rather than publishing unreviewed work.
-6. For a disposable workflow, run `cleanup ... --confirm --delete-deployed` and prove `inspect` no longer finds it.
+6. For an authorized disposable workflow, run `cleanup ... --confirm --delete-deployed`. Cleanup checks runtime instances once and is idempotent when both Designer/runtime definitions are absent; do not follow success with redundant `inspect`.
 
 `deploy` checks in its integrated SmartForm, then explicitly releases the HTML5 designer lock with K2's resolved AD identity after every successful save/publish. If a prior tool/browser session left a workflow locked, run `unlock <manifest> --confirm`, then refresh the Designer page. Do not inspect through `GetUserProcessKprx` or `GetProcessJson`: on K2 Five 5.10 those reads check the process out again. The CLI's read commands use `GetProcessInfo` plus `GetProcessDefinitionPerVersion` instead.
 

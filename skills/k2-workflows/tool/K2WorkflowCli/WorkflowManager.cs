@@ -379,16 +379,6 @@ namespace K2WorkflowCli
             var id = GetProcessId();
             if (!deleteDeployed && _manifest.Workflow.Publish)
                 throw new CliException("Cleanup of a published workflow requires --delete-deployed.");
-            if (deleteDeployed && _manifest.Workflow.SmartForms != null)
-            {
-                using (var runtime = new RuntimeWorkflowManager())
-                {
-                    if (runtime.GetProcessSet(_manifest.Workflow.ProcessFullName) != null && runtime.GetInstanceCount(_manifest.Workflow.ProcessFullName) != 0)
-                        throw new CliException("Workflow has runtime instances; SmartForms integration and definitions were preserved.");
-                }
-                if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Load(_manifest.Workflow);
-                new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Remove(_manifest.Workflow, _smartForm);
-            }
             var runtimeExists = false;
             if (deleteDeployed)
             {
@@ -399,9 +389,18 @@ namespace K2WorkflowCli
                     {
                         var instances = runtime.GetInstanceCount(_manifest.Workflow.ProcessFullName);
                         if (instances != 0) throw new CliException("Workflow has " + instances + " runtime instance(s); cleanup will not delete instance data.");
-                        runtime.DeleteAllDefinitions(_manifest.Workflow.ProcessFullName);
                     }
                 }
+            }
+            if (!id.HasValue && !runtimeExists) { Console.WriteLine("Workflow is already absent: " + _manifest.Workflow.ProcessFullName); return; }
+            if (deleteDeployed && _manifest.Workflow.SmartForms != null)
+            {
+                if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Load(_manifest.Workflow);
+                new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Remove(_manifest.Workflow, _smartForm);
+            }
+            if (runtimeExists)
+            {
+                using (var runtime = new RuntimeWorkflowManager()) runtime.DeleteAllDefinitions(_manifest.Workflow.ProcessFullName);
             }
             if (id.HasValue)
             {
@@ -409,7 +408,6 @@ namespace K2WorkflowCli
                 if (category == null) throw new CliException("Workflow category was not found: " + _manifest.Application.WorkflowCategoryPath);
                 Invoke("DeleteProcessById", _manifest.K2.DesignerHost, id.Value, _userName, (int)category["id"]);
             }
-            if (!id.HasValue && !runtimeExists) { Console.WriteLine("Workflow is already absent: " + _manifest.Workflow.ProcessFullName); return; }
             Console.WriteLine("Deleted workflow: " + _manifest.Workflow.ProcessFullName);
         }
 

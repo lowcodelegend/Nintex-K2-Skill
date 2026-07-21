@@ -1,6 +1,6 @@
 ---
 name: k2-builder
-description: Orchestrate complete self-hosted Nintex K2 Five solutions across SQL-backed SmartObjects, modern SmartForms, and HTML5 workflows, with durable K2 environment profiles. Use when turning requirements into an ordered artifact graph, coordinating specialist skills, designing lookup, approval-matrix, or master-detail contracts, enforcing cross-artifact defaults, or verifying an end-to-end K2 application. Do not use as a replacement for the specialist skills or for unsupported K2 artifact types.
+description: Orchestrate, verify, and clean up complete self-hosted Nintex K2 Five solutions across SQL-backed SmartObjects, modern SmartForms, and HTML5 workflows, with durable K2 environment profiles. Use when turning requirements into an ordered artifact graph, coordinating specialist skills, designing lookup, approval-matrix, or master-detail contracts, enforcing cross-artifact defaults, verifying an end-to-end application, or tearing down a generated solution from its manifest. Do not use as a replacement for the specialist skills or for unsupported K2 artifact types.
 ---
 
 # K2 Solution Builder
@@ -29,6 +29,18 @@ Before investigating K2, read [environment-profiles.md](references/environment-p
 8. Before declaring completion, read [deployment-handoff.md](references/deployment-handoff.md). Present the complete artifact inventory and an explicit errata register covering manual intervention, custom code, placeholders, partial configuration, unsupported requirements, known limitations, and skipped verification. State `None found` when the register is empty; never omit it.
 
 Stop on the first failed layer. Do not deploy dependent layers. Preserve successfully deployed prerequisites by default and report the exact remediation; clean up only when explicitly requested, in reverse dependency order.
+
+## Fast cleanup
+
+When the user asks to clean up a generated solution and its solution manifest is available, treat that manifest as the ownership ledger. Run one local manifest validation, then invoke:
+
+```powershell
+& '<k2-builder-root>\scripts\k2build.ps1' cleanup -Manifest '<solution-manifest.json>' -Confirm
+```
+
+This removes workflows/integration, Forms/Views, then generated SmartObjects/Service Instance in reverse dependency order. It preserves the application database and short-code reservation. Add `-DropDatabase` only when the user explicitly authorizes deletion of disposable application data.
+
+Do not run environment discovery, broad short-code inventory, specialist plans, per-artifact inspection, independent verification, or manual assembly/API exploration before this path. Let each cleanup command report absent artifacts, workflow instances, category mismatches, or K2 dependency failures. Investigate only that concrete blocker. Do not manually reproduce the manifest inventory in agent context; report concise layer results. Current cleanup intentionally retains empty K2 categories and the short-code reservation unless the user separately requests their removal or release.
 
 ## Fast demo contract
 

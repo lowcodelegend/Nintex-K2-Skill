@@ -117,3 +117,4 @@ Record verification evidence and every generated/deployed artifact in a deployme
 - Load `k2env show --summary --output json` in normal builds. Use full profile output only for environment administration.
 - Use live targeted short-code inspection before adoption. Do not refresh the entire environment solely to check one prefix.
 - Let workflow deployment perform its integrated-form check-in and verification; do not add a separate inspect/check-in/verify cycle unless it reports another checkout owner.
+- For authorized teardown, use `k2build cleanup -Confirm` directly from the existing solution manifest. Do not rediscover or re-prove artifacts the manifest owns unless deletion reports a conflict.

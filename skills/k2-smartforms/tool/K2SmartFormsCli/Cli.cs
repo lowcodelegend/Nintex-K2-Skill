@@ -75,7 +75,7 @@ namespace K2SmartFormsCli
 
                 case "cleanup":
                     RequireConfirmation(options, "cleanup");
-                    manager.Cleanup();
+                    manager.Cleanup(HasFlag(options, "manifest-only"));
                     Console.WriteLine("CLEANUP SUCCEEDED: " + manifest.Name);
                     return 0;
 
@@ -189,7 +189,7 @@ namespace K2SmartFormsCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2forms 0.14.0");
+            Console.WriteLine("k2forms 0.15.0");
         }
 
         private static void PrintHelp()
@@ -203,7 +203,7 @@ namespace K2SmartFormsCli
             Console.WriteLine("  k2forms verify  --manifest <path>");
             Console.WriteLine("  k2forms inspect --manifest <path>");
             Console.WriteLine("  k2forms checkin --manifest <path> --form <exact-name> --confirm");
-            Console.WriteLine("  k2forms cleanup --manifest <path> --confirm");
+            Console.WriteLine("  k2forms cleanup --manifest <path> --confirm [--manifest-only]");
             Console.WriteLine("  k2forms version");
             Console.WriteLine("  k2forms selftest");
             Console.WriteLine();

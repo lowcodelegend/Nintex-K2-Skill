@@ -74,6 +74,9 @@ Set-Location '.\my-k2-solution'
 
 # Resume after an interrupted layer without replacing successful prerequisites
 & "$builder\scripts\k2build.ps1" deploy -Manifest '.\solution-manifest.json' -Confirm -Resume
+
+# Fast reverse-order teardown; preserves the database unless -DropDatabase is explicit
+& "$builder\scripts\k2build.ps1" cleanup -Manifest '.\solution-manifest.json' -Confirm
 ```
 
 Or ask the agent to create a fresh solution:
@@ -96,6 +99,7 @@ Claude: /k2-builder create an expense approval solution with code EXP. Plan,
 - Persist Style Profile and header/footer lifecycle choices, including rule calls, control transfers, titles, and ordering.
 - Validate and plan complete solution manifests with SQL → SmartObjects → SmartForms → workflow dependencies.
 - Deploy and verify complete solutions in dependency order, with resumable checkpoints.
+- Clean up complete solutions directly from their manifests in reverse dependency order, without broad rediscovery or repeated inspection.
 - Reserve unique 3–4 letter solution codes per environment; enforce version-free names, shared categories, workflow states, approval-matrix/Admin UX, and master-detail contracts.
 - Copy bundled `corporate-workflow`, `expense-claim`, and `request-management` examples into a project.
 

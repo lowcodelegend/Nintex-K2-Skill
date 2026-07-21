@@ -8,6 +8,7 @@
 - Use compact resolved environment output during routine generation. Keep broad inventories out of normal agent context and refresh short-code ownership with a targeted live query.
 - PowerShell wrappers used from other scripts must return control and preserve `$LASTEXITCODE`; a top-level `exit` turns a verification chain into a silent partial run.
 - An HTTP authentication redirect proves route reachability only. Report `reachable-authentication-required`, not authenticated rendering success.
+- Complete-solution cleanup should use the existing manifests as its ownership ledger. Validate locally once, tear down in reverse dependency order, and investigate only concrete deletion conflicts; broad discovery and repeated inspect/verify passes add latency without improving ordinary generated-solution cleanup.
 
 ## Local environment
 

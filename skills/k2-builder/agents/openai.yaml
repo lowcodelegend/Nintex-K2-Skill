@@ -1,4 +1,4 @@
 interface:
   display_name: "K2 Solution Builder"
   short_description: "Orchestrate complete K2 solutions across every layer"
-  default_prompt: "Use $k2-builder to reserve a unique solution code, then plan, build, and verify a complete K2 Five solution across SQL SmartObjects, SmartForms, HTML5 workflows, approval matrices, and required master-detail collections."
+  default_prompt: "Use $k2-builder to plan, build, verify, or clean up a complete K2 Five solution across SQL SmartObjects, SmartForms, HTML5 workflows, approval matrices, and required master-detail collections."

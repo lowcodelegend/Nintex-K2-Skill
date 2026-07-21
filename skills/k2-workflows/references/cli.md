@@ -18,6 +18,6 @@ From the skill directory:
 
 `unlock` is an idempotent recovery command for workflows left locked by an interrupted CLI or browser session. K2 locks are client-session-sensitive, so a workflow can appear locked by the same AD username when the browser has a different client identifier. Do not follow the unlock with `GetUserProcessKprx` or use `GetProcessJson` for inspection; those calls reacquire the lock in this K2 build. `inspect`, `export`, and `verify` use the non-locking metadata/version-history path.
 
-Cleanup first refuses any workflow with runtime instances. It unsets the K2 default runtime version, deletes the exact runtime definitions without log deletion, then removes the exact designer JSON/category link. It does not remove the solution-specific `WFs` category.
+Cleanup checks runtime existence/instances once, returns immediately when Designer and runtime definitions are already absent, removes SmartForms integration, unsets the K2 default runtime version, deletes exact runtime definitions without log deletion, then removes the exact Designer JSON/category link. It does not remove the solution-specific `WFs` category.
 
 Exit code `0` indicates success, `2` is a validation/safety error, and `1` is an unexpected runtime error.
