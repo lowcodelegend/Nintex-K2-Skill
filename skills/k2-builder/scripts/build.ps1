@@ -43,6 +43,25 @@ foreach ($assetName in @('solution-manifest.template.json', 'deployment-ledger.t
     Get-Content -LiteralPath $assetPath -Raw | ConvertFrom-Json | Out-Null
 }
 
+$exampleTestRoot = Join-Path ([IO.Path]::GetTempPath()) ('K2BuilderExamples-' + [Guid]::NewGuid().ToString('N'))
+try {
+    New-Item -ItemType Directory -Path $exampleTestRoot | Out-Null
+    foreach ($exampleName in @('corporate-workflow', 'expense-claim', 'request-management')) {
+        $destination = Join-Path $exampleTestRoot $exampleName
+        & (Join-Path $PSScriptRoot 'copy-example.ps1') -Name $exampleName -Destination $destination | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "Example copy validation failed: $exampleName" }
+    }
+} finally {
+    if (Test-Path -LiteralPath $exampleTestRoot) {
+        $tempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\')
+        $resolved = [IO.Path]::GetFullPath($exampleTestRoot).TrimEnd('\')
+        if (-not $resolved.StartsWith($tempRoot + '\', [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Example validation cleanup escaped the temporary root: $resolved"
+        }
+        Remove-Item -LiteralPath $resolved -Recurse -Force
+    }
+}
+
 $ledgerTemplate = Get-Content -LiteralPath (Join-Path $skillRoot 'assets\deployment-ledger.template.json') -Raw | ConvertFrom-Json
 if ($ledgerTemplate.schemaVersion -ne 2 -or $null -eq $ledgerTemplate.artifacts -or $null -eq $ledgerTemplate.errata) {
     throw 'deployment-ledger.template.json must use schemaVersion 2 and contain artifact and errata arrays.'
@@ -63,7 +82,7 @@ if ($agentContent -notmatch '(?m)^\s*default_prompt:\s*"Use \$k2-builder .+"\s*$
 }
 
 $actualVersion = (& $entryPoint version | Out-String).Trim()
-if ($actualVersion -cne 'k2build 0.18.0') {
+if ($actualVersion -cne 'k2build 0.18.1') {
     throw "Unexpected k2build version output: $actualVersion"
 }
 $environmentExecutable = Join-Path $skillRoot "tool\K2EnvironmentCli\bin\$Configuration\k2env.exe"
@@ -72,4 +91,4 @@ if ($environmentVersion -cne 'k2env 0.7.0') {
     throw "Unexpected k2env version output: $environmentVersion"
 }
 
-Write-Output "k2-builder 0.18.0 validation passed ($Configuration); k2env 0.7.0 built at $environmentExecutable."
+Write-Output "k2-builder 0.18.1 validation passed ($Configuration); k2env 0.7.0 built at $environmentExecutable."
