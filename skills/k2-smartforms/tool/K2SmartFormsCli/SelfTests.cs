@@ -19,9 +19,10 @@ namespace K2SmartFormsCli
             TestHiddenPropertyComposition();
             TestEditableListHiddenPropertyComposition();
             TestMalformedEditableListRejected();
+            TestViewIdentityRebase();
             TestFlatFormViewOrdering();
             TestMultiTableWorkflowStateReconciliation();
-            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, required/read-only gate, live lookup placement, defaults, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, editable-list structural rejection, flat Form ordering, multi-table workflow-state reconciliation");
+            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, required/read-only gate, live lookup placement, defaults, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, multi-table workflow-state reconciliation");
         }
 
         private static void TestIdentityNormalization()
@@ -237,6 +238,10 @@ namespace K2SmartFormsCli
             Assert(document.Descendants("Control").Count(control => (string)control.Attribute("Type") == "Cell") == 8,
                 "editable-list Cell control definitions reduced from twelve to eight");
             Assert(columns.Sum(column => int.Parse(((string)column.Attribute("Size")).TrimEnd('%'))) == 100, "editable-list widths total 100 percent");
+            Assert(document.Descendants("Control").Single(control => (string)control.Attribute("Type") == "View")
+                .Descendants("Property").Any(property => (string)property.Element("Name") == "ShowAddRow" &&
+                    (string)property.Element("Value") == "false"),
+                "editable-list Add new row link disabled by default");
 
             foreach (var visible in new[] { "first", "last" })
             {
@@ -267,7 +272,10 @@ namespace K2SmartFormsCli
         private static void TestMalformedEditableListRejected()
         {
             var view = NewView("Malformed Evidence", "Evidence", "capture-list", "First", "Middle", "Last");
-            AssertThrows(delegate { ViewPresentationDefinition.Verify(EditableListXml(true), view, false, false); }, "exactly one Header");
+            AssertThrows(delegate { ViewPresentationDefinition.Apply(EditableListXml(true), view, false, false); }, "exactly one Header");
+
+            var addRowEnabled = EditableListXml(false);
+            AssertThrows(delegate { ViewPresentationDefinition.Verify(addRowEnabled, view, false, false); }, "ShowAddRow=false");
         }
 
         private static string EditableListXml(bool malformed)
@@ -277,7 +285,14 @@ namespace K2SmartFormsCli
             var sizes = new[] { "34%", "33%", "33%" };
             var view = new XElement("View",
                 new XElement("Fields"),
-                new XElement("Controls"),
+                new XElement("Controls",
+                    new XElement("Control", new XAttribute("ID", "view-control"), new XAttribute("Type", "View"),
+                        new XElement("Name", "Evidence"),
+                        new XElement("Properties",
+                            new XElement("Property",
+                                new XElement("Name", "ShowAddRow"),
+                                new XElement("DisplayValue", "true"),
+                                new XElement("Value", "true"))))),
                 new XElement("Canvas",
                     new XElement("Sections",
                         new XElement("Section", new XAttribute("Type", "Body"),
@@ -332,6 +347,42 @@ namespace K2SmartFormsCli
             }
 
             return new XDocument(view).ToString(SaveOptions.DisableFormatting);
+        }
+
+        private static void TestViewIdentityRebase()
+        {
+            var generatedId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+            var expectedId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+            var source = new XDocument(
+                new XElement("SourceCode.Forms",
+                    new XElement("Views",
+                        new XElement("View", new XAttribute("ID", generatedId),
+                            new XElement("Name", "Evidence1"),
+                            new XElement("DisplayName", "Evidence1"),
+                            new XElement("Controls",
+                                new XElement("Control", new XAttribute("ID", generatedId), new XAttribute("Type", "View"))),
+                            new XElement("Events",
+                                new XElement("Event", new XAttribute("SourceID", generatedId),
+                                    new XElement("Property", new XElement("Value", generatedId))))))));
+            var rebased = SmartFormsManager.RebaseViewIdentity(
+                source.ToString(SaveOptions.DisableFormatting), expectedId, "Evidence");
+            var document = XDocument.Parse(rebased);
+            var view = document.Descendants("View").Single();
+            Assert((string)view.Attribute("ID") == expectedId.ToString(), "View repair root identity rebased");
+            Assert((string)view.Element("Name") == "Evidence" && (string)view.Element("DisplayName") == "Evidence",
+                "View repair exact name/display name restored");
+            Assert(document.Descendants("Control").Single().Attribute("ID").Value == expectedId.ToString(),
+                "View repair root control self-reference rebased");
+            Assert(rebased.IndexOf(generatedId.ToString(), StringComparison.OrdinalIgnoreCase) < 0,
+                "View repair old generated identity fully removed");
+
+            var compositeDocument = XDocument.Parse(source.ToString(SaveOptions.DisableFormatting));
+            compositeDocument.Descendants("Event").Single().SetAttributeValue("Composite", generatedId + "-suffix");
+            var composite = compositeDocument.ToString(SaveOptions.DisableFormatting);
+            AssertThrows(delegate
+            {
+                SmartFormsManager.RebaseViewIdentity(composite, expectedId, "Evidence");
+            }, "composite self-reference");
         }
 
         private static XElement ControlDefinition(string id, string type, string value)

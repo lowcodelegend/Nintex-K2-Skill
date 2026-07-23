@@ -11,6 +11,7 @@ namespace K2SmartFormsCli
         public static string Apply(string xml, ViewDefinition view, bool master, bool detail)
         {
             var document = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
+            ApplyEditableListDefaults(document, view);
             ApplyHiddenProperties(document, view);
             ApplyPropertyLabels(document, view);
             if (view.Type == "capture" && (view.Charts == null || view.Charts.Count == 0))
@@ -39,7 +40,10 @@ namespace K2SmartFormsCli
         {
             var document = XDocument.Parse(xml);
             if (string.Equals(view.Type, "capture-list", StringComparison.OrdinalIgnoreCase))
+            {
+                VerifyEditableListDefaults(document, view);
                 VerifyEditableListStructure(document, view);
+            }
             VerifyHiddenProperties(document, view);
             VerifyPropertyLabels(document, view);
             if (view.Type == "capture" && (view.Charts == null || view.Charts.Count == 0))
@@ -79,6 +83,38 @@ namespace K2SmartFormsCli
         private static bool IsButtonControl(string type)
         {
             return !string.IsNullOrWhiteSpace(type) && type.EndsWith("Button", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static void ApplyEditableListDefaults(XDocument document, ViewDefinition view)
+        {
+            if (!string.Equals(view.Type, "capture-list", StringComparison.OrdinalIgnoreCase)) return;
+
+            var viewControl = FindEditableListViewControl(document, view);
+            var properties = viewControl.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
+            if (properties == null)
+            {
+                properties = new XElement(viewControl.Name.Namespace + "Properties");
+                viewControl.Add(properties);
+            }
+            SetProperty(properties, "ShowAddRow", "false");
+        }
+
+        private static void VerifyEditableListDefaults(XDocument document, ViewDefinition view)
+        {
+            var viewControl = FindEditableListViewControl(document, view);
+            if (!string.Equals(PropertyValue(viewControl, "ShowAddRow"), "false", StringComparison.OrdinalIgnoreCase))
+                throw new CliException("Capture-list View '" + view.Name +
+                    "' must disable the editable-list 'Enable Add new row link' setting (ShowAddRow=false).");
+        }
+
+        private static XElement FindEditableListViewControl(XDocument document, ViewDefinition view)
+        {
+            var controls = document.Descendants().Where(x => x.Name.LocalName == "Control" &&
+                string.Equals((string)x.Attribute("Type"), "View", StringComparison.OrdinalIgnoreCase)).ToList();
+            if (controls.Count != 1)
+                throw new CliException("Generated capture-list View '" + view.Name +
+                    "' must contain exactly one root View control; found " + controls.Count + ".");
+            return controls[0];
         }
 
         private static void ApplyHiddenProperties(XDocument document, ViewDefinition view)

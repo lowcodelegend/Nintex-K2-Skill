@@ -167,6 +167,7 @@ navigation, Designer isolation, and authenticated Runtime validation.
 - Apply discovered shared headers/footers, view titles, initialization/server-load rules, combined control transfers, and footer ordering.
 - Preserve exact manifest order on flat dashboard/report Forms and expose supported live Form-definition diagnostics.
 - Plan, deploy, inspect, verify Runtime definitions/routes, check in exact forms, and dependency-safe cleanup/replace.
+- Repair one exact manifest-declared View in place with required GUID/backup guards while preserving its name, category, SmartObject binding, Form dependencies, and check-in state.
 - Resume partial generation without replacing successful artifacts, automatically recover the known K2 5.10 post-delete connection invalidation in a fresh process, or regenerate Forms only while preserving View GUIDs.
 
 ### `k2style`

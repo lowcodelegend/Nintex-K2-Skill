@@ -1,0 +1,79 @@
+{
+  "name": "RQB editable-list repair probe",
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "application": {
+    "solutionCode": "RQB",
+    "rootCategoryPath": "K2 Skills\\RQB.Raqeeb Whistleblower\\Generator Probes",
+    "theme": "Lithium",
+    "replaceExisting": false,
+    "checkIn": true,
+    "commonHeader": {
+      "enabled": false,
+      "reason": "Disposable generator integration probe."
+    },
+    "views": [
+      {
+        "name": "RQB.Editable List Repair Probe",
+        "smartObject": "RQB_Raqeeb_Sql_RQBSEC_PublicIntakeEvidence",
+        "type": "capture-list",
+        "properties": [
+          "PublicIntakeEvidenceId",
+          "PublicIntakeSubmissionId",
+          "EvidenceId",
+          "EvidenceTypeCode",
+          "Title",
+          "Description",
+          "DocumentReference",
+          "CreatedDate"
+        ],
+        "hiddenProperties": [
+          "PublicIntakeEvidenceId",
+          "PublicIntakeSubmissionId",
+          "EvidenceId",
+          "CreatedDate"
+        ],
+        "methods": [
+          "Create",
+          "Read",
+          "Update",
+          "Delete",
+          "List"
+        ],
+        "defaultListMethod": "List",
+        "options": [
+          "editable",
+          "labels-left",
+          "colon-labels"
+        ]
+      }
+    ],
+    "forms": [
+      {
+        "name": "RQB.Editable List Repair Probe Form",
+        "useLegacyTheme": true,
+        "views": [
+          "RQB.Editable List Repair Probe"
+        ],
+        "viewTitles": {
+          "RQB.Editable List Repair Probe": "Editable-list repair probe"
+        },
+        "options": [],
+        "behaviors": []
+      }
+    ]
+  },
+  "verification": {
+    "expectedViews": [
+      "RQB.Editable List Repair Probe"
+    ],
+    "expectedForms": [
+      "RQB.Editable List Repair Probe Form"
+    ],
+    "smokeTestRuntime": false
+  }
+}

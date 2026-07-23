@@ -66,6 +66,20 @@ namespace K2SmartFormsCli
                     Console.WriteLine("RECONCILIATION SUCCEEDED: " + manifest.Name);
                     return 0;
 
+                case "repair-view":
+                    RequireConfirmation(options, "repair-view");
+                    manager.CheckConnectionAndInputs();
+                    Guid expectedViewId;
+                    var expectedViewIdValue = GetOption(options, "expected-id", true);
+                    if (!Guid.TryParse(expectedViewIdValue, out expectedViewId))
+                        throw new CliException("Invalid --expected-id GUID: " + expectedViewIdValue);
+                    manager.RepairView(
+                        GetOption(options, "view", true),
+                        expectedViewId,
+                        GetOption(options, "backup", true));
+                    Console.WriteLine("VIEW REPAIR SUCCEEDED: " + manifest.Name);
+                    return 0;
+
                 case "inspect":
                     Inspect(manager);
                     return 0;
@@ -214,7 +228,7 @@ namespace K2SmartFormsCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2forms 0.22.0");
+            Console.WriteLine("k2forms 0.23.0");
         }
 
         private static void PrintHelp()
@@ -227,6 +241,7 @@ namespace K2SmartFormsCli
             Console.WriteLine("  k2forms deploy  --manifest <path> --confirm [--resume | --forms-only]");
             Console.WriteLine("  k2forms verify  --manifest <path>");
             Console.WriteLine("  k2forms reconcile --manifest <path> --confirm");
+            Console.WriteLine("  k2forms repair-view --manifest <path> --view <exact-name> --expected-id <guid> --backup <path> --confirm");
             Console.WriteLine("  k2forms inspect --manifest <path>");
             Console.WriteLine("  k2forms controls --manifest <path> [--name <control>]");
             Console.WriteLine("  k2forms find-control-usage --manifest <path> --type <control>");

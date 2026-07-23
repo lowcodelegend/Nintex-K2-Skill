@@ -79,8 +79,11 @@ namespace K2SmartFormsCli
         {
             WithFormsManager(delegate(FormsManager manager)
             {
-                if (!manager.CheckViewExists(name)) throw new CliException("K2 View not found: " + name);
-                var view = manager.GetView(name);
+                Guid id;
+                var byId = Guid.TryParse(name, out id);
+                if (byId ? !manager.CheckViewExists(id) : !manager.CheckViewExists(name))
+                    throw new CliException("K2 View not found: " + name);
+                var view = byId ? manager.GetView(id) : manager.GetView(name);
                 Console.WriteLine(manager.GetViewDefinition(view.Guid));
                 return 0;
             });
@@ -471,6 +474,226 @@ namespace K2SmartFormsCli
             Console.WriteLine("K2 SmartForms master-detail reconciliation: OK");
         }
 
+        public void RepairView(string viewName, Guid expectedId, string backupPath)
+        {
+            var declaredView = _manifest.Application.Views.SingleOrDefault(x =>
+                string.Equals(x.Name, viewName, StringComparison.OrdinalIgnoreCase));
+            if (declaredView == null)
+                throw new CliException("View is not declared in application.views: " + viewName);
+
+            var fullBackupPath = Path.GetFullPath(backupPath);
+            if (File.Exists(fullBackupPath))
+                throw new CliException("Refusing to overwrite existing View backup: " + fullBackupPath);
+            var backupDirectory = Path.GetDirectoryName(fullBackupPath);
+            if (string.IsNullOrWhiteSpace(backupDirectory) || !Directory.Exists(backupDirectory))
+                throw new CliException("View backup directory does not exist: " + backupDirectory);
+
+            var lookupSources = LoadLookupRuntimeSources();
+            WithFormsManager(delegate(FormsManager manager)
+            {
+                ViewInfo originalInfo;
+                if (manager.CheckViewExists(viewName))
+                    originalInfo = manager.GetView(viewName);
+                else if (manager.CheckViewExists(expectedId))
+                {
+                    originalInfo = manager.GetView(expectedId);
+                    Console.WriteLine("View repair preflight: resolving manifest View by required ID because its live name drifted to '" +
+                        originalInfo.Name + "'.");
+                }
+                else
+                    throw new CliException("K2 View does not exist by manifest name or required ID: " + viewName);
+                if (originalInfo.Guid != expectedId)
+                    throw new CliException("Refusing to repair View '" + viewName + "': live ID " + originalInfo.Guid +
+                        " does not match required --expected-id " + expectedId + ".");
+                if (originalInfo.IsCheckedOut)
+                    throw new CliException("Refusing to repair View '" + viewName + "' while it is checked out by '" +
+                        originalInfo.CheckedOutBy + "'. Start from a checked-in View.");
+
+                var expectedCategory = _manifest.Application.GetViewCategoryPath(declaredView);
+                if (!string.Equals(originalInfo.CategoryPath, expectedCategory, StringComparison.OrdinalIgnoreCase))
+                    throw new CliException("Refusing to repair View '" + viewName + "' in category '" +
+                        originalInfo.CategoryPath + "'; manifest owns '" + expectedCategory + "'.");
+
+                var original = manager.GetViewDefinition(originalInfo.Guid);
+                var originalDocument = XDocument.Parse(original);
+                var originalPrimarySource = PrimarySmartObjectIdentity(originalDocument, viewName);
+                var originalDependencies = ViewDependencyIds(manager, originalInfo.Guid);
+
+                string rendered;
+                using (var renderer = new AutoGenerator(manager.Connection))
+                    rendered = RenderView(renderer, declaredView, lookupSources);
+                var repaired = RebaseViewIdentity(rendered, originalInfo.Guid, viewName);
+                var repairedDocument = XDocument.Parse(repaired);
+                var repairedPrimarySource = PrimarySmartObjectIdentity(repairedDocument, viewName);
+                if (!string.Equals(originalPrimarySource, repairedPrimarySource, StringComparison.OrdinalIgnoreCase))
+                    throw new CliException("Refusing to repair View '" + viewName +
+                        "': generated primary SmartObject binding differs from the live binding.");
+                VerifyRenderedView(repaired, declaredView);
+
+                File.WriteAllText(fullBackupPath, original);
+                Console.WriteLine("View repair backup: " + fullBackupPath);
+
+                var checkedOutHere = false;
+                try
+                {
+                    manager.CheckOutView(originalInfo.Guid);
+                    checkedOutHere = true;
+                    manager.DeployViews(repaired, expectedCategory, false);
+
+                    var draftInfo = manager.GetView(originalInfo.Guid);
+                    AssertRepairedViewInvariants(manager, draftInfo, originalInfo, expectedCategory,
+                        originalDependencies, originalPrimarySource, declaredView, true);
+
+                    manager.CheckInView(originalInfo.Guid);
+                    checkedOutHere = false;
+                }
+                catch
+                {
+                    if (checkedOutHere)
+                    {
+                        var failed = manager.GetView(originalInfo.Guid);
+                        if (failed.IsCheckedOut && IsCurrentIdentity(Convert.ToString(failed.CheckedOutBy)))
+                            manager.UndoViewCheckOut(originalInfo.Guid);
+                    }
+                    throw;
+                }
+
+                var updatedInfo = manager.GetView(originalInfo.Guid);
+                AssertRepairedViewInvariants(manager, updatedInfo, originalInfo, expectedCategory,
+                    originalDependencies, originalPrimarySource, declaredView, false);
+                Console.WriteLine("View repair: updated in place (" + viewName + ", " + originalInfo.Guid +
+                    ", v" + originalInfo.Version + " -> v" + updatedInfo.Version + ", dependencies=" +
+                    originalDependencies.Count + ", checkedIn=true)");
+                return 0;
+            });
+        }
+
+        private string RenderView(AutoGenerator renderer, ViewDefinition view,
+            IDictionary<string, LookupRuntimeSource> lookupSources)
+        {
+            var viewGenerator = new ViewGenerator(ParseViewType(view.Type), ParseViewOptions(view.Options));
+            if (view.Type == "capture" || view.Type == "capture-list")
+                viewGenerator.InputProperties.AddRange(view.Properties);
+            else
+                viewGenerator.DisplayProperties.AddRange(view.Properties);
+            viewGenerator.InstanceMethods.AddRange(view.Methods);
+            if (!string.IsNullOrWhiteSpace(view.DefaultListMethod))
+                viewGenerator.DefaultListMethod = view.DefaultListMethod;
+
+            var generated = renderer.Generate(viewGenerator, view.SmartObject, view.Name);
+            var definition = ViewLookupDefinition.Apply(generated.ToXml(), view, lookupSources);
+            var isMaster = _manifest.Application.Forms.Any(f => f.MasterDetail != null &&
+                string.Equals(f.MasterDetail.MasterView, view.Name, StringComparison.OrdinalIgnoreCase));
+            var detailRelationships = _manifest.Application.Forms.Where(f => f.MasterDetail != null)
+                .SelectMany(f => f.MasterDetail.Details)
+                .Where(d => string.Equals(d.View, view.Name, StringComparison.OrdinalIgnoreCase)).ToList();
+            var isDetail = detailRelationships.Count > 0;
+            definition = ViewPresentationDefinition.Apply(definition, view, isMaster, isDetail);
+            definition = ViewChartLayoutDefinition.Apply(definition, view);
+            definition = ViewMetricCardLayoutDefinition.Apply(definition, view);
+            definition = ViewLifecycleLayoutDefinition.Apply(definition, view);
+            if (isDetail)
+                definition = MasterDetailRules.SuppressUnfilteredDetailLoads(definition, view.Name, detailRelationships);
+            VerifyRenderedView(definition, view);
+            return definition;
+        }
+
+        private void VerifyRenderedView(string definition, ViewDefinition view)
+        {
+            var isMaster = _manifest.Application.Forms.Any(f => f.MasterDetail != null &&
+                string.Equals(f.MasterDetail.MasterView, view.Name, StringComparison.OrdinalIgnoreCase));
+            var isDetail = _manifest.Application.Forms.Where(f => f.MasterDetail != null)
+                .SelectMany(f => f.MasterDetail.Details)
+                .Any(d => string.Equals(d.View, view.Name, StringComparison.OrdinalIgnoreCase));
+            ViewPresentationDefinition.Verify(definition, view, isMaster, isDetail);
+        }
+
+        internal static string RebaseViewIdentity(string definition, Guid expectedId, string viewName)
+        {
+            var document = XDocument.Parse(definition, LoadOptions.PreserveWhitespace);
+            var view = document.Descendants().SingleOrDefault(x => x.Name.LocalName == "View");
+            Guid generatedId;
+            if (view == null || !Guid.TryParse((string)view.Attribute("ID"), out generatedId))
+                throw new CliException("Generated View '" + viewName + "' has no valid root View ID.");
+
+            var generatedValue = generatedId.ToString();
+            var expectedValue = expectedId.ToString();
+            foreach (var attribute in document.Descendants().Attributes()
+                .Where(x => string.Equals(x.Value, generatedValue, StringComparison.OrdinalIgnoreCase)).ToList())
+                attribute.Value = expectedValue;
+            foreach (var textNode in document.DescendantNodes().OfType<XText>()
+                .Where(x => string.Equals(x.Value, generatedValue, StringComparison.OrdinalIgnoreCase)).ToList())
+                textNode.Value = expectedValue;
+
+            var name = view.Elements().SingleOrDefault(x => x.Name.LocalName == "Name");
+            var displayName = view.Elements().SingleOrDefault(x => x.Name.LocalName == "DisplayName");
+            if (name == null || displayName == null)
+                throw new CliException("Generated View '" + viewName + "' has no root Name/DisplayName identity.");
+            name.Value = viewName;
+            displayName.Value = viewName;
+
+            var rebased = document.ToString(SaveOptions.DisableFormatting);
+            if (rebased.IndexOf(generatedValue, StringComparison.OrdinalIgnoreCase) >= 0)
+                throw new CliException("Generated View '" + viewName +
+                    "' contains an unsupported composite self-reference that could not be identity-rebased.");
+            var rebasedDocument = XDocument.Parse(rebased);
+            var rebasedView = rebasedDocument.Descendants().Single(x => x.Name.LocalName == "View");
+            var viewControls = rebasedDocument.Descendants().Where(x => x.Name.LocalName == "Control" &&
+                string.Equals((string)x.Attribute("Type"), "View", StringComparison.OrdinalIgnoreCase)).ToList();
+            if (!string.Equals((string)rebasedView.Attribute("ID"), expectedValue, StringComparison.OrdinalIgnoreCase) ||
+                viewControls.Count != 1 ||
+                !string.Equals((string)viewControls[0].Attribute("ID"), expectedValue, StringComparison.OrdinalIgnoreCase))
+                throw new CliException("Generated View '" + viewName +
+                    "' did not rebase every root View self-reference to " + expectedValue + ".");
+            return rebased;
+        }
+
+        private static string PrimarySmartObjectIdentity(XDocument document, string viewName)
+        {
+            var primarySources = document.Descendants().Where(x => x.Name.LocalName == "Source" &&
+                string.Equals((string)x.Attribute("SourceType"), "Object", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("ContextType"), "Primary", StringComparison.OrdinalIgnoreCase)).ToList();
+            if (primarySources.Count != 1)
+                throw new CliException("View '" + viewName + "' must contain exactly one primary SmartObject source; found " +
+                    primarySources.Count + ".");
+            return ((string)primarySources[0].Attribute("SourceID") ?? string.Empty) + "|" +
+                ((string)primarySources[0].Attribute("SourceName") ?? string.Empty);
+        }
+
+        private static IList<Guid> ViewDependencyIds(FormsManager manager, Guid viewId)
+        {
+            return manager.GetFormsForView(viewId).Forms.Cast<FormInfo>().Select(x => x.Guid)
+                .Distinct().OrderBy(x => x).ToList();
+        }
+
+        private void AssertRepairedViewInvariants(FormsManager manager, ViewInfo actual, ViewInfo original,
+            string expectedCategory, IList<Guid> expectedDependencies, string expectedPrimarySource,
+            ViewDefinition declaredView, bool expectCheckedOut)
+        {
+            if (actual.Guid != original.Guid)
+                throw new CliException("View repair changed the View identity: " + declaredView.Name);
+            if (!string.Equals(actual.Name, declaredView.Name, StringComparison.Ordinal) ||
+                !string.Equals(actual.DisplayName, declaredView.Name, StringComparison.Ordinal))
+                throw new CliException("View repair changed the View name/display name for '" + declaredView.Name +
+                    "' to '" + actual.Name + "'/'" + actual.DisplayName + "'.");
+            if (!string.Equals(actual.CategoryPath, expectedCategory, StringComparison.OrdinalIgnoreCase))
+                throw new CliException("View repair moved View '" + declaredView.Name + "' out of its manifest category.");
+            if (actual.IsCheckedOut != expectCheckedOut)
+                throw new CliException("View repair left View '" + declaredView.Name + "' checkout state at " +
+                    actual.IsCheckedOut + ", expected " + expectCheckedOut + ".");
+
+            var dependencies = ViewDependencyIds(manager, actual.Guid);
+            if (!dependencies.SequenceEqual(expectedDependencies))
+                throw new CliException("View repair changed Form dependencies for View '" + declaredView.Name + "'.");
+            var liveDefinition = manager.GetViewDefinition(actual.Guid);
+            var liveDocument = XDocument.Parse(liveDefinition);
+            if (!string.Equals(PrimarySmartObjectIdentity(liveDocument, declaredView.Name), expectedPrimarySource,
+                    StringComparison.OrdinalIgnoreCase))
+                throw new CliException("View repair changed the primary SmartObject binding for View '" +
+                    declaredView.Name + "'.");
+            VerifyRenderedView(liveDefinition, declaredView);
+        }
+
         public void Deploy(bool resume, bool formsOnly)
         {
             CheckConnectionAndInputs();
@@ -509,23 +732,7 @@ namespace K2SmartFormsCli
                         foreach (var view in _manifest.Application.Views)
                         {
                             if (resume && manager.CheckViewExists(view.Name)) continue;
-                            var viewGenerator = new ViewGenerator(ParseViewType(view.Type), ParseViewOptions(view.Options));
-                            if (view.Type == "capture" || view.Type == "capture-list") viewGenerator.InputProperties.AddRange(view.Properties);
-                            else viewGenerator.DisplayProperties.AddRange(view.Properties);
-                            viewGenerator.InstanceMethods.AddRange(view.Methods);
-                            if (!string.IsNullOrWhiteSpace(view.DefaultListMethod)) viewGenerator.DefaultListMethod = view.DefaultListMethod;
-                            var generated = renderer.Generate(viewGenerator, view.SmartObject, view.Name);
-                            var definition = ViewLookupDefinition.Apply(generated.ToXml(), view, lookupSources);
-                            var isMaster = _manifest.Application.Forms.Any(f => f.MasterDetail != null && string.Equals(f.MasterDetail.MasterView, view.Name, StringComparison.OrdinalIgnoreCase));
-                            var detailRelationships = _manifest.Application.Forms.Where(f => f.MasterDetail != null)
-                                .SelectMany(f => f.MasterDetail.Details).Where(d => string.Equals(d.View, view.Name, StringComparison.OrdinalIgnoreCase)).ToList();
-                            var isDetail = detailRelationships.Count > 0;
-                            definition = ViewPresentationDefinition.Apply(definition, view, isMaster, isDetail);
-                            definition = ViewChartLayoutDefinition.Apply(definition, view);
-                            definition = ViewMetricCardLayoutDefinition.Apply(definition, view);
-                            definition = ViewLifecycleLayoutDefinition.Apply(definition, view);
-                            if (isDetail) definition = MasterDetailRules.SuppressUnfilteredDetailLoads(definition, view.Name, detailRelationships);
-                            renderedViews[view.Name] = definition;
+                            renderedViews[view.Name] = RenderView(renderer, view, lookupSources);
                         }
                     }
                     Console.WriteLine("Pre-render validation: " + renderedViews.Count + " View definition(s) generated before K2 mutation.");
