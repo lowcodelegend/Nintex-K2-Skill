@@ -17,9 +17,11 @@ namespace K2SmartFormsCli
             TestMetricCardComposition();
             TestLifecycleComposition();
             TestHiddenPropertyComposition();
+            TestEditableListHiddenPropertyComposition();
+            TestMalformedEditableListRejected();
             TestFlatFormViewOrdering();
             TestMultiTableWorkflowStateReconciliation();
-            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, required/read-only gate, live lookup placement, defaults, master-detail buttons, native chart, metric-card, lifecycle and hidden-property composition, flat Form ordering, multi-table workflow-state reconciliation");
+            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, required/read-only gate, live lookup placement, defaults, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, editable-list structural rejection, flat Form ordering, multi-table workflow-state reconciliation");
         }
 
         private static void TestIdentityNormalization()
@@ -213,6 +215,146 @@ namespace K2SmartFormsCli
             Assert(!document.Descendants("Row").Any(row => row.Descendants("Control").Any(control => (string)control.Attribute("ID") == "case-control")), "hidden property row removed");
             Assert(document.Descendants("Row").Any(row => row.Descendants("Control").Any(control => (string)control.Attribute("ID") == "title-control")), "visible property row retained");
             Assert(document.Descendants("Control").Any(control => (string)control.Attribute("ID") == "title-label" && control.Descendants("Property").Any(property => (string)property.Element("Name") == "Text" && (string)property.Element("Value") == "Case title")), "friendly property label applied");
+        }
+
+        private static void TestEditableListHiddenPropertyComposition()
+        {
+            var view = NewView("Evidence", "Evidence", "capture-list", "First", "Middle", "Last");
+            view.HiddenProperties.Add("Middle");
+            var source = EditableListXml(false);
+            var transformed = ViewPresentationDefinition.Apply(source, view, false, false);
+            ViewPresentationDefinition.Verify(transformed, view, false, false);
+
+            var document = XDocument.Parse(transformed);
+            var body = document.Descendants("Section").Single(x => (string)x.Attribute("Type") == "Body").Element("Control");
+            var rows = body.Element("Rows").Elements("Row").ToList();
+            var columns = body.Element("Columns").Elements("Column").ToList();
+            Assert(rows.Count == 4, "editable-list Header, Display, Footer, and Edit rows retained");
+            Assert(rows.All(row => row.Element("Cells").Elements("Cell").Count() == 2), "editable-list template cells reduced from three to two");
+            Assert(columns.Count == 2, "editable-list columns reduced from three to two");
+            Assert(document.Descendants("Control").Count(control => (string)control.Attribute("Type") == "Column") == 2,
+                "editable-list Column control definitions reduced from three to two");
+            Assert(document.Descendants("Control").Count(control => (string)control.Attribute("Type") == "Cell") == 8,
+                "editable-list Cell control definitions reduced from twelve to eight");
+            Assert(columns.Sum(column => int.Parse(((string)column.Attribute("Size")).TrimEnd('%'))) == 100, "editable-list widths total 100 percent");
+
+            foreach (var visible in new[] { "first", "last" })
+            {
+                Assert(rows.Where(row => Template(document, row) != "Footer").All(row =>
+                    row.Descendants("Control").Any(control => ((string)control.Attribute("ID") ?? string.Empty).StartsWith(visible + "-", StringComparison.Ordinal))),
+                    "visible editable-list property '" + visible + "' retains Header, Display, and Edit placement");
+            }
+            Assert(!body.Descendants("Control").Any(control => ((string)control.Attribute("ID") ?? string.Empty).StartsWith("middle-", StringComparison.Ordinal)),
+                "hidden editable-list property has no visible placement");
+            Assert(document.Descendants("Field").Any(field => (string)field.Element("FieldName") == "Middle"), "hidden editable-list field definition retained");
+            Assert(document.Descendants("Control").Any(control => (string)control.Attribute("FieldID") == "field-middle" && control.Attribute("Type") != null),
+                "hidden editable-list field-bound controls retained");
+            Assert(document.Descendants("Parameter").Any(parameter => (string)parameter.Attribute("TargetID") == "Middle"),
+                "hidden editable-list method input mapping retained");
+            Assert(document.Descendants("Result").Any(result => (string)result.Attribute("SourceID") == "Middle"),
+                "hidden editable-list method result mapping retained");
+
+            var secondPass = ViewPresentationDefinition.Apply(transformed, view, false, false);
+            ViewPresentationDefinition.Verify(secondPass, view, false, false);
+            Assert(string.Equals(transformed, secondPass, StringComparison.Ordinal), "editable-list hidden-property transformation is idempotent");
+
+            var allPropertiesView = NewView("All Evidence", "Evidence", "capture-list");
+            allPropertiesView.Options.Add("all-properties");
+            var allProperties = ViewPresentationDefinition.Apply(source, allPropertiesView, false, false);
+            ViewPresentationDefinition.Verify(allProperties, allPropertiesView, false, false);
+        }
+
+        private static void TestMalformedEditableListRejected()
+        {
+            var view = NewView("Malformed Evidence", "Evidence", "capture-list", "First", "Middle", "Last");
+            AssertThrows(delegate { ViewPresentationDefinition.Verify(EditableListXml(true), view, false, false); }, "exactly one Header");
+        }
+
+        private static string EditableListXml(bool malformed)
+        {
+            var names = new[] { "First", "Middle", "Last" };
+            var keys = new[] { "first", "middle", "last" };
+            var sizes = new[] { "34%", "33%", "33%" };
+            var view = new XElement("View",
+                new XElement("Fields"),
+                new XElement("Controls"),
+                new XElement("Canvas",
+                    new XElement("Sections",
+                        new XElement("Section", new XAttribute("Type", "Body"),
+                            new XElement("Control", new XAttribute("ID", "body"), new XAttribute("LayoutType", "Grid"),
+                                new XElement("Columns"),
+                                new XElement("Rows"))))),
+                new XElement("Events",
+                    new XElement("Event",
+                        new XElement("Action",
+                            new XElement("Parameters"),
+                            new XElement("Results")))));
+            var fields = view.Element("Fields");
+            var controls = view.Element("Controls");
+            var body = view.Descendants("Section").Single().Element("Control");
+            var columns = body.Element("Columns");
+            var rows = body.Element("Rows");
+            var parameters = view.Descendants("Parameters").Single();
+            var results = view.Descendants("Results").Single();
+
+            controls.Add(ControlDefinition("body", "ListTable", null));
+            for (var i = 0; i < names.Length; i++)
+            {
+                fields.Add(new XElement("Field", new XAttribute("ID", "field-" + keys[i]), new XElement("FieldName", names[i])));
+                columns.Add(new XElement("Column", new XAttribute("ID", "column-" + keys[i]), new XAttribute("Size", sizes[i])));
+                controls.Add(ControlDefinition("column-" + keys[i], "Column", sizes[i]));
+                controls.Add(FieldControlDefinition(keys[i] + "-header", "Label", "field-" + keys[i]));
+                controls.Add(FieldControlDefinition(keys[i] + "-display", "DataLabel", "field-" + keys[i]));
+                controls.Add(FieldControlDefinition(keys[i] + "-edit", "TextBox", "field-" + keys[i]));
+                parameters.Add(new XElement("Parameter", new XAttribute("SourceID", "field-" + keys[i]), new XAttribute("TargetID", names[i])));
+                results.Add(new XElement("Result", new XAttribute("SourceID", names[i]), new XAttribute("TargetID", "field-" + keys[i])));
+            }
+
+            foreach (var template in new[] { "Header", "Display", "Footer", "Edit" })
+            {
+                var rowKey = template.ToLowerInvariant();
+                controls.Add(ControlDefinition("row-" + rowKey, "Row", template));
+                var cells = new XElement("Cells");
+                for (var i = 0; i < names.Length; i++)
+                {
+                    var cellId = "cell-" + rowKey + "-" + keys[i];
+                    controls.Add(ControlDefinition(cellId, "Cell", null));
+                    var cell = new XElement("Cell", new XAttribute("ID", cellId));
+                    if (template != "Footer")
+                    {
+                        var suffix = template == "Header" ? "header" : template == "Display" ? "display" : "edit";
+                        cell.Add(new XElement("Control", new XAttribute("ID", keys[i] + "-" + suffix)));
+                    }
+                    cells.Add(cell);
+                }
+                if (!malformed || template == "Footer")
+                    rows.Add(new XElement("Row", new XAttribute("ID", "row-" + rowKey), cells));
+            }
+
+            return new XDocument(view).ToString(SaveOptions.DisableFormatting);
+        }
+
+        private static XElement ControlDefinition(string id, string type, string value)
+        {
+            var properties = new XElement("Properties");
+            if (value != null)
+                properties.Add(new XElement("Property", new XElement("Name", type == "Row" ? "Template" : "Size"), new XElement("Value", value)));
+            return new XElement("Control", new XAttribute("ID", id), new XAttribute("Type", type), new XElement("Name", id), properties);
+        }
+
+        private static XElement FieldControlDefinition(string id, string type, string fieldId)
+        {
+            return new XElement("Control", new XAttribute("ID", id), new XAttribute("Type", type), new XAttribute("FieldID", fieldId),
+                new XElement("Name", id), new XElement("Properties"));
+        }
+
+        private static string Template(XDocument document, XElement row)
+        {
+            var id = (string)row.Attribute("ID");
+            var definition = document.Descendants("Control").First(control =>
+                control.Attribute("Type") != null && (string)control.Attribute("ID") == id);
+            var property = definition.Descendants("Property").First(item => (string)item.Element("Name") == "Template");
+            return (string)property.Element("Value");
         }
 
         private static string WorkflowStateXml(string id, string workflowActionType)

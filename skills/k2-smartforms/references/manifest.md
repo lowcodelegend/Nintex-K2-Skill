@@ -100,7 +100,7 @@ Supported tones are `neutral`, `positive`, `warning`, `critical`, and `info`. To
 
 ## Hidden bound properties
 
-Use `hiddenProperties` on a capture View when a generated method still requires technical/defaulted fields but the user should not see them. Every name must remain selected in `properties`; the CLI preserves its SmartObject field, control, defaults, and method/rule mappings while removing its generated row from the visible layout. Use this for a dedicated initiation View, never to conceal workflow state on a general workspace where operators need context, and never to bypass required user input.
+Use `hiddenProperties` on a `capture` or `capture-list` View when a generated method still requires technical/defaulted fields but the user should not see them. Every name must remain selected in `properties`; the CLI preserves its SmartObject field, bound controls, defaults, and method/rule mappings. A capture View removes the property's dedicated layout row. A `capture-list` removes only the property's aligned Header, data Display, Footer, and Edit cells plus its column placement, then redistributes the remaining column widths to 100 percent. The editable-list structural verifier requires exactly one of each template row, equal cell/column counts, aligned visible field placements, and no hidden field placement. Use this for a dedicated initiation View, never to conceal workflow state on a general workspace where operators need context, and never to bypass required user input.
 
 ```json
 "hiddenProperties": ["CaseId", "Status", "CurrentStageCode", "ConfigurationVersion"]

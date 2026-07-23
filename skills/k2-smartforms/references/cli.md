@@ -12,13 +12,14 @@
 | `inspect --manifest` | No | Print exact artifact GUIDs, versions, types, categories, Style Profile, legacy-theme mode, and checkout state. |
 | `controls --manifest [--name <control>]` | No | Inventory registered K2 controls or inspect one control's supported metadata. |
 | `find-control-usage --manifest --type <control>` | No | Locate live View examples using a registered control through supported management APIs. |
+| `view-definition --manifest --view <exact-name>` | No | Return the complete live View definition through the supported management API for read-only field, layout, rule, identity, and generator diagnosis. |
 | `view-control-definition --manifest --view <name> --type <control>` | No | Return one selected control and its related rule fragments for generator development. |
 | `form-definition --manifest --form <exact-name>` | No | Return one live Form definition through the supported management API for layout, rule, state, and integration diagnosis. |
 | `checkin --manifest --form <exact-name> --confirm` | Yes | Check in one exact manifest-declared form without regenerating or replacing it; report its checkout owner and resulting version. |
 | `cleanup --manifest --confirm` | Destructive | Delete exact declared forms then views after environment-wide external dependency checks. |
 | `cleanup --manifest --confirm --manifest-only` | Destructive | Fast builder path: skip broad dependency discovery and delete exact declared Forms/Views from their owned category or strict-ancestor orphan category. |
 | `version` | No | Print the CLI version. |
-| `selftest` | No | Verify identity-key normalization, required/read-only inputs, lookup placement/defaults, bypass-button suppression, native chart composition, and idempotent multi-child workflow-state reconciliation without connecting to K2. |
+| `selftest` | No | Verify identity-key normalization, required/read-only inputs, lookup placement/defaults, bypass-button suppression, native chart composition, capture/editable-list hidden-property transformation and structural rejection, and idempotent multi-child workflow-state reconciliation without connecting to K2. |
 
 Exit `0` means success, `2` means manifest/usage/safety validation failed, and `1` means an unexpected K2, network, or runtime error occurred. Set `K2FORMS_DEBUG=1` for full exception details.
 
