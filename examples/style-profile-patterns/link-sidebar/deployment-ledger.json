@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 2,
+  "shortCode": "SPL",
+  "solution": "SPL.Link Sidebar Example",
+  "deployedAtUtc": "2026-07-23T12:04:00Z",
+  "environment": "spk2-local",
+  "sourceRevision": "bc7d23c4bba36f895fafdfcfbaf292eabae62673",
+  "result": "complete",
+  "manifestChecksums": {
+    "manifest.json": "b9c68ade048bd5ada4322d19d734ee8df291358321bc1d11cf7f93516e0a516c",
+    "smartforms-manifest.json": "425064ba465c2d385df909124bf946dd29c7cd66076e589524f14fe171155547",
+    "style-profile-manifest.json": "5c36f288fd83ef6d8455ca2255dd9179017cc5870ff64fa6756fd9e1c90431f3",
+    "solution-manifest.json": "8058294ac9dd0dc3c64ad5c4ed7857b592ac08c611c7f448984df37518fd27ac"
+  },
+  "artifacts": [
+    { "id": "sql-database:SPL.LinkSidebarExample", "layer": "sql", "kind": "database", "name": "SPL.LinkSidebarExample", "action": "created", "location": "localhost", "identifier": null, "version": null, "source": "manifest.json", "verification": "SQL verification passed" },
+    { "id": "sql-schema:SPL", "layer": "sql", "kind": "schema", "name": "SPL", "action": "created", "location": "SPL.LinkSidebarExample", "identifier": null, "version": null, "source": "sql/001_schema.sql", "verification": "verified" },
+    { "id": "sql-table:SPL.NavigationItem", "layer": "sql", "kind": "table", "name": "SPL.NavigationItem", "action": "created", "location": "SPL.LinkSidebarExample", "identifier": null, "version": null, "source": "sql/001_schema.sql", "verification": "seeded and verified" },
+    { "id": "sql-table:SPL.WorkItem", "layer": "sql", "kind": "table", "name": "SPL.WorkItem", "action": "created", "location": "SPL.LinkSidebarExample", "identifier": null, "version": null, "source": "sql/001_schema.sql", "verification": "seeded and verified" },
+    { "id": "sql-view:SPL.ApplicationNavigation", "layer": "sql", "kind": "view", "name": "SPL.ApplicationNavigation", "action": "created", "location": "SPL.LinkSidebarExample", "identifier": null, "version": null, "source": "sql/001_schema.sql", "verification": "List smoke passed" },
+    { "id": "sql-view:SPL.DashboardSummary", "layer": "sql", "kind": "view", "name": "SPL.DashboardSummary", "action": "created", "location": "SPL.LinkSidebarExample", "identifier": null, "version": null, "source": "sql/001_schema.sql", "verification": "List smoke passed" },
+    { "id": "k2-service:SPL.LinkSidebarExampleSql", "layer": "smartobjects", "kind": "sql-service-instance", "name": "SPL.LinkSidebarExampleSql", "action": "created", "location": "K2 management server", "identifier": "f7b92ce5-66ad-4fb4-8de9-423487e061d7", "version": null, "source": "manifest.json", "verification": "four generated SmartObjects verified" },
+    { "id": "smartobject:SPL.NavigationItem", "layer": "smartobjects", "kind": "SmartObject", "name": "SPL_LinkSidebarExampleSql_SPL_NavigationItem", "action": "created", "location": "K2 Skills\\SPL.Link Sidebar Example\\Data", "identifier": "SPL-NavigationItem", "version": null, "source": "manifest.json", "verification": "CRUD/List and List smoke passed" },
+    { "id": "smartobject:SPL.WorkItem", "layer": "smartobjects", "kind": "SmartObject", "name": "SPL_LinkSidebarExampleSql_SPL_WorkItem", "action": "created", "location": "K2 Skills\\SPL.Link Sidebar Example\\Data", "identifier": "SPL-WorkItem", "version": null, "source": "manifest.json", "verification": "CRUD/List and List smoke passed" },
+    { "id": "smartobject:SPL.ApplicationNavigation", "layer": "smartobjects", "kind": "SmartObject", "name": "SPL_LinkSidebarExampleSql_SPL_ApplicationNavigation", "action": "created", "location": "K2 Skills\\SPL.Link Sidebar Example\\Data", "identifier": "SPL-ApplicationNavigation", "version": null, "source": "manifest.json", "verification": "List smoke passed" },
+    { "id": "smartobject:SPL.DashboardSummary", "layer": "smartobjects", "kind": "SmartObject", "name": "SPL_LinkSidebarExampleSql_SPL_DashboardSummary", "action": "created", "location": "K2 Skills\\SPL.Link Sidebar Example\\Data", "identifier": "SPL-DashboardSummary", "version": null, "source": "manifest.json", "verification": "List smoke passed" },
+    { "id": "style-profile:SPL Link Sidebar", "layer": "style-profile", "kind": "style-profile", "name": "SPL Link Sidebar", "action": "created", "location": "K2 Skills\\SPL.Link Sidebar Example", "identifier": "4d00b1fc-7aa4-41b0-aa71-ae7cd7bc2f1b", "version": 1, "source": "style-profile-manifest.json", "verification": "profile and five HTTPS assets verified" },
+    { "id": "hosting:SPLAssets", "layer": "style-profile", "kind": "IIS-virtual-directory", "name": "SPLAssets", "action": "created", "location": "K2/SPLAssets", "identifier": "C:\\inetpub\\spl-style-example-assets", "version": null, "source": "style-profile-manifest.json", "verification": "critical CSS, polish CSS, configuration JS, shell JS and application CSS returned HTTP 200" },
+    { "id": "view:SPL.Application Navigation", "layer": "smartforms", "kind": "view", "name": "SPL.Application Navigation", "action": "created", "location": "K2 Skills\\SPL.Link Sidebar Example\\Views", "identifier": "13426e78-6ab5-4e70-b04c-9047d267c178", "version": 1, "source": "smartforms-manifest.json", "verification": "List View verified" },
+    { "id": "view:SPL.Dashboard Summary", "layer": "smartforms", "kind": "view", "name": "SPL.Dashboard Summary", "action": "created", "location": "K2 Skills\\SPL.Link Sidebar Example\\Views", "identifier": "c8d8e513-0077-4b94-8ce0-0aad26bbb2f5", "version": 1, "source": "smartforms-manifest.json", "verification": "Capture metric View verified" },
+    { "id": "view:SPL.Work Items", "layer": "smartforms", "kind": "view", "name": "SPL.Work Items", "action": "created", "location": "K2 Skills\\SPL.Link Sidebar Example\\Views", "identifier": "73643efd-0e72-4494-a662-ae96db426dc3", "version": 1, "source": "smartforms-manifest.json", "verification": "List View verified" },
+    { "id": "form:SPL.Link Dashboard", "layer": "smartforms", "kind": "form", "name": "SPL.Link Dashboard", "action": "created", "location": "K2 Skills\\SPL.Link Sidebar Example\\Forms", "identifier": "664fbea1-baa1-478d-8935-b5bdc07bf317", "version": 1, "source": "smartforms-manifest.json", "verification": "Style Profile, authenticated rendering and active route verified" },
+    { "id": "form:SPL.Link Work", "layer": "smartforms", "kind": "form", "name": "SPL.Link Work", "action": "created", "location": "K2 Skills\\SPL.Link Sidebar Example\\Forms", "identifier": "7ee2b623-98b2-4bbe-ad28-fbf896248242", "version": 1, "source": "smartforms-manifest.json", "verification": "Style Profile, authenticated rendering and warm transition verified" }
+  ],
+  "runtimeUrls": [
+    "https://spk2.trials.demome.tech/Runtime/Runtime/Form/SPL.Link%20Dashboard/",
+    "https://spk2.trials.demome.tech/Runtime/Runtime/Form/SPL.Link%20Work/"
+  ],
+  "verification": {
+    "finalBuilderGate": { "status": "passed", "evidence": "k2build verify exited 0 after both SmartObject and SmartForms checkpoints" },
+    "specialistChecks": [
+      "k2env validate passed",
+      "k2sql doctor, deploy and verify passed",
+      "k2style doctor, deploy and verify passed",
+      "k2forms doctor, deploy and verify passed",
+      "authenticated runtime suite passed all asset, Designer-isolation, cold-load, transition, anti-flash, fail-safe and diagnostics checks",
+      "desktop and mobile screenshots have no horizontal overflow"
+    ],
+    "endToEndScenarios": [
+      {
+        "name": "Open Dashboard and navigate to Work Items",
+        "status": "passed",
+        "evidence": "Authenticated Edge cold-loaded SPL.Link Dashboard, synchronously activated the transition curtain, loaded SPL.Link Work, and synchronized the active WORK route from cached/live SmartObject navigation."
+      }
+    ]
+  },
+  "errata": [],
+  "rollbackNotes": [
+    "Use k2build cleanup with the solution manifest for Forms and SmartObjects, and k2style cleanup with the Style Profile manifest for the profile and hosted assets.",
+    "The source revision records the repository base; the example source and checksums include uncommitted work created during this deployment."
+  ]
+}

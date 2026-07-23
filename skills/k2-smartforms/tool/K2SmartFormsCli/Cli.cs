@@ -70,6 +70,28 @@ namespace K2SmartFormsCli
                     Inspect(manager);
                     return 0;
 
+                case "controls":
+                    var controlName = GetOption(options, "name", false);
+                    if (string.IsNullOrWhiteSpace(controlName)) manager.ListControlTypes();
+                    else manager.DescribeControlType(controlName);
+                    return 0;
+
+                case "find-control-usage":
+                    manager.FindViewsUsingControl(GetOption(options, "type", true));
+                    return 0;
+
+                case "view-definition":
+                    manager.PrintViewDefinition(GetOption(options, "view", true));
+                    return 0;
+
+                case "form-definition":
+                    manager.PrintFormDefinition(GetOption(options, "form", true));
+                    return 0;
+
+                case "view-control-definition":
+                    manager.PrintViewControlDefinition(GetOption(options, "view", true), GetOption(options, "type", true));
+                    return 0;
+
                 case "checkin":
                     RequireConfirmation(options, "checkin");
                     manager.CheckInForm(GetOption(options, "form", true));
@@ -192,7 +214,7 @@ namespace K2SmartFormsCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2forms 0.17.0");
+            Console.WriteLine("k2forms 0.21.0");
         }
 
         private static void PrintHelp()
@@ -206,6 +228,11 @@ namespace K2SmartFormsCli
             Console.WriteLine("  k2forms verify  --manifest <path>");
             Console.WriteLine("  k2forms reconcile --manifest <path> --confirm");
             Console.WriteLine("  k2forms inspect --manifest <path>");
+            Console.WriteLine("  k2forms controls --manifest <path> [--name <control>]");
+            Console.WriteLine("  k2forms find-control-usage --manifest <path> --type <control>");
+            Console.WriteLine("  k2forms view-definition --manifest <path> --view <exact-name>");
+            Console.WriteLine("  k2forms form-definition --manifest <path> --form <exact-name>");
+            Console.WriteLine("  k2forms view-control-definition --manifest <path> --view <exact-name> --type <control>");
             Console.WriteLine("  k2forms checkin --manifest <path> --form <exact-name> --confirm");
             Console.WriteLine("  k2forms cleanup --manifest <path> --confirm [--manifest-only]");
             Console.WriteLine("  k2forms version");

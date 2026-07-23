@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "template": {"id": "solution-case-ux", "extends": "canonical-case-ux", "description": "Add only solution-specific roles, sections, measures, fields, and labels."},
+  "pages": [],
+  "components": [],
+  "journeys": []
+}

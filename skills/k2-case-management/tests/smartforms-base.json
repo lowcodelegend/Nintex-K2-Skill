@@ -1,0 +1,37 @@
+{
+  "name": "TST.Case Workspace",
+  "k2": { "host": "localhost", "port": 5555, "integrated": true, "securityLabel": "K2" },
+  "application": {
+    "rootCategoryPath": "K2 Skills\\TST.Case",
+    "theme": "Lithium",
+    "styleProfile": "Test Style",
+    "solutionCode": "TST",
+    "replaceExisting": true,
+    "checkIn": true,
+    "views": [{
+      "name": "TST.Case Workspace",
+      "smartObject": "TST_Case",
+      "type": "capture",
+      "properties": ["CaseId", "CurrentStageCode"],
+      "readOnlyProperties": ["CaseId", "CurrentStageCode"],
+      "methods": ["Read"]
+    }],
+    "forms": [{
+      "name": "TST.Case Management",
+      "useLegacyTheme": false,
+      "views": ["TST.Case Workspace"],
+      "options": [],
+      "viewTitles": { "TST.Case Workspace": "Case Workspace" },
+      "tabs": [
+        { "name": "Cases", "views": ["TST.Case Workspace"] },
+        { "name": "My Tasks", "worklist": { "rows": 20 } }
+      ]
+    }]
+  },
+  "verification": {
+    "expectedViews": ["TST.Case Workspace"],
+    "expectedForms": ["TST.Case Management"],
+    "smokeTestRuntime": true,
+    "runtimeBaseUrl": "https://k2.example.test/Runtime"
+  }
+}

@@ -37,6 +37,10 @@ Declare the relationship on the Form. `k2forms` extends the generated Form rules
 
 This follows K2's parent/child pattern: users stage lines with the editable-list Add/Edit/Delete controls, then persist the whole transaction through one Form-level Save button. A new/blank master must show an empty child list without invoking List; viewing an existing master must invoke exactly the filtered Form-level List path. Hide every generated master Item View button and the detail Save/Refresh controls so a partial or unfiltered View operation is not presented as a valid transaction; retain detail Add/Edit/Delete. End both successful Create and Update branches with a small informational popup after the persistence batch. Never rely on a View rule to coordinate another View. Test creation with two rows, confirm the generated parent key was transferred before child persistence, create a second master, reload each and prove row isolation, then test one added, one changed, and one removed row.
 
+For initiation, prefer Details → Evidence → Review & Submit. Save Draft persists the aggregate, reads a separate review projection, and only then focuses Review. A dedicated final `workflowStartButton` is the workflow seam; keeping it separate from Save Draft makes review meaningful and prevents premature starts. Resume drafts through the normal case list/workspace when native FormGenerator cannot safely place another list over the same master SmartObject on the initiation Form.
+
+Use a dedicated initiation capture View even when it shares the Case SmartObject with the workspace. Keep required technical/defaulted properties selected for native method integrity, but declare them in `hiddenProperties`; expose only the business fields a reporter can understand and act on. Use `propertyLabels` to translate technical property names into the user's vocabulary. Do not reuse a dense operational workspace editor as the entry View.
+
 ## Property selection
 
 Order fields by user task and process stage, not database column order. Include the stable key when generated Read/Update/Delete rules need it, but mark it read-only when users need the reference and hide it when they do not. Request-entry views should emphasize editable business input; approval views should show read-only request context plus decision/comment controls; downstream finance or fulfilment views should expose only their stage-specific fields. Exclude `rowversion` and large technical projections. Show status, audit, derived totals, and workflow-owned fields only when they help the current task, and mark them with `readOnlyProperties`.
@@ -48,6 +52,22 @@ Convert user-selected foreign keys and controlled codes into SmartObject-backed 
 For every business-managed lookup, generate capture/list administration UX and set those views/forms to the `admin` area. External masters such as enterprise employees and fixed system/workflow vocabularies may omit administration deliberately.
 
 Approval matrices are business-managed configuration and therefore require Admin CRUD UX by default. Show the rule key, stage, amount bounds, priority, dimensions, approver type/value/label, and active flag; keep the identity key read-only or out of capture. Use lookup controls for normalized dimensions. Store K2 user/group/role destinations as strings because the SQL-backed matrix is the routing source, and label the field clearly enough that administrators understand the expected K2 identity format. Test lower and upper threshold boundaries after saving rules.
+
+## Operational charts
+
+Declare each native chart on a dedicated capture View whose SmartObject parameterless List method returns a category property and numeric value property. The CLI replaces the generated source rows with the environment-registered K2 `GenericChart` and maps the List result into it during initialization. Pair that chart View with a separate list View over the same projection as the accessible, sortable, exportable data alternative; place the pair together and title the list `<chart title> data`. Use column/line for trends, bar for rankings and stage distribution, and pie/donut only for a small mutually exclusive composition with proven nonzero data behavior on the target K2 build. Every chart needs a business title, empty-state text, tooltips, and deliberate label/legend choices. Keep KPI definitions and chart aggregations in governed SQL views or procedures rather than calculating business metrics in Form rules.
+
+Chart verification proves the native control, data method, category/value mapping, placement, and initialization rule. It does not prove visual legibility; capture the authenticated Runtime at the case UX contract's required viewports and states.
+
+## Operational metric cards
+
+Use `metricCards` on a dedicated capture View for a small set of decision-relevant summary measures, normally three to six. Back them with a parameterless aggregate SmartObject List that returns exactly one row. The CLI removes the generated source rows and maps the result into responsive read-only cards. Labels must state the measure plainly, and explanations must define the population or threshold well enough that an operator can interpret the number without guessing. Order cards from overall workload through risk and exception measures, use semantic tones consistently, and provide text labels so colour is never the only signal.
+
+Metric-card verification proves the labels, read-only value controls, result mappings, generated-source-row removal, and responsive card layout. It does not prove typography, contrast, or comprehension; include those in authenticated Runtime visual acceptance.
+
+## Case lifecycle tracker
+
+Use a native `Progress` control for the canonical ordered stage path when the case stores a stable current-stage code. Keep the control read-only: it communicates position and is never a stage picker. Labels may be friendlier than codes, but each item value must exactly match the persisted code so the existing SmartObject Read mapping selects the correct stage. Show exceptional states such as hold, breach, block, skip, and reopen in adjacent semantic status fields and history; a single linear Progress control cannot fully represent branching or repeated stage instances.
 
 ## Presentation
 

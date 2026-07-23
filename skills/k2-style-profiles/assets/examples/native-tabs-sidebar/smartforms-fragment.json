@@ -1,0 +1,60 @@
+{
+  "application": {
+    "theme": "Lithium",
+    "styleProfile": "APP Native Tabs Sidebar",
+    "views": [
+      {
+        "name": "APP.Work Queue",
+        "smartObject": "APP_WorkItem",
+        "type": "list",
+        "properties": ["WorkItemId", "Reference", "Title", "Status"],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": ["toolbar"]
+      },
+      {
+        "name": "APP.Work Details",
+        "smartObject": "APP_WorkItem",
+        "type": "capture",
+        "properties": ["WorkItemId", "Reference", "Title", "Description", "Status"],
+        "readOnlyProperties": ["WorkItemId", "Reference"],
+        "methods": ["Create", "Read", "Update"],
+        "options": ["editable", "labels-left", "colon-labels", "toolbar"]
+      }
+    ],
+    "forms": [
+      {
+        "name": "APP.Workspace",
+        "useLegacyTheme": false,
+        "views": ["APP.Work Queue", "APP.Work Details"],
+        "viewTitles": {
+          "APP.Work Queue": "Work queue",
+          "APP.Work Details": "Work details"
+        },
+        "tabs": [
+          { "name": "Queue", "views": ["APP.Work Queue"] },
+          { "name": "Details", "views": ["APP.Work Details"] },
+          {
+            "name": "My Tasks",
+            "worklist": {
+              "rows": 20,
+              "refreshIntervalSeconds": 120,
+              "showToolbar": true,
+              "showFilter": true,
+              "showSearch": false,
+              "enableSearch": true,
+              "height": "445px",
+              "openTaskInNewWindow": true,
+              "actions": ["viewWorkflow", "sleep", "redirect", "release", "share"]
+            }
+          }
+        ],
+        "listClickTabNavigation": [
+          { "sourceView": "APP.Work Queue", "targetTab": "Details" }
+        ],
+        "options": [],
+        "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]
+      }
+    ]
+  }
+}

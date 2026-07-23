@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "template": {
+    "id": "canonical-case-ux",
+    "extends": null,
+    "description": "Reusable role-aware case application experience; extend sections and measures rather than replacing the shell."
+  },
+  "design_system": {
+    "density": "comfortable",
+    "breakpoints": {"mobile": 390, "tablet": 768, "laptop": 1280, "desktop": 1440},
+    "status_semantics": {
+      "on_track": {"label": "On track", "tone": "positive", "icon": "check"},
+      "at_risk": {"label": "At risk", "tone": "warning", "icon": "warning"},
+      "breached": {"label": "Breached", "tone": "critical", "icon": "error"},
+      "paused": {"label": "Paused", "tone": "neutral", "icon": "pause"}
+    }
+  },
+  "roles": [
+    {"code": "REPORTER", "home": "my-work"},
+    {"code": "CASE_OWNER", "home": "my-work"},
+    {"code": "QUALITY_MANAGER", "home": "operations-dashboard"},
+    {"code": "AUDITOR", "home": "case-search"},
+    {"code": "ADMINISTRATOR", "home": "administration"}
+  ],
+  "shell": {
+    "global_search": {"enabled": true, "fields": ["case_number", "title", "party", "external_reference"]},
+    "primary_create_action": "new-case",
+    "navigation": [
+      {"id": "my-work", "label": "My Work", "target": "my-work"},
+      {"id": "cases", "label": "Cases", "target": "case-search"},
+      {"id": "new-case", "label": "New Case", "target": "case-initiation"},
+      {"id": "actions", "label": "Actions", "target": "corrective-actions"},
+      {"id": "analytics", "label": "Analytics", "target": "operations-dashboard"},
+      {"id": "reports", "label": "Reports", "target": "reports"},
+      {"id": "administration", "label": "Administration", "target": "administration", "roles": ["ADMINISTRATOR"]}
+    ]
+  },
+  "pages": [
+    {
+      "id": "my-work", "type": "dashboard", "title": "My Work",
+      "components": ["my-open-tasks", "due-soon", "cases-i-own", "recent-activity"]
+    },
+    {
+      "id": "operations-dashboard", "type": "dashboard", "title": "Quality Operations",
+      "roles": ["QUALITY_MANAGER"],
+      "components": ["open-cases", "sla-at-risk", "overdue-actions", "high-risk-cases", "cases-by-stage", "intake-trend", "aging-distribution", "urgent-work"]
+    },
+    {"id": "case-search", "type": "queue", "title": "Cases", "component": "all-cases"},
+    {"id": "case-initiation", "type": "journey", "title": "New Case", "journey": "canonical-initiation"},
+    {
+      "id": "case-workspace", "type": "workspace", "title": "Case Workspace",
+      "persistent_header": "case-header", "lifecycle": "case-lifecycle", "action_panel": "case-actions",
+      "sections": ["overview", "tasks", "details", "containment", "investigation", "decisions", "corrective-actions", "evidence", "communications", "parties", "related-cases", "history"]
+    },
+    {"id": "corrective-actions", "type": "queue", "title": "Corrective Actions", "component": "corrective-action-queue"},
+    {"id": "reports", "type": "report-catalog", "title": "Reports"},
+    {"id": "administration", "type": "administration", "title": "Administration", "roles": ["ADMINISTRATOR"]}
+  ],
+  "components": [
+    {"id": "my-open-tasks", "kind": "queue", "empty_state": "You have no open tasks.", "drilldown": "case-workspace"},
+    {"id": "due-soon", "kind": "kpi", "measure": "tasks_due_seven_days", "drilldown": "all-cases", "explanation": "Open tasks due in the next seven days."},
+    {"id": "cases-i-own", "kind": "queue", "empty_state": "You do not own any open cases.", "drilldown": "case-workspace"},
+    {"id": "recent-activity", "kind": "timeline", "empty_state": "No recent case activity."},
+    {"id": "open-cases", "kind": "kpi", "measure": "open_case_count", "drilldown": "all-cases", "explanation": "Cases not in a terminal state."},
+    {"id": "sla-at-risk", "kind": "kpi", "measure": "case_sla_at_risk_count", "drilldown": "all-cases", "explanation": "Open cases approaching or beyond their SLA threshold."},
+    {"id": "overdue-actions", "kind": "kpi", "measure": "overdue_corrective_action_count", "drilldown": "corrective-action-queue", "explanation": "Incomplete corrective actions beyond their due date."},
+    {"id": "high-risk-cases", "kind": "kpi", "measure": "high_risk_open_case_count", "drilldown": "all-cases", "explanation": "Open cases at or above the configured high-risk threshold."},
+    {"id": "cases-by-stage", "kind": "chart", "chart_type": "horizontal-bar", "measure": "open_case_count", "dimension": "current_stage", "drilldown": "all-cases", "table_alternative": true, "empty_state": "No open cases."},
+    {"id": "intake-trend", "kind": "chart", "chart_type": "line", "measure": "created_case_count", "dimension": "opened_month", "drilldown": "all-cases", "table_alternative": true, "empty_state": "No cases in this period."},
+    {"id": "aging-distribution", "kind": "chart", "chart_type": "column", "measure": "open_case_count", "dimension": "aging_bucket", "drilldown": "all-cases", "table_alternative": true, "empty_state": "No open cases."},
+    {"id": "urgent-work", "kind": "queue", "empty_state": "No urgent work.", "drilldown": "case-workspace"},
+    {"id": "all-cases", "kind": "queue", "empty_state": "No cases match the current filters.", "drilldown": "case-workspace"},
+    {"id": "corrective-action-queue", "kind": "queue", "empty_state": "No corrective actions match the current filters.", "drilldown": "case-workspace"},
+    {"id": "case-header", "kind": "case-header", "fields": ["case_number", "title", "status", "current_stage", "priority", "risk", "owner", "target_date", "sla_status"]},
+    {"id": "case-lifecycle", "kind": "lifecycle", "states": ["completed", "current", "optional", "skipped", "reopened", "blocked"]},
+    {"id": "case-actions", "kind": "action-panel", "permission_aware": true, "requires_reason_for": ["reassign", "escalate", "hold", "return", "override", "reopen"]}
+  ],
+  "journeys": [
+    {
+      "id": "canonical-initiation", "autosave": true, "resume_draft": true, "review_before_submit": true,
+      "success_target": "case-workspace",
+      "steps": [
+        {"id": "incident", "title": "What happened?", "fields": ["title", "description", "event_date", "discovery_date", "location"]},
+        {"id": "context", "title": "Who and what were affected?", "fields": ["party", "item", "lot", "quantity"]},
+        {"id": "impact", "title": "Impact and containment", "fields": ["severity", "risk", "containment_required", "containment_summary"]},
+        {"id": "evidence", "title": "Evidence", "collection": "evidence"},
+        {"id": "review", "title": "Review and submit", "summary": true}
+      ]
+    }
+  ],
+  "visual_acceptance": {
+    "viewports": [
+      {"name": "desktop", "width": 1440, "height": 1000},
+      {"name": "laptop", "width": 1280, "height": 800},
+      {"name": "tablet", "width": 768, "height": 1024},
+      {"name": "mobile", "width": 390, "height": 844}
+    ],
+    "states": ["populated", "empty", "validation-error", "long-content", "sla-breached", "read-only"],
+    "checks": ["no-overlap", "no-clipping", "no-horizontal-overflow", "visible-focus", "semantic-status", "single-primary-action", "chart-table-alternative"]
+  }
+}

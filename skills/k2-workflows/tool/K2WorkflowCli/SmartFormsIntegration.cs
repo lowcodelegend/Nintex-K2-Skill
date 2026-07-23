@@ -72,11 +72,12 @@ namespace K2WorkflowCli
             if (requirePrimaryItemReference)
             {
                 var content = GetContent(id, workflow.ProcessFullName, true);
+                var expectedSmartObject = workflow.RequestStatusUpdate == null ? workflow.SmartForms.PrimarySmartObject : workflow.RequestStatusUpdate.SmartObject;
                 primary = (content["itemReferences"] as JArray ?? new JArray()).OfType<JObject>()
                     .FirstOrDefault(x => (bool?)x["primary"] == true &&
-                        string.Equals(Convert.ToString(x["smartObjectName"]), workflow.RequestStatusUpdate.SmartObject, StringComparison.OrdinalIgnoreCase));
+                        string.Equals(Convert.ToString(x["smartObjectName"]), expectedSmartObject, StringComparison.OrdinalIgnoreCase));
                 if (primary == null)
-                    throw new CliException("The SmartForm does not expose the configured request SmartObject as its primary Create reference: " + workflow.RequestStatusUpdate.SmartObject);
+                    throw new CliException("The SmartForm does not expose the configured primary SmartObject Create reference: " + expectedSmartObject);
             }
             return new SmartFormsIntegrationDescriptor
             {
@@ -91,7 +92,7 @@ namespace K2WorkflowCli
         {
             if (form == null) return;
             IntegrateStart(workflow, form);
-            IntegrateTask(workflow, form);
+            if (!workflow.SmartForms.StartOnly) IntegrateTask(workflow, form);
         }
 
         public void Verify(WorkflowSettings workflow, SmartFormsIntegrationDescriptor form)
@@ -100,19 +101,22 @@ namespace K2WorkflowCli
             var start = GetContent(form.FormId, workflow.ProcessFullName, true);
             if (string.IsNullOrWhiteSpace(Nested(start, "workflowAction", "id")))
                 throw new CliException("SmartForm Start integration was not found for " + workflow.ProcessFullName + ".");
-            var task = GetContent(form.FormId, workflow.ProcessFullName + "\\Task", false);
-            if (string.IsNullOrWhiteSpace(Nested(task, "workflowAction", "id")))
-                throw new CliException("SmartForm task integration was not found for " + workflow.ProcessFullName + "\\Task.");
+            JObject task = null;
+            if (!workflow.SmartForms.StartOnly)
+            {
+                task = GetContent(form.FormId, workflow.ProcessFullName + "\\Task", false);
+                if (string.IsNullOrWhiteSpace(Nested(task, "workflowAction", "id"))) throw new CliException("SmartForm task integration was not found for " + workflow.ProcessFullName + "\\Task.");
+            }
 
             var states = JArray.Parse(InvokeData("GetFormStates", _host, form.FormId)).OfType<JObject>().ToList();
             var defaultStateIds = GetDefaultStateIds(form.FormId);
             var startState = states.FirstOrDefault(x => string.Equals(Convert.ToString(x["name"]), workflow.SmartForms.StartState, StringComparison.Ordinal));
             if (startState == null) throw new CliException("SmartForm Start state was not found: " + workflow.SmartForms.StartState + ".");
-            var taskState = states.FirstOrDefault(x => string.Equals(Convert.ToString(x["name"]), workflow.SmartForms.TaskState, StringComparison.Ordinal));
-            if (taskState == null) throw new CliException("SmartForm task state was not found: " + workflow.SmartForms.TaskState + ".");
+            var taskState = workflow.SmartForms.StartOnly ? null : states.FirstOrDefault(x => string.Equals(Convert.ToString(x["name"]), workflow.SmartForms.TaskState, StringComparison.Ordinal));
+            if (!workflow.SmartForms.StartOnly && taskState == null) throw new CliException("SmartForm task state was not found: " + workflow.SmartForms.TaskState + ".");
 
             var startIsDefault = defaultStateIds.Contains(Convert.ToString(startState["id"]));
-            var taskIsDefault = defaultStateIds.Contains(Convert.ToString(taskState["id"]));
+            var taskIsDefault = taskState != null && defaultStateIds.Contains(Convert.ToString(taskState["id"]));
             if (taskIsDefault) throw new CliException("SmartForm task state must not be default: " + workflow.SmartForms.TaskState + ".");
             if (startIsDefault != workflow.SmartForms.MakeStartStateDefault)
                 throw new CliException("SmartForm Start state default mismatch for '" + workflow.SmartForms.StartState + "': manifest=" +
@@ -122,7 +126,7 @@ namespace K2WorkflowCli
 
             AssertCheckedIn(form);
 
-            Console.WriteLine("Verified SmartForm states: Start default=" + startIsDefault.ToString().ToLowerInvariant() + ", Task default=false");
+            Console.WriteLine("Verified SmartForm states: Start default=" + startIsDefault.ToString().ToLowerInvariant() + (workflow.SmartForms.StartOnly ? ", start-only=true" : ", Task default=false"));
         }
 
         public void CheckInAfterIntegration(SmartFormsIntegrationDescriptor form)
@@ -210,7 +214,7 @@ namespace K2WorkflowCli
             // A previous interrupted provider call may have left a tool-owned draft. Publish it once
             // before continuing so the next provider call starts from a stable Form version.
             CheckInOwnedForm(form, "cleanup recovery");
-            RemoveOne(form, workflow.ProcessFullName + "\\Task", false, workflow.SmartForms.TaskState);
+            if (!workflow.SmartForms.StartOnly) RemoveOne(form, workflow.ProcessFullName + "\\Task", false, workflow.SmartForms.TaskState);
             RemoveOne(form, workflow.ProcessFullName, true, workflow.SmartForms.StartState);
             AssertCheckedIn(form);
         }

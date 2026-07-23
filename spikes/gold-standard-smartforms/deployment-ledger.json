@@ -1,0 +1,386 @@
+{
+  "schemaVersion": 2,
+  "shortCode": "GUX",
+  "solution": "GUX.Gold UX Spike",
+  "deployedAtUtc": "2026-07-23T10:48:47Z",
+  "environment": "spk2-local",
+  "sourceRevision": "bc7d23c4bba36f895fafdfcfbaf292eabae62673 plus current working-tree spike files",
+  "result": "complete-with-errata",
+  "manifestChecksums": {
+    "sql-smartobjects-manifest.json": "57FD22CBABF995765ED3026FCC504DC649F60BE14CEF97529CACB16D47ED5510",
+    "sql/001_application_navigation.sql": "C981BD4344EFD53F540F1C3A1F719287A777D3244346DDFBFC933A198B252DD1",
+    "smartforms-manifest.json": "FB2FBBD4D2F895436824358FB1B025C2393D06BB59D9A3D0F11AE6D64836E89F",
+    "assets/gux-northstar-critical.css": "5398D1A96AFD9B1298462E40E2D6410586BED3916915AC73225F6566C4BF5FFC",
+    "assets/gux-northstar.css": "1E9D06AF8DEA50E452ACBC7E505033427F36E8D895CA086A184E07FA4F11F18F",
+    "assets/gux-northstar.js": "7CD6F17948D2F9188AFC1F9AEC1DB8ACC9418B93B51B46E371A8844953598ED8"
+  },
+  "artifacts": [
+    {
+      "id": "sql-database:GUX.GoldUXSpike",
+      "layer": "sql",
+      "kind": "database",
+      "name": "GUX.GoldUXSpike",
+      "action": "created",
+      "location": "localhost",
+      "identifier": null,
+      "version": null,
+      "source": "sql-smartobjects-manifest.json",
+      "verification": "verified"
+    },
+    {
+      "id": "sql-schema:GUX",
+      "layer": "sql",
+      "kind": "schema",
+      "name": "GUX",
+      "action": "created",
+      "location": "GUX.GoldUXSpike",
+      "identifier": null,
+      "version": null,
+      "source": "sql/001_application_navigation.sql",
+      "verification": "verified"
+    },
+    {
+      "id": "sql-table:GUX.NavigationItem",
+      "layer": "sql",
+      "kind": "table",
+      "name": "GUX.NavigationItem",
+      "action": "created",
+      "location": "GUX.GoldUXSpike",
+      "identifier": null,
+      "version": null,
+      "source": "sql/001_application_navigation.sql",
+      "verification": "verified with two seeded destinations"
+    },
+    {
+      "id": "sql-view:GUX.ApplicationNavigation",
+      "layer": "sql",
+      "kind": "view",
+      "name": "GUX.ApplicationNavigation",
+      "action": "created",
+      "location": "GUX.GoldUXSpike",
+      "identifier": null,
+      "version": null,
+      "source": "sql/001_application_navigation.sql",
+      "verification": "verified parameterless active-navigation projection"
+    },
+    {
+      "id": "sql-key:PK_GUX_NavigationItem",
+      "layer": "sql",
+      "kind": "primary-key",
+      "name": "PK_GUX_NavigationItem",
+      "action": "created",
+      "location": "GUX.NavigationItem",
+      "identifier": null,
+      "version": null,
+      "source": "sql/001_application_navigation.sql",
+      "verification": "verified"
+    },
+    {
+      "id": "sql-index:UX_GUX_NavigationItem_SortOrder",
+      "layer": "sql",
+      "kind": "index",
+      "name": "UX_GUX_NavigationItem_SortOrder",
+      "action": "created",
+      "location": "GUX.NavigationItem",
+      "identifier": null,
+      "version": null,
+      "source": "sql/001_application_navigation.sql",
+      "verification": "verified"
+    },
+    {
+      "id": "k2-service:GUX.GoldUXSpikeSql",
+      "layer": "smartobjects",
+      "kind": "sql-service-instance",
+      "name": "GUX.GoldUXSpikeSql",
+      "action": "created",
+      "location": "K2 Management",
+      "identifier": "3142ef54-f953-4a44-b998-a87e78cccd5f",
+      "version": null,
+      "source": "sql-smartobjects-manifest.json",
+      "verification": "verified"
+    },
+    {
+      "id": "smartobject:GUX_GoldUXSpikeSql_GUX_NavigationItem",
+      "layer": "smartobjects",
+      "kind": "smartobject",
+      "name": "GUX_GoldUXSpikeSql_GUX_NavigationItem",
+      "action": "created",
+      "location": "K2 Skills\\GUX.Gold UX Spike\\Data",
+      "identifier": null,
+      "version": null,
+      "source": "sql-smartobjects-manifest.json",
+      "verification": "Create, Read, Update, Delete, and List verified"
+    },
+    {
+      "id": "smartobject:GUX_GoldUXSpikeSql_GUX_ApplicationNavigation",
+      "layer": "smartobjects",
+      "kind": "smartobject",
+      "name": "GUX_GoldUXSpikeSql_GUX_ApplicationNavigation",
+      "action": "created",
+      "location": "K2 Skills\\GUX.Gold UX Spike\\Data",
+      "identifier": null,
+      "version": null,
+      "source": "sql-smartobjects-manifest.json",
+      "verification": "parameterless List verified"
+    },
+    {
+      "id": "view:GUX.Application Navigation",
+      "layer": "smartforms",
+      "kind": "list-view",
+      "name": "GUX.Application Navigation",
+      "action": "created",
+      "location": "K2 Skills\\GUX.Gold UX Spike\\Views",
+      "identifier": "eab460f8-60c9-4bca-86d1-e8eaea8e6cb4",
+      "version": "1",
+      "source": "smartforms-manifest.json",
+      "verification": "verified on both Forms and through browser reconciliation"
+    },
+    {
+      "id": "view:GUX.Command KPIs",
+      "layer": "smartforms",
+      "kind": "capture-view",
+      "name": "GUX.Command KPIs",
+      "action": "replaced",
+      "location": "K2 Skills\\GUX.Gold UX Spike\\Views",
+      "identifier": "4b71c105-d5ba-4d1a-9ed0-d25a94138cfe",
+      "version": "1",
+      "source": "smartforms-manifest.json",
+      "verification": "verified"
+    },
+    {
+      "id": "view:GUX.Intake Trend",
+      "layer": "smartforms",
+      "kind": "chart-view",
+      "name": "GUX.Intake Trend",
+      "action": "replaced",
+      "location": "K2 Skills\\GUX.Gold UX Spike\\Views",
+      "identifier": "901b9ee3-eac0-400b-863a-bf212478ea21",
+      "version": "1",
+      "source": "smartforms-manifest.json",
+      "verification": "verified"
+    },
+    {
+      "id": "view:GUX.Attention Now",
+      "layer": "smartforms",
+      "kind": "list-view",
+      "name": "GUX.Attention Now",
+      "action": "replaced",
+      "location": "K2 Skills\\GUX.Gold UX Spike\\Views",
+      "identifier": "5136d04f-e489-4b69-82f5-5cb5ece7b02a",
+      "version": "1",
+      "source": "smartforms-manifest.json",
+      "verification": "verified"
+    },
+    {
+      "id": "view:GUX.Stage Distribution",
+      "layer": "smartforms",
+      "kind": "chart-view",
+      "name": "GUX.Stage Distribution",
+      "action": "replaced",
+      "location": "K2 Skills\\GUX.Gold UX Spike\\Views",
+      "identifier": "480c96c5-944d-4283-8b56-e81e67423292",
+      "version": "1",
+      "source": "smartforms-manifest.json",
+      "verification": "verified"
+    },
+    {
+      "id": "form:GUX.Gold Command Centre",
+      "layer": "smartforms",
+      "kind": "form",
+      "name": "GUX.Gold Command Centre",
+      "action": "replaced",
+      "location": "K2 Skills\\GUX.Gold UX Spike\\Forms",
+      "identifier": "fdc6da78-b94a-47b9-aa16-fafa5f148f2e",
+      "version": "1",
+      "source": "smartforms-manifest.json",
+      "verification": "authenticated Runtime and four viewports verified"
+    },
+    {
+      "id": "form:GUX.My Work",
+      "layer": "smartforms",
+      "kind": "form",
+      "name": "GUX.My Work",
+      "action": "created",
+      "location": "K2 Skills\\GUX.Gold UX Spike\\Forms",
+      "identifier": "9250beb9-1610-4a1e-9648-1cda5da237ff",
+      "version": "1",
+      "source": "smartforms-manifest.json",
+      "verification": "authenticated Runtime, native Worklist tab, and four viewports verified"
+    },
+    {
+      "id": "style-profile:GUX Northstar",
+      "layer": "presentation",
+      "kind": "style-profile",
+      "name": "GUX Northstar",
+      "action": "reused",
+      "location": "K2 Style Profiles",
+      "identifier": "88cc1563-c7db-4a81-883f-a53ed47d2f68",
+      "version": null,
+      "source": "style-profile.json",
+      "verification": "verified on both deployed Forms"
+    },
+    {
+      "id": "asset:gux-northstar.css",
+      "layer": "presentation",
+      "kind": "hosted-css",
+      "name": "gux-northstar.css",
+      "action": "updated",
+      "location": "https://spk2.trials.demome.tech/GUXAssets/gux-northstar.css",
+      "identifier": "SHA256:82F8CD969B88FC4C207510D4256F685601C8E6540AB30569DFCE822B792E5ACC",
+      "version": null,
+      "source": "assets/gux-northstar-critical.css",
+      "verification": "K2 Runtime-marker-gated critical boot layer minified to 1,433 bytes; HTTP 200; gzip 826 bytes; deployed hash match; computed Designer presentation unchanged"
+    },
+    {
+      "id": "asset:gux-northstar-app.css",
+      "layer": "presentation",
+      "kind": "hosted-css",
+      "name": "gux-northstar-app.css",
+      "action": "created",
+      "location": "https://spk2.trials.demome.tech/GUXAssets/gux-northstar-app.css?v=2026.07.23.5",
+      "identifier": "SHA256:02F50E3A1ED77E1746BD96ADFA2F32601324D56772D8321A7D91C55096D835B2",
+      "version": "2026.07.23.5",
+      "source": "assets/gux-northstar.css",
+      "verification": "application theme minified to 13,961 bytes; HTTP 200; gzip 3,640 bytes; deployed hash match; no external font request"
+    },
+    {
+      "id": "asset:gux-northstar.js",
+      "layer": "presentation",
+      "kind": "hosted-javascript",
+      "name": "gux-northstar.js",
+      "action": "updated",
+      "location": "https://spk2.trials.demome.tech/GUXAssets/gux-northstar.js",
+      "identifier": "SHA256:6EA832473278F85B4928BF8F08AECEC4E618A37EC9F00CDF978C568009BE89B9",
+      "version": "2026.07.23.5",
+      "source": "assets/gux-northstar.js",
+      "verification": "minified to 13,333 bytes; HTTP 200; gzip 4,770 bytes; deployed hash match; exits before state or stylesheet creation outside Runtime Form routes"
+    },
+    {
+      "id": "iis-config:GUXAssets-static-compression",
+      "layer": "presentation",
+      "kind": "iis-configuration",
+      "name": "GUXAssets static compression",
+      "action": "updated",
+      "location": "MACHINE/WEBROOT/APPHOST/K2/GUXAssets",
+      "identifier": "system.webServer/urlCompression doStaticCompression=true",
+      "version": null,
+      "source": "README.md deployment command",
+      "verification": "CSS and JavaScript return Content-Encoding: gzip and Vary: Accept-Encoding"
+    }
+  ],
+  "runtimeUrls": [
+    "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.Gold%20Command%20Centre/",
+    "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.My%20Work/"
+  ],
+  "verification": {
+    "finalBuilderGate": {
+      "command": "k2build validate -Manifest solution-manifest.json",
+      "status": "pending",
+      "completedAtUtc": null,
+      "note": "Full Builder validation is not applicable because this isolated GUX presentation spike intentionally consumes existing SNC-prefixed read-model SmartObjects."
+    },
+    "specialistChecks": [
+      {
+        "command": "k2sql deploy --manifest sql-smartobjects-manifest.json --confirm",
+        "status": "passed",
+        "completedAtUtc": "2026-07-23T08:44:00Z"
+      },
+      {
+        "command": "k2forms deploy --manifest smartforms-manifest.json --confirm",
+        "status": "passed",
+        "completedAtUtc": "2026-07-23T08:47:00Z"
+      },
+      {
+        "command": "test-native-shell-cdp.ps1",
+        "status": "passed",
+        "completedAtUtc": "2026-07-23T10:48:47Z"
+      },
+      {
+        "command": "capture-k2-runtime-ux-evidence.ps1 for two Forms and four viewports",
+        "status": "passed",
+        "completedAtUtc": "2026-07-23T09:00:31Z"
+      }
+    ],
+    "endToEndScenarios": [
+      {
+        "name": "Native GUX shell navigation",
+        "status": "passed",
+        "evidence": "runtime-designer-isolation/native-shell-validation.json"
+      },
+      {
+        "name": "K2 Designer isolation",
+        "status": "passed",
+        "evidence": "runtime-designer-isolation/native-shell-validation.json: Style Profile assets are inert in K2 Designer"
+      },
+      {
+        "name": "Responsive authenticated Runtime rendering",
+        "status": "passed",
+        "evidence": "runtime-native-shell-final/runtime-ux-evidence.json and eight PNG captures"
+      },
+      {
+        "name": "Cold load and native Form transition",
+        "status": "passed",
+        "evidence": "runtime-video-critical/gux-page-load-and-transition.mp4, load-strip.png, and transition-strip.png"
+      }
+    ]
+  },
+  "errata": [
+    {
+      "id": "ERR-001",
+      "category": "known-limitation",
+      "severity": "info",
+      "artifactIds": [
+        "view:GUX.Command KPIs",
+        "view:GUX.Intake Trend",
+        "view:GUX.Attention Now",
+        "view:GUX.Stage Distribution"
+      ],
+      "description": "The isolated GUX spike intentionally reuses SNC-prefixed read-model SmartObjects, so the full-solution Builder namespace gate does not apply.",
+      "impact": "Specialist manifests are authoritative; there is no single passing k2build final gate for this cross-solution presentation spike.",
+      "remediation": "When the shell is promoted into a complete owned application, declare the reporting SmartObjects as an explicit supported external dependency or provide solution-owned governed projections.",
+      "status": "accepted"
+    },
+    {
+      "id": "ERR-002",
+      "category": "placeholder",
+      "severity": "info",
+      "artifactIds": [
+        "asset:gux-northstar.js"
+      ],
+      "description": "The greeting name, insight copy, New case button, and insight action are prototype seams. The buttons currently show explanatory feedback rather than initiating or opening an SNC case.",
+      "impact": "The shell demonstrates presentation and navigation but does not replace the existing SNC initiation/workspace entry points.",
+      "remediation": "Bind these seams to governed GUX navigation/configuration records and the approved SNC initiation/workspace URLs after product-level routing is agreed.",
+      "status": "accepted"
+    },
+    {
+      "id": "ERR-003",
+      "category": "skipped-verification",
+      "severity": "warning",
+      "artifactIds": [
+        "form:GUX.My Work"
+      ],
+      "description": "The native My Tasks tab rendered and its tab interaction was verified, but the test identity had no live task to open.",
+      "impact": "The generated Worklist control and open-task rule are structurally verified; an actual task URL was not exercised.",
+      "remediation": "Assign a disposable K2 task to the test identity and open it from the My Tasks tab.",
+      "status": "open"
+    },
+    {
+      "id": "ERR-004",
+      "category": "known-limitation",
+      "severity": "info",
+      "artifactIds": [
+        "smartobject:GUX_GoldUXSpikeSql_GUX_ApplicationNavigation",
+        "view:GUX.Application Navigation"
+      ],
+      "description": "Navigation visibility is presentation configuration, not authorization. With JavaScript blocked, K2 reveals the raw native navigation rows after the 2.5-second curtain fail-safe; the generated View does not turn target Form names into native links.",
+      "impact": "Security still comes from K2 Form/SmartObject rights. The no-JavaScript state is readable and unmasked but is not a polished navigation experience.",
+      "remediation": "Add governed role-aware navigation and a supported native hyperlink projection if no-JavaScript navigation becomes a production requirement.",
+      "status": "accepted"
+    }
+  ],
+  "rollbackNotes": [
+    "The replacement deployment generated new GUIDs for the four existing GUX Views and GUX.Gold Command Centre; no K2 export rollback package was created.",
+    "The checked-in manifests and hosted asset sources are the authoritative rebuild inputs.",
+    "SmartForms manifest cleanup removes only the declared GUX Forms and Views. SQL cleanup removes the GUX Service Instance and generated SmartObjects but preserves GUX.GoldUXSpike unless database removal is explicitly authorized."
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "name": "LPR.Leave request approval workflow",
+  "k2": {
+    "designerHost": "smartforms",
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "application": {
+    "rootCategoryPath": "K2 Skills\\LPR.Leave Request Process",
+    "workflowCategoryName": "LPR.Leave Request Process WFs"
+  },
+  "workflow": {
+    "name": "LPR.Leave Request Approval",
+    "kind": "request-approval",
+    "publish": true,
+    "replaceExisting": false,
+    "comment": "Single-stage manager approval for employee leave requests",
+    "requestStatusUpdate": {
+      "name": "LPR.Set Pending Approval Status",
+      "smartObject": "LPR_LeaveRequestProcess_LPR_LeaveRequest",
+      "method": "Update",
+      "identifierProperty": "LeaveRequestId",
+      "statusProperty": "Status",
+      "statusValue": "Pending Approval",
+      "approvedStatusValue": "Approved",
+      "rejectedStatusValue": "Rejected"
+    },
+    "email": {
+      "name": "LPR.Send Submission Confirmation",
+      "from": "$environment:From Address",
+      "to": ["$originator"],
+      "subject": "Leave request submitted",
+      "body": "Your leave request has been submitted for manager approval.",
+      "html": false
+    },
+    "userTask": {
+      "name": "LPR.Manager Review",
+      "assignees": ["K2:TRIALS\\Administrator"],
+      "instructions": "Review the employee leave request and select Approve or Reject.",
+      "actions": ["Approve", "Reject"],
+      "notification": {
+        "enabled": true,
+        "from": "$environment:From Address",
+        "subject": "Leave request awaiting approval for {{request.EmployeeName}}",
+        "body": "Dear {{task.participantName}},<br><br>Please review the leave request for {{request.EmployeeName}} from {{request.StartDate}} to {{request.EndDate}}.<br><br>{{task.worklistLink}}",
+        "richText": true
+      }
+    },
+    "smartForms": {
+      "form": "LPR.Leave Request",
+      "startState": "LPR.Leave Request Approval Start",
+      "taskState": "LPR.Leave Request Approval Task",
+      "startRuleContains": "Create Button",
+      "makeStartStateDefault": true,
+      "workflowStripLocation": "bottom"
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "application": {
+    "views": [
+      {
+        "name": "APP.Application Navigation",
+        "smartObject": "APP_ApplicationNavigation",
+        "type": "list",
+        "properties": [
+          "NavigationCode",
+          "SectionLabel",
+          "Label",
+          "IconToken",
+          "TargetFormName",
+          "SortOrder",
+          "IsActive",
+          "ConfigurationVersion"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": []
+      }
+    ],
+    "forms": [
+      {
+        "name": "APP.Home",
+        "useLegacyTheme": false,
+        "views": [
+          "APP.Application Navigation",
+          "APP.Home Content"
+        ],
+        "options": [
+          "no-tabs"
+        ],
+        "viewTitles": {
+          "APP.Application Navigation": "Application navigation",
+          "APP.Home Content": "Home"
+        }
+      },
+      {
+        "name": "APP.My Work",
+        "useLegacyTheme": false,
+        "views": [
+          "APP.Application Navigation",
+          "APP.My Work Content"
+        ],
+        "options": [
+          "no-tabs"
+        ],
+        "viewTitles": {
+          "APP.Application Navigation": "Application navigation",
+          "APP.My Work Content": "My work"
+        }
+      }
+    ]
+  }
+}

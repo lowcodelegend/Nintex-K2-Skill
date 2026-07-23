@@ -1,0 +1,85 @@
+{
+  "name": "SPT.Native Tabs Example",
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "application": {
+    "rootCategoryPath": "K2 Skills\\SPT.Native Tabs Example",
+    "theme": "Lithium",
+    "styleProfile": "SPT Native Tabs Sidebar",
+    "solutionCode": "SPT",
+    "replaceExisting": false,
+    "checkIn": true,
+    "commonHeader": {
+      "enabled": false,
+      "reason": "This example intentionally demonstrates its own isolated native-tab shell."
+    },
+    "views": [
+      {
+        "name": "SPT.Dashboard Summary",
+        "smartObject": "SPT_NativeTabsExampleSql_SPT_DashboardSummary",
+        "type": "capture",
+        "properties": ["TotalItems", "OpenItems", "HighPriorityItems", "CompletedItems"],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
+        "metricCards": [
+          { "property": "TotalItems", "label": "All work", "tone": "neutral", "explanation": "All seeded example work items." },
+          { "property": "OpenItems", "label": "Open", "tone": "neutral", "explanation": "Work not yet completed." },
+          { "property": "HighPriorityItems", "label": "High priority", "tone": "warning", "explanation": "Open items marked high priority." },
+          { "property": "CompletedItems", "label": "Completed", "tone": "positive", "explanation": "Completed example work." }
+        ]
+      },
+      {
+        "name": "SPT.Work Queue",
+        "smartObject": "SPT_NativeTabsExampleSql_SPT_WorkItem",
+        "type": "list",
+        "properties": ["WorkItemId", "Reference", "Title", "OwnerName", "Status", "Priority", "DueDate"],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": ["toolbar"]
+      },
+      {
+        "name": "SPT.Work Details",
+        "smartObject": "SPT_NativeTabsExampleSql_SPT_WorkItem",
+        "type": "capture",
+        "properties": ["WorkItemId", "Reference", "Title", "Description", "OwnerName", "Status", "Priority", "DueDate"],
+        "readOnlyProperties": ["WorkItemId", "Reference"],
+        "methods": ["Read", "Update"],
+        "layoutColumns": 2,
+        "options": ["editable", "labels-left", "colon-labels", "toolbar"]
+      }
+    ],
+    "forms": [
+      {
+        "name": "SPT.Tab Workspace",
+        "useLegacyTheme": false,
+        "views": ["SPT.Dashboard Summary", "SPT.Work Queue", "SPT.Work Details"],
+        "viewTitles": {
+          "SPT.Dashboard Summary": "Workspace overview",
+          "SPT.Work Queue": "Work queue",
+          "SPT.Work Details": "Work details"
+        },
+        "tabs": [
+          { "name": "Overview", "views": ["SPT.Dashboard Summary"] },
+          { "name": "Work Queue", "views": ["SPT.Work Queue"] },
+          { "name": "Details", "views": ["SPT.Work Details"] }
+        ],
+        "listClickTabNavigation": [
+          { "sourceView": "SPT.Work Queue", "targetTab": "Details" }
+        ],
+        "options": [],
+        "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]
+      }
+    ]
+  },
+  "verification": {
+    "expectedViews": ["SPT.Dashboard Summary", "SPT.Work Queue", "SPT.Work Details"],
+    "expectedForms": ["SPT.Tab Workspace"],
+    "smokeTestRuntime": true,
+    "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime"
+  }
+}

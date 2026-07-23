@@ -64,11 +64,52 @@ namespace K2WorkflowCli
             if (string.IsNullOrWhiteSpace(Workflow.Kind)) Workflow.Kind = "start-end";
             if (!string.Equals(Workflow.Kind, "start-end", StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(Workflow.Kind, "request-approval", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(Workflow.Kind, "call-subworkflow", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(Workflow.Kind, "case-lifecycle", StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(Workflow.Kind, "json-file", StringComparison.OrdinalIgnoreCase))
-                throw new CliException("workflow.kind must be 'start-end', 'request-approval', or 'json-file'.");
+                throw new CliException("workflow.kind must be 'start-end', 'request-approval', 'call-subworkflow', 'case-lifecycle', or 'json-file'.");
             if (string.Equals(Workflow.Kind, "json-file", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(Workflow.DefinitionFile))
                 throw new CliException("workflow.definitionFile is required when workflow.kind is 'json-file'.");
             if (string.Equals(Workflow.Kind, "request-approval", StringComparison.OrdinalIgnoreCase)) ValidateRequestApproval();
+            if (string.Equals(Workflow.Kind, "call-subworkflow", StringComparison.OrdinalIgnoreCase)) ValidateCallSubWorkflow();
+            if (string.Equals(Workflow.Kind, "case-lifecycle", StringComparison.OrdinalIgnoreCase)) ValidateCaseLifecycle();
+        }
+
+        private void ValidateCaseLifecycle()
+        {
+            var value = Workflow.CaseLifecycle;
+            if (value == null) throw new CliException("workflow.caseLifecycle is required for case-lifecycle.");
+            Required(value.ResolverSmartObject, "workflow.caseLifecycle.resolverSmartObject");
+            Required(value.ResolverMethod, "workflow.caseLifecycle.resolverMethod");
+            Required(value.StateSmartObject, "workflow.caseLifecycle.stateSmartObject");
+            Required(value.StateMethod, "workflow.caseLifecycle.stateMethod");
+            Required(value.CaseIdInput, "workflow.caseLifecycle.caseIdInput");
+            Required(value.StageInstanceProperty, "workflow.caseLifecycle.stageInstanceProperty");
+            Required(value.StageWorkflowProperty, "workflow.caseLifecycle.stageWorkflowProperty");
+            Required(value.IsTerminalProperty, "workflow.caseLifecycle.isTerminalProperty");
+            if (string.IsNullOrWhiteSpace(value.CaseIdDataField)) value.CaseIdDataField = "CaseId";
+            if (string.IsNullOrWhiteSpace(value.ChildStageInstanceInput)) value.ChildStageInstanceInput = "CaseStageInstanceId";
+            if (Workflow.SmartForms != null)
+            {
+                Required(Workflow.SmartForms.Form, "workflow.smartForms.form");
+                if (!Workflow.SmartForms.StartOnly) throw new CliException("case-lifecycle SmartForms integration must set startOnly=true.");
+                Required(Workflow.SmartForms.PrimarySmartObject, "workflow.smartForms.primarySmartObject");
+                if (string.IsNullOrWhiteSpace(Workflow.SmartForms.StartState)) Workflow.SmartForms.StartState = Workflow.Name + " Start";
+                if (string.IsNullOrWhiteSpace(Workflow.SmartForms.StartRuleContains)) Workflow.SmartForms.StartRuleContains = "Save draft and review";
+                ValidateNoVersion(Workflow.SmartForms.StartState, "workflow.smartForms.startState");
+            }
+        }
+
+        private void ValidateCallSubWorkflow()
+        {
+            if (Workflow.CallSubWorkflow == null) throw new CliException("workflow.callSubWorkflow is required for call-subworkflow.");
+            Required(Workflow.CallSubWorkflow.Workflow, "workflow.callSubWorkflow.workflow");
+            if (Workflow.CallSubWorkflow.Workflow.IndexOf('\\') < 1)
+                throw new CliException("workflow.callSubWorkflow.workflow must be the deployed workflow full name '<category>\\<workflow>'.");
+            if (string.IsNullOrWhiteSpace(Workflow.CallSubWorkflow.Account)) Workflow.CallSubWorkflow.Account = "Originator";
+            if (string.IsNullOrWhiteSpace(Workflow.CallSubWorkflow.WaitFor)) Workflow.CallSubWorkflow.WaitFor = "all";
+            if (!new[] { "none", "all", "first" }.Contains(Workflow.CallSubWorkflow.WaitFor, StringComparer.OrdinalIgnoreCase))
+                throw new CliException("workflow.callSubWorkflow.waitFor must be 'none', 'all', or 'first'.");
         }
 
         private void ValidateRequestApproval()
@@ -213,8 +254,44 @@ namespace K2WorkflowCli
         [JsonProperty("userTask")] public UserTaskSettings UserTask { get; set; }
         [JsonProperty("approvalMatrix")] public ApprovalMatrixSettings ApprovalMatrix { get; set; }
         [JsonProperty("smartForms")] public SmartFormsSettings SmartForms { get; set; }
+        [JsonProperty("callSubWorkflow")] public CallSubWorkflowSettings CallSubWorkflow { get; set; }
+        [JsonProperty("caseLifecycle")] public CaseLifecycleSettings CaseLifecycle { get; set; }
+        [JsonProperty("dataFields")] public List<WorkflowDataFieldSettings> DataFields { get; set; }
         [JsonIgnore] public string ProcessFolderName { get; set; }
         [JsonIgnore] public string ProcessFullName { get { return ProcessFolderName + "\\" + Name; } }
+    }
+
+    internal sealed class WorkflowDataFieldSettings
+    {
+        [JsonProperty("name")] public string Name { get; set; }
+        [JsonProperty("type")] public string Type { get; set; }
+        [JsonProperty("hidden")] public bool Hidden { get; set; }
+    }
+
+    internal sealed class CaseLifecycleSettings
+    {
+        [JsonProperty("resolverSmartObject")] public string ResolverSmartObject { get; set; }
+        [JsonProperty("resolverMethod")] public string ResolverMethod { get; set; }
+        [JsonProperty("stateSmartObject")] public string StateSmartObject { get; set; }
+        [JsonProperty("stateMethod")] public string StateMethod { get; set; }
+        [JsonProperty("caseIdInput")] public string CaseIdInput { get; set; }
+        [JsonProperty("caseIdDataField")] public string CaseIdDataField { get; set; }
+        [JsonProperty("stageInstanceProperty")] public string StageInstanceProperty { get; set; }
+        [JsonProperty("stageWorkflowProperty")] public string StageWorkflowProperty { get; set; }
+        [JsonProperty("isTerminalProperty")] public string IsTerminalProperty { get; set; }
+        [JsonProperty("childStageInstanceInput")] public string ChildStageInstanceInput { get; set; }
+        [JsonProperty("workflowIds")] public Dictionary<string, int> WorkflowIds { get; set; }
+    }
+
+    internal sealed class CallSubWorkflowSettings
+    {
+        [JsonProperty("workflow")] public string Workflow { get; set; }
+        [JsonProperty("workflowId")] public int? WorkflowId { get; set; }
+        [JsonProperty("account")] public string Account { get; set; }
+        [JsonProperty("waitFor")] public string WaitFor { get; set; }
+        [JsonProperty("workflowDataField")] public string WorkflowDataField { get; set; }
+        [JsonProperty("inputs")] public Dictionary<string, string> Inputs { get; set; }
+        [JsonProperty("outputs")] public Dictionary<string, string> Outputs { get; set; }
     }
 
     internal sealed class RequestStatusUpdateSettings
@@ -291,5 +368,7 @@ namespace K2WorkflowCli
         [JsonProperty("startRuleContains")] public string StartRuleContains { get; set; }
         [JsonProperty("makeStartStateDefault")] public bool MakeStartStateDefault { get; set; }
         [JsonProperty("workflowStripLocation")] public string WorkflowStripLocation { get; set; }
+        [JsonProperty("startOnly")] public bool StartOnly { get; set; }
+        [JsonProperty("primarySmartObject")] public string PrimarySmartObject { get; set; }
     }
 }

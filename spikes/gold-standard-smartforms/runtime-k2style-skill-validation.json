@@ -1,0 +1,458 @@
+{
+  "testedUtc": "2026-07-23T11:24:17.2166639Z",
+  "config": "C:\\Users\\Administrator\\K2Skills\\spikes\\gold-standard-smartforms\\k2style-runtime-validation.json",
+  "checks": [
+    {
+      "name": "asset delivery: criticalCss",
+      "passed": true,
+      "evidence": {
+        "name": "criticalCss",
+        "url": "https://spk2.trials.demome.tech/GUXAssets/gux-northstar.css",
+        "status": 200,
+        "contentType": "text/css",
+        "contentEncoding": "gzip",
+        "cacheControl": null,
+        "etag": "\"51b068cd901add1:0\"",
+        "lastModified": "Thu, 23 Jul 2026 10:48:31 GMT",
+        "vary": "Accept-Encoding",
+        "transferBytes": 826
+      }
+    },
+    {
+      "name": "asset delivery: applicationCss",
+      "passed": true,
+      "evidence": {
+        "name": "applicationCss",
+        "url": "https://spk2.trials.demome.tech/GUXAssets/gux-northstar-app.css?v=2026.07.23.5",
+        "status": 200,
+        "contentType": "text/css",
+        "contentEncoding": "gzip",
+        "cacheControl": null,
+        "etag": "\"0baa95d901add1:0\"",
+        "lastModified": "Thu, 23 Jul 2026 10:45:24 GMT",
+        "vary": "Accept-Encoding",
+        "transferBytes": 3640
+      }
+    },
+    {
+      "name": "asset delivery: bootJavaScript",
+      "passed": true,
+      "evidence": {
+        "name": "bootJavaScript",
+        "url": "https://spk2.trials.demome.tech/GUXAssets/gux-northstar.js",
+        "status": 200,
+        "contentType": "application/javascript",
+        "contentEncoding": "gzip",
+        "cacheControl": null,
+        "etag": "\"8050425e901add1:0\"",
+        "lastModified": "Thu, 23 Jul 2026 10:45:25 GMT",
+        "vary": "Accept-Encoding",
+        "transferBytes": 4770
+      }
+    },
+    {
+      "name": "Style Profile assets are inert in K2 Designer",
+      "passed": true,
+      "evidence": {
+        "baseline": {
+          "htmlClass": "designer k-webkit k-webkit150 webkit chrome",
+          "bodyClass": "",
+          "backgroundColor": "rgb(0, 4, 38)",
+          "beforeContent": "none",
+          "beforeVisibility": "visible",
+          "beforeZIndex": "auto"
+        },
+        "after": {
+          "htmlClass": "designer k-webkit k-webkit150 webkit chrome",
+          "bodyClass": "",
+          "backgroundColor": "rgb(0, 4, 38)",
+          "beforeContent": "none",
+          "beforeVisibility": "visible",
+          "beforeZIndex": "auto"
+        },
+        "stateCreated": false,
+        "shellCount": 0
+      }
+    },
+    {
+      "name": "cold load has one ready shell with no perceptible native-navigation flash",
+      "passed": true,
+      "evidence": {
+        "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.Gold%20Command%20Centre/",
+        "title": "GUX.Gold Command Centre",
+        "readyState": "complete",
+        "shellCount": 1,
+        "routeCount": 2,
+        "activeRoute": "GUX.Gold Command Centre",
+        "statePresent": true,
+        "stylesReady": true,
+        "stylesLoaded": true,
+        "navigationSource": "smartobject",
+        "ready": true,
+        "leaving": false,
+        "runtimeRoot": true,
+        "nativeNavigationVisible": false,
+        "cacheVersion": "1",
+        "nativePerceptibleEver": false,
+        "firstPerceptibleAt": null,
+        "samples": [
+          {
+            "at": 140,
+            "nativeVisible": true,
+            "bootCovered": false,
+            "ready": false,
+            "painted": false,
+            "firstContentfulPaintAt": null
+          },
+          {
+            "at": 184,
+            "nativeVisible": true,
+            "bootCovered": true,
+            "ready": false,
+            "painted": false,
+            "firstContentfulPaintAt": null
+          },
+          {
+            "at": 233,
+            "nativeVisible": true,
+            "bootCovered": true,
+            "ready": false,
+            "painted": true,
+            "firstContentfulPaintAt": 192
+          },
+          {
+            "at": 392,
+            "nativeVisible": false,
+            "bootCovered": true,
+            "ready": false,
+            "painted": true,
+            "firstContentfulPaintAt": 192
+          },
+          {
+            "at": 750,
+            "nativeVisible": false,
+            "bootCovered": true,
+            "ready": true,
+            "painted": true,
+            "firstContentfulPaintAt": 192
+          },
+          {
+            "at": 755,
+            "nativeVisible": false,
+            "bootCovered": false,
+            "ready": true,
+            "painted": true,
+            "firstContentfulPaintAt": 192
+          }
+        ],
+        "paints": {
+          "first-paint": 192,
+          "first-contentful-paint": 192
+        },
+        "horizontalOverflow": false,
+        "navigationTiming": {
+          "responseEnd": 115,
+          "domContentLoaded": 284,
+          "load": 458
+        }
+      }
+    },
+    {
+      "name": "Form transition curtain activates synchronously",
+      "passed": true,
+      "evidence": {
+        "found": true,
+        "leaving": true,
+        "activationMilliseconds": 1.3
+      }
+    },
+    {
+      "name": "warm transition uses cached/live navigation without flash",
+      "passed": true,
+      "evidence": {
+        "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.My%20Work/",
+        "title": "GUX.My Work",
+        "readyState": "complete",
+        "shellCount": 1,
+        "routeCount": 2,
+        "activeRoute": "GUX.My Work",
+        "statePresent": true,
+        "stylesReady": true,
+        "stylesLoaded": true,
+        "navigationSource": "cache",
+        "ready": true,
+        "leaving": false,
+        "runtimeRoot": true,
+        "nativeNavigationVisible": false,
+        "cacheVersion": "1",
+        "nativePerceptibleEver": false,
+        "firstPerceptibleAt": null,
+        "samples": [
+          {
+            "at": 58,
+            "nativeVisible": true,
+            "bootCovered": true,
+            "ready": false,
+            "painted": false,
+            "firstContentfulPaintAt": null
+          },
+          {
+            "at": 107,
+            "nativeVisible": true,
+            "bootCovered": true,
+            "ready": false,
+            "painted": true,
+            "firstContentfulPaintAt": 72
+          },
+          {
+            "at": 123,
+            "nativeVisible": false,
+            "bootCovered": true,
+            "ready": false,
+            "painted": true,
+            "firstContentfulPaintAt": 72
+          },
+          {
+            "at": 218,
+            "nativeVisible": false,
+            "bootCovered": true,
+            "ready": true,
+            "painted": true,
+            "firstContentfulPaintAt": 72
+          },
+          {
+            "at": 227,
+            "nativeVisible": false,
+            "bootCovered": false,
+            "ready": true,
+            "painted": true,
+            "firstContentfulPaintAt": 72
+          }
+        ],
+        "paints": {
+          "first-paint": 72,
+          "first-contentful-paint": 72
+        },
+        "horizontalOverflow": false,
+        "navigationTiming": {
+          "responseEnd": 29,
+          "domContentLoaded": 123,
+          "load": 125
+        }
+      }
+    },
+    {
+      "name": "boot failure reveals usable native K2 content within the fail-safe deadline",
+      "passed": true,
+      "evidence": {
+        "stateCreated": false,
+        "shellCount": 0,
+        "textLength": 835,
+        "bootVisibility": "visible",
+        "bootOpacity": "1.10134e-13",
+        "bootZIndex": "-1",
+        "elapsedMilliseconds": 3384
+      }
+    },
+    {
+      "name": "browser diagnostics contain no unexpected errors",
+      "passed": true,
+      "evidence": []
+    }
+  ],
+  "states": [
+    {
+      "phase": "designer-isolation",
+      "state": {
+        "baseline": {
+          "htmlClass": "designer k-webkit k-webkit150 webkit chrome",
+          "bodyClass": "",
+          "backgroundColor": "rgb(0, 4, 38)",
+          "beforeContent": "none",
+          "beforeVisibility": "visible",
+          "beforeZIndex": "auto"
+        },
+        "after": {
+          "htmlClass": "designer k-webkit k-webkit150 webkit chrome",
+          "bodyClass": "",
+          "backgroundColor": "rgb(0, 4, 38)",
+          "beforeContent": "none",
+          "beforeVisibility": "visible",
+          "beforeZIndex": "auto"
+        },
+        "stateCreated": false,
+        "shellCount": 0
+      }
+    },
+    {
+      "phase": "cold-load",
+      "state": {
+        "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.Gold%20Command%20Centre/",
+        "title": "GUX.Gold Command Centre",
+        "readyState": "complete",
+        "shellCount": 1,
+        "routeCount": 2,
+        "activeRoute": "GUX.Gold Command Centre",
+        "statePresent": true,
+        "stylesReady": true,
+        "stylesLoaded": true,
+        "navigationSource": "smartobject",
+        "ready": true,
+        "leaving": false,
+        "runtimeRoot": true,
+        "nativeNavigationVisible": false,
+        "cacheVersion": "1",
+        "nativePerceptibleEver": false,
+        "firstPerceptibleAt": null,
+        "samples": [
+          {
+            "at": 140,
+            "nativeVisible": true,
+            "bootCovered": false,
+            "ready": false,
+            "painted": false,
+            "firstContentfulPaintAt": null
+          },
+          {
+            "at": 184,
+            "nativeVisible": true,
+            "bootCovered": true,
+            "ready": false,
+            "painted": false,
+            "firstContentfulPaintAt": null
+          },
+          {
+            "at": 233,
+            "nativeVisible": true,
+            "bootCovered": true,
+            "ready": false,
+            "painted": true,
+            "firstContentfulPaintAt": 192
+          },
+          {
+            "at": 392,
+            "nativeVisible": false,
+            "bootCovered": true,
+            "ready": false,
+            "painted": true,
+            "firstContentfulPaintAt": 192
+          },
+          {
+            "at": 750,
+            "nativeVisible": false,
+            "bootCovered": true,
+            "ready": true,
+            "painted": true,
+            "firstContentfulPaintAt": 192
+          },
+          {
+            "at": 755,
+            "nativeVisible": false,
+            "bootCovered": false,
+            "ready": true,
+            "painted": true,
+            "firstContentfulPaintAt": 192
+          }
+        ],
+        "paints": {
+          "first-paint": 192,
+          "first-contentful-paint": 192
+        },
+        "horizontalOverflow": false,
+        "navigationTiming": {
+          "responseEnd": 115,
+          "domContentLoaded": 284,
+          "load": 458
+        }
+      }
+    },
+    {
+      "phase": "warm-transition",
+      "state": {
+        "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.My%20Work/",
+        "title": "GUX.My Work",
+        "readyState": "complete",
+        "shellCount": 1,
+        "routeCount": 2,
+        "activeRoute": "GUX.My Work",
+        "statePresent": true,
+        "stylesReady": true,
+        "stylesLoaded": true,
+        "navigationSource": "cache",
+        "ready": true,
+        "leaving": false,
+        "runtimeRoot": true,
+        "nativeNavigationVisible": false,
+        "cacheVersion": "1",
+        "nativePerceptibleEver": false,
+        "firstPerceptibleAt": null,
+        "samples": [
+          {
+            "at": 58,
+            "nativeVisible": true,
+            "bootCovered": true,
+            "ready": false,
+            "painted": false,
+            "firstContentfulPaintAt": null
+          },
+          {
+            "at": 107,
+            "nativeVisible": true,
+            "bootCovered": true,
+            "ready": false,
+            "painted": true,
+            "firstContentfulPaintAt": 72
+          },
+          {
+            "at": 123,
+            "nativeVisible": false,
+            "bootCovered": true,
+            "ready": false,
+            "painted": true,
+            "firstContentfulPaintAt": 72
+          },
+          {
+            "at": 218,
+            "nativeVisible": false,
+            "bootCovered": true,
+            "ready": true,
+            "painted": true,
+            "firstContentfulPaintAt": 72
+          },
+          {
+            "at": 227,
+            "nativeVisible": false,
+            "bootCovered": false,
+            "ready": true,
+            "painted": true,
+            "firstContentfulPaintAt": 72
+          }
+        ],
+        "paints": {
+          "first-paint": 72,
+          "first-contentful-paint": 72
+        },
+        "horizontalOverflow": false,
+        "navigationTiming": {
+          "responseEnd": 29,
+          "domContentLoaded": 123,
+          "load": 125
+        }
+      }
+    },
+    {
+      "phase": "readiness-timeout",
+      "state": {
+        "stateCreated": false,
+        "shellCount": 0,
+        "textLength": 835,
+        "bootVisibility": "visible",
+        "bootOpacity": "1.10134e-13",
+        "bootZIndex": "-1",
+        "elapsedMilliseconds": 3384
+      }
+    }
+  ],
+  "diagnostics": [],
+  "passed": true
+}

@@ -1,0 +1,29 @@
+/*
+ * Runtime-scoped starter for a K2 Style Profile.
+ * Keep every selector under html:not(.designer) so Designer remains untouched.
+ */
+html:not(.designer) {
+  --k2sp-accent: #2563eb;
+  --k2sp-surface: #ffffff;
+  --k2sp-border: #dbe3ee;
+  --k2sp-radius: 10px;
+  --k2sp-font: "Segoe UI", Arial, sans-serif;
+}
+
+html:not(.designer) body {
+  background: #f5f7fb;
+  color: #172033;
+  font-family: var(--k2sp-font);
+}
+
+html:not(.designer) .form {
+  background: var(--k2sp-surface);
+}
+
+html:not(.designer) input:focus,
+html:not(.designer) select:focus,
+html:not(.designer) textarea:focus,
+html:not(.designer) button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--k2sp-accent) 30%, transparent);
+  outline-offset: 2px;
+}

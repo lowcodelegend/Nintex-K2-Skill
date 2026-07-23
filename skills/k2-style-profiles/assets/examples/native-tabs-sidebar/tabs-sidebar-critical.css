@@ -1,0 +1,69 @@
+/*
+ * Runtime-only critical layer. It prevents the native horizontal tab strip
+ * from flashing before relocation and fails open without JavaScript.
+ */
+html:not(.designer):has(> body.theme-entry),
+html:not(.designer).k2sp-tabs-runtime {
+  --k2sp-tabs-boot-background: #091225;
+  --k2sp-tabs-boot-foreground: #ffffff;
+  min-height: 100%;
+  background: var(--k2sp-tabs-boot-background) !important;
+}
+
+html:not(.designer) body.theme-entry::before,
+html:not(.designer) body.theme-entry::after {
+  position: fixed;
+  z-index: 2147483600;
+  pointer-events: none;
+  animation: k2sp-tabs-boot-failsafe .001s linear 2.5s forwards;
+  transition: opacity .18s ease, visibility .18s ease;
+}
+
+html:not(.designer) body.theme-entry::before {
+  content: "";
+  inset: 0;
+  background:
+    radial-gradient(circle at 45% 40%, rgba(84, 104, 255, .22), transparent 28rem),
+    linear-gradient(145deg, #07101f, #111c34);
+}
+
+html:not(.designer) body.theme-entry::after {
+  content: "OPENING WORKSPACE";
+  top: 50%;
+  left: 50%;
+  padding: 16px 20px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 12px;
+  color: var(--k2sp-tabs-boot-foreground);
+  background: rgba(255, 255, 255, .08);
+  font: 700 12px/1 "Segoe UI", Arial, sans-serif;
+  letter-spacing: .15em;
+  transform: translate(-50%, -50%);
+}
+
+html:not(.designer) body.theme-entry.k2sp-tabs-ready::before,
+html:not(.designer) body.theme-entry.k2sp-tabs-ready::after {
+  opacity: 0;
+  visibility: hidden;
+}
+
+html:not(.designer) body.theme-entry .runtime-form > ul.tab-box-tabs {
+  opacity: 0;
+  visibility: hidden;
+  animation: k2sp-tabs-source-failsafe .001s linear 2.5s forwards;
+}
+
+@keyframes k2sp-tabs-boot-failsafe {
+  to { z-index: -1; opacity: 0; visibility: hidden; }
+}
+
+@keyframes k2sp-tabs-source-failsafe {
+  to { opacity: 1; visibility: visible; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not(.designer) body.theme-entry::before,
+  html:not(.designer) body.theme-entry::after {
+    transition-duration: .001s !important;
+  }
+}

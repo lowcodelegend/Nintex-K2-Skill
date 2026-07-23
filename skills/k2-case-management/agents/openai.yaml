@@ -1,0 +1,4 @@
+interface:
+  display_name: "K2 Case Management"
+  short_description: "Design reusable stage-based case applications for K2"
+  default_prompt: "Use $k2-case-management to design a governed K2 case-management solution using the canonical extensible data model, parent lifecycle workflow, reusable stage workflows, and a build-manifest handoff to $k2-builder."

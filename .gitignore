@@ -10,6 +10,10 @@
 .tools/
 .test-install*/
 dist/
+!skills/k2-style-profiles/assets/examples/smartobject-sidebar/dist/
+!skills/k2-style-profiles/assets/examples/smartobject-sidebar/dist/**
+!skills/k2-style-profiles/assets/examples/native-tabs-sidebar/dist/
+!skills/k2-style-profiles/assets/examples/native-tabs-sidebar/dist/**
 TestResults/
 *.trx
 

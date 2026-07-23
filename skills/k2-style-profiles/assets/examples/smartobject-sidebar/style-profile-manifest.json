@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "name": "APP native sidebar Style Profile",
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "styleProfile": {
+    "systemName": "APP Native Sidebar",
+    "displayName": "APP Native Sidebar",
+    "description": "Runtime-only native K2 sidebar with critical anti-flash boot styling.",
+    "categoryPath": "APP\\UX",
+    "previewFormId": null,
+    "replaceExisting": false,
+    "files": [
+      {
+        "type": "css",
+        "source": "dist/sidebar-critical.min.css",
+        "target": "sidebar-critical.min.css"
+      },
+      {
+        "type": "js",
+        "source": "dist/sidebar-shell.min.js",
+        "target": "sidebar-shell.min.js"
+      }
+    ]
+  },
+  "hosting": {
+    "enabled": true,
+    "configureIis": true,
+    "siteName": "K2",
+    "applicationPath": "K2/",
+    "virtualPath": "/APPAssets",
+    "physicalPath": "C:\\inetpub\\app-assets",
+    "baseUrl": "https://k2.example.com/APPAssets",
+    "additionalFiles": [
+      {
+        "type": "css",
+        "source": "dist/sidebar-application.min.css",
+        "target": "sidebar-application.min.css"
+      }
+    ]
+  },
+  "verification": {
+    "requireHttps": true,
+    "requireDesignerIsolation": true,
+    "verifyHttp": true,
+    "httpTimeoutSeconds": 20
+  }
+}

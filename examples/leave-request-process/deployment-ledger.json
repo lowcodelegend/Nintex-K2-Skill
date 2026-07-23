@@ -1,0 +1,542 @@
+{
+  "schemaVersion": 2,
+  "shortCode": "LPR",
+  "solution": "LPR.Leave Request Process",
+  "deployedAtUtc": "2026-07-23T12:43:10Z",
+  "environment": "spk2-local",
+  "sourceRevision": "bc7d23c4bba36f895fafdfcfbaf292eabae62673",
+  "result": "complete-with-errata",
+  "manifestChecksums": {
+    "manifest.json": "2177C872D851B42F38351F84A8785F07A2B11E2482BA340A35377A51CB5CF121",
+    "smartforms-manifest.json": "5457B5A7BDBFF5EF075B8BF4FE3B4E20E4AD3B1338702EA402A484342072E764",
+    "workflow-manifest.json": "C00CE461D5A464304480DEDAE157D926D6BB7BF85CB09C6B13422BE25898B324",
+    "solution-manifest.json": "740497E30F72EE7DE3246BFAEED9A37B293109E38900CFAAADECF779A5455D92",
+    "style-profile-manifest.json": "4697DC3659BE0D9E0B5AC7C33DBA3E489D9D048EB77E612578EC292E555035DB"
+  },
+  "artifacts": [
+    {
+      "id": "source:solution-manifest",
+      "layer": "source",
+      "kind": "manifest",
+      "name": "solution-manifest.json",
+      "action": "created",
+      "location": "examples/leave-request-process",
+      "identifier": null,
+      "version": "schema 1",
+      "source": "solution-manifest.json",
+      "verification": "validated"
+    },
+    {
+      "id": "source:sql-manifest",
+      "layer": "source",
+      "kind": "manifest",
+      "name": "manifest.json",
+      "action": "created",
+      "location": "examples/leave-request-process",
+      "identifier": null,
+      "version": null,
+      "source": "manifest.json",
+      "verification": "deployed and verified"
+    },
+    {
+      "id": "source:smartforms-manifest",
+      "layer": "source",
+      "kind": "manifest",
+      "name": "smartforms-manifest.json",
+      "action": "created",
+      "location": "examples/leave-request-process",
+      "identifier": null,
+      "version": null,
+      "source": "smartforms-manifest.json",
+      "verification": "deployed and verified after workflow integration"
+    },
+    {
+      "id": "source:workflow-manifest",
+      "layer": "source",
+      "kind": "manifest",
+      "name": "workflow-manifest.json",
+      "action": "created",
+      "location": "examples/leave-request-process",
+      "identifier": null,
+      "version": "schema 1",
+      "source": "workflow-manifest.json",
+      "verification": "published and verified"
+    },
+    {
+      "id": "source:style-profile-manifest",
+      "layer": "source",
+      "kind": "manifest",
+      "name": "style-profile-manifest.json",
+      "action": "created",
+      "location": "examples/leave-request-process",
+      "identifier": null,
+      "version": "schema 1",
+      "source": "style-profile-manifest.json",
+      "verification": "live profile and hosted CSS verified"
+    },
+    {
+      "id": "source:sql-script",
+      "layer": "source",
+      "kind": "sql-script",
+      "name": "001_leave_request.sql",
+      "action": "created",
+      "location": "examples/leave-request-process/sql",
+      "identifier": null,
+      "version": null,
+      "source": "sql/001_leave_request.sql",
+      "verification": "applied"
+    },
+    {
+      "id": "source:style-css",
+      "layer": "source",
+      "kind": "css",
+      "name": "lpr-blue-white.v1.css",
+      "action": "created",
+      "location": "examples/leave-request-process/assets",
+      "identifier": null,
+      "version": "v1",
+      "source": "assets/lpr-blue-white.v1.css",
+      "verification": "designer-isolation validation passed; hosted bytes not fully verified because profile deployment failed"
+    },
+    {
+      "id": "sql-database:LPR.LeaveRequestProcess",
+      "layer": "sql",
+      "kind": "database",
+      "name": "LPR.LeaveRequestProcess",
+      "action": "created",
+      "location": "localhost",
+      "identifier": null,
+      "version": "SQL Server 15.0.2180.2",
+      "source": "manifest.json",
+      "verification": "verified"
+    },
+    {
+      "id": "sql-schema:LPR",
+      "layer": "sql",
+      "kind": "schema",
+      "name": "LPR",
+      "action": "created",
+      "location": "LPR.LeaveRequestProcess",
+      "identifier": null,
+      "version": null,
+      "source": "sql/001_leave_request.sql",
+      "verification": "verified"
+    },
+    {
+      "id": "sql-table:LPR.LeaveType",
+      "layer": "sql",
+      "kind": "table",
+      "name": "LPR.LeaveType",
+      "action": "created",
+      "location": "LPR.LeaveRequestProcess",
+      "identifier": null,
+      "version": null,
+      "source": "sql/001_leave_request.sql",
+      "verification": "verified; 4 seed rows asserted"
+    },
+    {
+      "id": "sql-table:LPR.LeaveStatus",
+      "layer": "sql",
+      "kind": "table",
+      "name": "LPR.LeaveStatus",
+      "action": "created",
+      "location": "LPR.LeaveRequestProcess",
+      "identifier": null,
+      "version": null,
+      "source": "sql/001_leave_request.sql",
+      "verification": "verified; 4 seed rows asserted"
+    },
+    {
+      "id": "sql-table:LPR.LeaveRequest",
+      "layer": "sql",
+      "kind": "table",
+      "name": "LPR.LeaveRequest",
+      "action": "created",
+      "location": "LPR.LeaveRequestProcess",
+      "identifier": null,
+      "version": null,
+      "source": "sql/001_leave_request.sql",
+      "verification": "verified"
+    },
+    {
+      "id": "sql-constraints:LPR.LeaveRequest",
+      "layer": "sql",
+      "kind": "keys-and-checks",
+      "name": "LPR.LeaveRequest constraints",
+      "action": "created",
+      "location": "LPR.LeaveRequestProcess",
+      "identifier": null,
+      "version": null,
+      "source": "sql/001_leave_request.sql",
+      "verification": "verified: primary key, 2 foreign keys, 2 checks, and status/start-date index"
+    },
+    {
+      "id": "sql-grant:TRIALS-k2svc",
+      "layer": "sql",
+      "kind": "runtime-grant",
+      "name": "TRIALS\\k2svc DML/EXECUTE/VIEW DEFINITION",
+      "action": "created",
+      "location": "LPR.LeaveRequestProcess",
+      "identifier": null,
+      "version": null,
+      "source": "manifest.json",
+      "verification": "verified"
+    },
+    {
+      "id": "k2-service:LPR.LeaveRequestProcess",
+      "layer": "smartobjects",
+      "kind": "sql-service-instance",
+      "name": "LPR.LeaveRequestProcess",
+      "action": "created",
+      "location": "K2 Management",
+      "identifier": "8506b828-b051-4beb-9e97-a28872816931",
+      "version": null,
+      "source": "manifest.json",
+      "verification": "verified"
+    },
+    {
+      "id": "smartobject:LPR_LeaveRequestProcess_LPR_LeaveRequest",
+      "layer": "smartobjects",
+      "kind": "smartobject",
+      "name": "LPR_LeaveRequestProcess_LPR_LeaveRequest",
+      "action": "created",
+      "location": "K2 Skills\\LPR.Leave Request Process\\Data",
+      "identifier": null,
+      "version": null,
+      "source": "manifest.json / LPR-LeaveRequest",
+      "verification": "verified: Create, Read, Update, Delete, List; List smoke test passed"
+    },
+    {
+      "id": "smartobject:LPR_LeaveRequestProcess_LPR_LeaveStatus",
+      "layer": "smartobjects",
+      "kind": "smartobject",
+      "name": "LPR_LeaveRequestProcess_LPR_LeaveStatus",
+      "action": "created",
+      "location": "K2 Skills\\LPR.Leave Request Process\\Data",
+      "identifier": null,
+      "version": null,
+      "source": "manifest.json / LPR-LeaveStatus",
+      "verification": "verified: Create, Read, Update, Delete, List; List smoke test passed"
+    },
+    {
+      "id": "smartobject:LPR_LeaveRequestProcess_LPR_LeaveType",
+      "layer": "smartobjects",
+      "kind": "smartobject",
+      "name": "LPR_LeaveRequestProcess_LPR_LeaveType",
+      "action": "created",
+      "location": "K2 Skills\\LPR.Leave Request Process\\Data",
+      "identifier": null,
+      "version": null,
+      "source": "manifest.json / LPR-LeaveType",
+      "verification": "verified: Create, Read, Update, Delete, List; List smoke test passed"
+    },
+    {
+      "id": "k2-category:LPR-root",
+      "layer": "smartobjects",
+      "kind": "category",
+      "name": "K2 Skills\\LPR.Leave Request Process\\Data",
+      "action": "created",
+      "location": "K2 Categories",
+      "identifier": null,
+      "version": null,
+      "source": "manifest.json",
+      "verification": "verified"
+    },
+    {
+      "id": "iis-vdir:LPRAssets",
+      "layer": "style-profile",
+      "kind": "iis-virtual-directory",
+      "name": "K2/LPRAssets",
+      "action": "created",
+      "location": "C:\\inetpub\\lpr-blue-white-assets",
+      "identifier": null,
+      "version": null,
+      "source": "style-profile-manifest.json",
+      "verification": "verified: hosted endpoint returned HTTP 200 with text/css"
+    },
+    {
+      "id": "hosted-css:lpr-blue-white.v1.css",
+      "layer": "style-profile",
+      "kind": "hosted-css",
+      "name": "lpr-blue-white.v1.css",
+      "action": "created",
+      "location": "https://spk2.trials.demome.tech/LPRAssets/lpr-blue-white.v1.css",
+      "identifier": null,
+      "version": "v1",
+      "source": "assets/lpr-blue-white.v1.css",
+      "verification": "verified: HTTP 200, text/css, and served SHA-256 F20C9805C9941398C26F7727E811B363A73BAF5B950B2AE19A6D2DB007A67DF3 matched source"
+    },
+    {
+      "id": "style-profile:LPR-Blue-and-White",
+      "layer": "style-profile",
+      "kind": "style-profile",
+      "name": "LPR Blue and White",
+      "action": "created",
+      "location": "K2 Skills\\LPR.Leave Request Process",
+      "identifier": "ba82a3e7-8e28-4046-b122-0b80cebec163",
+      "version": "2",
+      "source": "style-profile-manifest.json",
+      "verification": "verified: checked in, exact CSS URL, HTTP 200, source/served bytes matched; selected by both deployed Forms"
+    },
+    {
+      "id": "smartforms-view:LPR.Leave-Request-Editor",
+      "layer": "smartforms",
+      "kind": "view",
+      "name": "LPR.Leave Request Editor",
+      "action": "created",
+      "location": "K2 Skills\\LPR.Leave Request Process\\Views",
+      "identifier": "329440f8-40da-4af2-a5e3-aa02b2eb8add",
+      "version": "1",
+      "source": "smartforms-manifest.json",
+      "verification": "verified: Capture View with Leave Type lookup binding"
+    },
+    {
+      "id": "smartforms-view:LPR.Leave-Request-List",
+      "layer": "smartforms",
+      "kind": "view",
+      "name": "LPR.Leave Request List",
+      "action": "created",
+      "location": "K2 Skills\\LPR.Leave Request Process\\Views",
+      "identifier": "22df950c-0a01-4c4e-96ed-11c0b117ff3d",
+      "version": "1",
+      "source": "smartforms-manifest.json",
+      "verification": "verified: List View"
+    },
+    {
+      "id": "smartforms-view:LPR.Leave-Type-Editor",
+      "layer": "smartforms",
+      "kind": "view",
+      "name": "LPR.Leave Type Editor",
+      "action": "created",
+      "location": "K2 Skills\\LPR.Leave Request Process\\Admin\\Views",
+      "identifier": "058bc104-0c8f-4302-bf3b-5bf0574307c0",
+      "version": "1",
+      "source": "smartforms-manifest.json",
+      "verification": "verified: Admin Capture View"
+    },
+    {
+      "id": "smartforms-view:LPR.Leave-Type-List",
+      "layer": "smartforms",
+      "kind": "view",
+      "name": "LPR.Leave Type List",
+      "action": "created",
+      "location": "K2 Skills\\LPR.Leave Request Process\\Admin\\Views",
+      "identifier": "bb7a9733-bc38-4919-855d-e0ae1a047841",
+      "version": "1",
+      "source": "smartforms-manifest.json",
+      "verification": "verified: Admin List View"
+    },
+    {
+      "id": "smartforms-form:LPR.Leave-Request",
+      "layer": "smartforms",
+      "kind": "form",
+      "name": "LPR.Leave Request",
+      "action": "created",
+      "location": "K2 Skills\\LPR.Leave Request Process\\Forms",
+      "identifier": "fbdcb100-4d72-4463-b677-4c0d4a9db005",
+      "version": "2",
+      "source": "smartforms-manifest.json / workflow-manifest.json",
+      "verification": "verified after workflow integration: styleProfile=LPR Blue and White, useLegacyTheme=false, 3 tabs, native Worklist, Start default=true, Task default=false"
+    },
+    {
+      "id": "smartforms-form:LPR.Leave-Type-Administration",
+      "layer": "smartforms",
+      "kind": "form",
+      "name": "LPR.Leave Type Administration",
+      "action": "created",
+      "location": "K2 Skills\\LPR.Leave Request Process\\Admin\\Forms",
+      "identifier": "857f96e6-ec5f-43eb-91e8-8c33e6308c0a",
+      "version": "1",
+      "source": "smartforms-manifest.json",
+      "verification": "verified: styleProfile=LPR Blue and White, useLegacyTheme=false"
+    },
+    {
+      "id": "smartforms-framework:PSF.FrameworkHeader",
+      "layer": "smartforms",
+      "kind": "external-view",
+      "name": "PSF.FrameworkHeader",
+      "action": "reused",
+      "location": "Demo - PSF Case Management\\PSF Core\\Framework Views",
+      "identifier": "a6d0b4d6-aca4-49ba-9d5e-2d42cb0b8b65",
+      "version": "2",
+      "source": "spk2-local environment profile",
+      "verification": "verified: first placement, server rule, and 2 server-load transfers"
+    },
+    {
+      "id": "smartforms-framework:PSF.FrameworkFooter",
+      "layer": "smartforms",
+      "kind": "external-view",
+      "name": "PSF.FrameworkFooter",
+      "action": "reused",
+      "location": "Demo - PSF Case Management\\PSF Core\\Framework Views",
+      "identifier": "f466e477-1e8b-40f1-8311-b7fe4a58be30",
+      "version": "1",
+      "source": "spk2-local environment profile",
+      "verification": "verified: final placement"
+    },
+    {
+      "id": "workflow-category:LPR.Leave-Request-Process-WFs",
+      "layer": "workflow",
+      "kind": "category",
+      "name": "LPR.Leave Request Process WFs",
+      "action": "created",
+      "location": "K2 Skills\\LPR.Leave Request Process",
+      "identifier": null,
+      "version": null,
+      "source": "workflow-manifest.json",
+      "verification": "verified"
+    },
+    {
+      "id": "workflow:LPR.Leave-Request-Approval",
+      "layer": "workflow",
+      "kind": "published-workflow",
+      "name": "LPR.Leave Request Approval",
+      "action": "created",
+      "location": "LPR.Leave Request Process WFs\\LPR.Leave Request Approval",
+      "identifier": "JSON process 1070; runtime process 3513",
+      "version": "1",
+      "source": "workflow-manifest.json",
+      "verification": "verified: published runtime definition and released Designer lock"
+    },
+    {
+      "id": "workflow-task:LPR.Manager-Review",
+      "layer": "workflow",
+      "kind": "user-task",
+      "name": "LPR.Manager Review",
+      "action": "created",
+      "location": "LPR.Leave Request Approval",
+      "identifier": null,
+      "version": "1",
+      "source": "workflow-manifest.json",
+      "verification": "verified: effective destination K2:TRIALS\\Administrator; actions Approve and Reject; notification enabled"
+    },
+    {
+      "id": "workflow-integration:LPR.Leave-Request",
+      "layer": "workflow",
+      "kind": "smartforms-integration",
+      "name": "LPR.Leave Request Start/Task integration",
+      "action": "updated",
+      "location": "LPR.Leave Request",
+      "identifier": null,
+      "version": "Form v2",
+      "source": "workflow-manifest.json",
+      "verification": "verified: StartProcess, LoadProcess, ActionProcess rules; Start state sole default; Task state non-default"
+    }
+  ],
+  "runtimeUrls": [
+    "https://spk2.trials.demome.tech/Runtime/Runtime/Form/LPR.Leave%20Request/",
+    "https://spk2.trials.demome.tech/Runtime/Runtime/Form/LPR.Leave%20Type%20Administration/"
+  ],
+  "verification": {
+    "finalBuilderGate": {
+      "command": "k2build deploy -Manifest solution-manifest.json -Confirm -Resume",
+      "status": "passed",
+      "completedAtUtc": "2026-07-23T12:43:10Z"
+    },
+    "specialistChecks": [
+      {
+        "layer": "sql-smartobjects",
+        "command": "k2sql deploy --manifest manifest.json --confirm",
+        "status": "passed",
+        "completedAtUtc": "2026-07-23T12:30:46Z"
+      },
+      {
+        "layer": "style-profile",
+        "command": "k2style verify --manifest style-profile-manifest.json",
+        "status": "passed",
+        "completedAtUtc": "2026-07-23T12:38:34Z",
+        "detail": "LPR Blue and White ba82a3e7-8e28-4046-b122-0b80cebec163 v2 verified with hosted asset bytes."
+      },
+      {
+        "layer": "smartforms",
+        "command": "k2build deploy -Manifest solution-manifest.json -Confirm -Resume",
+        "status": "passed",
+        "completedAtUtc": "2026-07-23T12:43:10Z",
+        "detail": "4 Views and 2 Forms deployed; full verification passed after workflow integration and reconciliation."
+      },
+      {
+        "layer": "workflow",
+        "command": "k2build deploy -Manifest solution-manifest.json -Confirm -Resume",
+        "status": "passed",
+        "completedAtUtc": "2026-07-23T12:43:10Z",
+        "detail": "Published runtime version 1; native Start/Task integration and effective assignee verified."
+      }
+    ],
+    "endToEndScenarios": [
+      {
+        "name": "LPR.Submit and decide a leave request",
+        "status": "skipped",
+        "detail": "Ordinary Runtime routes returned HTTP 302 authentication redirects. Authenticated create/start/worklist/action/final-status correlation was not executed."
+      }
+    ]
+  },
+  "errata": [
+    {
+      "id": "ERR-001",
+      "category": "manual-intervention",
+      "severity": "blocker",
+      "artifactIds": [
+        "iis-vdir:LPRAssets",
+        "hosted-css:lpr-blue-white.v1.css",
+        "style-profile:LPR-Blue-and-White"
+      ],
+      "description": "The LPR Blue and White Style Profile required manual creation after the local authoring operation could not load App_GlobalResources.",
+      "impact": "Resolved: the checked-in profile and hosted CSS contract now verify successfully.",
+      "remediation": "Completed manually in K2 Designer and verified through the Style Profile utility.",
+      "status": "resolved"
+    },
+    {
+      "id": "ERR-002",
+      "category": "placeholder",
+      "severity": "warning",
+      "artifactIds": [
+        "workflow-task:LPR.Manager-Review"
+      ],
+      "description": "The manager approval destination is the environment-bound placeholder K2:TRIALS\\Administrator.",
+      "impact": "All leave approvals route to the deployment identity instead of the production manager or manager group.",
+      "remediation": "Replace workflow.userTask.assignees in workflow-manifest.json with the intended explicit K2 user, group, or role before production rollout.",
+      "status": "open"
+    },
+    {
+      "id": "ERR-003",
+      "category": "skipped-verification",
+      "severity": "warning",
+      "artifactIds": [],
+      "description": "Authenticated Runtime rendering, lookup CRUD, workflow start, Worklist task action, and final status correlation were not run.",
+      "impact": "No browser-level evidence exists yet for the end-to-end process.",
+      "remediation": "Sign in to the ordinary Runtime Form URL, create a request, approve or reject the resulting task, and correlate LeaveRequestId, workflow instance, task action, and final Status.",
+      "status": "open"
+    },
+    {
+      "id": "ERR-004",
+      "category": "manual-intervention",
+      "severity": "blocker",
+      "artifactIds": [
+        "sql-database:LPR.LeaveRequestProcess",
+        "k2-service:LPR.LeaveRequestProcess"
+      ],
+      "description": "Two supported builder resume attempts failed because SQL Server reported insufficient system memory in resource pool 'default'. The host had approximately 813 MB free physical memory when checked.",
+      "impact": "Resolved after the user restarted services; the final builder deployment and verification gate passed.",
+      "remediation": "Completed: services restarted and deployment resumed successfully.",
+      "status": "resolved"
+    },
+    {
+      "id": "ERR-005",
+      "category": "known-limitation",
+      "severity": "info",
+      "artifactIds": [
+        "smartforms-form:LPR.Leave-Request",
+        "workflow:LPR.Leave-Request-Approval"
+      ],
+      "description": "After the exit-0 final Builder gate and successful in-run verification, secondary handoff metadata helpers emitted contradictory missing-artifact messages.",
+      "impact": "No deployment checkpoint failed; the live GUIDs, versions, Form states, workflow publication, and integration were already verified in the authoritative builder run.",
+      "remediation": "Use the recorded in-run deployment evidence. Run targeted inspection only if later drift or a missing live artifact is reported.",
+      "status": "accepted"
+    }
+  ],
+  "rollbackNotes": [
+    "Use k2build cleanup -Manifest solution-manifest.json -Confirm to remove manifest-owned workflow, Forms, Views, SmartObjects, and the SQL Service Instance in reverse dependency order. The database is preserved unless -DropDatabase is explicitly authorized.",
+    "LPR Blue and White is now consumed by the deployed Forms. Remove those Forms before attempting Style Profile cleanup; the utility deliberately preserves the IIS virtual directory and physical directory.",
+    "The source directory is currently uncommitted. The recorded sourceRevision identifies the repository base commit, while the complete solution source is the untracked examples/leave-request-process directory."
+  ]
+}

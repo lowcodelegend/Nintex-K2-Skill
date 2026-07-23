@@ -44,6 +44,31 @@ SHA256SUMS
 
 The packager validates skill metadata, builds declared tools, verifies tool versions, rejects source and other forbidden files, creates sorted ZIP entries with fixed timestamps, and writes SHA-256 checksums. The suite archive contains all selected skills; with one selected skill it is intentionally content-identical to that skill archive.
 
+## Bloat and content audit
+
+Before committing a release, inspect both repository additions and packaged payloads:
+
+```powershell
+git status --short
+git ls-files --others --exclude-standard |
+  ForEach-Object { Get-Item -LiteralPath $_ } |
+  Sort-Object Length -Descending |
+  Select-Object -First 40 Length, FullName
+
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$zip = [IO.Compression.ZipFile]::OpenRead('.\dist\<version>\k2-skills-<version>-win-x64.zip')
+try {
+  $zip.Entries | Sort-Object Length -Descending |
+    Select-Object -First 40 FullName, Length, CompressedLength
+} finally {
+  $zip.Dispose()
+}
+```
+
+Keep only durable source, reusable fixtures, and curated final validation evidence. Send raw screenshots, video frames, disposable browser profiles, temporary packages, and intermediate render passes to ignored `.artifacts` or `.tmp` directories. Repository-level solution examples and spike evidence do not belong in the operational suite ZIP.
+
+The packager must continue to reject `.cs`, project/solution files, debug symbols, local/secrets files, build scripts, and proprietary `SourceCode.*.dll` assemblies. Do not weaken those exclusions to make a package pass.
+
 ## Install packages
 
 Install a single-skill or suite archive with:
@@ -67,6 +92,8 @@ Existing skills are never replaced implicitly. Replace them with:
 
 The previous installation moves to a timestamped backup before the new directory is moved into place. Backups default to a sibling of the installation root named `<install-root>.backups`, keeping old `SKILL.md` files outside the active skills tree. Override this with `-BackupRoot`.
 
+After installation, compare the configured skill names with the directories in the target root and run every declared `versionCommand`. A successful archive build does not prove that the active agent installation was updated. Restart or reload the agent session after replacement.
+
 ## Roll back
 
 Restore the newest backup with:
@@ -84,7 +111,10 @@ Use `-BackupId '<directory-name>'` to select a specific backup. Rollback preserv
 2. Build and test each changed skill against disposable artifacts.
 3. Commit the release changes.
 4. Run the packager without `-AllowDirty`.
-5. Inspect `release.json` and verify `SHA256SUMS` independently.
-6. Confirm the ZIP contains no `.cs`, `.csproj`, `.sln`, `.resx`, or `scripts/build.ps1` entries.
-7. Install the suite ZIP into a disposable root and run each packaged tool's version/doctor command.
-8. Publish the ZIPs, checksum sidecars, release manifest, and `SHA256SUMS` together.
+5. Require `release.json` to contain `"dirty": false`; an `-AllowDirty` package is a development artifact and must not be published.
+6. Inspect `release.json` and verify `SHA256SUMS` independently.
+7. Confirm the ZIP contains every configured skill and no `.cs`, `.csproj`, `.sln`, `.resx`, `scripts/build.ps1`, secret/local files, debug output, or proprietary K2 assemblies.
+8. Review the largest repository additions and ZIP entries for raw capture frames, duplicate evidence, or intermediate packages.
+9. Install the suite ZIP into a disposable root and run each packaged tool's version/doctor command.
+10. Install the verified suite into the intended active skill root, confirm every configured skill directory exists, and reload skill discovery.
+11. Publish the per-skill and suite ZIPs, checksum sidecars, `release.json`, and `SHA256SUMS` together. Never publish a ZIP without its matching metadata.

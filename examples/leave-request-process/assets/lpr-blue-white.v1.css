@@ -1,0 +1,162 @@
+/*
+ * LPR Blue and White.
+ * Every selector is Runtime-scoped so K2 Designer remains untouched.
+ */
+html:not(.designer) {
+  --lpr-blue-950: #0b2447;
+  --lpr-blue-800: #123f73;
+  --lpr-blue-700: #15549a;
+  --lpr-blue-600: #1769c2;
+  --lpr-blue-100: #dceeff;
+  --lpr-blue-050: #f3f9ff;
+  --lpr-white: #ffffff;
+  --lpr-ink: #10233c;
+  --lpr-muted: #52677f;
+  --lpr-border: #c9dff3;
+  --lpr-focus: #ffbf47;
+  --lpr-shadow: 0 10px 28px rgba(11, 36, 71, 0.10);
+  --lpr-radius: 10px;
+}
+
+html:not(.designer) body,
+html:not(.designer) .runtime-content {
+  background: linear-gradient(180deg, var(--lpr-blue-050) 0, var(--lpr-white) 360px);
+  color: var(--lpr-ink);
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+html:not(.designer) .form,
+html:not(.designer) .theme-entry .form {
+  background: transparent;
+}
+
+html:not(.designer) .view,
+html:not(.designer) .theme-entry .view {
+  background: var(--lpr-white);
+  border: 1px solid var(--lpr-border);
+  border-radius: var(--lpr-radius);
+  box-shadow: var(--lpr-shadow);
+  overflow: hidden;
+}
+
+html:not(.designer) .view .view-header,
+html:not(.designer) .theme-entry .view .view-header {
+  background: linear-gradient(90deg, var(--lpr-blue-800), var(--lpr-blue-600));
+  border: 0;
+  color: var(--lpr-white);
+  min-height: 42px;
+}
+
+html:not(.designer) .view .view-header .view-header-text,
+html:not(.designer) .view .view-header .view-header-text a,
+html:not(.designer) .theme-entry .view .view-header .view-header-text {
+  color: var(--lpr-white);
+  font-weight: 650;
+}
+
+html:not(.designer) .tab-box ul.tab-box-tabs,
+html:not(.designer) .theme-entry .tab-box ul.tab-box-tabs {
+  background: var(--lpr-white);
+  border-bottom: 2px solid var(--lpr-blue-100);
+}
+
+html:not(.designer) .tab-box ul.tab-box-tabs li a,
+html:not(.designer) .theme-entry .tab-box ul.tab-box-tabs li a {
+  color: var(--lpr-blue-800);
+  font-weight: 600;
+}
+
+html:not(.designer) .tab-box ul.tab-box-tabs li.selected a,
+html:not(.designer) .theme-entry .tab-box ul.tab-box-tabs li.selected a {
+  background: var(--lpr-blue-700);
+  color: var(--lpr-white);
+}
+
+html:not(.designer) input[type="text"],
+html:not(.designer) input[type="password"],
+html:not(.designer) textarea,
+html:not(.designer) select,
+html:not(.designer) .input-control,
+html:not(.designer) .theme-entry .input-control {
+  background-color: var(--lpr-white);
+  border-color: var(--lpr-border);
+  border-radius: 6px;
+  color: var(--lpr-ink);
+}
+
+html:not(.designer) input:focus,
+html:not(.designer) textarea:focus,
+html:not(.designer) select:focus,
+html:not(.designer) button:focus-visible,
+html:not(.designer) a:focus-visible,
+html:not(.designer) .input-control:focus-within {
+  outline: 3px solid var(--lpr-focus);
+  outline-offset: 2px;
+}
+
+html:not(.designer) .SourceCode-Forms-Controls-Web-Button,
+html:not(.designer) .theme-entry a.SourceCode-Forms-Controls-Web-Button,
+html:not(.designer) .theme-entry button {
+  background: var(--lpr-blue-700);
+  border: 1px solid var(--lpr-blue-700);
+  border-radius: 6px;
+  color: var(--lpr-white);
+  font-weight: 600;
+}
+
+html:not(.designer) .SourceCode-Forms-Controls-Web-Button:hover,
+html:not(.designer) .theme-entry a.SourceCode-Forms-Controls-Web-Button:hover,
+html:not(.designer) .theme-entry button:hover {
+  background: var(--lpr-blue-950);
+  border-color: var(--lpr-blue-950);
+}
+
+html:not(.designer) .grid-header,
+html:not(.designer) .theme-entry .grid-header {
+  background: var(--lpr-blue-100);
+  color: var(--lpr-blue-950);
+  font-weight: 650;
+}
+
+html:not(.designer) .grid-content tr:nth-child(even),
+html:not(.designer) .theme-entry .grid-content tr:nth-child(even) {
+  background: var(--lpr-blue-050);
+}
+
+html:not(.designer) .grid-content tr:hover,
+html:not(.designer) .theme-entry .grid-content tr:hover {
+  background: var(--lpr-blue-100);
+}
+
+html:not(.designer) label,
+html:not(.designer) .form-field label,
+html:not(.designer) .theme-entry .form-field label {
+  color: var(--lpr-blue-950);
+}
+
+html:not(.designer) .message-box-content,
+html:not(.designer) .popup,
+html:not(.designer) .theme-entry .popup {
+  background: var(--lpr-white);
+  border-color: var(--lpr-border);
+  color: var(--lpr-ink);
+}
+
+@media (max-width: 720px) {
+  html:not(.designer) .view,
+  html:not(.designer) .theme-entry .view {
+    border-radius: 6px;
+    box-shadow: 0 5px 16px rgba(11, 36, 71, 0.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not(.designer) *,
+  html:not(.designer) *::before,
+  html:not(.designer) *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

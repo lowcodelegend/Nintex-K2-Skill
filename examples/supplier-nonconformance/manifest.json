@@ -1,0 +1,47 @@
+{
+  "name": "SNC.Supplier Nonconformance data model",
+  "application": { "rootCategoryPath": "K2 Skills\\SNC.Supplier Nonconformance" },
+  "database": {
+    "server": "localhost", "name": "SNC.SupplierNonconformance", "integratedSecurity": true,
+    "createIfMissing": true, "commandTimeoutSeconds": 120, "runtimePrincipal": "TRIALS\\k2svc",
+    "scripts": ["sql/001_case_model.sql"]
+  },
+  "k2": {
+    "host": "localhost", "port": 5555, "integrated": true, "securityLabel": "K2",
+    "serviceInstance": {
+      "systemName": "SNC.SupplierNonconformance", "displayName": "SNC.Supplier Nonconformance",
+      "description": "Reusable canonical case model extended for supplier nonconformance",
+      "authenticationMode": "service-account", "commandTimeoutSeconds": 30,
+      "useNativeSqlExecution": true, "useSqlPaging": false, "encryptConnection": false, "onDifferentSqlServer": false
+    },
+    "smartObjects": { "createNew": true, "updateExisting": true, "deleteRemoved": false }
+  },
+  "masterDetails": [
+    {"name":"SNC.Nonconformance Detail","masterSchema":"SNC","masterTable":"Case","masterKey":"CaseId","detailSchema":"SNC","detailTable":"NonconformanceDetail","detailKey":"NonconformanceDetailId","detailForeignKey":"CaseId","deleteBehavior":"cascade","requireIdentityMasterKey":true,"requireForeignKeyIndex":true},
+    {"name":"SNC.Stage Instances","masterSchema":"SNC","masterTable":"Case","masterKey":"CaseId","detailSchema":"SNC","detailTable":"CaseStageInstance","detailKey":"CaseStageInstanceId","detailForeignKey":"CaseId","deleteBehavior":"cascade","requireIdentityMasterKey":true,"requireForeignKeyIndex":true},
+    {"name":"SNC.Parties","masterSchema":"SNC","masterTable":"Case","masterKey":"CaseId","detailSchema":"SNC","detailTable":"CaseParty","detailKey":"CasePartyId","detailForeignKey":"CaseId","deleteBehavior":"cascade","requireIdentityMasterKey":true,"requireForeignKeyIndex":true},
+    {"name":"SNC.Evidence","masterSchema":"SNC","masterTable":"Case","masterKey":"CaseId","detailSchema":"SNC","detailTable":"EvidenceItem","detailKey":"EvidenceId","detailForeignKey":"CaseId","deleteBehavior":"cascade","requireIdentityMasterKey":true,"requireForeignKeyIndex":true},
+    {"name":"SNC.Tasks","masterSchema":"SNC","masterTable":"Case","masterKey":"CaseId","detailSchema":"SNC","detailTable":"CaseTask","detailKey":"CaseTaskId","detailForeignKey":"CaseId","deleteBehavior":"cascade","requireIdentityMasterKey":true,"requireForeignKeyIndex":true},
+    {"name":"SNC.AI Interactions","masterSchema":"SNC","masterTable":"Case","masterKey":"CaseId","detailSchema":"SNC","detailTable":"AIInteraction","detailKey":"AIInteractionId","detailForeignKey":"CaseId","deleteBehavior":"cascade","requireIdentityMasterKey":true,"requireForeignKeyIndex":true},
+    {"name":"SNC.Decisions","masterSchema":"SNC","masterTable":"Case","masterKey":"CaseId","detailSchema":"SNC","detailTable":"Decision","detailKey":"DecisionId","detailForeignKey":"CaseId","deleteBehavior":"cascade","requireIdentityMasterKey":true,"requireForeignKeyIndex":true},
+    {"name":"SNC.Communications","masterSchema":"SNC","masterTable":"Case","masterKey":"CaseId","detailSchema":"SNC","detailTable":"Communication","detailKey":"CommunicationId","detailForeignKey":"CaseId","deleteBehavior":"cascade","requireIdentityMasterKey":true,"requireForeignKeyIndex":true},
+    {"name":"SNC.Comments","masterSchema":"SNC","masterTable":"Case","masterKey":"CaseId","detailSchema":"SNC","detailTable":"CaseComment","detailKey":"CommentId","detailForeignKey":"CaseId","deleteBehavior":"cascade","requireIdentityMasterKey":true,"requireForeignKeyIndex":true},
+    {"name":"SNC.Commands","masterSchema":"SNC","masterTable":"Case","masterKey":"CaseId","detailSchema":"SNC","detailTable":"CaseCommand","detailKey":"CommandId","detailForeignKey":"CaseId","deleteBehavior":"cascade","requireIdentityMasterKey":true,"requireForeignKeyIndex":true},
+    {"name":"SNC.Corrective Actions","masterSchema":"SNC","masterTable":"Case","masterKey":"CaseId","detailSchema":"SNC","detailTable":"CorrectiveAction","detailKey":"CorrectiveActionId","detailForeignKey":"CaseId","deleteBehavior":"cascade","requireIdentityMasterKey":true,"requireForeignKeyIndex":true}
+  ],
+  "verification": {
+    "sqlObjects": [
+      {"type":"table","schema":"SNC","name":"LookupValue"},{"type":"table","schema":"SNC","name":"SLAProfile"},{"type":"table","schema":"SNC","name":"CaseType"},{"type":"table","schema":"SNC","name":"StageDefinition"},{"type":"table","schema":"SNC","name":"AllowedTransition"},{"type":"table","schema":"SNC","name":"BusinessRule"},{"type":"table","schema":"SNC","name":"Case"},{"type":"table","schema":"SNC","name":"NonconformanceDetail"},{"type":"table","schema":"SNC","name":"CaseStageInstance"},{"type":"table","schema":"SNC","name":"CaseParty"},{"type":"table","schema":"SNC","name":"EvidenceItem"},{"type":"table","schema":"SNC","name":"CaseTask"},{"type":"table","schema":"SNC","name":"Decision"},{"type":"table","schema":"SNC","name":"Communication"},{"type":"table","schema":"SNC","name":"CaseComment"},{"type":"table","schema":"SNC","name":"CaseRelationship"},{"type":"table","schema":"SNC","name":"CaseCommand"},{"type":"table","schema":"SNC","name":"AIInteraction"},{"type":"table","schema":"SNC","name":"CorrectiveAction"},{"type":"table","schema":"SNC","name":"AuditEvent"},{"type":"view","schema":"SNC","name":"CaseSummary"},{"type":"view","schema":"SNC","name":"DashboardSummary"},{"type":"view","schema":"SNC","name":"DashboardCasesByStage"},{"type":"view","schema":"SNC","name":"DashboardIntakeTrend"},{"type":"view","schema":"SNC","name":"DashboardUrgentWork"},{"type":"view","schema":"SNC","name":"ReportBacklogAging"},{"type":"view","schema":"SNC","name":"ReportSLAStatus"},{"type":"view","schema":"SNC","name":"ReportClosureThroughput"},{"type":"view","schema":"SNC","name":"ReportCorrectiveActionStatus"},{"type":"view","schema":"SNC","name":"ReportCaseOutcomes"},{"type":"view","schema":"SNC","name":"ReportSupplierRecurrence"},{"type":"procedure","schema":"SNC","name":"ResolveCaseLifecycleStage"}
+    ],
+    "queries": [
+      {"name":"canonical runtime entities","sql":"SELECT COUNT(*) FROM sys.tables WHERE schema_id=SCHEMA_ID(N'SNC') AND name IN (N'Case',N'CaseStageInstance',N'CaseParty',N'EvidenceItem',N'CaseTask',N'Decision',N'Communication',N'CaseComment',N'CaseRelationship',N'CaseCommand',N'AIInteraction',N'AuditEvent')","expectedScalar":"12"},
+      {"name":"eight configured stages","sql":"SELECT COUNT(*) FROM SNC.StageDefinition sd JOIN SNC.CaseType ct ON ct.CaseTypeId=sd.CaseTypeId WHERE ct.CaseTypeCode=N'SUPPLIER_NONCONFORMANCE' AND sd.IsActive=1","expectedScalar":"8"},
+      {"name":"ten configured transitions","sql":"SELECT COUNT(*) FROM SNC.AllowedTransition t JOIN SNC.CaseType ct ON ct.CaseTypeId=t.CaseTypeId WHERE ct.CaseTypeCode=N'SUPPLIER_NONCONFORMANCE' AND t.IsActive=1","expectedScalar":"10"},
+      {"name":"one current stage per case constraint","sql":"SELECT COUNT(*) FROM sys.indexes WHERE object_id=OBJECT_ID(N'SNC.CaseStageInstance') AND name=N'UX_SNC_Stage_Current' AND is_unique=1 AND has_filter=1","expectedScalar":"1"},
+      {"name":"verification case exists","sql":"SELECT COUNT(*) FROM SNC.[Case] WHERE CaseNumber=N'SNC-TEST-0001'","expectedScalar":"1"}
+    ],
+    "smartObjectServiceObjects": ["SNC-LookupValue","SNC-SLAProfile","SNC-CaseType","SNC-StageDefinition","SNC-AllowedTransition","SNC-BusinessRule","SNC-Case","SNC-NonconformanceDetail","SNC-CaseStageInstance","SNC-CaseParty","SNC-EvidenceItem","SNC-CaseTask","SNC-AIInteraction","SNC-Decision","SNC-Communication","SNC-CaseComment","SNC-CaseRelationship","SNC-CaseCommand","SNC-CorrectiveAction","SNC-AuditEvent","SNC-CaseSummary","SNC-DashboardSummary","SNC-DashboardCasesByStage","SNC-DashboardIntakeTrend","SNC-DashboardUrgentWork","SNC-ReportBacklogAging","SNC-ReportSLAStatus","SNC-ReportClosureThroughput","SNC-ReportCorrectiveActionStatus","SNC-ReportCaseOutcomes","SNC-ReportSupplierRecurrence","SNC-ResolveCaseLifecycleStage"],
+    "minimumGeneratedSmartObjects": 32,
+    "smokeTestListMethods": true
+  }
+}

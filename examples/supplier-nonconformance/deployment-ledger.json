@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 2,
+  "shortCode": "SNC",
+  "solution": "SNC.Supplier Nonconformance",
+  "deployedAtUtc": "2026-07-21T17:08:40Z",
+  "environment": "spk2-local",
+  "sourceRevision": "working-tree",
+  "result": "passed-with-development-errata",
+  "artifacts": [
+    {
+      "id": "database:SNC.SupplierNonconformance",
+      "layer": "sql",
+      "kind": "database",
+      "name": "SNC.SupplierNonconformance",
+      "action": "updated",
+      "source": "manifest.json / sql/001_case_model.sql",
+      "verification": "21 tables, lifecycle resolver, four dashboard projections, six report projections, constraints, grants, and smoke tests passed"
+    },
+    {
+      "id": "service-instance:SNC.SupplierNonconformance",
+      "layer": "smartobjects",
+      "kind": "sql-service-instance",
+      "name": "SNC.SupplierNonconformance",
+      "action": "updated",
+      "identifier": "335b3473-e952-4905-bdfd-5394d9911c35",
+      "source": "manifest.json",
+      "verification": "33 generated SQL SmartObjects, method/category contracts, zero-data analytics fallbacks, and smoke tests passed"
+    },
+    {
+      "id": "workflow:SNC.CaseLifecycle",
+      "layer": "workflow",
+      "kind": "parent-workflow",
+      "name": "SNC.Supplier Nonconformance WFs\\SNC.Case Lifecycle",
+      "action": "updated",
+      "identifier": "json:1069 / runtime:3512",
+      "version": "runtime 29",
+      "source": "workflow-lifecycle.json",
+      "verification": "resolver/load, eight synchronous child calls, loop, publication, and start-only integration on SNC.New Nonconformance passed"
+    },
+    {
+      "id": "workflows:SNC.Stages",
+      "layer": "workflow",
+      "kind": "stage-workflows",
+      "name": "SNC.Stage Assign; Capture; Classify; Close; Decide; Investigate; Resolve; Validate",
+      "action": "updated",
+      "identifier": "json:1061-1068 / runtime:3504-3511",
+      "version": "runtime 16 except Investigate 17",
+      "source": "workflow-stage-*.json",
+      "verification": "all eight publication, assignee, SmartForms Start/Task rule, check-in, and runtime-definition checks passed"
+    },
+    {
+      "id": "form:SNC.Workspace",
+      "layer": "smartforms",
+      "kind": "case-workspace",
+      "name": "SNC.Supplier Nonconformance",
+      "action": "replaced",
+      "identifier": "3a31f254-6ef9-4830-a37a-6fd58318759f",
+      "version": "1",
+      "source": "smartforms-combined-manifest.json",
+      "verification": "PSF framework/profile, nine task-oriented tabs, filtered 11-collection master-detail behavior, lifecycle, commands, navigation, analytics/reports, Worklist, and authenticated four-viewport Runtime evidence passed"
+    },
+    {
+      "id": "form:SNC.StageTask",
+      "layer": "smartforms",
+      "kind": "stage-task",
+      "name": "SNC.Stage Task",
+      "action": "replaced",
+      "identifier": "113318ab-203d-40ed-a0c0-a4f5643009a5",
+      "version": "9",
+      "source": "smartforms-combined-manifest.json + workflow-stage-*.json",
+      "verification": "eight checked-in Start/Task integrations and authenticated four-viewport Runtime evidence passed"
+    },
+    {
+      "id": "form:SNC.QualityOperations",
+      "layer": "smartforms",
+      "kind": "operations-dashboard",
+      "name": "SNC.Quality Operations",
+      "action": "replaced",
+      "identifier": "35e7f272-7170-4f9d-a272-33ee04519606",
+      "version": "1",
+      "source": "case-ux.composed.json + case-ux-k2-mapping.yaml -> smartforms-combined-manifest.json",
+      "verification": "responsive native KPI cards, charts with paired data Views, urgent queue, exact flat ordering, PSF shell, and authenticated four-viewport Runtime evidence passed"
+    },
+    {
+      "id": "form:SNC.Reports",
+      "layer": "smartforms",
+      "kind": "reports",
+      "name": "SNC.Reports",
+      "action": "replaced",
+      "identifier": "12b66f51-7a27-4acd-9b97-7166fdb69a72",
+      "version": "1",
+      "source": "case-ux.composed.json + case-ux-k2-mapping.yaml -> smartforms-combined-manifest.json",
+      "verification": "Operations, Performance, Quality tabs; six native chart/data pairs; zero-data behavior; and authenticated four-viewport Runtime evidence passed"
+    },
+    {
+      "id": "form:SNC.MyWork",
+      "layer": "smartforms",
+      "kind": "personal-work",
+      "name": "SNC.My Work",
+      "action": "replaced",
+      "identifier": "2a1533c2-91be-4c61-b74a-c993b9e8a8db",
+      "version": "1",
+      "source": "smartforms-combined-manifest.json",
+      "verification": "native current-user Worklist, reused urgent queue, task-open navigation, and authenticated four-viewport Runtime evidence passed"
+    },
+    {
+      "id": "form:SNC.NewNonconformance",
+      "layer": "smartforms",
+      "kind": "guided-initiation",
+      "name": "SNC.New Nonconformance",
+      "action": "replaced",
+      "identifier": "ecb30409-d8a2-4ad8-93c7-ab4b58a7ecb4",
+      "version": "2",
+      "source": "smartforms-combined-manifest.json + workflow-lifecycle.json",
+      "verification": "dedicated reporter-facing entry View with hidden bound technical fields and business labels; Details/Evidence/saved-key Review & Submit; two detail paths; final start-only integration; and authenticated four-viewport Runtime evidence passed"
+    },
+    {
+      "id": "forms:SNC.Admin",
+      "layer": "smartforms",
+      "kind": "administration",
+      "name": "Lookup Value; SLA; Case Type; Stage; Transition; Business Rule Administration",
+      "action": "reused",
+      "identifier": "6 forms / 12 views",
+      "version": "1",
+      "source": "smartforms-admin-manifest.json",
+      "verification": "all administration Views/Forms, modern Style Profile, categories, and Runtime routes passed"
+    }
+  ],
+  "runtimeUrls": [
+    "https://spk2.trials.demome.tech/Runtime/Form/SNC.Supplier%20Nonconformance/",
+    "https://spk2.trials.demome.tech/Runtime/Form/SNC.Stage%20Task/",
+    "https://spk2.trials.demome.tech/Runtime/Form/SNC.Quality%20Operations/",
+    "https://spk2.trials.demome.tech/Runtime/Form/SNC.Reports/",
+    "https://spk2.trials.demome.tech/Runtime/Form/SNC.My%20Work/",
+    "https://spk2.trials.demome.tech/Runtime/Form/SNC.New%20Nonconformance/"
+  ],
+  "verification": {
+    "finalBuilderGate": {
+      "command": "k2build verify -Manifest solution-manifest.json",
+      "status": "passed",
+      "completedAtUtc": "2026-07-21T17:08:40Z",
+      "checkpoints": 11
+    },
+    "specialistChecks": [
+      { "command": "k2sql deploy/verify", "status": "passed" },
+      { "command": "k2forms deploy/reconcile/verify", "status": "passed", "scope": "34 Views and 6 primary Forms" },
+      { "command": "k2wf verify", "status": "passed", "scope": "parent plus eight stages after final Form integration" },
+      { "command": "k2forms selftest 0.21.0", "status": "passed" },
+      { "command": "k2-case-management tests", "status": "passed" }
+    ],
+    "runtimeVisualEvidence": [
+      { "report": "runtime-ux-evidence-final-main/runtime-ux-evidence.json", "forms": 1, "captures": 4, "viewports": ["desktop", "laptop", "tablet", "mobile"], "horizontalOverflow": 0, "status": "passed" },
+      { "report": "runtime-ux-evidence-final-analytics/runtime-ux-evidence.json", "forms": 2, "captures": 8, "viewports": ["desktop", "laptop", "tablet", "mobile"], "horizontalOverflow": 0, "status": "passed" },
+      { "report": "runtime-ux-evidence-final-work/runtime-ux-evidence.json", "forms": 3, "captures": 12, "viewports": ["desktop", "laptop", "tablet", "mobile"], "horizontalOverflow": 0, "status": "passed" }
+    ],
+    "endToEndScenarios": [
+      {
+        "name": "SNC-TEST-0001 closure",
+        "status": "passed",
+        "evidence": "parent 845; stage tasks 846/847/848 plus Investigate 844; outcomes EVIDENCE_COMPLETE, APPROVED, RESOLUTION_COMPLETED, CLOSED; CaseId 1 authoritatively Closed"
+      }
+    ]
+  },
+  "errata": [
+    {
+      "id": "ERR-001",
+      "category": "development-history",
+      "severity": "warning",
+      "description": "Failed diagnostic workflow instances 820-828, 839, 841 and 843 remain in K2 runtime history from generator iteration.",
+      "impact": "They appear in management history but do not affect the verified definitions or closed validation case.",
+      "remediation": "Apply the environment's approved workflow-log retention procedure if removal is desired.",
+      "status": "open"
+    },
+    {
+      "id": "ERR-002",
+      "category": "production-hardening",
+      "severity": "warning",
+      "description": "Development assignments use $originator and seeded demonstration supplier/repository/identity values.",
+      "impact": "Production routing, calendars, repository integration, notifications, authority policy, and dynamic defaults remain solution/environment-specific configuration.",
+      "remediation": "Replace demonstration configuration during production hardening without changing the reusable case/UX templates.",
+      "status": "open"
+    },
+    {
+      "id": "ERR-003",
+      "category": "k2-runtime-diagnostic",
+      "severity": "warning",
+      "description": "K2 5.10 emits a non-blocking DataLabel setValue null-index browser diagnostic on generated capture Views.",
+      "impact": "All 24 authenticated captures render content and pass layout checks; the diagnostic remains visible in every evidence report and any other diagnostic fails the gate.",
+      "remediation": "Re-test after a K2 platform update and remove the exact-signature allowlist when the platform no longer emits it.",
+      "status": "open"
+    },
+    {
+      "id": "ERR-004",
+      "category": "responsive-platform-control",
+      "severity": "warning",
+      "description": "At 390px, the selected external PSF header clips long Form titles and K2's compact List control forces/truncates key columns even though the document itself does not overflow.",
+      "impact": "The hamburger shell and primary tasks remain usable, but narrow-screen information density is below the desktop experience.",
+      "remediation": "Improve the shared PSF header's narrow-width CSS and use a platform-supported responsive List/card template when available; retain CaseId because native list-click Read/drill-in requires it.",
+      "status": "open"
+    }
+  ],
+  "rollbackNotes": [
+    "Use solution-manifest.json for bounded reverse-order cleanup.",
+    "Do not drop SNC.SupplierNonconformance without explicit authorization.",
+    "Retain the SNC short-code reservation unless the solution is permanently retired."
+  ]
+}

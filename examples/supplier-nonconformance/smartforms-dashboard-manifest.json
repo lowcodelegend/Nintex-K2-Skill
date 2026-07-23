@@ -1,0 +1,170 @@
+{
+  "name": "SNC.Reusable Case Operations Dashboard",
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "application": {
+    "rootCategoryPath": "K2 Skills\\SNC.Supplier Nonconformance",
+    "theme": "Lithium",
+    "styleProfile": "PSF UX v1",
+    "solutionCode": "SNC",
+    "replaceExisting": true,
+    "checkIn": true,
+    "views": [
+      {
+        "name": "SNC.Operations KPIs",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardSummary",
+        "type": "list",
+        "properties": [
+          "OpenCaseCount",
+          "SLAAtRiskCount",
+          "OverdueActionCount",
+          "HighRiskCaseCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [
+          "toolbar"
+        ],
+        "metricCards": [
+          {
+            "property": "OpenCaseCount",
+            "label": "Open cases",
+            "tone": "neutral",
+            "explanation": "Cases not in a terminal state."
+          },
+          {
+            "property": "SLAAtRiskCount",
+            "label": "SLA at risk",
+            "tone": "warning",
+            "explanation": "Open cases approaching or beyond their SLA threshold."
+          },
+          {
+            "property": "OverdueActionCount",
+            "label": "Overdue actions",
+            "tone": "critical",
+            "explanation": "Incomplete corrective actions beyond their due date."
+          },
+          {
+            "property": "HighRiskCaseCount",
+            "label": "High-risk cases",
+            "tone": "critical",
+            "explanation": "Open cases at or above the configured high-risk threshold."
+          }
+        ]
+      },
+      {
+        "name": "SNC.Open Cases by Stage",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardCasesByStage",
+        "type": "list",
+        "properties": [
+          "StageLabel",
+          "CaseCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [
+          "toolbar"
+        ],
+        "charts": [
+          {
+            "name": "chtCasesByStage",
+            "title": "Open cases by stage",
+            "type": "bar",
+            "categoryProperty": "StageLabel",
+            "valueProperty": "CaseCount",
+            "height": 260,
+            "showLegend": false,
+            "showLabels": true,
+            "emptyState": "No open cases."
+          }
+        ]
+      },
+      {
+        "name": "SNC.Case Intake Trend",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardIntakeTrend",
+        "type": "list",
+        "properties": [
+          "PeriodLabel",
+          "CaseCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [
+          "toolbar"
+        ],
+        "charts": [
+          {
+            "name": "chtIntakeTrend",
+            "title": "Case intake trend",
+            "type": "line",
+            "categoryProperty": "PeriodLabel",
+            "valueProperty": "CaseCount",
+            "height": 260,
+            "showLegend": false,
+            "showLabels": true,
+            "emptyState": "No cases in this period."
+          }
+        ]
+      },
+      {
+        "name": "SNC.Urgent Work",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardUrgentWork",
+        "type": "list",
+        "properties": [
+          "CaseId",
+          "CaseNumber",
+          "Title",
+          "SupplierName",
+          "CurrentStageCode",
+          "RiskCode",
+          "OwnerFQN",
+          "SLAStatus",
+          "TargetDate"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [
+          "toolbar"
+        ]
+      }
+    ],
+    "forms": [
+      {
+        "name": "SNC.Quality Operations",
+        "useLegacyTheme": false,
+        "views": [
+          "SNC.Operations KPIs",
+          "SNC.Open Cases by Stage",
+          "SNC.Case Intake Trend",
+          "SNC.Urgent Work"
+        ],
+        "options": [
+          "no-tabs"
+        ],
+        "viewTitles": {
+          "SNC.Operations KPIs": "Operational position",
+          "SNC.Open Cases by Stage": "Open cases by stage",
+          "SNC.Case Intake Trend": "Case intake trend",
+          "SNC.Urgent Work": "Urgent work"
+        }
+      }
+    ]
+  },
+  "verification": {
+    "expectedViews": [
+      "SNC.Operations KPIs",
+      "SNC.Open Cases by Stage",
+      "SNC.Case Intake Trend",
+      "SNC.Urgent Work"
+    ],
+    "expectedForms": [
+      "SNC.Quality Operations"
+    ],
+    "smokeTestRuntime": true,
+    "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime"
+  }
+}

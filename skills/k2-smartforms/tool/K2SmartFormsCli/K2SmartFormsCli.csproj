@@ -76,6 +76,9 @@
     <Compile Include="SelfTests.cs" />
     <Compile Include="SmartFormsManager.cs" />
     <Compile Include="ViewLookupDefinition.cs" />
+    <Compile Include="ViewChartDefinition.cs" />
+    <Compile Include="ViewMetricCardDefinition.cs" />
+    <Compile Include="ViewLifecycleDefinition.cs" />
     <Compile Include="ViewPresentationDefinition.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime",
+  "designerUrl": "https://spk2.trials.demome.tech/Designer/",
+  "trustedAuthHost": "spk2.trials.demome.tech",
+  "assetUrls": {
+    "criticalCss": "https://spk2.trials.demome.tech/GUXAssets/gux-northstar.css",
+    "applicationCss": "https://spk2.trials.demome.tech/GUXAssets/gux-northstar-app.css?v=2026.07.23.5",
+    "bootJavaScript": "https://spk2.trials.demome.tech/GUXAssets/gux-northstar.js"
+  },
+  "startForm": {
+    "name": "GUX.Gold Command Centre",
+    "title": "GUX.Gold Command Centre"
+  },
+  "transitionForm": {
+    "name": "GUX.My Work",
+    "title": "GUX.My Work",
+    "navigationCode": "MY_WORK"
+  },
+  "selectors": {
+    "shell": "#gux-shell",
+    "route": "[data-gux-route]",
+    "activeRoute": "[data-gux-route][aria-current=\"page\"]",
+    "nativeNavigationTitle": "[data-sf-title=\"Application navigation\"]",
+    "transition": ".gux-transition"
+  },
+  "stateObject": "__guxNorthstar",
+  "readyClass": "gux-ready",
+  "leavingClass": "gux-leaving",
+  "runtimeRootClass": "gux-runtime",
+  "cacheVersionKey": "gux:navigation:version",
+  "bootTimeoutMilliseconds": 2500,
+  "requireCompression": true,
+  "requireCacheHeaders": true
+}

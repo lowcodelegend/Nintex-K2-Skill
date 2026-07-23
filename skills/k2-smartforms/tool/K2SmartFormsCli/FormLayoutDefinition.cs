@@ -23,7 +23,7 @@ namespace K2SmartFormsCli
             }
             if (definition.Tabs.Count == 0)
             {
-                ReorderFrameworkAreas(form, headerArea, footerArea, definition.Name);
+                ReorderFlatAreas(form, definition, headerArea, footerArea);
                 return document.ToString(SaveOptions.DisableFormatting);
             }
             form.SetAttributeValue("Layout", "TabControl");
@@ -61,6 +61,8 @@ namespace K2SmartFormsCli
                 if (headerArea != null && object.ReferenceEquals(tab, definition.Tabs[0])) areas.Add(new XElement(headerArea));
                 foreach (var viewName in tab.Views) areas.Add(new XElement(viewAreas[viewName]));
                 if (tab.Worklist != null) areas.Add(BuildWorklistArea(form, controls, tab, definition.Name));
+                if (definition.WorkflowStartButton != null && string.Equals(definition.WorkflowStartButton.Tab, tab.Name, StringComparison.OrdinalIgnoreCase))
+                    areas.Add(BuildWorkflowStartArea(form, controls, definition));
                 if (footerArea != null && object.ReferenceEquals(tab, definition.Tabs[definition.Tabs.Count - 1])) areas.Add(new XElement(footerArea));
                 panels.Add(panel);
             }
@@ -74,7 +76,12 @@ namespace K2SmartFormsCli
             var form = FindForm(document);
             VerifyViewTitles(form, definition);
             if (header != null) VerifyHeader(form, header, headerParameters, headerControlTransfers, definition.Name);
-            if (definition.Tabs.Count == 0) return;
+            if (definition.Tabs.Count == 0)
+            {
+                VerifyFlatAreaOrder(form, definition, header);
+                VerifyFrameworkPositions(form, header, definition.Name);
+                return;
+            }
             if (!string.Equals((string)form.Attribute("Layout"), "TabControl", StringComparison.OrdinalIgnoreCase))
                 throw new CliException("K2 Form '" + definition.Name + "' has multiple tabs but Layout is '" + (string)form.Attribute("Layout") + "', expected 'TabControl'.");
             var controls = RequiredChild(form, "Controls");
@@ -101,6 +108,8 @@ namespace K2SmartFormsCli
                 if (header != null && header.Footer != null && footerCount != (index == definition.Tabs.Count - 1 ? 1 : 0))
                     throw new CliException("K2 Form '" + definition.Name + "' common footer must occur once on the last tab only.");
                 if (expected.Worklist != null) VerifyWorklist(form, controls, panel, definition, expected);
+                if (definition.WorkflowStartButton != null && string.Equals(definition.WorkflowStartButton.Tab, expected.Name, StringComparison.OrdinalIgnoreCase))
+                    VerifyWorkflowStartButton(form, controls, panel, definition);
             }
             VerifyListClickTabNavigation(form, definition);
             VerifyFrameworkPositions(form, header, definition.Name);
@@ -214,6 +223,39 @@ namespace K2SmartFormsCli
             if (footerArea == null) return;
             footerArea.Remove();
             lastAreas.Add(footerArea);
+        }
+
+        private static void ReorderFlatAreas(XElement form, FormDefinition definition, XElement headerArea, XElement footerArea)
+        {
+            var panels = RequiredChild(form, "Panels").Elements().Where(x => x.Name.LocalName == "Panel").ToList();
+            if (panels.Count != 1) throw new CliException("Generated flat form '" + definition.Name + "' has " + panels.Count + " panels, expected one.");
+            var areas = panels[0].Elements().FirstOrDefault(x => x.Name.LocalName == "Areas");
+            if (areas == null) throw new CliException("Generated flat form '" + definition.Name + "' has no Areas collection.");
+            var ordered = new List<XElement>();
+            if (headerArea != null) ordered.Add(headerArea);
+            foreach (var viewName in definition.Views)
+            {
+                var item = form.Descendants().FirstOrDefault(x => x.Name.LocalName == "Item" && string.Equals((string)x.Attribute("ViewName"), viewName, StringComparison.OrdinalIgnoreCase));
+                var area = item == null ? null : item.Ancestors().FirstOrDefault(x => x.Name.LocalName == "Area");
+                if (area == null) throw new CliException("Generated flat form '" + definition.Name + "' has no area for view '" + viewName + "'.");
+                ordered.Add(area);
+            }
+            if (footerArea != null) ordered.Add(footerArea);
+            foreach (var area in ordered) area.Remove();
+            areas.RemoveNodes();
+            foreach (var area in ordered) areas.Add(area);
+        }
+
+        private static void VerifyFlatAreaOrder(XElement form, FormDefinition definition, ResolvedCommonHeader header)
+        {
+            var panels = RequiredChild(form, "Panels").Elements().Where(x => x.Name.LocalName == "Panel").ToList();
+            if (panels.Count != 1) throw new CliException("K2 flat Form '" + definition.Name + "' has " + panels.Count + " panels, expected one.");
+            var actual = panels[0].Descendants().Where(x => x.Name.LocalName == "Item" && x.Attribute("ViewID") != null)
+                .Where(x => header == null || !string.Equals((string)x.Attribute("ViewID"), header.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase))
+                .Where(x => header == null || header.Footer == null || !string.Equals((string)x.Attribute("ViewID"), header.Footer.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase))
+                .Select(x => (string)x.Attribute("ViewName") ?? ChildValue(x, "Name")).ToList();
+            if (!actual.SequenceEqual(definition.Views, StringComparer.OrdinalIgnoreCase))
+                throw new CliException("K2 flat Form '" + definition.Name + "' has the wrong view layout order.");
         }
 
         private static void ApplyHeader(XElement form, ResolvedCommonHeader header, IDictionary<string, string> parameters, IDictionary<Guid, ResolvedHeaderControlTransfer> controlTransfers)
@@ -353,6 +395,7 @@ namespace K2SmartFormsCli
 
         private static void VerifyFrameworkPositions(XElement form, ResolvedCommonHeader header, string formName)
         {
+            if (header == null) return;
             var items = form.Descendants().Where(x => x.Name.LocalName == "Item" && x.Attribute("ViewID") != null).ToList();
             var headerIndex = items.FindIndex(x => string.Equals((string)x.Attribute("ViewID"), header.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase));
             if (headerIndex != 0) throw new CliException("K2 Form '" + formName + "' common header must be the first view position.");
@@ -559,6 +602,59 @@ namespace K2SmartFormsCli
                 new XElement(ns + "Items",
                     new XElement(ns + "Item", new XAttribute("ID", itemId),
                         new XElement(ns + "Canvas", new XElement(ns + "Control", new XAttribute("ID", controlId))))));
+        }
+
+        private static XElement BuildWorkflowStartArea(XElement form, XElement controls, FormDefinition definition)
+        {
+            var ns = form.Name.Namespace;
+            var button = definition.WorkflowStartButton;
+            var tableId = NewId(); var rowId = NewId(); var cellId = NewId(); var buttonId = NewId();
+            var areaId = NewId(); var itemId = NewId();
+            controls.Add(new XElement(ns + "Control", new XAttribute("ID", tableId), new XAttribute("Type", "Table"),
+                new XElement(ns + "Name", "tblWorkflowActions"), new XElement(ns + "DisplayName", "Workflow Actions"),
+                new XElement(ns + "Properties", Property(ns, "ControlName", "tblWorkflowActions", true), Property(ns, "IsResponsive", "true", true))));
+            controls.Add(BasicControl(ns, rowId, "Row", "Workflow Actions Row"));
+            controls.Add(BasicControl(ns, cellId, "Cell", "Workflow Actions Cell"));
+            controls.Add(new XElement(ns + "Control", new XAttribute("ID", buttonId), new XAttribute("Type", "Button"),
+                new XElement(ns + "Name", button.Name), new XElement(ns + "DisplayName", button.Name),
+                new XElement(ns + "Properties", Property(ns, "ControlName", button.Name, true), Property(ns, "Text", button.Text, true), Property(ns, "ButtonStyle", "mainaction", true))));
+            controls.Add(BasicControl(ns, areaId, "Area", "Workflow Actions Area"));
+            controls.Add(BasicControl(ns, itemId, "AreaItem", "Workflow Actions Area Item"));
+            AddWorkflowStartRule(form, definition, buttonId);
+            return new XElement(ns + "Area", new XAttribute("ID", areaId),
+                new XElement(ns + "Items", new XElement(ns + "Item", new XAttribute("ID", itemId),
+                    new XElement(ns + "Canvas", new XElement(ns + "Control", new XAttribute("ID", tableId), new XAttribute("LayoutType", "Grid"),
+                        new XElement(ns + "Columns", new XElement(ns + "Column", new XAttribute("ID", NewId()), new XAttribute("Size", "100%"))),
+                        new XElement(ns + "Rows", new XElement(ns + "Row", new XAttribute("ID", rowId),
+                            new XElement(ns + "Cells", new XElement(ns + "Cell", new XAttribute("ID", cellId), new XElement(ns + "Control", new XAttribute("ID", buttonId)))))))))));
+        }
+
+        private static void AddWorkflowStartRule(XElement form, FormDefinition definition, string buttonId)
+        {
+            var ns = form.Name.Namespace;
+            var events = RequiredChild(RequiredChild(form, "States"), "State").Elements().FirstOrDefault(x => x.Name.LocalName == "Events");
+            if (events == null) { events = new XElement(ns + "Events"); RequiredChild(RequiredChild(form, "States"), "State").Add(events); }
+            var button = definition.WorkflowStartButton;
+            events.Add(new XElement(ns + "Event", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                new XAttribute("Type", "User"), new XAttribute("SourceID", buttonId), new XAttribute("SourceType", "Control"),
+                new XAttribute("SourceName", button.Name), new XAttribute("SourceDisplayName", button.Name),
+                new XElement(ns + "Name", "OnClick"),
+                new XElement(ns + "Properties", Property(ns, "RuleFriendlyName", "When " + button.Name + " is Clicked", false), Property(ns, "Location", definition.Name + " / " + button.Tab, false)),
+                new XElement(ns + "Handlers", new XElement(ns + "Handler", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                    new XElement(ns + "Properties", Property(ns, "HandlerName", "IfLogicalHandler", false), Property(ns, "Location", "form", false)), new XElement(ns + "Actions")))));
+        }
+
+        private static void VerifyWorkflowStartButton(XElement form, XElement controls, XElement panel, FormDefinition definition)
+        {
+            var button = definition.WorkflowStartButton;
+            var control = controls.Elements().SingleOrDefault(x => x.Name.LocalName == "Control" && string.Equals((string)x.Attribute("Type"), "Button", StringComparison.OrdinalIgnoreCase) && string.Equals(ChildValue(x, "Name"), button.Name, StringComparison.OrdinalIgnoreCase));
+            if (control == null) throw new CliException("K2 Form '" + definition.Name + "' has no workflow start button '" + button.Name + "'.");
+            if (!string.Equals(ReadProperty(control, "Text"), button.Text, StringComparison.Ordinal)) throw new CliException("K2 Form '" + definition.Name + "' workflow start button text is incorrect.");
+            var id = (string)control.Attribute("ID");
+            if (!panel.Descendants().Any(x => x.Name.LocalName == "Control" && string.Equals((string)x.Attribute("ID"), id, StringComparison.OrdinalIgnoreCase))) throw new CliException("K2 Form '" + definition.Name + "' workflow start button is not on tab '" + button.Tab + "'.");
+            var baseState = RequiredChild(RequiredChild(form, "States"), "State");
+            var clickRules = baseState.Descendants().Where(x => x.Name.LocalName == "Event" && string.Equals((string)x.Attribute("SourceID"), id, StringComparison.OrdinalIgnoreCase) && string.Equals(ChildValue(x, "Name"), "OnClick", StringComparison.OrdinalIgnoreCase)).ToList();
+            if (clickRules.Count != 1) throw new CliException("K2 Form '" + definition.Name + "' workflow start button must have exactly one OnClick rule.");
         }
 
         private static XElement BasicControl(XNamespace ns, string id, string type, string name)

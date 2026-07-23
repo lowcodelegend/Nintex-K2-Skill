@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "case_type": {"code":"SUPPLIER_NONCONFORMANCE","name":"Supplier Nonconformance","initial_stage":"CAPTURE","retention_code":"QUALITY_RECORD","configuration_version":"1","ai_enabled":false},
+  "stages": [
+    {"code":"CAPTURE","workflow":"SNC.Stage Capture","sequence":10,"exit_rule":"CAPTURE_COMPLETE","terminal":false},
+    {"code":"VALIDATE","workflow":"SNC.Stage Validate","sequence":20,"exit_rule":"VALIDATION_COMPLETE","terminal":false},
+    {"code":"CLASSIFY","workflow":"SNC.Stage Classify","sequence":30,"exit_rule":"CLASSIFICATION_COMPLETE","terminal":false},
+    {"code":"ASSIGN","workflow":"SNC.Stage Assign","sequence":40,"exit_rule":"ASSIGNMENT_COMPLETE","terminal":false},
+    {"code":"INVESTIGATE","workflow":"SNC.Stage Investigate","sequence":50,"exit_rule":"EVIDENCE_COMPLETE","terminal":false},
+    {"code":"DECIDE","workflow":"SNC.Stage Decide","sequence":60,"exit_rule":"DECISION_RECORDED","terminal":false},
+    {"code":"RESOLVE","workflow":"SNC.Stage Resolve","sequence":70,"exit_rule":"RESOLUTION_COMPLETE","terminal":false},
+    {"code":"CLOSE","workflow":"SNC.Stage Close","sequence":80,"exit_rule":"CLOSURE_COMPLETE","terminal":true}
+  ],
+  "transitions": [
+    {"from":"CAPTURE","outcome":"SUBMITTED","to":"VALIDATE"},
+    {"from":"VALIDATE","outcome":"VALID","to":"CLASSIFY"},
+    {"from":"VALIDATE","outcome":"MORE_INFORMATION_REQUIRED","to":"CAPTURE","reentry":true},
+    {"from":"CLASSIFY","outcome":"CLASSIFIED","to":"ASSIGN"},
+    {"from":"ASSIGN","outcome":"ASSIGNED","to":"INVESTIGATE"},
+    {"from":"INVESTIGATE","outcome":"EVIDENCE_COMPLETE","to":"DECIDE"},
+    {"from":"DECIDE","outcome":"RETURNED_FOR_INVESTIGATION","to":"INVESTIGATE","reentry":true},
+    {"from":"DECIDE","outcome":"APPROVED","to":"RESOLVE"},
+    {"from":"RESOLVE","outcome":"RESOLUTION_COMPLETED","to":"CLOSE"},
+    {"from":"CLOSE","outcome":"REOPENED","to":"INVESTIGATE","reentry":true,"reopen":true}
+  ],
+  "extensions": {"entities":["NonconformanceDetail","CorrectiveAction"],"notes":"Supplier, part, lot, containment and CAPA data extend the canonical case model."}
+}

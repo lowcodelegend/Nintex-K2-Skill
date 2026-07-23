@@ -1,6 +1,6 @@
 ---
 name: k2-smartforms
-description: Generate, deploy, inspect, verify, replace, and clean up K2 Five SmartForms views and forms over existing SmartObjects using declarative JSON manifests and the bundled k2forms .NET CLI. Use for tabbed CRUD UX, master-detail item/editable-list forms, native K2 Worklist tabs, lookup dropdowns, Admin UX, generated rules, modern Style Profiles, or repeatable SmartForms construction. Do not use for creating SmartObjects, workflows, arbitrary custom controls, general hand-authored XML definitions, or cloud Nintex Forms.
+description: Generate, deploy, inspect, verify, replace, and clean up K2 Five SmartForms views and forms over existing SmartObjects using declarative JSON manifests and the bundled k2forms .NET CLI. Use for tabbed CRUD UX, native SmartObject-backed charts and lifecycle trackers, metric cards, master-detail item/editable-list forms, native K2 Worklist tabs, lookup dropdowns, Admin UX, generated rules, modern Style Profiles, or repeatable SmartForms construction. Do not use for creating SmartObjects, workflows, arbitrary custom controls, general hand-authored XML definitions, or cloud Nintex Forms.
 ---
 
 # K2 SmartForms builder
@@ -9,7 +9,7 @@ Build checked-in Forms/Views through supported K2 APIs; never edit K2 databases 
 
 ## Workflow
 
-1. Confirm self-hosted K2 Five and existing SmartObjects. If `$k2-builder` is installed, validate its selected environment profile before discovery. Resolve the Style Profile and common-framework selections; stop while either is `unselected`.
+1. Confirm self-hosted K2 Five and existing SmartObjects. If `$k2-builder` is installed, validate its selected environment profile before discovery. Resolve the Style Profile and common-framework selections; stop while either is `unselected`. When the required custom Style Profile does not exist, create and verify it first with `$k2-style-profiles`.
 2. Read [design.md](references/design.md) and [manifest.md](references/manifest.md). Create a stable, version-free manifest under one application root.
 3. Select fields, methods, layout, read-only state, literal defaults, lookups, cascades, titles, tabs, and Form composition for each user/process stage. Every capture View must include each selected method's required properties except a master-detail foreign key supplied by the Form. Keep required Create inputs editable or supply intentional system values with `defaultValues`.
 4. Run `scripts/k2forms.ps1 doctor --manifest <path>`, then `plan` and review categories, collisions, replacement, dependencies, framework, and verification scope.
@@ -24,10 +24,13 @@ The linked design/manifest references are authoritative. Key constraints are:
 
 - Prefix complete-solution Forms, Views, category leaf, and generated SmartObject references with `<CODE>.`; preserve K2-sanitized SmartObject system names exactly. Ordinary artifacts go under `Views`/`Forms`; managed lookup and matrix UX goes under `Admin\Views`/`Admin\Forms`.
 - Bind controlled fields to declared SmartObject lookup sources. Give every business-managed lookup Admin capture/list UX; omit it deliberately for external/system vocabularies.
-- For master-detail, use a capture master plus every required editable `capture-list` child and declare them under `form.masterDetail.details`. One Form Save handles master Create/Update, returned-key transfer, and each child's `Added`/`Changed`/`Removed` states. Suppress unfiltered detail Lists and bypass persistence controls; reload every child after every nonblank master-key Read path. Never flatten or remove a child collection to recover from generation or integration failure.
+- For master-detail, use a capture master plus every required editable `capture-list` child and declare them under `form.masterDetail.details`. One Form Save handles master Create/Update, returned-key transfer, and each child's `Added`/`Changed`/`Removed` states. Optional `masterDetail.review` loads a read-only review View from the saved key and focuses its tab only after persistence. Suppress unfiltered detail Lists and bypass persistence controls; reload every child after every nonblank master-key Read path. Never flatten or remove a child collection to recover from generation or integration failure.
+- For guided initiation, declare `workflowStartButton` on the final review tab. It creates a stable native button and empty OnClick rule that `k2-workflows` can embellish with start-only integration; do not attach workflow Start to Save Draft.
 - Use named list/details/My Tasks tabs for workflow shells, `listClickTabNavigation` for drill-in, and the native Worklist control when users act in the application. Keep compact Admin Forms stacked unless tabs help.
-- Use bold labels and 40/60 label/control widths by default; use four columns only for short fields on wide screens. Put transient rule values in hidden `tblDebug` Data Labels. Give every Form view instance a user-facing title or a documented `untitledViews` exception.
+- Use bold labels and 40/60 label/control widths by default; use four columns only for short fields on wide screens. Put transient rule values in hidden `tblDebug` Data Labels. Use `hiddenProperties` only to retain bound technical/defaulted fields without presenting them in a dedicated task View. Give every Form view instance a user-facing title or a documented `untitledViews` exception.
 - Generate modern Forms with the selected Style Profile and `useLegacyTheme=false`; `theme` is required legacy generator metadata only.
+- Use manifest-declared `charts` on dedicated capture Views backed by parameterless List methods. Pair every visual chart View with a separate list View over the same projection as its accessible, exportable data alternative; provide a meaningful empty state on both.
+- Use manifest-declared `metricCards` on a dedicated capture View for governed one-row operational summaries and `lifecycleTrackers` on a capture View's read-only current-stage property. These transformers preserve native SmartObject bindings while replacing generated source rows with responsive presentation controls.
 - Apply the selected environment header/footer contract unless the manifest explicitly overrides or disables it with a reason. Preserve exact instance settings, first/last placement, initialization bindings, server-load rule calls, combined control transfer, and discovered order. PSF names/mappings are optional discovered conventions, never defaults.
 - Generated UX is a baseline: validate accessibility, required-state messaging, empty/long values, destructive confirmation, and business rules in Designer/browser.
 
@@ -41,7 +44,7 @@ The linked design/manifest references are authoritative. Key constraints are:
 
 ## Boundary
 
-The CLI supports capture, list, content, and editable-list Views; composed/titled/tabbed Forms; lookups/cascades/Admin UX; Worklist tabs and list navigation; modern Style Profiles and external frameworks; master-detail persistence/load rules; hidden variables; layout controls; resumable/forms-only deployment; verification; and manifest-owned cleanup.
+The CLI supports capture, list, content, and editable-list Views; native GenericChart, metric-card, and Progress lifecycle composition; composed/titled/tabbed Forms; lookups/cascades/Admin UX; Worklist tabs and list navigation; modern Style Profiles and external frameworks; master-detail persistence/load rules; hidden variables; layout controls; resumable/forms-only deployment; verification; and manifest-owned cleanup.
 
 It does not support generic Form-level Save synthesis for ordinary non-master-detail CRUD, arbitrary conditional visibility/rules or custom controls, multi-column lookup templates, preservation of Designer customizations during replacement, export rollback packages, or authenticated browser automation. Retain generated View buttons for ordinary CRUD and report unsupported behavior as errata.
 

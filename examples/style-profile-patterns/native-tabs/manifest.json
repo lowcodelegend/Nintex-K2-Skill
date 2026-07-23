@@ -1,0 +1,43 @@
+{
+  "name": "SPT.Native Tabs Example Data",
+  "application": {
+    "rootCategoryPath": "K2 Skills\\SPT.Native Tabs Example"
+  },
+  "database": {
+    "server": "localhost",
+    "name": "SPT.NativeTabsExample",
+    "integratedSecurity": true,
+    "createIfMissing": true,
+    "runtimePrincipal": "TRIALS\\k2svc",
+    "scripts": ["sql/001_schema.sql"]
+  },
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2",
+    "serviceInstance": {
+      "systemName": "SPT.NativeTabsExampleSql",
+      "displayName": "SPT.Native Tabs Example SQL",
+      "authenticationMode": "service-account",
+      "useNativeSqlExecution": true
+    },
+    "smartObjects": {
+      "createNew": true,
+      "updateExisting": true,
+      "deleteRemoved": false
+    }
+  },
+  "verification": {
+    "sqlObjects": [
+      { "type": "table", "schema": "SPT", "name": "WorkItem" },
+      { "type": "view", "schema": "SPT", "name": "DashboardSummary" }
+    ],
+    "queries": [
+      { "name": "work item seed", "sql": "SELECT COUNT(*) FROM SPT.WorkItem", "expectedScalar": "4" }
+    ],
+    "smartObjectServiceObjects": ["SPT-WorkItem", "SPT-DashboardSummary"],
+    "minimumGeneratedSmartObjects": 2,
+    "smokeTestListMethods": true
+  }
+}

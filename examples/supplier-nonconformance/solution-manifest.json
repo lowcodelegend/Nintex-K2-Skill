@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "shortCode": "SNC",
+  "name": "SNC.Supplier Nonconformance",
+  "application": {"rootCategoryPath":"K2 Skills\\SNC.Supplier Nonconformance"},
+  "components": {
+    "smartObjects": {"manifest":"manifest.json"},
+    "forms": {"manifest":"smartforms-combined-manifest.json","dependsOn":["smartObjects"]},
+    "workflows": [
+      {"name":"SNC.Stage Assign","manifest":"workflow-stage-assign.json","dependsOn":["smartObjects","forms"]},
+      {"name":"SNC.Stage Capture","manifest":"workflow-stage-capture.json","dependsOn":["smartObjects","forms"]},
+      {"name":"SNC.Stage Classify","manifest":"workflow-stage-classify.json","dependsOn":["smartObjects","forms"]},
+      {"name":"SNC.Stage Close","manifest":"workflow-stage-close.json","dependsOn":["smartObjects","forms"]},
+      {"name":"SNC.Stage Decide","manifest":"workflow-stage-decide.json","dependsOn":["smartObjects","forms"]},
+      {"name":"SNC.Stage Investigate","manifest":"workflow-stage-investigate.json","dependsOn":["smartObjects","forms"]},
+      {"name":"SNC.Stage Resolve","manifest":"workflow-stage-resolve.json","dependsOn":["smartObjects","forms"]},
+      {"name":"SNC.Stage Validate","manifest":"workflow-stage-validate.json","dependsOn":["smartObjects","forms"]},
+      {"name":"SNC.Case Lifecycle","manifest":"workflow-lifecycle.json","dependsOn":["smartObjects","forms"]}
+    ]
+  },
+  "policies": {
+    "dataModelComplexity":"complex","versionFreeNames":true,"modernForms":true,
+    "masterDetails": [
+      {"name":"SNC.Nonconformance Detail","masterSmartObject":"SNC_SupplierNonconformance_SNC_Case","masterKey":"CaseId","detailSmartObject":"SNC_SupplierNonconformance_SNC_NonconformanceDetail","detailKey":"NonconformanceDetailId","foreignKey":"CaseId","form":"SNC.Supplier Nonconformance","masterView":"SNC.Case Workspace","detailView":"SNC.Nonconformance Details"},
+      {"name":"SNC.Stage Instances","masterSmartObject":"SNC_SupplierNonconformance_SNC_Case","masterKey":"CaseId","detailSmartObject":"SNC_SupplierNonconformance_SNC_CaseStageInstance","detailKey":"CaseStageInstanceId","foreignKey":"CaseId","form":"SNC.Supplier Nonconformance","masterView":"SNC.Case Workspace","detailView":"SNC.Stage History"},
+      {"name":"SNC.Parties","masterSmartObject":"SNC_SupplierNonconformance_SNC_Case","masterKey":"CaseId","detailSmartObject":"SNC_SupplierNonconformance_SNC_CaseParty","detailKey":"CasePartyId","foreignKey":"CaseId","form":"SNC.Supplier Nonconformance","masterView":"SNC.Case Workspace","detailView":"SNC.Parties"},
+      {"name":"SNC.Evidence","masterSmartObject":"SNC_SupplierNonconformance_SNC_Case","masterKey":"CaseId","detailSmartObject":"SNC_SupplierNonconformance_SNC_EvidenceItem","detailKey":"EvidenceId","foreignKey":"CaseId","form":"SNC.Supplier Nonconformance","masterView":"SNC.Case Workspace","detailView":"SNC.Evidence"},
+      {"name":"SNC.Tasks","masterSmartObject":"SNC_SupplierNonconformance_SNC_Case","masterKey":"CaseId","detailSmartObject":"SNC_SupplierNonconformance_SNC_CaseTask","detailKey":"CaseTaskId","foreignKey":"CaseId","form":"SNC.Supplier Nonconformance","masterView":"SNC.Case Workspace","detailView":"SNC.Case Tasks"},
+      {"name":"SNC.AI Interactions","masterSmartObject":"SNC_SupplierNonconformance_SNC_Case","masterKey":"CaseId","detailSmartObject":"SNC_SupplierNonconformance_SNC_AIInteraction","detailKey":"AIInteractionId","foreignKey":"CaseId","form":"SNC.Supplier Nonconformance","masterView":"SNC.Case Workspace","detailView":"SNC.AI Interactions"},
+      {"name":"SNC.Decisions","masterSmartObject":"SNC_SupplierNonconformance_SNC_Case","masterKey":"CaseId","detailSmartObject":"SNC_SupplierNonconformance_SNC_Decision","detailKey":"DecisionId","foreignKey":"CaseId","form":"SNC.Supplier Nonconformance","masterView":"SNC.Case Workspace","detailView":"SNC.Decisions"},
+      {"name":"SNC.Communications","masterSmartObject":"SNC_SupplierNonconformance_SNC_Case","masterKey":"CaseId","detailSmartObject":"SNC_SupplierNonconformance_SNC_Communication","detailKey":"CommunicationId","foreignKey":"CaseId","form":"SNC.Supplier Nonconformance","masterView":"SNC.Case Workspace","detailView":"SNC.Communications"},
+      {"name":"SNC.Comments","masterSmartObject":"SNC_SupplierNonconformance_SNC_Case","masterKey":"CaseId","detailSmartObject":"SNC_SupplierNonconformance_SNC_CaseComment","detailKey":"CommentId","foreignKey":"CaseId","form":"SNC.Supplier Nonconformance","masterView":"SNC.Case Workspace","detailView":"SNC.Comments"},
+      {"name":"SNC.Commands","masterSmartObject":"SNC_SupplierNonconformance_SNC_Case","masterKey":"CaseId","detailSmartObject":"SNC_SupplierNonconformance_SNC_CaseCommand","detailKey":"CommandId","foreignKey":"CaseId","form":"SNC.Supplier Nonconformance","masterView":"SNC.Case Workspace","detailView":"SNC.Commands"},
+      {"name":"SNC.Corrective Actions","masterSmartObject":"SNC_SupplierNonconformance_SNC_Case","masterKey":"CaseId","detailSmartObject":"SNC_SupplierNonconformance_SNC_CorrectiveAction","detailKey":"CorrectiveActionId","foreignKey":"CaseId","form":"SNC.Supplier Nonconformance","masterView":"SNC.Case Workspace","detailView":"SNC.Corrective Actions"}
+      ,{"name":"SNC.Nonconformance Detail","masterSmartObject":"SNC_SupplierNonconformance_SNC_Case","masterKey":"CaseId","detailSmartObject":"SNC_SupplierNonconformance_SNC_NonconformanceDetail","detailKey":"NonconformanceDetailId","foreignKey":"CaseId","form":"SNC.New Nonconformance","masterView":"SNC.New Case Details","detailView":"SNC.Nonconformance Details"}
+      ,{"name":"SNC.Evidence","masterSmartObject":"SNC_SupplierNonconformance_SNC_Case","masterKey":"CaseId","detailSmartObject":"SNC_SupplierNonconformance_SNC_EvidenceItem","detailKey":"EvidenceId","foreignKey":"CaseId","form":"SNC.New Nonconformance","masterView":"SNC.New Case Details","detailView":"SNC.Evidence"}
+    ],
+    "workflowEntries": [
+      {"workflow":"SNC.Stage Assign","form":"SNC.Stage Task","formOwnership":"shared","startStateDefault":"false"},
+      {"workflow":"SNC.Stage Capture","form":"SNC.Stage Task","formOwnership":"shared","startStateDefault":"false"},
+      {"workflow":"SNC.Stage Classify","form":"SNC.Stage Task","formOwnership":"shared","startStateDefault":"false"},
+      {"workflow":"SNC.Stage Close","form":"SNC.Stage Task","formOwnership":"shared","startStateDefault":"false"},
+      {"workflow":"SNC.Stage Decide","form":"SNC.Stage Task","formOwnership":"shared","startStateDefault":"false"},
+      {"workflow":"SNC.Stage Investigate","form":"SNC.Stage Task","formOwnership":"shared","startStateDefault":"false"},
+      {"workflow":"SNC.Stage Resolve","form":"SNC.Stage Task","formOwnership":"shared","startStateDefault":"false"},
+      {"workflow":"SNC.Stage Validate","form":"SNC.Stage Task","formOwnership":"shared","startStateDefault":"false"},
+      {"workflow":"SNC.Case Lifecycle","form":"SNC.New Nonconformance","formOwnership":"dedicated","startStateDefault":"false"}
+    ]
+  },
+  "verification": {
+    "runtimeBaseUrl":"https://spk2.trials.demome.tech/Runtime",
+    "scenarios":[{"name":"SNC investigate to closure","entryForm":"SNC.Supplier Nonconformance","steps":["open the seeded nonconformance","start the parent with CaseId","complete Investigate with EVIDENCE_COMPLETE","complete Decide with APPROVED","complete Resolve with RESOLUTION_COMPLETED","complete Close with CLOSED","prove Case.Status is Closed and no stage remains current"]}]
+  }
+}

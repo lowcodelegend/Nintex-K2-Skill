@@ -1,0 +1,8 @@
+{
+  "roles": [{"code":"USER"}],
+  "shell": {"primary_create_action":"missing", "navigation":[{"id":"home","target":"missing-page"}]},
+  "pages": [{"id":"home","type":"dashboard","components":["missing-component"]}],
+  "components": [{"id":"bad-chart","kind":"chart","measure":"count"}],
+  "journeys": [{"id":"bad-journey","steps":[{"id":"only"}],"success_target":"missing-page"}],
+  "visual_acceptance": {"viewports":[{"name":"desktop"}],"states":["populated"]}
+}

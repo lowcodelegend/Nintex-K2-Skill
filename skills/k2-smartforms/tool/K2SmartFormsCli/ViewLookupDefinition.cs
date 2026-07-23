@@ -160,6 +160,7 @@ namespace K2SmartFormsCli
 
         private static void VerifyControlPlacement(XDocument document, XElement control, ViewDefinition view, string propertyName)
         {
+            if (view.HiddenProperties.Contains(propertyName, StringComparer.OrdinalIgnoreCase)) return;
             var id = (string)control.Attribute("ID");
             var placed = !string.IsNullOrWhiteSpace(id) && document.Descendants().Any(x =>
                 x.Name.LocalName == "Control" &&

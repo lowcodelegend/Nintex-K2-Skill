@@ -10,11 +10,15 @@
 | `verify --manifest` | No | Validate live definitions, placed dropdown bindings, literal defaults, master-detail bypass controls/rules, tab order/content, Worklist properties/navigation rule, GUID references, category, theme, Style Profile, explicit legacy-theme mode, check-in state, and runtime routes. |
 | `reconcile --manifest --confirm` | Yes | Update each manifest-declared master-detail Form in place after native workflow integration: replace only declared detail List paths with one parent-key-filtered/not-blank load after every master Read path, preserve Form identity/category/states/non-detail actions, check in, and run full verification. Clean Forms are not versioned again. |
 | `inspect --manifest` | No | Print exact artifact GUIDs, versions, types, categories, Style Profile, legacy-theme mode, and checkout state. |
+| `controls --manifest [--name <control>]` | No | Inventory registered K2 controls or inspect one control's supported metadata. |
+| `find-control-usage --manifest --type <control>` | No | Locate live View examples using a registered control through supported management APIs. |
+| `view-control-definition --manifest --view <name> --type <control>` | No | Return one selected control and its related rule fragments for generator development. |
+| `form-definition --manifest --form <exact-name>` | No | Return one live Form definition through the supported management API for layout, rule, state, and integration diagnosis. |
 | `checkin --manifest --form <exact-name> --confirm` | Yes | Check in one exact manifest-declared form without regenerating or replacing it; report its checkout owner and resulting version. |
 | `cleanup --manifest --confirm` | Destructive | Delete exact declared forms then views after environment-wide external dependency checks. |
 | `cleanup --manifest --confirm --manifest-only` | Destructive | Fast builder path: skip broad dependency discovery and delete exact declared Forms/Views from their owned category or strict-ancestor orphan category. |
 | `version` | No | Print the CLI version. |
-| `selftest` | No | Verify identity-key normalization, required/read-only inputs, lookup placement/defaults, bypass-button suppression, and idempotent multi-child workflow-state reconciliation without connecting to K2. |
+| `selftest` | No | Verify identity-key normalization, required/read-only inputs, lookup placement/defaults, bypass-button suppression, native chart composition, and idempotent multi-child workflow-state reconciliation without connecting to K2. |
 
 Exit `0` means success, `2` means manifest/usage/safety validation failed, and `1` means an unexpected K2, network, or runtime error occurred. Set `K2FORMS_DEBUG=1` for full exception details.
 
@@ -22,6 +26,6 @@ The CLI resolves K2 from `K2_INSTALL_DIR`, the SourceCode registry key, or `C:\P
 
 Use `checkin` when verification finds a deliberately preserved form checked out after a supported Designer or workflow-integration edit. It refuses forms outside the manifest and relies on K2 authorization for the reported checkout owner. Do not use it to publish another designer's unreviewed work.
 
-Prefer `--resume` after a partial deployment instead of repeating a full replacement. It treats existing artifacts as interruption checkpoints and the final verifier still checks the complete manifest. Use `--forms-only` when Views are known-good and stable GUIDs matter; it fails fast if any declared View is absent.
+Prefer `--resume` after a partial deployment instead of repeating a full replacement. It treats existing artifacts as interruption checkpoints and the final verifier still checks the complete manifest. On K2 5.10, deleting replacement artifacts can invalidate the management connection before regeneration; the PowerShell wrapper detects that known first-phase failure and automatically retries the same deployment with `--resume` in a fresh process. A different failure is returned unchanged. Use `--forms-only` when Views are known-good and stable GUIDs matter; it fails fast if any declared View is absent.
 
 Use `--manifest-only` only when a validated solution manifest is the ownership boundary. It avoids one external-Form lookup per View, accepts only the expected or a strict-ancestor orphan category, and relies on K2 to reject remaining dependency violations. It discards current-identity cleanup drafts but refuses foreign checkouts.

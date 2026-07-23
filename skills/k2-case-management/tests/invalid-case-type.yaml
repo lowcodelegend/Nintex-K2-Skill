@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "case_type": {"code": "BROKEN", "name": "Broken test", "initial_stage": "CAPTURE", "retention_code": "TEST", "configuration_version": "1"},
+  "stages": [
+    {"code": "CAPTURE", "workflow": "CM.Stage.Capture", "sequence": 10, "terminal": false},
+    {"code": "ORPHAN", "workflow": "CM.Stage.Orphan", "sequence": 20, "terminal": false},
+    {"code": "CLOSE", "workflow": "CM.Stage.Close", "sequence": 30, "terminal": true}
+  ],
+  "transitions": [
+    {"from": "CAPTURE", "outcome": "SUBMITTED", "to": "MISSING"},
+    {"from": "CLOSE", "outcome": "RETURN", "to": "CAPTURE"}
+  ]
+}

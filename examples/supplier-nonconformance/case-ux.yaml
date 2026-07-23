@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "template": {"id": "supplier-nonconformance-ux", "extends": "canonical-case-ux", "description": "Supplier-quality overlay on the reusable case experience."},
+  "shell": {
+    "navigation": [
+      {"id": "new-case", "label": "New Nonconformance", "target": "case-initiation"},
+      {"id": "suppliers", "label": "Suppliers", "target": "supplier-performance"}
+    ]
+  },
+  "pages": [
+    {"id": "case-initiation", "title": "Report a Supplier Nonconformance"},
+    {"id": "case-workspace", "title": "Nonconformance Workspace", "sections": ["overview", "tasks", "nonconformance", "containment", "investigation", "root-cause", "decisions", "corrective-actions", "effectiveness", "evidence", "communications", "parties", "related-cases", "history"]},
+    {"id": "supplier-performance", "type": "dashboard", "title": "Supplier Performance", "components": ["supplier-open-cases", "supplier-repeat-rate", "supplier-response-time", "supplier-defect-trend"]}
+  ],
+  "components": [
+    {"id": "supplier-open-cases", "kind": "kpi", "measure": "supplier_open_case_count", "drilldown": "all-cases", "explanation": "Open nonconformances for the selected supplier."},
+    {"id": "supplier-repeat-rate", "kind": "kpi", "measure": "supplier_repeat_nonconformance_rate", "drilldown": "all-cases", "explanation": "Share of supplier cases matching a prior part, lot, or defect pattern."},
+    {"id": "supplier-response-time", "kind": "kpi", "measure": "supplier_median_response_hours", "drilldown": "all-cases", "explanation": "Median elapsed business hours to the supplier's first response."},
+    {"id": "supplier-defect-trend", "kind": "chart", "chart_type": "line", "measure": "supplier_case_count", "dimension": "opened_month", "drilldown": "all-cases", "table_alternative": true, "empty_state": "No supplier cases in this period."}
+  ],
+  "journeys": [
+    {
+      "id": "canonical-initiation",
+      "steps": [
+        {"id": "incident", "title": "What happened?", "fields": ["title", "description", "event_date", "discovery_date", "detection_point", "site"]},
+        {"id": "context", "title": "Supplier and affected material", "fields": ["supplier", "part_number", "lot_number", "purchase_order", "quantity_affected", "unit_of_measure"]},
+        {"id": "impact", "title": "Impact and containment", "fields": ["severity", "risk", "production_impact", "safety_impact", "containment_required", "containment_summary"]},
+        {"id": "evidence", "title": "Evidence", "collection": "evidence"},
+        {"id": "review", "title": "Review and submit", "summary": true}
+      ]
+    }
+  ]
+}

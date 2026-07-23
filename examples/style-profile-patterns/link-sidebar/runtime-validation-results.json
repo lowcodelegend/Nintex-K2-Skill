@@ -1,0 +1,410 @@
+{
+  "testedUtc": "2026-07-23T12:00:38.9320281Z",
+  "config": "C:\\Users\\Administrator\\K2Skills\\examples\\style-profile-patterns\\link-sidebar\\runtime-validation.json",
+  "checks": [
+    {
+      "name": "asset delivery: criticalCss",
+      "passed": true,
+      "evidence": {
+        "name": "criticalCss",
+        "url": "https://spk2.trials.demome.tech/SPLAssets/spl-critical.v1.css",
+        "status": 200,
+        "contentType": "text/css",
+        "contentEncoding": "gzip",
+        "cacheControl": null,
+        "etag": "\"311ccdfd981add1:0\"",
+        "lastModified": "Thu, 23 Jul 2026 11:47:08 GMT",
+        "vary": "Accept-Encoding",
+        "transferBytes": 824
+      }
+    },
+    {
+      "name": "asset delivery: applicationCss",
+      "passed": true,
+      "evidence": {
+        "name": "applicationCss",
+        "url": "https://spk2.trials.demome.tech/SPLAssets/spl-application.v1.css",
+        "status": 200,
+        "contentType": "text/css",
+        "contentEncoding": "gzip",
+        "cacheControl": null,
+        "etag": "\"80dc3fe981add1:0\"",
+        "lastModified": "Thu, 23 Jul 2026 11:47:09 GMT",
+        "vary": "Accept-Encoding",
+        "transferBytes": 1147
+      }
+    },
+    {
+      "name": "asset delivery: bootJavaScript",
+      "passed": true,
+      "evidence": {
+        "name": "bootJavaScript",
+        "url": "https://spk2.trials.demome.tech/SPLAssets/spl-shell.v1.js",
+        "status": 200,
+        "contentType": "application/javascript",
+        "contentEncoding": "gzip",
+        "cacheControl": null,
+        "etag": "\"0739cfe981add1:0\"",
+        "lastModified": "Thu, 23 Jul 2026 11:47:10 GMT",
+        "vary": "Accept-Encoding",
+        "transferBytes": 3093
+      }
+    },
+    {
+      "name": "Style Profile assets are inert in K2 Designer",
+      "passed": true,
+      "evidence": {
+        "baseline": {
+          "htmlClass": "designer k-webkit k-webkit150 webkit chrome",
+          "bodyClass": "",
+          "backgroundColor": "rgb(0, 4, 38)",
+          "beforeContent": "none",
+          "beforeVisibility": "visible",
+          "beforeZIndex": "auto"
+        },
+        "after": {
+          "htmlClass": "designer k-webkit k-webkit150 webkit chrome",
+          "bodyClass": "",
+          "backgroundColor": "rgb(0, 4, 38)",
+          "beforeContent": "none",
+          "beforeVisibility": "visible",
+          "beforeZIndex": "auto"
+        },
+        "stateCreated": false,
+        "shellCount": 0
+      }
+    },
+    {
+      "name": "cold load has one ready shell with no perceptible native-navigation flash",
+      "passed": true,
+      "evidence": {
+        "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/SPL.Link%20Dashboard/",
+        "title": "SPL.Link Dashboard",
+        "readyState": "complete",
+        "shellCount": 1,
+        "routeCount": 2,
+        "activeRoute": "SPL.Link Dashboard",
+        "statePresent": true,
+        "stylesReady": true,
+        "stylesLoaded": true,
+        "navigationSource": "fallback",
+        "ready": true,
+        "leaving": false,
+        "runtimeRoot": true,
+        "nativeNavigationVisible": false,
+        "cacheVersion": null,
+        "nativePerceptibleEver": false,
+        "firstPerceptibleAt": null,
+        "samples": [
+          {
+            "at": 2232,
+            "nativeVisible": false,
+            "bootCovered": true,
+            "ready": false,
+            "painted": false,
+            "firstContentfulPaintAt": null
+          },
+          {
+            "at": 2426,
+            "nativeVisible": false,
+            "bootCovered": true,
+            "ready": false,
+            "painted": true,
+            "firstContentfulPaintAt": 2396
+          },
+          {
+            "at": 2501,
+            "nativeVisible": false,
+            "bootCovered": true,
+            "ready": true,
+            "painted": true,
+            "firstContentfulPaintAt": 2396
+          },
+          {
+            "at": 2528,
+            "nativeVisible": false,
+            "bootCovered": false,
+            "ready": true,
+            "painted": true,
+            "firstContentfulPaintAt": 2396
+          }
+        ],
+        "paints": {
+          "first-paint": 2396,
+          "first-contentful-paint": 2396
+        },
+        "horizontalOverflow": false,
+        "navigationTiming": {
+          "responseEnd": 2191,
+          "domContentLoaded": 2464,
+          "load": 2466
+        }
+      }
+    },
+    {
+      "name": "Form transition curtain activates synchronously",
+      "passed": true,
+      "evidence": {
+        "found": true,
+        "leaving": true,
+        "activationMilliseconds": 1.6
+      }
+    },
+    {
+      "name": "warm transition uses cached/live navigation without flash",
+      "passed": true,
+      "evidence": {
+        "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/SPL.Link%20Work/",
+        "title": "SPL.Link Work",
+        "readyState": "complete",
+        "shellCount": 1,
+        "routeCount": 2,
+        "activeRoute": "SPL.Link Work",
+        "statePresent": true,
+        "stylesReady": true,
+        "stylesLoaded": true,
+        "navigationSource": "cache",
+        "ready": true,
+        "leaving": false,
+        "runtimeRoot": true,
+        "nativeNavigationVisible": false,
+        "cacheVersion": "1",
+        "nativePerceptibleEver": false,
+        "firstPerceptibleAt": null,
+        "samples": [
+          {
+            "at": 1561,
+            "nativeVisible": false,
+            "bootCovered": true,
+            "ready": false,
+            "painted": false,
+            "firstContentfulPaintAt": null
+          },
+          {
+            "at": 1584,
+            "nativeVisible": false,
+            "bootCovered": true,
+            "ready": false,
+            "painted": true,
+            "firstContentfulPaintAt": 1564
+          },
+          {
+            "at": 1640,
+            "nativeVisible": false,
+            "bootCovered": true,
+            "ready": true,
+            "painted": true,
+            "firstContentfulPaintAt": 1564
+          },
+          {
+            "at": 1648,
+            "nativeVisible": false,
+            "bootCovered": false,
+            "ready": true,
+            "painted": true,
+            "firstContentfulPaintAt": 1564
+          }
+        ],
+        "paints": {
+          "first-paint": 1564,
+          "first-contentful-paint": 1564
+        },
+        "horizontalOverflow": false,
+        "navigationTiming": {
+          "responseEnd": 1523,
+          "domContentLoaded": 1588,
+          "load": 1589
+        }
+      }
+    },
+    {
+      "name": "boot failure reveals usable native K2 content within the fail-safe deadline",
+      "passed": true,
+      "evidence": {
+        "stateCreated": false,
+        "shellCount": 0,
+        "textLength": 64,
+        "bootVisibility": "visible",
+        "bootOpacity": "1.10134e-13",
+        "bootZIndex": "-1",
+        "elapsedMilliseconds": 3414
+      }
+    },
+    {
+      "name": "browser diagnostics contain no unexpected errors",
+      "passed": true,
+      "evidence": []
+    }
+  ],
+  "states": [
+    {
+      "phase": "designer-isolation",
+      "state": {
+        "baseline": {
+          "htmlClass": "designer k-webkit k-webkit150 webkit chrome",
+          "bodyClass": "",
+          "backgroundColor": "rgb(0, 4, 38)",
+          "beforeContent": "none",
+          "beforeVisibility": "visible",
+          "beforeZIndex": "auto"
+        },
+        "after": {
+          "htmlClass": "designer k-webkit k-webkit150 webkit chrome",
+          "bodyClass": "",
+          "backgroundColor": "rgb(0, 4, 38)",
+          "beforeContent": "none",
+          "beforeVisibility": "visible",
+          "beforeZIndex": "auto"
+        },
+        "stateCreated": false,
+        "shellCount": 0
+      }
+    },
+    {
+      "phase": "cold-load",
+      "state": {
+        "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/SPL.Link%20Dashboard/",
+        "title": "SPL.Link Dashboard",
+        "readyState": "complete",
+        "shellCount": 1,
+        "routeCount": 2,
+        "activeRoute": "SPL.Link Dashboard",
+        "statePresent": true,
+        "stylesReady": true,
+        "stylesLoaded": true,
+        "navigationSource": "fallback",
+        "ready": true,
+        "leaving": false,
+        "runtimeRoot": true,
+        "nativeNavigationVisible": false,
+        "cacheVersion": null,
+        "nativePerceptibleEver": false,
+        "firstPerceptibleAt": null,
+        "samples": [
+          {
+            "at": 2232,
+            "nativeVisible": false,
+            "bootCovered": true,
+            "ready": false,
+            "painted": false,
+            "firstContentfulPaintAt": null
+          },
+          {
+            "at": 2426,
+            "nativeVisible": false,
+            "bootCovered": true,
+            "ready": false,
+            "painted": true,
+            "firstContentfulPaintAt": 2396
+          },
+          {
+            "at": 2501,
+            "nativeVisible": false,
+            "bootCovered": true,
+            "ready": true,
+            "painted": true,
+            "firstContentfulPaintAt": 2396
+          },
+          {
+            "at": 2528,
+            "nativeVisible": false,
+            "bootCovered": false,
+            "ready": true,
+            "painted": true,
+            "firstContentfulPaintAt": 2396
+          }
+        ],
+        "paints": {
+          "first-paint": 2396,
+          "first-contentful-paint": 2396
+        },
+        "horizontalOverflow": false,
+        "navigationTiming": {
+          "responseEnd": 2191,
+          "domContentLoaded": 2464,
+          "load": 2466
+        }
+      }
+    },
+    {
+      "phase": "warm-transition",
+      "state": {
+        "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/SPL.Link%20Work/",
+        "title": "SPL.Link Work",
+        "readyState": "complete",
+        "shellCount": 1,
+        "routeCount": 2,
+        "activeRoute": "SPL.Link Work",
+        "statePresent": true,
+        "stylesReady": true,
+        "stylesLoaded": true,
+        "navigationSource": "cache",
+        "ready": true,
+        "leaving": false,
+        "runtimeRoot": true,
+        "nativeNavigationVisible": false,
+        "cacheVersion": "1",
+        "nativePerceptibleEver": false,
+        "firstPerceptibleAt": null,
+        "samples": [
+          {
+            "at": 1561,
+            "nativeVisible": false,
+            "bootCovered": true,
+            "ready": false,
+            "painted": false,
+            "firstContentfulPaintAt": null
+          },
+          {
+            "at": 1584,
+            "nativeVisible": false,
+            "bootCovered": true,
+            "ready": false,
+            "painted": true,
+            "firstContentfulPaintAt": 1564
+          },
+          {
+            "at": 1640,
+            "nativeVisible": false,
+            "bootCovered": true,
+            "ready": true,
+            "painted": true,
+            "firstContentfulPaintAt": 1564
+          },
+          {
+            "at": 1648,
+            "nativeVisible": false,
+            "bootCovered": false,
+            "ready": true,
+            "painted": true,
+            "firstContentfulPaintAt": 1564
+          }
+        ],
+        "paints": {
+          "first-paint": 1564,
+          "first-contentful-paint": 1564
+        },
+        "horizontalOverflow": false,
+        "navigationTiming": {
+          "responseEnd": 1523,
+          "domContentLoaded": 1588,
+          "load": 1589
+        }
+      }
+    },
+    {
+      "phase": "readiness-timeout",
+      "state": {
+        "stateCreated": false,
+        "shellCount": 0,
+        "textLength": 64,
+        "bootVisibility": "visible",
+        "bootOpacity": "1.10134e-13",
+        "bootZIndex": "-1",
+        "elapsedMilliseconds": 3414
+      }
+    }
+  ],
+  "diagnostics": [],
+  "passed": true
+}

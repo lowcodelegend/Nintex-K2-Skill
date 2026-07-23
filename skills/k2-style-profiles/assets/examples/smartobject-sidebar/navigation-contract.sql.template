@@ -1,0 +1,49 @@
+/*
+Replace {{SCHEMA}} and the APP.* Form names before adding this fragment to a
+k2-sql-smartobjects migration. Generate a SmartObject over the view and expose
+its parameterless List method.
+*/
+CREATE TABLE {{SCHEMA}}.NavigationItem
+(
+    NavigationCode nvarchar(50) NOT NULL,
+    SectionLabel nvarchar(100) NULL,
+    Label nvarchar(100) NOT NULL,
+    IconToken nvarchar(30) NULL,
+    TargetFormName nvarchar(200) NOT NULL,
+    SortOrder int NOT NULL,
+    IsActive bit NOT NULL CONSTRAINT DF_{{SCHEMA}}_NavigationItem_IsActive DEFAULT (1),
+    ConfigurationVersion nvarchar(40) NOT NULL
+        CONSTRAINT DF_{{SCHEMA}}_NavigationItem_ConfigurationVersion DEFAULT (N'1'),
+    CONSTRAINT PK_{{SCHEMA}}_NavigationItem PRIMARY KEY CLUSTERED (NavigationCode),
+    CONSTRAINT CK_{{SCHEMA}}_NavigationItem_SortOrder CHECK (SortOrder >= 0),
+    CONSTRAINT CK_{{SCHEMA}}_NavigationItem_Label_NotBlank
+        CHECK (LEN(LTRIM(RTRIM(Label))) > 0),
+    CONSTRAINT CK_{{SCHEMA}}_NavigationItem_Target_NotBlank
+        CHECK (LEN(LTRIM(RTRIM(TargetFormName))) > 0)
+);
+
+CREATE UNIQUE NONCLUSTERED INDEX UX_{{SCHEMA}}_NavigationItem_SortOrder
+    ON {{SCHEMA}}.NavigationItem (SortOrder, NavigationCode);
+
+INSERT {{SCHEMA}}.NavigationItem
+(
+    NavigationCode, SectionLabel, Label, IconToken, TargetFormName,
+    SortOrder, IsActive, ConfigurationVersion
+)
+VALUES
+    (N'HOME', N'Workspace', N'Home', N'home', N'APP.Home', 10, 1, N'1'),
+    (N'MY_WORK', N'Workspace', N'My work', N'work', N'APP.My Work', 20, 1, N'1');
+
+CREATE VIEW {{SCHEMA}}.ApplicationNavigation
+AS
+    SELECT
+        NavigationCode,
+        SectionLabel,
+        Label,
+        IconToken,
+        TargetFormName,
+        SortOrder,
+        IsActive,
+        ConfigurationVersion
+    FROM {{SCHEMA}}.NavigationItem
+    WHERE IsActive = CONVERT(bit, 1);

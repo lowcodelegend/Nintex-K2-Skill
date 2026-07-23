@@ -1,0 +1,202 @@
+{
+  "capturedUtc": "2026-07-21T17:07:44.8099101Z",
+  "runtimeBaseUrl": "https://spk2.trials.demome.tech",
+  "forms": [
+    "SNC.Stage Task",
+    "SNC.New Nonconformance",
+    "SNC.My Work"
+  ],
+  "viewports": [
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "name": "laptop",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "name": "tablet",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "name": "mobile",
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "captures": [
+    {
+      "form": "SNC.Stage Task",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 1000,
+      "image": "snc-stage-task-desktop.png",
+      "url": "https://spk2.trials.demome.tech/Runtime/Form/SNC.Stage%20Task/",
+      "title": "SNC.Stage Task",
+      "textLength": 777,
+      "horizontalOverflow": false,
+      "knownK2Diagnostics": [
+        "TypeError: Cannot read properties of null (reading '0')\n    at <anonymous>:1:386\n    at m (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:880)\n    at $e (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:46274)\n    at e.<computed>.append (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:47633)\n    at e.<computed>.<anonymous> (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48729)\n    at M (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:29497)\n    at e.<computed>.html (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48405)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:9:10447)\n    at r.<computed> [as _value] (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:12:1181)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:19:6935)"
+      ]
+    },
+    {
+      "form": "SNC.Stage Task",
+      "viewport": "laptop",
+      "width": 1280,
+      "height": 800,
+      "image": "snc-stage-task-laptop.png",
+      "url": "https://spk2.trials.demome.tech/Runtime/Form/SNC.Stage%20Task/",
+      "title": "SNC.Stage Task",
+      "textLength": 777,
+      "horizontalOverflow": false,
+      "knownK2Diagnostics": [
+        "TypeError: Cannot read properties of null (reading '0')\n    at <anonymous>:1:386\n    at m (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:880)\n    at $e (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:46274)\n    at e.<computed>.append (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:47633)\n    at e.<computed>.<anonymous> (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48729)\n    at M (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:29497)\n    at e.<computed>.html (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48405)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:9:10447)\n    at r.<computed> [as _value] (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:12:1181)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:19:6935)"
+      ]
+    },
+    {
+      "form": "SNC.Stage Task",
+      "viewport": "tablet",
+      "width": 768,
+      "height": 1024,
+      "image": "snc-stage-task-tablet.png",
+      "url": "https://spk2.trials.demome.tech/Runtime/Form/SNC.Stage%20Task/",
+      "title": "SNC.Stage Task",
+      "textLength": 517,
+      "horizontalOverflow": false,
+      "knownK2Diagnostics": [
+        "TypeError: Cannot read properties of null (reading '0')\n    at <anonymous>:1:386\n    at m (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:880)\n    at $e (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:46274)\n    at e.<computed>.append (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:47633)\n    at e.<computed>.<anonymous> (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48729)\n    at M (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:29497)\n    at e.<computed>.html (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48405)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:9:10447)\n    at r.<computed> [as _value] (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:12:1181)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:19:6935)"
+      ]
+    },
+    {
+      "form": "SNC.Stage Task",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "image": "snc-stage-task-mobile.png",
+      "url": "https://spk2.trials.demome.tech/Runtime/Form/SNC.Stage%20Task/",
+      "title": "SNC.Stage Task",
+      "textLength": 517,
+      "horizontalOverflow": false,
+      "knownK2Diagnostics": [
+        "TypeError: Cannot read properties of null (reading '0')\n    at <anonymous>:1:386\n    at m (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:880)\n    at $e (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:46274)\n    at e.<computed>.append (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:47633)\n    at e.<computed>.<anonymous> (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48729)\n    at M (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:29497)\n    at e.<computed>.html (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48405)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:9:10447)\n    at r.<computed> [as _value] (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:12:1181)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:19:6935)"
+      ]
+    },
+    {
+      "form": "SNC.New Nonconformance",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 1000,
+      "image": "snc-new-nonconformance-desktop.png",
+      "url": "https://spk2.trials.demome.tech/Runtime/Form/SNC.New%20Nonconformance/",
+      "title": "SNC.New Nonconformance",
+      "textLength": 701,
+      "horizontalOverflow": false,
+      "knownK2Diagnostics": [
+        "TypeError: Cannot read properties of null (reading '0')\n    at <anonymous>:1:386\n    at m (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:880)\n    at $e (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:46274)\n    at e.<computed>.append (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:47633)\n    at e.<computed>.<anonymous> (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48729)\n    at M (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:29497)\n    at e.<computed>.html (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48405)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:9:10447)\n    at r.<computed> [as _value] (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:12:1181)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:19:6935)"
+      ]
+    },
+    {
+      "form": "SNC.New Nonconformance",
+      "viewport": "laptop",
+      "width": 1280,
+      "height": 800,
+      "image": "snc-new-nonconformance-laptop.png",
+      "url": "https://spk2.trials.demome.tech/Runtime/Form/SNC.New%20Nonconformance/",
+      "title": "SNC.New Nonconformance",
+      "textLength": 701,
+      "horizontalOverflow": false,
+      "knownK2Diagnostics": [
+        "TypeError: Cannot read properties of null (reading '0')\n    at <anonymous>:1:386\n    at m (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:880)\n    at $e (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:46274)\n    at e.<computed>.append (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:47633)\n    at e.<computed>.<anonymous> (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48729)\n    at M (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:29497)\n    at e.<computed>.html (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48405)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:9:10447)\n    at r.<computed> [as _value] (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:12:1181)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:19:6935)"
+      ]
+    },
+    {
+      "form": "SNC.New Nonconformance",
+      "viewport": "tablet",
+      "width": 768,
+      "height": 1024,
+      "image": "snc-new-nonconformance-tablet.png",
+      "url": "https://spk2.trials.demome.tech/Runtime/Form/SNC.New%20Nonconformance/",
+      "title": "SNC.New Nonconformance",
+      "textLength": 416,
+      "horizontalOverflow": false,
+      "knownK2Diagnostics": [
+        "TypeError: Cannot read properties of null (reading '0')\n    at <anonymous>:1:386\n    at m (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:880)\n    at $e (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:46274)\n    at e.<computed>.append (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:47633)\n    at e.<computed>.<anonymous> (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48729)\n    at M (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:29497)\n    at e.<computed>.html (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48405)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:9:10447)\n    at r.<computed> [as _value] (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:12:1181)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:19:6935)"
+      ]
+    },
+    {
+      "form": "SNC.New Nonconformance",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "image": "snc-new-nonconformance-mobile.png",
+      "url": "https://spk2.trials.demome.tech/Runtime/Form/SNC.New%20Nonconformance/",
+      "title": "SNC.New Nonconformance",
+      "textLength": 340,
+      "horizontalOverflow": false,
+      "knownK2Diagnostics": [
+        "TypeError: Cannot read properties of null (reading '0')\n    at <anonymous>:1:386\n    at m (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:880)\n    at $e (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:46274)\n    at e.<computed>.append (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:47633)\n    at e.<computed>.<anonymous> (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48729)\n    at M (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:29497)\n    at e.<computed>.html (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48405)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:9:10447)\n    at r.<computed> [as _value] (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:12:1181)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:19:6935)"
+      ]
+    },
+    {
+      "form": "SNC.My Work",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 1000,
+      "image": "snc-my-work-desktop.png",
+      "url": "https://spk2.trials.demome.tech/Runtime/Form/SNC.My%20Work/",
+      "title": "SNC.My Work",
+      "textLength": 523,
+      "horizontalOverflow": false,
+      "knownK2Diagnostics": [
+        "TypeError: Cannot read properties of null (reading '0')\n    at <anonymous>:1:386\n    at m (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:880)\n    at $e (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:46274)\n    at e.<computed>.append (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:47633)\n    at e.<computed>.<anonymous> (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48729)\n    at M (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:29497)\n    at e.<computed>.html (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48405)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:9:10447)\n    at r.<computed> [as _value] (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:12:1181)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:19:6935)"
+      ]
+    },
+    {
+      "form": "SNC.My Work",
+      "viewport": "laptop",
+      "width": 1280,
+      "height": 800,
+      "image": "snc-my-work-laptop.png",
+      "url": "https://spk2.trials.demome.tech/Runtime/Form/SNC.My%20Work/",
+      "title": "SNC.My Work",
+      "textLength": 523,
+      "horizontalOverflow": false,
+      "knownK2Diagnostics": [
+        "TypeError: Cannot read properties of null (reading '0')\n    at <anonymous>:1:386\n    at m (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:880)\n    at $e (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:46274)\n    at e.<computed>.append (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:47633)\n    at e.<computed>.<anonymous> (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48729)\n    at M (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:29497)\n    at e.<computed>.html (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48405)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:9:10447)\n    at r.<computed> [as _value] (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:12:1181)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:19:6935)"
+      ]
+    },
+    {
+      "form": "SNC.My Work",
+      "viewport": "tablet",
+      "width": 768,
+      "height": 1024,
+      "image": "snc-my-work-tablet.png",
+      "url": "https://spk2.trials.demome.tech/Runtime/Form/SNC.My%20Work/",
+      "title": "SNC.My Work",
+      "textLength": 264,
+      "horizontalOverflow": false,
+      "knownK2Diagnostics": [
+        "TypeError: Cannot read properties of null (reading '0')\n    at <anonymous>:1:386\n    at m (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:880)\n    at $e (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:46274)\n    at e.<computed>.append (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:47633)\n    at e.<computed>.<anonymous> (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48729)\n    at M (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:29497)\n    at e.<computed>.html (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48405)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:9:10447)\n    at r.<computed> [as _value] (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:12:1181)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:19:6935)"
+      ]
+    },
+    {
+      "form": "SNC.My Work",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "image": "snc-my-work-mobile.png",
+      "url": "https://spk2.trials.demome.tech/Runtime/Form/SNC.My%20Work/",
+      "title": "SNC.My Work",
+      "textLength": 264,
+      "horizontalOverflow": false,
+      "knownK2Diagnostics": [
+        "TypeError: Cannot read properties of null (reading '0')\n    at <anonymous>:1:386\n    at m (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:880)\n    at $e (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:46274)\n    at e.<computed>.append (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:47633)\n    at e.<computed>.<anonymous> (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48729)\n    at M (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:29497)\n    at e.<computed>.html (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:2:48405)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:9:10447)\n    at r.<computed> [as _value] (https://spk2.trials.demome.tech/Runtime/Content/Js/Common.js?_gv=2023439689-20260224-100958&_v=5.1019.25336.3:12:1181)\n    at V.<computed>.<computed>._value (https://spk2.trials.demome.tech/Runtime/Content/Js/RT.SourceCode.Forms.Controls.Web.js?_gv=-1652888594-20260224-100959&_v=5.1019.25336.3:19:6935)"
+      ]
+    }
+  ],
+  "knownDiagnosticPolicy": "K2 5.10 emits a non-blocking DataLabel setValue null-index diagnostic on generated capture Views; any other browser diagnostic fails evidence capture."
+}

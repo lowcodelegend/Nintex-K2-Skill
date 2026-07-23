@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>K2 native tabs sidebar fixture</title>
+  <script>
+    if (new URLSearchParams(location.search).has("designer")) {
+      document.documentElement.classList.add("designer");
+    }
+  </script>
+  <link rel="stylesheet" href="tabs-sidebar-critical.css">
+  <link rel="stylesheet" href="tabs-sidebar-application.css" data-k2sp-tabs-application-styles="fixture">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #172033; background: #f5f7fb; font: 14px "Segoe UI", Arial, sans-serif; }
+    .runtime-form { min-height: 100vh; padding: 34px; }
+    .tab-box-tabs { display: flex; gap: 8px; margin: 0 0 18px; padding: 0; list-style: none; }
+    .tab-box-tabs a { display: block; padding: 10px 14px; color: #475467; background: #fff; cursor: pointer; }
+    .tab-box-tabs a.selected { color: #fff; background: #6257d9; }
+    .tab-box { min-height: 480px; padding: 28px; border: 1px solid #e2e7ef; border-radius: 16px; background: #fff; }
+    .formpanel { display: none; }
+    .formpanel.active { display: block; }
+    .fixture-card { max-width: 720px; padding: 24px; border: 1px solid #e1e6ee; border-radius: 14px; }
+  </style>
+  <script>
+    window.K2SP_NATIVE_TABS_CONFIG = {
+      allowFixture: true,
+      version: "fixture",
+      brandMark: "N",
+      brandLabel: "Northstar",
+      brandSubtitle: "Native K2 workspace",
+      applicationCssUrl: "tabs-sidebar-application.css",
+      bootTimeoutMilliseconds: 2500,
+      collapsedStorageKey: "k2sp:native-tabs:fixture:collapsed"
+    };
+  </script>
+</head>
+<body class="theme-entry">
+  <div class="runtime-content">
+    <main class="runtime-form theme-entry">
+      <ul class="tab-box-tabs" id="fixture_tabPanel" tabindex="0">
+        <li>
+          <a id="fixture_queue" class="tab selected" tabindex="-1">
+            <span class="tab-wrapper style-aware"><span class="tab-text">Queue</span></span>
+          </a>
+        </li>
+        <li>
+          <a id="fixture_details" class="tab" tabindex="-1">
+            <span class="tab-wrapper style-aware"><span class="tab-text">Details</span></span>
+          </a>
+        </li>
+        <li>
+          <a id="fixture_tasks" class="tab" tabindex="-1">
+            <span class="tab-wrapper style-aware"><span class="tab-text">My Tasks</span></span>
+          </a>
+        </li>
+      </ul>
+      <div class="tab-box tabs-top form-tabs" id="fixture_tabbox">
+        <div class="tab-box-body">
+          <section id="fixture_queue_form" class="formpanel active">
+            <div class="fixture-card"><h1>Work queue</h1><p>This represents a native K2 List View tab.</p></div>
+          </section>
+          <section id="fixture_details_form" class="formpanel">
+            <div class="fixture-card"><h1>Work details</h1><p>This represents a native K2 capture View tab.</p></div>
+          </section>
+          <section id="fixture_tasks_form" class="formpanel">
+            <div class="fixture-card"><h1>My tasks</h1><p>This represents a native K2 Worklist tab.</p></div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script>
+    document.getElementById("fixture_tabPanel").addEventListener("click", function (event) {
+      var anchor = event.target.closest("a.tab");
+      if (!anchor) return;
+      document.querySelectorAll("#fixture_tabPanel a.tab").forEach(function (tab) {
+        tab.classList.toggle("selected", tab === anchor);
+      });
+      document.querySelectorAll(".formpanel").forEach(function (panel) {
+        panel.classList.toggle("active", panel.id === anchor.id + "_form");
+      });
+    });
+
+    if (!new URLSearchParams(location.search).has("nojs")) {
+      var script = document.createElement("script");
+      script.src = "tabs-sidebar.js";
+      document.body.appendChild(script);
+    }
+  </script>
+</body>
+</html>

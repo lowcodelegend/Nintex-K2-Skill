@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "shortCode": "SPT",
+  "name": "SPT.Native Tabs Example",
+  "application": {
+    "rootCategoryPath": "K2 Skills\\SPT.Native Tabs Example"
+  },
+  "components": {
+    "smartObjects": { "manifest": "manifest.json" },
+    "forms": { "manifest": "smartforms-manifest.json", "dependsOn": ["smartObjects"] },
+    "workflows": []
+  },
+  "policies": {
+    "dataModelComplexity": "small",
+    "versionFreeNames": true,
+    "modernForms": true,
+    "masterDetails": [],
+    "workflowEntries": []
+  },
+  "verification": {
+    "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime",
+    "scenarios": [
+      {
+        "name": "Use native K2 tabs through the relocated sidebar",
+        "entryForm": "SPT.Tab Workspace",
+        "steps": [
+          "open the ordinary Runtime URL",
+          "prove the original native tab strip appears once in the sidebar",
+          "select Work Queue and prove the native tab panel changes",
+          "select a queue row and prove K2 opens Details after its Read action",
+          "prove desktop and mobile navigation preserve one active native tab"
+        ]
+      }
+    ]
+  }
+}

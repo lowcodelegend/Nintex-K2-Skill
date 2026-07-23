@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "shortCode": "LPR",
+  "name": "LPR.Leave Request Process",
+  "application": {
+    "rootCategoryPath": "K2 Skills\\LPR.Leave Request Process"
+  },
+  "components": {
+    "smartObjects": {
+      "manifest": "manifest.json"
+    },
+    "forms": {
+      "manifest": "smartforms-manifest.json",
+      "dependsOn": ["smartObjects"]
+    },
+    "workflows": [
+      {
+        "name": "LPR.Leave Request Approval",
+        "manifest": "workflow-manifest.json",
+        "dependsOn": ["smartObjects", "forms"]
+      }
+    ]
+  },
+  "policies": {
+    "dataModelComplexity": "small",
+    "versionFreeNames": true,
+    "modernForms": true,
+    "workflowEntries": [
+      {
+        "workflow": "LPR.Leave Request Approval",
+        "form": "LPR.Leave Request",
+        "formOwnership": "dedicated",
+        "startStateDefault": "auto"
+      }
+    ]
+  },
+  "verification": {
+    "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime",
+    "scenarios": [
+      {
+        "name": "LPR.Submit and decide a leave request",
+        "entryForm": "LPR.Leave Request",
+        "steps": [
+          "open the ordinary form URL without a state query parameter",
+          "create a valid leave request and capture LeaveRequestId",
+          "prove exactly one LPR.Leave Request Approval instance started for LeaveRequestId",
+          "prove K2:TRIALS\\Administrator received the LPR.Manager Review task",
+          "select Approve or Reject from the native task form",
+          "prove LeaveRequest.Status matches the selected outcome"
+        ]
+      }
+    ]
+  }
+}

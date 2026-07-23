@@ -1,0 +1,4 @@
+interface:
+  display_name: "K2 Style Profiles"
+  short_description: "Build and validate K2 runtime UX profiles"
+  default_prompt: "Use $k2-style-profiles to create, host, deploy, and validate a runtime-only K2 Five Style Profile, choosing either a SmartObject-backed cross-Form sidebar or relocated native K2 tabs with anti-flash behavior."

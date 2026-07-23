@@ -1,0 +1,412 @@
+{
+  "testedUtc": "2026-07-23T10:19:43.5569914Z",
+  "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime",
+  "checks": [
+    {
+      "name": "cold Command Centre shell is singular and active",
+      "passed": true,
+      "evidence": {
+        "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.Gold%20Command%20Centre/",
+        "title": "GUX.Gold Command Centre",
+        "topLevel": true,
+        "shellCount": 1,
+        "shellVersion": "2026.07.23.4",
+        "stylesReady": true,
+        "stylesLoaded": true,
+        "activeRoute": "GUX.Gold Command Centre",
+        "activeLabel": "⌂Command centre",
+        "routeLinkCount": 2,
+        "sourceViewHidden": 1,
+        "nativeNavigationVisible": false,
+        "navigationSource": "smartobject",
+        "cacheVersion": "1",
+        "ready": true,
+        "leaving": false,
+        "horizontalOverflow": false,
+        "marks": {
+          "gux:boot-start": 258.8,
+          "gux:styles-ready": 465.6,
+          "gux:shell-ready": 274.1,
+          "gux:navigation-reconciled": 762.2,
+          "gux:content-ready": 679.5
+        },
+        "navigationTiming": {
+          "responseEnd": 112.4,
+          "domContentLoaded": 275,
+          "load": 466
+        }
+      }
+    },
+    {
+      "name": "native navigation reconciles after shell render",
+      "passed": true,
+      "evidence": {
+        "gux:boot-start": 258.8,
+        "gux:styles-ready": 465.6,
+        "gux:shell-ready": 274.1,
+        "gux:navigation-reconciled": 762.2,
+        "gux:content-ready": 679.5
+      }
+    },
+    {
+      "name": "transition overlay activates synchronously for MY_WORK",
+      "passed": true,
+      "evidence": {
+        "found": true,
+        "overlayActive": true,
+        "activationMilliseconds": 0.8
+      }
+    },
+    {
+      "name": "My Work route is top-level, singular, cached, and active",
+      "passed": true,
+      "evidence": {
+        "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.My%20Work/",
+        "title": "GUX.My Work",
+        "topLevel": true,
+        "shellCount": 1,
+        "shellVersion": "2026.07.23.4",
+        "stylesReady": true,
+        "stylesLoaded": true,
+        "activeRoute": "GUX.My Work",
+        "activeLabel": "✓My work",
+        "routeLinkCount": 2,
+        "sourceViewHidden": 1,
+        "nativeNavigationVisible": false,
+        "navigationSource": "smartobject",
+        "cacheVersion": "1",
+        "ready": true,
+        "leaving": false,
+        "horizontalOverflow": false,
+        "marks": {
+          "gux:boot-start": 98.6,
+          "gux:styles-ready": 105.7,
+          "gux:shell-ready": 107.3,
+          "gux:navigation-reconciled": 352.2,
+          "gux:content-ready": 201.8
+        },
+        "navigationTiming": {
+          "responseEnd": 33.3,
+          "domContentLoaded": 107.5,
+          "load": 119.7
+        }
+      }
+    },
+    {
+      "name": "programmatic control load does not mark the Form dirty",
+      "passed": true,
+      "evidence": {
+        "found": true,
+        "dirty": false
+      }
+    },
+    {
+      "name": "trusted user edit marks the Form dirty",
+      "passed": true,
+      "evidence": {
+        "input": {
+          "found": true,
+          "x": 1102,
+          "y": 411,
+          "name": "e303b81c-33fe-416f-a332-162f8e3d1640_5136d04f-e489-4b69-82f5-5cb5ece7b02a_quickSearchTxt"
+        },
+        "dirty": true
+      }
+    },
+    {
+      "name": "dirty navigation warning can cancel route change",
+      "passed": true,
+      "evidence": {
+        "before": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.My%20Work/",
+        "after": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.My%20Work/",
+        "leaving": false
+      }
+    },
+    {
+      "name": "native My Tasks tab is not intercepted as application navigation",
+      "passed": true,
+      "evidence": {
+        "found": true,
+        "routeLinksOutsideShell": 0
+      }
+    },
+    {
+      "name": "transition overlay activates synchronously for COMMAND",
+      "passed": true,
+      "evidence": {
+        "found": true,
+        "overlayActive": true,
+        "activationMilliseconds": 0.4
+      }
+    },
+    {
+      "name": "warm Command Centre route is active with one shell",
+      "passed": true,
+      "evidence": {
+        "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.Gold%20Command%20Centre/",
+        "title": "GUX.Gold Command Centre",
+        "topLevel": true,
+        "shellCount": 1,
+        "shellVersion": "2026.07.23.4",
+        "stylesReady": true,
+        "stylesLoaded": true,
+        "activeRoute": "GUX.Gold Command Centre",
+        "activeLabel": "⌂Command centre",
+        "routeLinkCount": 2,
+        "sourceViewHidden": 1,
+        "nativeNavigationVisible": false,
+        "navigationSource": "smartobject",
+        "cacheVersion": "1",
+        "ready": true,
+        "leaving": false,
+        "horizontalOverflow": false,
+        "marks": {
+          "gux:boot-start": 94.9,
+          "gux:styles-ready": 124.2,
+          "gux:shell-ready": 108.6,
+          "gux:navigation-reconciled": 431,
+          "gux:content-ready": 377.8
+        },
+        "navigationTiming": {
+          "responseEnd": 34.3,
+          "domContentLoaded": 109,
+          "load": 124.3
+        }
+      }
+    },
+    {
+      "name": "browser Back restores My Work active state",
+      "passed": true,
+      "evidence": {
+        "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.My%20Work/",
+        "title": "GUX.My Work",
+        "topLevel": true,
+        "shellCount": 1,
+        "shellVersion": "2026.07.23.4",
+        "stylesReady": true,
+        "stylesLoaded": true,
+        "activeRoute": "GUX.My Work",
+        "activeLabel": "✓My work",
+        "routeLinkCount": 2,
+        "sourceViewHidden": 1,
+        "nativeNavigationVisible": false,
+        "navigationSource": "smartobject",
+        "cacheVersion": "1",
+        "ready": true,
+        "leaving": false,
+        "horizontalOverflow": false,
+        "marks": {
+          "gux:boot-start": 50.2,
+          "gux:styles-ready": 71.4,
+          "gux:shell-ready": 57.9,
+          "gux:navigation-reconciled": 283.3,
+          "gux:content-ready": 162.6
+        },
+        "navigationTiming": {
+          "responseEnd": 4.9,
+          "domContentLoaded": 58.2,
+          "load": 71.5
+        }
+      }
+    },
+    {
+      "name": "second browser Back restores Command Centre active state",
+      "passed": true,
+      "evidence": {
+        "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.Gold%20Command%20Centre/",
+        "title": "GUX.Gold Command Centre",
+        "topLevel": true,
+        "shellCount": 1,
+        "shellVersion": "2026.07.23.4",
+        "stylesReady": true,
+        "stylesLoaded": true,
+        "activeRoute": "GUX.Gold Command Centre",
+        "activeLabel": "⌂Command centre",
+        "routeLinkCount": 2,
+        "sourceViewHidden": 1,
+        "nativeNavigationVisible": false,
+        "navigationSource": "smartobject",
+        "cacheVersion": "1",
+        "ready": true,
+        "leaving": false,
+        "horizontalOverflow": false,
+        "marks": {
+          "gux:boot-start": 53.8,
+          "gux:styles-ready": 96.8,
+          "gux:shell-ready": 73.4,
+          "gux:navigation-reconciled": 457.6,
+          "gux:content-ready": 373.8
+        },
+        "navigationTiming": {
+          "responseEnd": 3.6,
+          "domContentLoaded": 74,
+          "load": 97
+        }
+      }
+    },
+    {
+      "name": "refresh preserves URL-derived active state",
+      "passed": true,
+      "evidence": {
+        "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.Gold%20Command%20Centre/",
+        "title": "GUX.Gold Command Centre",
+        "topLevel": true,
+        "shellCount": 1,
+        "shellVersion": "2026.07.23.4",
+        "stylesReady": true,
+        "stylesLoaded": true,
+        "activeRoute": "GUX.Gold Command Centre",
+        "activeLabel": "⌂Command centre",
+        "routeLinkCount": 2,
+        "sourceViewHidden": 1,
+        "nativeNavigationVisible": false,
+        "navigationSource": "cache",
+        "cacheVersion": "1",
+        "ready": true,
+        "leaving": false,
+        "horizontalOverflow": false,
+        "marks": {
+          "gux:boot-start": 80.7,
+          "gux:styles-ready": 112.5,
+          "gux:shell-ready": 95,
+          "gux:navigation-reconciled": null,
+          "gux:content-ready": 337.5
+        },
+        "navigationTiming": {
+          "responseEnd": 35.5,
+          "domContentLoaded": 95.5,
+          "load": 112.7
+        }
+      }
+    },
+    {
+      "name": "enhancement failure reveals usable native K2 content within 2.5 seconds",
+      "passed": true,
+      "evidence": {
+        "title": "GUX.Gold Command Centre",
+        "shellCount": 0,
+        "nativeNavigationVisible": true,
+        "textLength": 835,
+        "bootVisibility": "visible",
+        "bootOpacity": "1.10134e-13",
+        "bootZIndex": "-1",
+        "bootAnimationName": "gux-boot-failsafe",
+        "bootAnimationDuration": "0.001s",
+        "bootAnimationDelay": "2.5s",
+        "elapsedMilliseconds": 3257,
+        "horizontalOverflow": false
+      }
+    },
+    {
+      "name": "browser diagnostics contain no unexpected errors",
+      "passed": true,
+      "evidence": []
+    }
+  ],
+  "states": [
+    {
+      "phase": "command-cold",
+      "state": {
+        "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.Gold%20Command%20Centre/",
+        "title": "GUX.Gold Command Centre",
+        "topLevel": true,
+        "shellCount": 1,
+        "shellVersion": "2026.07.23.4",
+        "stylesReady": true,
+        "stylesLoaded": true,
+        "activeRoute": "GUX.Gold Command Centre",
+        "activeLabel": "⌂Command centre",
+        "routeLinkCount": 2,
+        "sourceViewHidden": 1,
+        "nativeNavigationVisible": false,
+        "navigationSource": "smartobject",
+        "cacheVersion": "1",
+        "ready": true,
+        "leaving": false,
+        "horizontalOverflow": false,
+        "marks": {
+          "gux:boot-start": 258.8,
+          "gux:styles-ready": 465.6,
+          "gux:shell-ready": 274.1,
+          "gux:navigation-reconciled": 762.2,
+          "gux:content-ready": 679.5
+        },
+        "navigationTiming": {
+          "responseEnd": 112.4,
+          "domContentLoaded": 275,
+          "load": 466
+        }
+      }
+    },
+    {
+      "phase": "my-work",
+      "state": {
+        "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.My%20Work/",
+        "title": "GUX.My Work",
+        "topLevel": true,
+        "shellCount": 1,
+        "shellVersion": "2026.07.23.4",
+        "stylesReady": true,
+        "stylesLoaded": true,
+        "activeRoute": "GUX.My Work",
+        "activeLabel": "✓My work",
+        "routeLinkCount": 2,
+        "sourceViewHidden": 1,
+        "nativeNavigationVisible": false,
+        "navigationSource": "smartobject",
+        "cacheVersion": "1",
+        "ready": true,
+        "leaving": false,
+        "horizontalOverflow": false,
+        "marks": {
+          "gux:boot-start": 98.6,
+          "gux:styles-ready": 105.7,
+          "gux:shell-ready": 107.3,
+          "gux:navigation-reconciled": 352.2,
+          "gux:content-ready": 201.8
+        },
+        "navigationTiming": {
+          "responseEnd": 33.3,
+          "domContentLoaded": 107.5,
+          "load": 119.7
+        }
+      }
+    },
+    {
+      "phase": "command-warm",
+      "state": {
+        "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.Gold%20Command%20Centre/",
+        "title": "GUX.Gold Command Centre",
+        "topLevel": true,
+        "shellCount": 1,
+        "shellVersion": "2026.07.23.4",
+        "stylesReady": true,
+        "stylesLoaded": true,
+        "activeRoute": "GUX.Gold Command Centre",
+        "activeLabel": "⌂Command centre",
+        "routeLinkCount": 2,
+        "sourceViewHidden": 1,
+        "nativeNavigationVisible": false,
+        "navigationSource": "smartobject",
+        "cacheVersion": "1",
+        "ready": true,
+        "leaving": false,
+        "horizontalOverflow": false,
+        "marks": {
+          "gux:boot-start": 94.9,
+          "gux:styles-ready": 124.2,
+          "gux:shell-ready": 108.6,
+          "gux:navigation-reconciled": 431,
+          "gux:content-ready": 377.8
+        },
+        "navigationTiming": {
+          "responseEnd": 34.3,
+          "domContentLoaded": 109,
+          "load": 124.3
+        }
+      }
+    }
+  ],
+  "diagnostics": [],
+  "passed": true
+}

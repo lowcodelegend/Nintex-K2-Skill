@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "name": "SNC.Decide stage",
+  "k2": {
+    "designerHost": "smartforms",
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "application": {
+    "rootCategoryPath": "K2 Skills\\SNC.Supplier Nonconformance",
+    "workflowCategoryName": "SNC.Supplier Nonconformance WFs"
+  },
+  "workflow": {
+    "name": "SNC.Stage Decide",
+    "kind": "request-approval",
+    "publish": true,
+    "replaceExisting": true,
+    "comment": "Reusable accountable decision stage",
+    "requestStatusUpdate": {
+      "name": "SNC.Record Decision Result",
+      "smartObject": "SNC_SupplierNonconformance_SNC_CaseStageInstance",
+      "method": "Update",
+      "identifierProperty": "CaseStageInstanceId",
+      "identifierDataField": "CaseStageInstanceId",
+      "statusProperty": "OutcomeCode",
+      "statusValue": "PENDING",
+      "approvedStatusValue": "APPROVED",
+      "rejectedStatusValue": "RETURNED_FOR_INVESTIGATION"
+    },
+    "email": {
+      "name": "SNC.Decision assigned",
+      "from": "$environment:From Address",
+      "to": [
+        "$originator"
+      ],
+      "subject": "Decide supplier nonconformance",
+      "body": "Review evidence and record an accountable disposition.",
+      "html": false
+    },
+    "userTask": {
+      "name": "SNC.Decide Case",
+      "assignees": [
+        "$originator"
+      ],
+      "instructions": "Review evidence and decide the disposition.",
+      "actions": [
+        "Approve",
+        "Reject"
+      ],
+      "formUrl": "https://spk2.trials.demome.tech/Runtime/Form/SNC.Supplier%20Nonconformance/",
+      "requestIdParameter": "CaseStageInstanceId"
+    },
+    "smartForms": {
+      "form": "SNC.Stage Task",
+      "startState": "SNC.Decide Start",
+      "taskState": "SNC.Decide Task",
+      "startRuleContains": "Create Button",
+      "makeStartStateDefault": false,
+      "workflowStripLocation": "bottom"
+    }
+  }
+}

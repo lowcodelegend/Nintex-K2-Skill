@@ -19,6 +19,8 @@ namespace K2WorkflowCli
         private readonly string _userName;
         private SmartObjectDescriptor _smartObject;
         private SmartObjectMethodDescriptor _approvalMatrix;
+        private SmartObjectMethodDescriptor _caseLifecycleResolver;
+        private SmartObjectMethodDescriptor _caseLifecycleState;
         private SmartFormsIntegrationDescriptor _smartForm;
 
         private static JToken At(JToken token, params object[] path)
@@ -75,6 +77,14 @@ namespace K2WorkflowCli
                     _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Load(_manifest.Workflow);
                 json = WorkflowJsonBuilder.BuildRequestApproval(_manifest.Workflow, _smartObject, _smartForm, _approvalMatrix);
             }
+            else if (string.Equals(_manifest.Workflow.Kind, "call-subworkflow", StringComparison.OrdinalIgnoreCase))
+                json = WorkflowJsonBuilder.BuildCallSubWorkflow(_manifest.Workflow);
+            else if (string.Equals(_manifest.Workflow.Kind, "case-lifecycle", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_caseLifecycleResolver == null) _caseLifecycleResolver = SmartObjectMetadata.LoadMethod(_manifest.K2, _manifest.Workflow.CaseLifecycle.ResolverSmartObject, _manifest.Workflow.CaseLifecycle.ResolverMethod);
+                if (_caseLifecycleState == null) _caseLifecycleState = SmartObjectMetadata.LoadMethod(_manifest.K2, _manifest.Workflow.CaseLifecycle.StateSmartObject, _manifest.Workflow.CaseLifecycle.StateMethod);
+                json = WorkflowJsonBuilder.BuildCaseLifecycle(_manifest.Workflow, _caseLifecycleResolver, _caseLifecycleState);
+            }
             else json = WorkflowJsonBuilder.BuildStartEnd(_manifest.Workflow.Name);
             return WorkflowJsonBuilder.ParseAndValidate(json, _manifest.Workflow.Name).ToString(Formatting.None);
         }
@@ -99,7 +109,7 @@ namespace K2WorkflowCli
             {
                 Console.WriteLine("SmartForm: " + _manifest.Workflow.SmartForms.Form);
                 Console.WriteLine("Start state: " + _manifest.Workflow.SmartForms.StartState + " (default: " + _manifest.Workflow.SmartForms.MakeStartStateDefault + ")");
-                Console.WriteLine("Task state: " + _manifest.Workflow.SmartForms.TaskState);
+                Console.WriteLine(_manifest.Workflow.SmartForms.StartOnly ? "Integration mode: start-only" : "Task state: " + _manifest.Workflow.SmartForms.TaskState);
             }
             Console.WriteLine("Rendered JSON bytes: " + System.Text.Encoding.UTF8.GetByteCount(Render()));
         }
@@ -168,6 +178,120 @@ namespace K2WorkflowCli
             if (!id.HasValue) throw new CliException("Workflow not found: " + _manifest.Workflow.ProcessFullName);
             Unlock(id.Value);
             Console.WriteLine("Released designer lock: " + _manifest.Workflow.ProcessFullName);
+        }
+
+        public void Start(IDictionary<string, string> data)
+        {
+            var workflowAssembly = Assembly.LoadFrom(Path.Combine(RuntimeAssemblyResolver.InstallDirectory, "Bin", "SourceCode.Workflow.Client.dll"));
+            var connectionType = workflowAssembly.GetType("SourceCode.Workflow.Client.Connection", true);
+            var connection = Activator.CreateInstance(connectionType);
+            try
+            {
+                connectionType.GetMethod("Open", new[] { typeof(string) }).Invoke(connection, new object[] { _manifest.K2.Host });
+                var instance = connectionType.GetMethod("CreateProcessInstance", new[] { typeof(string) }).Invoke(connection, new object[] { _manifest.Workflow.ProcessFullName });
+                var fields = instance.GetType().GetProperty("DataFields").GetValue(instance, null);
+                var item = fields.GetType().GetProperty("Item", new[] { typeof(string) });
+                foreach (var pair in data)
+                {
+                    var field = item.GetValue(fields, new object[] { pair.Key });
+                    if (field == null) throw new CliException("Workflow data field was not found: " + pair.Key);
+                    field.GetType().GetProperty("Value").SetValue(field, pair.Value, null);
+                }
+                instance.GetType().GetProperty("Folio").SetValue(instance, _manifest.Workflow.Name + " " + DateTime.UtcNow.ToString("s", CultureInfo.InvariantCulture), null);
+                connectionType.GetMethod("StartProcessInstance", new[] { instance.GetType() }).Invoke(connection, new[] { instance });
+                Console.WriteLine("Started workflow instance: " + _manifest.Workflow.ProcessFullName + " (ID " + Convert.ToString(instance.GetType().GetProperty("ID").GetValue(instance, null)) + ")");
+            }
+            catch (TargetInvocationException ex) { throw new CliException(ex.GetBaseException().Message); }
+            finally
+            {
+                var close = connectionType.GetMethod("Close", Type.EmptyTypes); if (close != null) close.Invoke(connection, null);
+                var disposable = connection as IDisposable; if (disposable != null) disposable.Dispose();
+            }
+        }
+
+        public void RuntimeStatus()
+        {
+            using (var runtime = new RuntimeWorkflowManager()) runtime.ReportInstances(_manifest.Workflow.ProcessFullName);
+        }
+
+        public void ReportInstanceData(int instanceId)
+        {
+            var workflowAssembly = Assembly.LoadFrom(Path.Combine(RuntimeAssemblyResolver.InstallDirectory, "Bin", "SourceCode.Workflow.Client.dll"));
+            var connectionType = workflowAssembly.GetType("SourceCode.Workflow.Client.Connection", true);
+            var connection = Activator.CreateInstance(connectionType);
+            try
+            {
+                connectionType.GetMethod("Open", new[] { typeof(string) }).Invoke(connection, new object[] { _manifest.K2.Host });
+                var instance = connectionType.GetMethod("OpenProcessInstance", new[] { typeof(int) }).Invoke(connection, new object[] { instanceId });
+                var fields = instance.GetType().GetProperty("DataFields").GetValue(instance, null) as System.Collections.IEnumerable;
+                Console.WriteLine("Process instance data: " + instanceId);
+                if (fields != null) foreach (var field in fields)
+                {
+                    var type = field.GetType();
+                    var name = type.GetProperty("Name"); var value = type.GetProperty("Value");
+                    Console.WriteLine(Convert.ToString(name.GetValue(field, null)) + "=" + Convert.ToString(value.GetValue(field, null)));
+                }
+            }
+            catch (TargetInvocationException ex) { throw new CliException(ex.GetBaseException().Message); }
+            finally
+            {
+                var close = connectionType.GetMethod("Close", Type.EmptyTypes); if (close != null) close.Invoke(connection, null);
+                var disposable = connection as IDisposable; if (disposable != null) disposable.Dispose();
+            }
+        }
+
+        public void ReportWorklist()
+        {
+            var workflowAssembly = Assembly.LoadFrom(Path.Combine(RuntimeAssemblyResolver.InstallDirectory, "Bin", "SourceCode.Workflow.Client.dll"));
+            var connectionType = workflowAssembly.GetType("SourceCode.Workflow.Client.Connection", true);
+            var connection = Activator.CreateInstance(connectionType);
+            try
+            {
+                connectionType.GetMethod("Open", new[] { typeof(string) }).Invoke(connection, new object[] { _manifest.K2.Host });
+                var worklist = connectionType.GetMethod("OpenWorklist", Type.EmptyTypes).Invoke(connection, null) as System.Collections.IEnumerable;
+                var count = 0;
+                if (worklist != null) foreach (var item in worklist)
+                {
+                    var type = item.GetType();
+                    var process = type.GetProperty("ProcessInstance").GetValue(item, null);
+                    var fullName = Convert.ToString(process.GetType().GetProperty("FullName").GetValue(process, null));
+                    if (!string.Equals(fullName, _manifest.Workflow.ProcessFullName, StringComparison.OrdinalIgnoreCase)) continue;
+                    count++;
+                    Console.WriteLine("Worklist item: Serial=" + Convert.ToString(type.GetProperty("SerialNumber").GetValue(item, null)) +
+                        " Status=" + Convert.ToString(type.GetProperty("Status").GetValue(item, null)) +
+                        " User=" + Convert.ToString(type.GetProperty("AllocatedUser").GetValue(item, null)));
+                }
+                Console.WriteLine("Worklist items: " + count + " for " + _manifest.Workflow.ProcessFullName);
+            }
+            catch (TargetInvocationException ex) { throw new CliException(ex.GetBaseException().Message); }
+            finally
+            {
+                var close = connectionType.GetMethod("Close", Type.EmptyTypes); if (close != null) close.Invoke(connection, null);
+                var disposable = connection as IDisposable; if (disposable != null) disposable.Dispose();
+            }
+        }
+
+        public void ExecuteAction(string serialNumber, string actionName)
+        {
+            var workflowAssembly = Assembly.LoadFrom(Path.Combine(RuntimeAssemblyResolver.InstallDirectory, "Bin", "SourceCode.Workflow.Client.dll"));
+            var connectionType = workflowAssembly.GetType("SourceCode.Workflow.Client.Connection", true);
+            var connection = Activator.CreateInstance(connectionType);
+            try
+            {
+                connectionType.GetMethod("Open", new[] { typeof(string) }).Invoke(connection, new object[] { _manifest.K2.Host });
+                var item = connectionType.GetMethod("OpenWorklistItem", new[] { typeof(string) }).Invoke(connection, new object[] { serialNumber });
+                var actions = item.GetType().GetProperty("Actions").GetValue(item, null);
+                var action = actions.GetType().GetProperty("Item", new[] { typeof(string) }).GetValue(actions, new object[] { actionName });
+                if (action == null) throw new CliException("Worklist action was not found: " + actionName);
+                action.GetType().GetMethod("Execute", Type.EmptyTypes).Invoke(action, null);
+                Console.WriteLine("Executed worklist action: " + actionName + " on " + serialNumber);
+            }
+            catch (TargetInvocationException ex) { throw new CliException(ex.GetBaseException().Message); }
+            finally
+            {
+                var close = connectionType.GetMethod("Close", Type.EmptyTypes); if (close != null) close.Invoke(connection, null);
+                var disposable = connection as IDisposable; if (disposable != null) disposable.Dispose();
+            }
         }
 
         public void Inspect()
@@ -300,6 +424,40 @@ namespace K2WorkflowCli
                     throw new CliException("Saved workflow is missing the request SmartObject reference.");
                 if (_manifest.Workflow.ApprovalMatrix != null && !references.OfType<JObject>().Any(x => string.Equals(Convert.ToString(x["systemName"]), _manifest.Workflow.ApprovalMatrix.SmartObject, StringComparison.OrdinalIgnoreCase)))
                     throw new CliException("Saved workflow is missing the approval matrix resolver SmartObject reference.");
+            }
+            if (string.Equals(_manifest.Workflow.Kind, "call-subworkflow", StringComparison.OrdinalIgnoreCase))
+            {
+                var call = ((JArray)root["nodes"]).OfType<JObject>()
+                    .SelectMany(x => (x["children"] as JArray) == null ? Enumerable.Empty<JObject>() : ((JArray)x["children"]).OfType<JObject>())
+                    .SingleOrDefault(x => (int?)x["componentId"] == 30021);
+                if (call == null) throw new CliException("Saved call-subworkflow workflow is missing event component 30021.");
+                if (!string.Equals(Convert.ToString(At(call, "configuration", "selectedWorkflowFullName")), _manifest.Workflow.CallSubWorkflow.Workflow, StringComparison.Ordinal))
+                    throw new CliException("Saved Call Sub Workflow target differs from the manifest.");
+                var expectedWait = string.Equals(_manifest.Workflow.CallSubWorkflow.WaitFor, "none", StringComparison.OrdinalIgnoreCase) ? 0 :
+                    string.Equals(_manifest.Workflow.CallSubWorkflow.WaitFor, "first", StringComparison.OrdinalIgnoreCase) ? 2 : 1;
+                if ((int?)At(call, "configuration", "waitMode") != expectedWait)
+                    throw new CliException("Saved Call Sub Workflow wait mode differs from the manifest.");
+                Console.WriteLine("Verified Call Sub Workflow target and wait mode: " + _manifest.Workflow.CallSubWorkflow.Workflow);
+            }
+            if (string.Equals(_manifest.Workflow.Kind, "case-lifecycle", StringComparison.OrdinalIgnoreCase))
+            {
+                var children = ((JArray)root["nodes"]).OfType<JObject>().SelectMany(x => (x["children"] as JArray) == null ? Enumerable.Empty<JObject>() : ((JArray)x["children"]).OfType<JObject>()).ToArray();
+                if (children.Count(x => (int?)x["componentId"] == 30021) != 8 || children.Count(x => (int?)x["componentId"] == 30011) != 2)
+                    throw new CliException("Saved case-lifecycle workflow must contain resolve/load events and eight canonical stage Call Sub Workflow events.");
+                var calls = children.Where(x => (int?)x["componentId"] == 30021).ToArray();
+                if (calls.Any(call => (int?)At(call, "configuration", "waitMode") != 1 || (bool?)At(call, "configuration", "synchronous") != true))
+                    throw new CliException("Case lifecycle child invocation must wait synchronously for completion.");
+                var links = ((JArray)root["links"]).OfType<JObject>().ToArray();
+                var nodes = ((JArray)root["nodes"]).OfType<JObject>().ToArray();
+                if (calls.Any(call => { var owner = nodes.Single(n => (n["children"] as JArray) != null && ((JArray)n["children"]).Contains(call)); return !links.Any(x => (int?)x["fromInternalId"] == (int?)owner["internalId"] && (int?)x["toInternalId"] == 2); }))
+                    throw new CliException("Saved case-lifecycle workflow is missing one or more child-to-resolver loops.");
+                Console.WriteLine("Verified configuration-driven case lifecycle resolver, eight synchronous child calls, and loops.");
+                if (_manifest.Workflow.SmartForms != null)
+                {
+                    if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Load(_manifest.Workflow);
+                    new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Verify(_manifest.Workflow, _smartForm);
+                    Console.WriteLine("Verified SmartForms start-only rule: " + _smartForm.DisplayName);
+                }
             }
             if (_manifest.Workflow.Publish)
             {
@@ -584,6 +742,56 @@ namespace K2WorkflowCli
             var instances = method.Invoke(_server, new object[] { fullName, string.Empty, string.Empty });
             var count = instances.GetType().GetProperty("Count");
             return count == null ? 0 : Convert.ToInt32(count.GetValue(instances, null));
+        }
+
+        public void ReportInstances(string fullName)
+        {
+            var processSet = GetProcessSet(fullName);
+            if (processSet != null)
+            {
+                var pst = processSet.GetType();
+                Func<string,string> pp = name => { var p=pst.GetProperty(name); return p==null?string.Empty:Convert.ToString(p.GetValue(processSet,null)); };
+                Console.WriteLine("Process set: ID="+pp("ID")+" ProcSetID="+pp("ProcSetID")+" FullName="+pp("FullName"));
+                var profilesMethod = _type.GetMethod("GetErrorProfiles", Type.EmptyTypes);
+                var logsMethod = _type.GetMethod("GetErrorLogs", new[] { typeof(int) });
+                var profiles = profilesMethod == null ? null : profilesMethod.Invoke(_server, null) as System.Collections.IEnumerable;
+                if (profiles != null && logsMethod != null) foreach (var profile in profiles)
+                {
+                    var profileIdProperty = profile.GetType().GetProperty("ID");
+                    if (profileIdProperty == null) continue;
+                    try
+                    {
+                        var errorValues = logsMethod.Invoke(_server, new[] { profileIdProperty.GetValue(profile, null) }) as System.Collections.IEnumerable;
+                        if (errorValues == null) continue;
+                        foreach (var error in errorValues)
+                        {
+                            var et=error.GetType(); Func<string,string> ep=name=>{var p=et.GetProperty(name);return p==null?string.Empty:Convert.ToString(p.GetValue(error,null));};
+                            if (!string.Equals(ep("ProcSetID"), pp("ProcSetID"), StringComparison.OrdinalIgnoreCase) &&
+                                !string.Equals(ep("ProcessName"), fullName, StringComparison.OrdinalIgnoreCase)) continue;
+                            var detail = string.Empty;
+                            int procInstId, errorId;
+                            if (int.TryParse(ep("ProcInstID"), out procInstId) && int.TryParse(ep("ID"), out errorId))
+                            {
+                                var detailMethod = _type.GetMethod("GetError", new[] { typeof(int), typeof(int) });
+                                if (detailMethod != null) try { detail = Convert.ToString(detailMethod.Invoke(_server, new object[] { procInstId, errorId })); } catch (TargetInvocationException) { }
+                            }
+                            Console.WriteLine("Runtime error: ID="+ep("ID")+" ProcInstID="+ep("ProcInstID")+" Item="+ep("ErrorItemName")+" Description="+ep("Description")+(string.IsNullOrWhiteSpace(detail)?string.Empty:" Detail="+detail));
+                        }
+                    }
+                    catch (TargetInvocationException) { }
+                }
+            }
+            var method = _type.GetMethod("GetProcessInstancesAll", new[] { typeof(string), typeof(string), typeof(string) });
+            var values = method.Invoke(_server, new object[] { fullName, string.Empty, string.Empty }) as System.Collections.IEnumerable;
+            var count = 0;
+            if (values != null) foreach (var value in values)
+            {
+                count++;
+                var type = value.GetType();
+                Func<string, string> property = name => { var p = type.GetProperty(name); return p == null ? string.Empty : Convert.ToString(p.GetValue(value, null)); };
+                Console.WriteLine("Instance: ID=" + property("ID") + " ProcInstID=" + property("ProcInstID") + " Status=" + property("Status") + " Folio=" + property("Folio") + " StartDate=" + property("StartDate") + " Activity=" + property("ActivityName") + " Error=" + property("Error"));
+            }
+            Console.WriteLine("Runtime instances: " + count + " for " + fullName);
         }
 
         public void DeleteAllDefinitions(string fullName)

@@ -112,8 +112,13 @@ namespace K2SmartFormsCli
                 if (view.Options == null) view.Options = new List<string>();
                 if (view.LookupControls == null) view.LookupControls = new List<LookupControlDefinition>();
                 if (view.ReadOnlyProperties == null) view.ReadOnlyProperties = new List<string>();
+                if (view.HiddenProperties == null) view.HiddenProperties = new List<string>();
+                if (view.PropertyLabels == null) view.PropertyLabels = new Dictionary<string, string>();
                 if (view.DefaultValues == null) view.DefaultValues = new Dictionary<string, string>();
                 if (view.HiddenVariables == null) view.HiddenVariables = new List<HiddenVariableDefinition>();
+                if (view.Charts == null) view.Charts = new List<ViewChartDefinition>();
+                if (view.MetricCards == null) view.MetricCards = new List<ViewMetricCardDefinition>();
+                if (view.LifecycleTrackers == null) view.LifecycleTrackers = new List<ViewLifecycleDefinition>();
                 RequireArtifactName(view.Name, "view.name");
                 RejectVersionToken(view.Name, "view.name");
                 Require(view.SmartObject, "view.smartObject");
@@ -124,6 +129,7 @@ namespace K2SmartFormsCli
                 EnsureUniqueValues(view.Properties, "property", view.Name);
                 EnsureUniqueValues(view.Methods, "method", view.Name);
                 EnsureUniqueValues(view.ReadOnlyProperties, "read-only property", view.Name);
+                EnsureUniqueValues(view.HiddenProperties, "hidden property", view.Name);
                 EnsureUniqueValues(view.HiddenVariables.Select(x => x == null ? null : x.Name), "hidden variable", view.Name);
                 foreach (var variable in view.HiddenVariables)
                 {
@@ -133,6 +139,40 @@ namespace K2SmartFormsCli
                 }
                 if (view.HiddenVariables.Count > 0 && view.Type != "capture")
                     throw new CliException("View '" + view.Name + "' hiddenVariables are currently supported only on capture/item views.");
+                EnsureUniqueValues(view.Charts.Select(x => x == null ? null : x.Name), "chart", view.Name);
+                foreach (var chart in view.Charts)
+                {
+                    if (chart == null) throw new CliException("View '" + view.Name + "' charts cannot contain null entries.");
+                    Require(chart.Name, "view.charts.name"); Require(chart.Title, "view.charts.title");
+                    Require(chart.CategoryProperty, "view.charts.categoryProperty"); Require(chart.ValueProperty, "view.charts.valueProperty");
+                    chart.Type = (chart.Type ?? "column").Trim().ToLowerInvariant();
+                    if (!AllowedChartTypes.Contains(chart.Type)) throw new CliException("Unsupported chart type '" + chart.Type + "' for " + view.Name + ".");
+                    if (view.Type != "capture") throw new CliException("View '" + view.Name + "' charts require a capture View; pair it with a list View for the accessible data-table alternative.");
+                    if (!view.Properties.Contains(chart.CategoryProperty, StringComparer.OrdinalIgnoreCase) || !view.Properties.Contains(chart.ValueProperty, StringComparer.OrdinalIgnoreCase))
+                        throw new CliException("View '" + view.Name + "' chart properties must be selected in view.properties: " + chart.CategoryProperty + ", " + chart.ValueProperty);
+                    if (chart.Height < 180 || chart.Height > 800) throw new CliException("View '" + view.Name + "' chart height must be between 180 and 800 pixels.");
+                }
+                EnsureUniqueValues(view.MetricCards.Select(x => x == null ? null : x.Property), "metric card property", view.Name);
+                foreach (var card in view.MetricCards)
+                {
+                    if (card == null) throw new CliException("View '" + view.Name + "' metricCards cannot contain null entries.");
+                    Require(card.Property, "view.metricCards.property"); Require(card.Label, "view.metricCards.label");
+                    if (view.Type != "capture") throw new CliException("View '" + view.Name + "' metricCards require a capture View so their card layout is rendered natively.");
+                    if (!view.Properties.Contains(card.Property, StringComparer.OrdinalIgnoreCase)) throw new CliException("View '" + view.Name + "' metric card property must be selected in view.properties: " + card.Property);
+                    if (!AllowedMetricTones.Contains((card.Tone ?? "neutral").Trim().ToLowerInvariant())) throw new CliException("Unsupported metric card tone '" + card.Tone + "' for " + view.Name + ".");
+                }
+                if (view.MetricCards.Count > 6) throw new CliException("View '" + view.Name + "' supports at most six metric cards.");
+                EnsureUniqueValues(view.LifecycleTrackers.Select(x => x == null ? null : x.Property), "lifecycle tracker property", view.Name);
+                foreach (var tracker in view.LifecycleTrackers)
+                {
+                    if (tracker == null) throw new CliException("View '" + view.Name + "' lifecycleTrackers cannot contain null entries.");
+                    Require(tracker.Property, "view.lifecycleTrackers.property"); Require(tracker.Name, "view.lifecycleTrackers.name");
+                    if (view.Type != "capture") throw new CliException("View '" + view.Name + "' lifecycleTrackers currently require type capture.");
+                    if (!view.Properties.Contains(tracker.Property, StringComparer.OrdinalIgnoreCase)) throw new CliException("View '" + view.Name + "' lifecycle tracker property must be selected in view.properties: " + tracker.Property);
+                    if (tracker.Stages == null || tracker.Stages.Count < 2) throw new CliException("View '" + view.Name + "' lifecycle tracker requires at least two stages.");
+                    EnsureUniqueValues(tracker.Stages.Select(x => x == null ? null : x.Code), "lifecycle stage code", view.Name);
+                    foreach (var stage in tracker.Stages) { if (stage == null) throw new CliException("View '" + view.Name + "' lifecycle tracker stages cannot contain null entries."); Require(stage.Code, "view.lifecycleTrackers.stages.code"); Require(stage.Label, "view.lifecycleTrackers.stages.label"); }
+                }
                 if (view.LayoutColumns != 0 && view.LayoutColumns != 2 && view.LayoutColumns != 4)
                     throw new CliException("View '" + view.Name + "' layoutColumns must be 2 or 4.");
                 if (view.LayoutColumns == 4 && view.Type != "capture")
@@ -140,6 +180,14 @@ namespace K2SmartFormsCli
                 foreach (var property in view.ReadOnlyProperties)
                     if (!view.Properties.Contains(property, StringComparer.OrdinalIgnoreCase))
                         throw new CliException("View '" + view.Name + "' readOnlyProperties entry is not selected in view.properties: " + property);
+                foreach (var property in view.HiddenProperties)
+                    if (!view.Properties.Contains(property, StringComparer.OrdinalIgnoreCase))
+                        throw new CliException("View '" + view.Name + "' hiddenProperties entry is not selected in view.properties: " + property);
+                foreach (var label in view.PropertyLabels)
+                {
+                    if (!view.Properties.Contains(label.Key, StringComparer.OrdinalIgnoreCase)) throw new CliException("View '" + view.Name + "' propertyLabels entry is not selected in view.properties: " + label.Key);
+                    if (string.IsNullOrWhiteSpace(label.Value)) throw new CliException("View '" + view.Name + "' propertyLabels value is empty for property '" + label.Key + "'.");
+                }
                 foreach (var value in view.DefaultValues)
                 {
                     if (string.IsNullOrWhiteSpace(value.Key))
@@ -220,6 +268,7 @@ namespace K2SmartFormsCli
                 ValidateValues(form.Behaviors, AllowedFormBehaviors, "form behavior", form.Name);
                 form.Area = NormalizeArea(form.Area, "form", form.Name);
                 ValidateTabs(form);
+                ValidateWorkflowStartButton(form);
                 ValidateListClickTabNavigation(form, Application.Views);
                 ValidateMasterDetail(form, Application.Views);
             }
@@ -255,6 +304,8 @@ namespace K2SmartFormsCli
         private static readonly HashSet<string> AllowedFormBehaviors = NewSet("load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load");
         private static readonly HashSet<string> AllowedAreas = NewSet("application", "admin");
         private static readonly HashSet<string> AllowedWorklistActions = NewSet("viewWorkflow", "sleep", "redirect", "release", "share");
+        private static readonly HashSet<string> AllowedChartTypes = NewSet("column", "bar", "line", "area", "pie", "donut");
+        private static readonly HashSet<string> AllowedMetricTones = NewSet("neutral", "positive", "warning", "critical");
 
         private static void ValidateMasterDetail(FormDefinition form, IEnumerable<ViewDefinition> views)
         {
@@ -297,6 +348,33 @@ namespace K2SmartFormsCli
                         !string.Equals(detail.DefaultListMethod, method, StringComparison.OrdinalIgnoreCase))
                         throw new CliException("Form '" + form.Name + "' detail view '" + detail.Name + "' does not select required method '" + method + "'.");
             }
+            if (relationship.Review != null)
+            {
+                Require(relationship.Review.View, "form.masterDetail.review.view");
+                Require(relationship.Review.KeyProperty, "form.masterDetail.review.keyProperty");
+                Require(relationship.Review.ReadMethod, "form.masterDetail.review.readMethod");
+                Require(relationship.Review.Tab, "form.masterDetail.review.tab");
+                if (!form.Views.Contains(relationship.Review.View, StringComparer.OrdinalIgnoreCase)) throw new CliException("Form '" + form.Name + "' master-detail review View is not present on the form: " + relationship.Review.View);
+                var review = views.Single(x => string.Equals(x.Name, relationship.Review.View, StringComparison.OrdinalIgnoreCase));
+                if (review.Type != "capture") throw new CliException("Form '" + form.Name + "' review must be a capture/item View: " + review.Name);
+                if (!review.Properties.Contains(relationship.Review.KeyProperty, StringComparer.OrdinalIgnoreCase)) throw new CliException("Form '" + form.Name + "' review View must select its key property: " + relationship.Review.KeyProperty);
+                if (!review.Methods.Contains(relationship.Review.ReadMethod, StringComparer.OrdinalIgnoreCase) && !review.Options.Contains("all-methods", StringComparer.OrdinalIgnoreCase)) throw new CliException("Form '" + form.Name + "' review View does not select Read method '" + relationship.Review.ReadMethod + "'.");
+                var reviewTab = form.Tabs.FirstOrDefault(x => string.Equals(x.Name, relationship.Review.Tab, StringComparison.OrdinalIgnoreCase));
+                if (reviewTab == null || !reviewTab.Views.Contains(relationship.Review.View, StringComparer.OrdinalIgnoreCase)) throw new CliException("Form '" + form.Name + "' review View must be placed on review tab '" + relationship.Review.Tab + "'.");
+            }
+        }
+
+        private static void ValidateWorkflowStartButton(FormDefinition form)
+        {
+            var button = form.WorkflowStartButton;
+            if (button == null) return;
+            RequireArtifactName(button.Name, "form.workflowStartButton.name");
+            Require(button.Text, "form.workflowStartButton.text");
+            RequireArtifactName(button.Tab, "form.workflowStartButton.tab");
+            if (form.Tabs.Count == 0)
+                throw new CliException("Form '" + form.Name + "' workflowStartButton requires a tabbed form.");
+            if (!form.Tabs.Any(x => string.Equals(x.Name, button.Tab, StringComparison.OrdinalIgnoreCase)))
+                throw new CliException("Form '" + form.Name + "' workflowStartButton references undeclared tab '" + button.Tab + "'.");
         }
 
         private static void ValidateTabs(FormDefinition form)
@@ -555,9 +633,14 @@ namespace K2SmartFormsCli
         public string Area { get; set; }
         public List<LookupControlDefinition> LookupControls { get; set; }
         public List<string> ReadOnlyProperties { get; set; }
+        public List<string> HiddenProperties { get; set; }
+        public Dictionary<string, string> PropertyLabels { get; set; }
         public Dictionary<string, string> DefaultValues { get; set; }
         public int LayoutColumns { get; set; }
         public List<HiddenVariableDefinition> HiddenVariables { get; set; }
+        public List<ViewChartDefinition> Charts { get; set; }
+        public List<ViewMetricCardDefinition> MetricCards { get; set; }
+        public List<ViewLifecycleDefinition> LifecycleTrackers { get; set; }
 
         public ViewDefinition()
         {
@@ -568,10 +651,52 @@ namespace K2SmartFormsCli
             Area = "application";
             LookupControls = new List<LookupControlDefinition>();
             ReadOnlyProperties = new List<string>();
+            HiddenProperties = new List<string>();
+            PropertyLabels = new Dictionary<string, string>();
             DefaultValues = new Dictionary<string, string>();
             LayoutColumns = 2;
             HiddenVariables = new List<HiddenVariableDefinition>();
+            Charts = new List<ViewChartDefinition>();
+            MetricCards = new List<ViewMetricCardDefinition>();
+            LifecycleTrackers = new List<ViewLifecycleDefinition>();
         }
+    }
+
+    public sealed class ViewChartDefinition
+    {
+        public string Name { get; set; }
+        public string Title { get; set; }
+        public string Type { get; set; }
+        public string CategoryProperty { get; set; }
+        public string ValueProperty { get; set; }
+        public int Height { get; set; }
+        public bool ShowLegend { get; set; }
+        public bool ShowLabels { get; set; }
+        public string EmptyState { get; set; }
+        public ViewChartDefinition() { Type = "column"; Height = 275; EmptyState = "No data to display"; }
+    }
+
+    public sealed class ViewMetricCardDefinition
+    {
+        public string Property { get; set; }
+        public string Label { get; set; }
+        public string Tone { get; set; }
+        public string Explanation { get; set; }
+        public ViewMetricCardDefinition() { Tone = "neutral"; }
+    }
+
+    public sealed class ViewLifecycleDefinition
+    {
+        public string Name { get; set; }
+        public string Property { get; set; }
+        public List<ViewLifecycleStageDefinition> Stages { get; set; }
+        public ViewLifecycleDefinition() { Name = "Lifecycle"; Stages = new List<ViewLifecycleStageDefinition>(); }
+    }
+
+    public sealed class ViewLifecycleStageDefinition
+    {
+        public string Code { get; set; }
+        public string Label { get; set; }
     }
 
     public sealed class HiddenVariableDefinition
@@ -593,6 +718,7 @@ namespace K2SmartFormsCli
         public List<FormTabDefinition> Tabs { get; set; }
         public List<ListClickTabNavigationDefinition> ListClickTabNavigation { get; set; }
         public MasterDetailFormDefinition MasterDetail { get; set; }
+        public WorkflowStartButtonDefinition WorkflowStartButton { get; set; }
         public Dictionary<string, string> ViewTitles { get; set; }
         public Dictionary<string, string> UntitledViews { get; set; }
 
@@ -616,6 +742,13 @@ namespace K2SmartFormsCli
         }
     }
 
+    public sealed class WorkflowStartButtonDefinition
+    {
+        public string Name { get; set; }
+        public string Text { get; set; }
+        public string Tab { get; set; }
+    }
+
     public sealed class MasterDetailFormDefinition
     {
         public string MasterView { get; set; }
@@ -627,6 +760,7 @@ namespace K2SmartFormsCli
         public string SuccessMessageTitle { get; set; }
         public string SuccessMessageBody { get; set; }
         public List<MasterDetailChildDefinition> Details { get; set; }
+        public MasterDetailReviewDefinition Review { get; set; }
 
         public MasterDetailFormDefinition()
         {
@@ -638,6 +772,15 @@ namespace K2SmartFormsCli
             SuccessMessageBody = "The record and its line items were saved successfully.";
             Details = new List<MasterDetailChildDefinition>();
         }
+    }
+
+    public sealed class MasterDetailReviewDefinition
+    {
+        public string View { get; set; }
+        public string KeyProperty { get; set; }
+        public string ReadMethod { get; set; }
+        public string Tab { get; set; }
+        public MasterDetailReviewDefinition() { ReadMethod = "Read"; }
     }
 
     public sealed class MasterDetailChildDefinition

@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "shortCode": "SPL",
+  "name": "SPL.Link Sidebar Example",
+  "application": {
+    "rootCategoryPath": "K2 Skills\\SPL.Link Sidebar Example"
+  },
+  "components": {
+    "smartObjects": { "manifest": "manifest.json" },
+    "forms": { "manifest": "smartforms-manifest.json", "dependsOn": ["smartObjects"] },
+    "workflows": []
+  },
+  "policies": {
+    "dataModelComplexity": "small",
+    "versionFreeNames": true,
+    "modernForms": true,
+    "masterDetails": [],
+    "workflowEntries": []
+  },
+  "verification": {
+    "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime",
+    "scenarios": [
+      {
+        "name": "Navigate between SmartObject-backed application routes",
+        "entryForm": "SPL.Link Dashboard",
+        "steps": [
+          "open the dashboard ordinary Runtime URL",
+          "prove the navigation SmartObject renders Overview and Work items",
+          "select Work items and prove SPL.Link Work loads",
+          "prove the active route follows the loaded Form URL",
+          "return to Overview and prove warm navigation uses the cached data contract"
+        ]
+      }
+    ]
+  }
+}

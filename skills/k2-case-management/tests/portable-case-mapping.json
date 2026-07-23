@@ -1,0 +1,11 @@
+{
+  "schema_version":1,
+  "application":{"name":"RQT.Request Experience","rootCategoryPath":"K2 Skills\\RQT.Request Case","solutionCode":"RQT","theme":"Lithium","styleProfile":"Test Style"},
+  "dashboard":{"page":"operations-dashboard","formName":"RQT.Operations",
+    "summary":{"viewName":"RQT.KPIs","smartObject":"RQT_DashboardSummary","components":[{"id":"open-cases","property":"OpenCaseCount"}]},
+    "charts":[{"component":"cases-by-stage","viewName":"RQT.Cases by Stage","smartObject":"RQT_CasesByStage","categoryProperty":"StageLabel","valueProperty":"CaseCount"}],
+    "queues":[{"component":"urgent-work","viewName":"RQT.Urgent Work","smartObject":"RQT_UrgentWork","properties":["CaseId","CaseNumber","Title"]}]},
+  "workspace":{"viewName":"RQT.Case Workspace","shellFormName":"RQT.Case Management","analyticsTab":"Insights","lifecycleComponent":"case-lifecycle","currentStageProperty":"CurrentStageCode","stages":[{"code":"CAPTURE","label":"Capture"},{"code":"FULFIL","label":"Fulfil"},{"code":"CLOSE","label":"Close"}]},
+  "initiation":{"journey":"canonical-initiation","formName":"RQT.New Request","smartObject":"RQT_Case","masterView":"RQT.Case Workspace","masterKeyProperty":"CaseId","reviewViewName":"RQT.New Request Review","reviewProperties":["CaseId","CaseNumber","Title","Description"],"detailsTab":"Request Details","evidenceTab":"Supporting Evidence","reviewTab":"Review & Submit","saveButtonText":"Save draft and review","submitButtonName":"btnSubmitRequest","submitButtonText":"Submit request","details":[{"step":"details","view":"RQT.Request Detail","foreignKeyProperty":"CaseId"},{"step":"evidence","view":"RQT.Evidence","foreignKeyProperty":"CaseId"}]},
+  "runtimeBaseUrl":"https://k2.example.test/Runtime"
+}

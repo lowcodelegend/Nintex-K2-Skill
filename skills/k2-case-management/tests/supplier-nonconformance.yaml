@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "case_type": {
+    "code": "SUPPLIER_NONCONFORMANCE",
+    "name": "Supplier Nonconformance",
+    "initial_stage": "CAPTURE",
+    "retention_code": "QUALITY_RECORD",
+    "configuration_version": "1",
+    "ai_enabled": true
+  },
+  "stages": [
+    {"code": "CAPTURE", "workflow": "CM.Stage.Capture", "sequence": 10, "terminal": false},
+    {"code": "VALIDATE", "workflow": "CM.Stage.Validate", "sequence": 20, "terminal": false},
+    {"code": "CLASSIFY", "workflow": "CM.Stage.Classify", "sequence": 30, "terminal": false},
+    {"code": "ASSIGN", "workflow": "CM.Stage.Assign", "sequence": 40, "terminal": false},
+    {"code": "INVESTIGATE", "workflow": "CM.Stage.Investigate", "sequence": 50, "terminal": false},
+    {"code": "DECIDE", "workflow": "CM.Stage.Decide", "sequence": 60, "terminal": false},
+    {"code": "RESOLVE", "workflow": "CM.Stage.Resolve", "sequence": 70, "terminal": false},
+    {"code": "CLOSE", "workflow": "CM.Stage.Close", "sequence": 80, "terminal": true}
+  ],
+  "transitions": [
+    {"from": "CAPTURE", "outcome": "SUBMITTED", "to": "VALIDATE"},
+    {"from": "VALIDATE", "outcome": "VALID", "to": "CLASSIFY"},
+    {"from": "VALIDATE", "outcome": "MORE_INFORMATION_REQUIRED", "to": "CAPTURE", "reentry": true},
+    {"from": "CLASSIFY", "outcome": "CLASSIFIED", "to": "ASSIGN"},
+    {"from": "ASSIGN", "outcome": "ASSIGNED", "to": "INVESTIGATE"},
+    {"from": "INVESTIGATE", "outcome": "EVIDENCE_COMPLETE", "to": "DECIDE"},
+    {"from": "DECIDE", "outcome": "RETURNED_FOR_INVESTIGATION", "to": "INVESTIGATE", "reentry": true},
+    {"from": "DECIDE", "outcome": "APPROVED", "to": "RESOLVE"},
+    {"from": "RESOLVE", "outcome": "RESOLUTION_COMPLETED", "to": "CLOSE"},
+    {"from": "CLOSE", "outcome": "REOPENED", "to": "INVESTIGATE", "reopen": true}
+  ],
+  "extensions": {
+    "entities": [
+      {"name": "NonconformanceDetail", "parent": "Case", "fields": ["SupplierId", "PartNumber", "LotNumber", "QuantityAffected", "SpecificationReference", "ContainmentRequired"]},
+      {"name": "CorrectiveAction", "parent": "CaseStageInstance", "fields": ["ActionTypeCode", "OwnerFQN", "DueDate", "VerificationResult"]}
+    ]
+  }
+}

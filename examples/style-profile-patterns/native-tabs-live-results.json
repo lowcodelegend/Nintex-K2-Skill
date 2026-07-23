@@ -1,0 +1,131 @@
+{
+  "testedUtc": "2026-07-23T12:03:31.4308290Z",
+  "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/SPT.Tab%20Workspace/",
+  "checks": [
+    {
+      "name": "the original three native K2 tabs are relocated exactly once",
+      "passed": true,
+      "evidence": {
+        "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/SPT.Tab%20Workspace/",
+        "title": "SPT.Tab Workspace",
+        "ready": true,
+        "shellCount": 1,
+        "tabCount": 3,
+        "tabLabels": [
+          "Overview",
+          "Work Queue",
+          "Details"
+        ],
+        "selectedLabel": "Overview",
+        "selectedCount": 1,
+        "tabRolesValid": true,
+        "orientation": "vertical",
+        "originalTabsRelocated": true,
+        "horizontalOverflow": false
+      }
+    },
+    {
+      "name": "the initial Overview tab has accessible single-selection state",
+      "passed": true,
+      "evidence": {
+        "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/SPT.Tab%20Workspace/",
+        "title": "SPT.Tab Workspace",
+        "ready": true,
+        "shellCount": 1,
+        "tabCount": 3,
+        "tabLabels": [
+          "Overview",
+          "Work Queue",
+          "Details"
+        ],
+        "selectedLabel": "Overview",
+        "selectedCount": 1,
+        "tabRolesValid": true,
+        "orientation": "vertical",
+        "originalTabsRelocated": true,
+        "horizontalOverflow": false
+      }
+    },
+    {
+      "name": "a native tab click selects Work Queue without page navigation",
+      "passed": true,
+      "evidence": {
+        "clicked": true,
+        "selected": true,
+        "state": {
+          "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/SPT.Tab%20Workspace/",
+          "title": "SPT.Tab Workspace",
+          "ready": true,
+          "shellCount": 1,
+          "tabCount": 3,
+          "tabLabels": [
+            "Overview",
+            "Work Queue",
+            "Details"
+          ],
+          "selectedLabel": "Work Queue",
+          "selectedCount": 1,
+          "tabRolesValid": true,
+          "orientation": "vertical",
+          "originalTabsRelocated": true,
+          "horizontalOverflow": false
+        }
+      }
+    },
+    {
+      "name": "a second native tab click selects Details with one active tab",
+      "passed": true,
+      "evidence": {
+        "clicked": true,
+        "selected": true,
+        "state": {
+          "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/SPT.Tab%20Workspace/",
+          "title": "SPT.Tab Workspace",
+          "ready": true,
+          "shellCount": 1,
+          "tabCount": 3,
+          "tabLabels": [
+            "Overview",
+            "Work Queue",
+            "Details"
+          ],
+          "selectedLabel": "Details",
+          "selectedCount": 1,
+          "tabRolesValid": true,
+          "orientation": "vertical",
+          "originalTabsRelocated": true,
+          "horizontalOverflow": false
+        }
+      }
+    },
+    {
+      "name": "the live desktop shell has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/SPT.Tab%20Workspace/",
+        "title": "SPT.Tab Workspace",
+        "ready": true,
+        "shellCount": 1,
+        "tabCount": 3,
+        "tabLabels": [
+          "Overview",
+          "Work Queue",
+          "Details"
+        ],
+        "selectedLabel": "Details",
+        "selectedCount": 1,
+        "tabRolesValid": true,
+        "orientation": "vertical",
+        "originalTabsRelocated": true,
+        "horizontalOverflow": false
+      }
+    },
+    {
+      "name": "browser diagnostics contain no unexpected errors",
+      "passed": true,
+      "evidence": []
+    }
+  ],
+  "diagnostics": [],
+  "passed": true
+}

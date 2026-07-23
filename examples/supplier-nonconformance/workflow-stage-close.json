@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "name": "SNC.Close stage",
+  "k2": {
+    "designerHost": "smartforms",
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "application": {
+    "rootCategoryPath": "K2 Skills\\SNC.Supplier Nonconformance",
+    "workflowCategoryName": "SNC.Supplier Nonconformance WFs"
+  },
+  "workflow": {
+    "name": "SNC.Stage Close",
+    "kind": "request-approval",
+    "publish": true,
+    "replaceExisting": true,
+    "comment": "Reusable closure stage",
+    "requestStatusUpdate": {
+      "name": "SNC.Record Closure Result",
+      "smartObject": "SNC_SupplierNonconformance_SNC_CaseStageInstance",
+      "method": "Update",
+      "identifierProperty": "CaseStageInstanceId",
+      "identifierDataField": "CaseStageInstanceId",
+      "statusProperty": "OutcomeCode",
+      "statusValue": "PENDING",
+      "approvedStatusValue": "CLOSED",
+      "rejectedStatusValue": "CLOSURE_DEFECT"
+    },
+    "email": {
+      "name": "SNC.Closure assigned",
+      "from": "$environment:From Address",
+      "to": [
+        "$originator"
+      ],
+      "subject": "Close supplier nonconformance",
+      "body": "Confirm closure controls and lessons learned.",
+      "html": false
+    },
+    "userTask": {
+      "name": "SNC.Close Case",
+      "assignees": [
+        "$originator"
+      ],
+      "instructions": "Confirm all closure criteria and retention.",
+      "actions": [
+        "Approve",
+        "Reject"
+      ],
+      "formUrl": "https://spk2.trials.demome.tech/Runtime/Form/SNC.Supplier%20Nonconformance/",
+      "requestIdParameter": "CaseStageInstanceId"
+    },
+    "smartForms": {
+      "form": "SNC.Stage Task",
+      "startState": "SNC.Close Start",
+      "taskState": "SNC.Close Task",
+      "startRuleContains": "Create Button",
+      "makeStartStateDefault": false,
+      "workflowStripLocation": "bottom"
+    }
+  }
+}

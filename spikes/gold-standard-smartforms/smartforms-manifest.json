@@ -1,0 +1,228 @@
+{
+  "name": "GUX.Gold UX Spike",
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "application": {
+    "rootCategoryPath": "K2 Skills\\GUX.Gold UX Spike",
+    "theme": "Lithium",
+    "styleProfile": "GUX Northstar",
+    "solutionCode": "GUX",
+    "replaceExisting": true,
+    "checkIn": true,
+    "commonHeader": {
+      "enabled": false,
+      "reason": "The spike supplies its own isolated Northstar shell and must not consume the existing PSF framework."
+    },
+    "views": [
+      {
+        "name": "GUX.Application Navigation",
+        "smartObject": "GUX_GoldUXSpikeSql_GUX_ApplicationNavigation",
+        "type": "list",
+        "properties": [
+          "NavigationCode",
+          "SectionLabel",
+          "Label",
+          "IconToken",
+          "TargetFormName",
+          "SortOrder",
+          "IsActive",
+          "ConfigurationVersion"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": []
+      },
+      {
+        "name": "GUX.Command KPIs",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardSummary",
+        "type": "capture",
+        "properties": [
+          "OpenCaseCount",
+          "SLAAtRiskCount",
+          "OverdueActionCount",
+          "HighRiskCaseCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
+        "metricCards": [
+          {
+            "property": "OpenCaseCount",
+            "label": "Open cases",
+            "tone": "neutral",
+            "explanation": "Cases not in a terminal state."
+          },
+          {
+            "property": "SLAAtRiskCount",
+            "label": "SLA at risk",
+            "tone": "warning",
+            "explanation": "Cases approaching or beyond their SLA threshold."
+          },
+          {
+            "property": "OverdueActionCount",
+            "label": "Overdue actions",
+            "tone": "critical",
+            "explanation": "Incomplete actions beyond their target."
+          },
+          {
+            "property": "HighRiskCaseCount",
+            "label": "High-risk cases",
+            "tone": "critical",
+            "explanation": "Cases at or above the high-risk threshold."
+          }
+        ]
+      },
+      {
+        "name": "GUX.Intake Trend",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardIntakeTrend",
+        "type": "capture",
+        "properties": [
+          "PeriodLabel",
+          "CaseCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
+        "charts": [
+          {
+            "name": "chtGuxIntake",
+            "title": "Nonconformance trend",
+            "type": "line",
+            "categoryProperty": "PeriodLabel",
+            "valueProperty": "CaseCount",
+            "height": 280,
+            "showLegend": false,
+            "showLabels": true,
+            "emptyState": "No cases in this period."
+          }
+        ]
+      },
+      {
+        "name": "GUX.Attention Now",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardUrgentWork",
+        "type": "list",
+        "properties": [
+          "CaseNumber",
+          "Title",
+          "SupplierName",
+          "CurrentStageCode",
+          "RiskCode",
+          "SLAStatus",
+          "TargetDate"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": []
+      },
+      {
+        "name": "GUX.Stage Distribution",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardCasesByStage",
+        "type": "capture",
+        "properties": [
+          "StageLabel",
+          "CaseCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
+        "charts": [
+          {
+            "name": "chtGuxStage",
+            "title": "Where work is accumulating",
+            "type": "bar",
+            "categoryProperty": "StageLabel",
+            "valueProperty": "CaseCount",
+            "height": 260,
+            "showLegend": false,
+            "showLabels": true,
+            "emptyState": "No open cases."
+          }
+        ]
+      }
+    ],
+    "forms": [
+      {
+        "name": "GUX.Gold Command Centre",
+        "useLegacyTheme": false,
+        "views": [
+          "GUX.Application Navigation",
+          "GUX.Command KPIs",
+          "GUX.Intake Trend",
+          "GUX.Attention Now",
+          "GUX.Stage Distribution"
+        ],
+        "options": [
+          "no-tabs"
+        ],
+        "viewTitles": {
+          "GUX.Application Navigation": "Application navigation",
+          "GUX.Command KPIs": "Operational position",
+          "GUX.Intake Trend": "Nonconformance trend",
+          "GUX.Attention Now": "Attention now",
+          "GUX.Stage Distribution": "Where work is accumulating"
+        }
+      },
+      {
+        "name": "GUX.My Work",
+        "useLegacyTheme": false,
+        "views": [
+          "GUX.Application Navigation",
+          "GUX.Attention Now"
+        ],
+        "tabs": [
+          {
+            "name": "Priority work",
+            "views": [
+              "GUX.Application Navigation",
+              "GUX.Attention Now"
+            ]
+          },
+          {
+            "name": "My Tasks",
+            "worklist": {
+              "rows": 20,
+              "refreshIntervalSeconds": 120,
+              "showToolbar": true,
+              "showFilter": true,
+              "showSearch": true,
+              "enableSearch": true,
+              "height": "520px",
+              "openTaskInNewWindow": true,
+              "actions": [
+                "viewWorkflow",
+                "sleep",
+                "redirect",
+                "release",
+                "share"
+              ]
+            }
+          }
+        ],
+        "options": [],
+        "viewTitles": {
+          "GUX.Application Navigation": "Application navigation",
+          "GUX.Attention Now": "Priority work"
+        }
+      }
+    ]
+  },
+  "verification": {
+    "expectedViews": [
+      "GUX.Application Navigation",
+      "GUX.Command KPIs",
+      "GUX.Intake Trend",
+      "GUX.Attention Now",
+      "GUX.Stage Distribution"
+    ],
+    "expectedForms": [
+      "GUX.Gold Command Centre",
+      "GUX.My Work"
+    ],
+    "smokeTestRuntime": true,
+    "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime"
+  }
+}

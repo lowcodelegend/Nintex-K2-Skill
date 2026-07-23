@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "stage": {
+    "code":"INVESTIGATE","name":"Investigate or Fulfil","workflow":"SNC.Stage Investigate","sequence":50,
+    "entry_rule":"ASSIGNMENT_COMPLETE","exit_rule":"EVIDENCE_COMPLETE","sla_profile":"SNC_STANDARD","assignment_rule":"QUALIFIED_SUPPLIER_QUALITY_OWNER",
+    "allow_reentry":true,"allow_skip":false,"requires_human_completion":true,"terminal":false,
+    "required_data":["Case","NonconformanceDetail","EvidenceItem","CorrectiveAction"],
+    "outcomes":["EVIDENCE_COMPLETE","MORE_INFORMATION_REQUIRED","UNABLE_TO_COMPLETE","ESCALATED"],
+    "audit_events":["STAGE_STARTED","EVIDENCE_ADDED","CORRECTIVE_ACTION_RECORDED","STAGE_COMPLETED"],
+    "failure_policy":{"retry":"bounded-idempotent","operational_record":true}
+  }
+}

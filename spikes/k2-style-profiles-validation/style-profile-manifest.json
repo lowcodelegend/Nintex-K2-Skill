@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "name": "K2 Style Profile end-to-end validation",
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "styleProfile": {
+    "systemName": "K2Skills Style Profile Validation",
+    "displayName": "K2 Skills Style Profile Validation",
+    "description": "End-to-end validation profile created and managed by k2-style-profiles.",
+    "categoryPath": "K2 Skills\\GUX.Gold UX Spike",
+    "previewFormId": null,
+    "replaceExisting": true,
+    "files": [
+      {
+        "type": "css",
+        "source": "validation.css",
+        "target": "validation.css"
+      },
+      {
+        "type": "js",
+        "source": "validation.js",
+        "target": "validation.js"
+      }
+    ]
+  },
+  "hosting": {
+    "enabled": true,
+    "configureIis": true,
+    "siteName": "K2",
+    "applicationPath": "K2/",
+    "virtualPath": "/K2StyleValidationAssets",
+    "physicalPath": "C:\\inetpub\\k2style-validation-assets",
+    "baseUrl": "https://spk2.trials.demome.tech/K2StyleValidationAssets",
+    "additionalFiles": [
+      {
+        "type": "css",
+        "source": "validation-application.css",
+        "target": "validation-application.css"
+      }
+    ]
+  },
+  "verification": {
+    "requireHttps": true,
+    "requireDesignerIsolation": true,
+    "verifyHttp": true,
+    "httpTimeoutSeconds": 20
+  }
+}

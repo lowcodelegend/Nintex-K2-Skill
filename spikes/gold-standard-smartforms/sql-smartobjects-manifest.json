@@ -1,0 +1,65 @@
+{
+  "name": "GUX.Gold UX Spike Data",
+  "application": {
+    "rootCategoryPath": "K2 Skills\\GUX.Gold UX Spike"
+  },
+  "database": {
+    "server": "localhost",
+    "name": "GUX.GoldUXSpike",
+    "integratedSecurity": true,
+    "createIfMissing": true,
+    "runtimePrincipal": "TRIALS\\k2svc",
+    "scripts": [
+      "sql/001_application_navigation.sql"
+    ]
+  },
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2",
+    "serviceInstance": {
+      "systemName": "GUX.GoldUXSpikeSql",
+      "displayName": "GUX.Gold UX Spike SQL",
+      "authenticationMode": "service-account",
+      "useNativeSqlExecution": true
+    },
+    "smartObjects": {
+      "createNew": true,
+      "updateExisting": true,
+      "deleteRemoved": false
+    }
+  },
+  "verification": {
+    "sqlObjects": [
+      {
+        "type": "table",
+        "schema": "GUX",
+        "name": "NavigationItem"
+      },
+      {
+        "type": "view",
+        "schema": "GUX",
+        "name": "ApplicationNavigation"
+      }
+    ],
+    "queries": [
+      {
+        "name": "active navigation seed",
+        "sql": "SELECT COUNT(*) FROM GUX.ApplicationNavigation",
+        "expectedScalar": "2"
+      },
+      {
+        "name": "navigation configuration version",
+        "sql": "SELECT COUNT(DISTINCT ConfigurationVersion) FROM GUX.ApplicationNavigation",
+        "expectedScalar": "1"
+      }
+    ],
+    "smartObjectServiceObjects": [
+      "GUX-NavigationItem",
+      "GUX-ApplicationNavigation"
+    ],
+    "minimumGeneratedSmartObjects": 2,
+    "smokeTestListMethods": true
+  }
+}

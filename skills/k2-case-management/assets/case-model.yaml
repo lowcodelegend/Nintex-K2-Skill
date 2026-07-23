@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "purpose": "Canonical reusable case-management model; copy and extend, then transform through k2-builder. This is not a native K2 import format.",
+  "time_basis": "UTC",
+  "entities": {
+    "Case": ["CaseId", "CaseNumber", "CaseTypeId", "Title", "Description", "Source", "Status", "CurrentStageCode", "PreviousStageCode", "PriorityCode", "SeverityCode", "RiskCode", "ConfidentialityCode", "JurisdictionCode", "OwningTeam", "OwnerFQN", "RequesterPartyId", "SubjectPartyId", "ParentCaseId", "OpenedDate", "TargetDate", "ClosedDate", "LastUpdatedDate", "StageEnteredDate", "SLAStatus", "IsOnHold", "HoldReasonCode", "OutcomeCode", "ResolutionSummary", "RowVersion"],
+    "CaseType": ["CaseTypeId", "CaseTypeCode", "Name", "Description", "IsActive", "InitialStageCode", "DefaultPriorityCode", "DefaultSLAProfileId", "WorkflowVersion", "ConfigurationVersion", "AIEnabled", "RetentionCode"],
+    "CaseStageDefinition": ["StageDefinitionId", "CaseTypeId", "StageCode", "Name", "Sequence", "StageWorkflowName", "EntryRuleCode", "ExitRuleCode", "SLAProfileId", "AssignmentRuleCode", "AllowReentry", "AllowSkip", "RequiresHumanCompletion", "IsTerminal", "IsActive"],
+    "AllowedStageTransition": ["TransitionId", "CaseTypeId", "FromStageCode", "OutcomeCode", "ToStageCode", "GuardRuleCode", "ApprovalRuleCode", "IsReopen", "IsActive"],
+    "CaseStageInstance": ["CaseStageInstanceId", "CaseId", "StageCode", "Iteration", "Status", "StartedDate", "TargetDate", "CompletedDate", "CompletedByFQN", "OutcomeCode", "OutcomeReason", "ChildWorkflowInstanceId", "SLAStatus", "EscalationLevel", "IsCurrent"],
+    "CaseParty": ["CasePartyId", "CaseId", "PartyType", "RoleCode", "DisplayName", "ExternalReference", "Email", "Phone", "Organisation", "SensitivityCode", "IsPrimary"],
+    "EvidenceItem": ["EvidenceId", "CaseId", "StageInstanceId", "EvidenceTypeCode", "Title", "Description", "DocumentReference", "SourceSystem", "SourceRecordId", "Version", "ReceivedDate", "SubmittedByFQN", "VerificationStatus", "VerifiedByFQN", "VerifiedDate", "ConfidentialityCode", "Hash", "IsRequired", "IsCurrent"],
+    "CaseTask": ["CaseTaskId", "CaseId", "StageInstanceId", "TaskTypeCode", "AssignedRole", "AssignedGroup", "AssignedUserFQN", "Status", "CreatedDate", "AcceptedDate", "DueDate", "CompletedDate", "OutcomeCode", "EscalationLevel", "IsBlocking", "WorkflowSerialNumber"],
+    "Decision": ["DecisionId", "CaseId", "StageInstanceId", "DecisionTypeCode", "RecommendationCode", "DispositionCode", "Rationale", "DeciderFQN", "DecisionDate", "ApprovalLevel", "AdverseFlag", "EffectiveDate", "ExpiryDate", "SupersedesDecisionId", "AIInteractionId"],
+    "Communication": ["CommunicationId", "CaseId", "StageInstanceId", "Direction", "ChannelCode", "Recipient", "Subject", "BodyReference", "TemplateCode", "CreatedDate", "SentDate", "DeliveryStatus", "ExternalMessageId"],
+    "CaseComment": ["CommentId", "CaseId", "StageInstanceId", "CommentTypeCode", "CommentText", "CreatedByFQN", "CreatedDate", "VisibilityCode", "IsPinned"],
+    "CaseRelationship": ["CaseRelationshipId", "CaseId", "RelatedCaseId", "RelationshipTypeCode", "CreatedByFQN", "CreatedDate", "Reason"],
+    "CaseCommand": ["CommandId", "CaseId", "CommandTypeCode", "RequestedByFQN", "RequestedDate", "Reason", "Status", "ProcessedDate", "ProcessingResult", "CorrelationId"],
+    "AuditEvent": ["AuditEventId", "CaseId", "StageInstanceId", "EventTypeCode", "ObjectType", "ObjectId", "ActorType", "ActorFQN", "EventDate", "BeforeState", "AfterState", "Reason", "CorrelationId", "WorkflowInstanceId"],
+    "AIInteraction": ["AIInteractionId", "CaseId", "StageInstanceId", "PurposeCode", "ProviderCode", "ModelId", "ModelVersion", "PromptTemplateCode", "InputReference", "OutputReference", "ConfidenceScore", "CreatedDate", "ReviewedByFQN", "ReviewedDate", "HumanDispositionCode", "ErrorCode", "ContainsSensitiveData", "CorrelationId"]
+  },
+  "configuration_entities": ["Status", "Priority", "Severity", "Risk", "Confidentiality", "Jurisdiction", "Outcome", "EvidenceType", "CommunicationType", "DecisionType", "SLAProfile", "SLAThreshold", "BusinessCalendar", "AssignmentRule", "BusinessRule", "EscalationRule", "NotificationTemplate", "Role", "AuthorityLevel", "AIPolicy"],
+  "extensions": {
+    "instructions": "Add solution-specific entities/fields here. Link extensions to CaseId or CaseStageInstanceId; do not duplicate or delete canonical entities.",
+    "entities": []
+  }
+}

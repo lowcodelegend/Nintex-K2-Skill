@@ -25,6 +25,101 @@ namespace K2SmartFormsCli
             _manifest = manifest;
         }
 
+        public void ListControlTypes()
+        {
+            WithFormsManager(delegate(FormsManager manager)
+            {
+                foreach (var control in manager.GetControlTypes().ControlTypes.Cast<ControlTypeInfo>().OrderBy(x => x.Name))
+                    Console.WriteLine(control.Name + "\t" + control.FullName);
+                return 0;
+            });
+        }
+
+        public void DescribeControlType(string name)
+        {
+            WithFormsManager(delegate(FormsManager manager)
+            {
+                var control = manager.GetControlTypes().ControlTypes.Cast<ControlTypeInfo>()
+                    .FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
+                if (control == null) throw new CliException("K2 control type not found: " + name);
+                Console.WriteLine(control.Name + "\t" + control.FullName);
+                foreach (var property in control.GetType().GetProperties().OrderBy(x => x.Name))
+                {
+                    object value;
+                    try { value = property.GetValue(control, null); }
+                    catch { continue; }
+                    Console.WriteLine("  " + property.Name + " = " + (value == null ? "<null>" : value.ToString()));
+                }
+                return 0;
+            });
+        }
+
+        public void FindViewsUsingControl(string controlType)
+        {
+            WithFormsManager(delegate(FormsManager manager)
+            {
+                var matches = 0;
+                foreach (var view in manager.GetViews().Views.Cast<ViewInfo>().OrderBy(x => x.CategoryPath).ThenBy(x => x.Name))
+                {
+                    XDocument document;
+                    try { document = XDocument.Parse(manager.GetViewDefinition(view.Guid)); }
+                    catch { continue; }
+                    var count = document.Descendants().Count(x => x.Name.LocalName == "Control" &&
+                        string.Equals((string)x.Attribute("Type"), controlType, StringComparison.OrdinalIgnoreCase));
+                    if (count == 0) continue;
+                    matches++;
+                    Console.WriteLine(view.Name + "\t" + view.Guid + "\t" + view.CategoryPath + "\t" + count);
+                }
+                Console.WriteLine("Matched views: " + matches);
+                return 0;
+            });
+        }
+
+        public void PrintViewDefinition(string name)
+        {
+            WithFormsManager(delegate(FormsManager manager)
+            {
+                if (!manager.CheckViewExists(name)) throw new CliException("K2 View not found: " + name);
+                var view = manager.GetView(name);
+                Console.WriteLine(manager.GetViewDefinition(view.Guid));
+                return 0;
+            });
+        }
+
+        public void PrintFormDefinition(string name)
+        {
+            WithFormsManager(delegate(FormsManager manager)
+            {
+                if (!manager.CheckFormExists(name)) throw new CliException("K2 Form not found: " + name);
+                var form = manager.GetForm(name);
+                Console.WriteLine(manager.GetFormDefinition(form.Guid));
+                return 0;
+            });
+        }
+
+        public void PrintViewControlDefinition(string viewName, string controlType)
+        {
+            WithFormsManager(delegate(FormsManager manager)
+            {
+                if (!manager.CheckViewExists(viewName)) throw new CliException("K2 View not found: " + viewName);
+                var view = manager.GetView(viewName);
+                var document = XDocument.Parse(manager.GetViewDefinition(view.Guid));
+                var controls = document.Descendants().Where(x => x.Name.LocalName == "Control" &&
+                    string.Equals((string)x.Attribute("Type"), controlType, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (controls.Count == 0) throw new CliException("View '" + viewName + "' has no control of type '" + controlType + "'.");
+                foreach (var control in controls)
+                {
+                    Console.WriteLine(control.ToString());
+                    var id = (string)control.Attribute("ID");
+                    foreach (var rule in document.Descendants().Where(x => x.Name.LocalName == "Event" &&
+                        x.DescendantsAndSelf().Any(d => string.Equals((string)d.Attribute("SourceID"), id, StringComparison.OrdinalIgnoreCase) ||
+                                                       string.Equals((string)d.Attribute("TargetID"), id, StringComparison.OrdinalIgnoreCase))))
+                        Console.WriteLine(rule.ToString());
+                }
+                return 0;
+            });
+        }
+
         public void CheckConnectionAndInputs()
         {
             WithFormsManager(delegate(FormsManager manager)
@@ -426,6 +521,9 @@ namespace K2SmartFormsCli
                                 .SelectMany(f => f.MasterDetail.Details).Where(d => string.Equals(d.View, view.Name, StringComparison.OrdinalIgnoreCase)).ToList();
                             var isDetail = detailRelationships.Count > 0;
                             definition = ViewPresentationDefinition.Apply(definition, view, isMaster, isDetail);
+                            definition = ViewChartLayoutDefinition.Apply(definition, view);
+                            definition = ViewMetricCardLayoutDefinition.Apply(definition, view);
+                            definition = ViewLifecycleLayoutDefinition.Apply(definition, view);
                             if (isDetail) definition = MasterDetailRules.SuppressUnfilteredDetailLoads(definition, view.Name, detailRelationships);
                             renderedViews[view.Name] = definition;
                         }
@@ -453,6 +551,13 @@ namespace K2SmartFormsCli
                         manager.DeleteView(info.Guid);
                         Console.WriteLine("View: removed for replacement (" + view.Name + ", " + info.Guid + ")");
                     }
+                    // K2 5.10 keeps deleted Form/View metadata in the current authoring session.
+                    // Reconnect before generating replacements so a normal deploy is as reliable as a later --resume.
+                    manager.Connection.Close();
+                    manager.DeleteConnection();
+                    System.Threading.Thread.Sleep(250);
+                    manager.CreateConnection();
+                    manager.Connection.Open(BuildConnectionString());
                 }
 
                 using (var generator = new AutoGenerator(manager.Connection))
@@ -524,6 +629,9 @@ namespace K2SmartFormsCli
                         .SelectMany(f => f.MasterDetail.Details).Where(d => string.Equals(d.View, declaredView.Name, StringComparison.OrdinalIgnoreCase)).ToList();
                     var isDetail = detailRelationships.Count > 0;
                     ViewPresentationDefinition.Verify(definition, declaredView, isMaster, isDetail);
+                    ViewChartLayoutDefinition.Verify(definition, declaredView);
+                    ViewMetricCardLayoutDefinition.Verify(definition, declaredView);
+                    ViewLifecycleLayoutDefinition.Verify(definition, declaredView);
                     if (isDetail) MasterDetailRules.VerifyDetailViewLoads(definition, declaredView.Name, detailRelationships);
                     Console.WriteLine("View verification: OK (" + expected + ", " + info.Guid + ", v" + info.Version + ", " + info.Type + ")");
                 }

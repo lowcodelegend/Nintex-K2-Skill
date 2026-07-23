@@ -1,0 +1,129 @@
+{
+  "capturedUtc": "2026-07-23T09:00:31.5905756Z",
+  "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime",
+  "forms": [
+    "GUX.Gold Command Centre",
+    "GUX.My Work"
+  ],
+  "viewports": [
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "name": "laptop",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "name": "tablet",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "name": "mobile",
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "captures": [
+    {
+      "form": "GUX.Gold Command Centre",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 1000,
+      "image": "gux-gold-command-centre-desktop.png",
+      "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.Gold%20Command%20Centre/",
+      "title": "GUX.Gold Command Centre",
+      "textLength": 951,
+      "horizontalOverflow": false,
+      "knownK2Diagnostics": []
+    },
+    {
+      "form": "GUX.Gold Command Centre",
+      "viewport": "laptop",
+      "width": 1280,
+      "height": 800,
+      "image": "gux-gold-command-centre-laptop.png",
+      "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.Gold%20Command%20Centre/",
+      "title": "GUX.Gold Command Centre",
+      "textLength": 951,
+      "horizontalOverflow": false,
+      "knownK2Diagnostics": []
+    },
+    {
+      "form": "GUX.Gold Command Centre",
+      "viewport": "tablet",
+      "width": 768,
+      "height": 1024,
+      "image": "gux-gold-command-centre-tablet.png",
+      "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.Gold%20Command%20Centre/",
+      "title": "GUX.Gold Command Centre",
+      "textLength": 887,
+      "horizontalOverflow": false,
+      "knownK2Diagnostics": []
+    },
+    {
+      "form": "GUX.Gold Command Centre",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "image": "gux-gold-command-centre-mobile.png",
+      "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.Gold%20Command%20Centre/",
+      "title": "GUX.Gold Command Centre",
+      "textLength": 887,
+      "horizontalOverflow": false,
+      "knownK2Diagnostics": []
+    },
+    {
+      "form": "GUX.My Work",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 1000,
+      "image": "gux-my-work-desktop.png",
+      "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.My%20Work/",
+      "title": "GUX.My Work",
+      "textLength": 722,
+      "horizontalOverflow": false,
+      "knownK2Diagnostics": []
+    },
+    {
+      "form": "GUX.My Work",
+      "viewport": "laptop",
+      "width": 1280,
+      "height": 800,
+      "image": "gux-my-work-laptop.png",
+      "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.My%20Work/",
+      "title": "GUX.My Work",
+      "textLength": 722,
+      "horizontalOverflow": false,
+      "knownK2Diagnostics": []
+    },
+    {
+      "form": "GUX.My Work",
+      "viewport": "tablet",
+      "width": 768,
+      "height": 1024,
+      "image": "gux-my-work-tablet.png",
+      "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.My%20Work/",
+      "title": "GUX.My Work",
+      "textLength": 652,
+      "horizontalOverflow": false,
+      "knownK2Diagnostics": []
+    },
+    {
+      "form": "GUX.My Work",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "image": "gux-my-work-mobile.png",
+      "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.My%20Work/",
+      "title": "GUX.My Work",
+      "textLength": 652,
+      "horizontalOverflow": false,
+      "knownK2Diagnostics": []
+    }
+  ],
+  "knownDiagnosticPolicy": "K2 5.10 emits a non-blocking DataLabel setValue null-index diagnostic on generated capture Views; any other browser diagnostic fails evidence capture."
+}

@@ -1,0 +1,45 @@
+{
+  "recordedUtc": "2026-07-23T10:48:53.723Z",
+  "width": 1440,
+  "height": 900,
+  "frameCount": 71,
+  "video": "gux-page-load-and-transition.mp4",
+  "videoBytes": 189837,
+  "timeline": [
+    {
+      "name": "recording-started",
+      "elapsedMilliseconds": 401
+    },
+    {
+      "name": "command-navigation-start",
+      "elapsedMilliseconds": 430
+    },
+    {
+      "name": "command-ready",
+      "elapsedMilliseconds": 1619,
+      "title": "GUX.Gold Command Centre",
+      "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.Gold%20Command%20Centre/",
+      "ready": true,
+      "shellVersion": "2026.07.23.5"
+    },
+    {
+      "name": "my-work-clicked",
+      "elapsedMilliseconds": 3027,
+      "clicked": true,
+      "curtainVisible": true
+    },
+    {
+      "name": "my-work-ready",
+      "elapsedMilliseconds": 3330,
+      "title": "GUX.My Work",
+      "url": "https://spk2.trials.demome.tech/Runtime/Runtime/Form/GUX.My%20Work/",
+      "ready": true,
+      "shellVersion": "2026.07.23.5"
+    },
+    {
+      "name": "recording-ended",
+      "elapsedMilliseconds": 4930
+    }
+  ],
+  "diagnostics": []
+}

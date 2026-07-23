@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "name": "SPT native-tabs example Style Profile",
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "styleProfile": {
+    "systemName": "SPT Native Tabs Sidebar",
+    "displayName": "SPT Native Tabs Sidebar",
+    "description": "Clean modern sidebar that relocates a Form's real native K2 tabs.",
+    "categoryPath": "K2 Skills\\SPT.Native Tabs Example",
+    "previewFormId": null,
+    "replaceExisting": false,
+    "files": [
+      {
+        "type": "css",
+        "source": "../../../skills/k2-style-profiles/assets/examples/native-tabs-sidebar/dist/tabs-sidebar-critical.min.css",
+        "target": "spt-critical.v1.css"
+      },
+      {
+        "type": "css",
+        "source": "assets/spt-polish.css",
+        "target": "spt-polish.v1.css"
+      },
+      {
+        "type": "js",
+        "source": "assets/spt-config.js",
+        "target": "spt-config.v1.js"
+      },
+      {
+        "type": "js",
+        "source": "../../../skills/k2-style-profiles/assets/examples/native-tabs-sidebar/dist/tabs-sidebar.min.js",
+        "target": "spt-shell.v1.js"
+      }
+    ]
+  },
+  "hosting": {
+    "enabled": true,
+    "configureIis": true,
+    "siteName": "K2",
+    "applicationPath": "K2/",
+    "virtualPath": "/SPTAssets",
+    "physicalPath": "C:\\inetpub\\spt-style-example-assets",
+    "baseUrl": "https://spk2.trials.demome.tech/SPTAssets",
+    "additionalFiles": [
+      {
+        "type": "css",
+        "source": "../../../skills/k2-style-profiles/assets/examples/native-tabs-sidebar/dist/tabs-sidebar-application.min.css",
+        "target": "spt-application.v1.css"
+      }
+    ]
+  },
+  "verification": {
+    "requireHttps": true,
+    "requireDesignerIsolation": true,
+    "verifyHttp": true,
+    "httpTimeoutSeconds": 20
+  }
+}

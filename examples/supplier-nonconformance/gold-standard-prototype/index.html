@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b1220">
+  <title>Northstar Quality — Experience Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
+      <button class="brand" data-route="command" aria-label="Northstar Quality home"><span class="brand-mark">N</span><span><b>Northstar</b><small>Quality operations</small></span></button>
+      <nav id="primaryNav"></nav>
+      <div class="sidebar-foot">
+        <button class="mini-profile"><span class="avatar">AM</span><span><b>Alex Morgan</b><small>Quality manager</small></span><span>•••</span></button>
+      </div>
+    </aside>
+    <div class="app-frame">
+      <header class="topbar">
+        <button class="icon-button mobile-only" id="menuButton" aria-label="Open menu">☰</button>
+        <button class="search-trigger" id="searchButton"><span>⌕</span><span>Search cases, suppliers, lots…</span><kbd>Ctrl K</kbd></button>
+        <div class="top-actions">
+          <button class="icon-button" data-toast="You’re all caught up" aria-label="Notifications">♢<span class="notification-dot"></span></button>
+          <button class="button primary compact" data-route="initiate"><span>＋</span> New case</button>
+        </div>
+      </header>
+      <main id="main" tabindex="-1"></main>
+    </div>
+  </div>
+  <div class="scrim" id="scrim"></div>
+  <dialog class="command-dialog" id="commandDialog">
+    <div class="command-head"><span>⌕</span><input id="commandInput" aria-label="Search" placeholder="Search or jump to…" autocomplete="off"><kbd>Esc</kbd></div>
+    <div class="command-body" id="commandResults"></div>
+    <footer><span>↑↓ Navigate</span><span>↵ Open</span><span>Prototype data</span></footer>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>

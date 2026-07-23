@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "application": {
+    "name": "TST.Reusable Case UX",
+    "rootCategoryPath": "K2 Skills\\TST.Case UX Test",
+    "solutionCode": "TST",
+    "theme": "Lithium",
+    "styleProfile": "Test Style"
+  },
+  "dashboard": {
+    "page": "operations-dashboard",
+    "formName": "TST.Quality Operations",
+    "summary": {
+      "viewName": "TST.Operations KPIs",
+      "smartObject": "TST_DashboardSummary",
+      "components": [
+        { "id": "open-cases", "property": "OpenCaseCount", "label": "Open cases" },
+        { "id": "sla-at-risk", "property": "SLAAtRiskCount", "tone": "warning" }
+      ]
+    },
+    "charts": [
+      {
+        "component": "cases-by-stage",
+        "viewName": "TST.Cases by Stage",
+        "smartObject": "TST_CasesByStage",
+        "categoryProperty": "StageLabel",
+        "valueProperty": "CaseCount",
+        "title": "Cases by stage"
+      }
+    ],
+    "queues": [
+      {
+        "component": "urgent-work",
+        "viewName": "TST.Urgent Work",
+        "smartObject": "TST_UrgentWork",
+        "properties": ["CaseNumber", "Title", "SLAStatus"]
+      }
+    ]
+  },
+  "workspace": {
+    "viewName": "TST.Case Workspace",
+    "shellFormName": "TST.Case Management",
+    "analyticsTab": "Analytics",
+    "lifecycleComponent": "case-lifecycle",
+    "currentStageProperty": "CurrentStageCode",
+    "stages": [
+      { "code": "CAPTURE", "label": "Capture" },
+      { "code": "INVESTIGATE", "label": "Investigate" },
+      { "code": "CLOSE", "label": "Close" }
+    ]
+  },
+  "runtimeBaseUrl": "https://k2.example.test/Runtime"
+}

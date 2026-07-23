@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "name": "SPL link-sidebar example Style Profile",
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "styleProfile": {
+    "systemName": "SPL Link Sidebar",
+    "displayName": "SPL Link Sidebar",
+    "description": "Clean modern cross-Form shell backed by a navigation SmartObject.",
+    "categoryPath": "K2 Skills\\SPL.Link Sidebar Example",
+    "previewFormId": null,
+    "replaceExisting": false,
+    "files": [
+      {
+        "type": "css",
+        "source": "../../../skills/k2-style-profiles/assets/examples/smartobject-sidebar/dist/sidebar-critical.min.css",
+        "target": "spl-critical.v1.css"
+      },
+      {
+        "type": "css",
+        "source": "assets/spl-polish.css",
+        "target": "spl-polish.v1.css"
+      },
+      {
+        "type": "js",
+        "source": "assets/spl-config.js",
+        "target": "spl-config.v1.js"
+      },
+      {
+        "type": "js",
+        "source": "../../../skills/k2-style-profiles/assets/examples/smartobject-sidebar/dist/sidebar-shell.min.js",
+        "target": "spl-shell.v1.js"
+      }
+    ]
+  },
+  "hosting": {
+    "enabled": true,
+    "configureIis": true,
+    "siteName": "K2",
+    "applicationPath": "K2/",
+    "virtualPath": "/SPLAssets",
+    "physicalPath": "C:\\inetpub\\spl-style-example-assets",
+    "baseUrl": "https://spk2.trials.demome.tech/SPLAssets",
+    "additionalFiles": [
+      {
+        "type": "css",
+        "source": "../../../skills/k2-style-profiles/assets/examples/smartobject-sidebar/dist/sidebar-application.min.css",
+        "target": "spl-application.v1.css"
+      }
+    ]
+  },
+  "verification": {
+    "requireHttps": true,
+    "requireDesignerIsolation": true,
+    "verifyHttp": true,
+    "httpTimeoutSeconds": 20
+  }
+}

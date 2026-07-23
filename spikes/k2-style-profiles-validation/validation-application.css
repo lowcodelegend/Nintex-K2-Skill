@@ -1,0 +1,7 @@
+/*
+ * Separately hosted runtime-only asset used to validate hosting.additionalFiles.
+ * It is intentionally not referenced by the validation Style Profile.
+ */
+html:not(.designer) {
+  --k2style-validation-application-asset: ready;
+}

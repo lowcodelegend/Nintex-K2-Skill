@@ -8,6 +8,11 @@ From the skill directory:
 & '.\scripts\k2wf.ps1' render '<manifest.json>' --output '<workflow.json>'
 & '.\scripts\k2wf.ps1' export '<manifest.json>' --output '<workflow.json>'
 & '.\scripts\k2wf.ps1' deploy '<manifest.json>' --confirm
+& '.\scripts\k2wf.ps1' start '<manifest.json>' --data CaseId=1 --confirm
+& '.\scripts\k2wf.ps1' status '<manifest.json>'
+& '.\scripts\k2wf.ps1' worklist '<manifest.json>'
+& '.\scripts\k2wf.ps1' instance-data '<manifest.json>' --id 123
+& '.\scripts\k2wf.ps1' action '<manifest.json>' --serial '123_16' --action Approve --confirm
 & '.\scripts\k2wf.ps1' inspect '<manifest.json>'
 & '.\scripts\k2wf.ps1' verify '<manifest.json>'
 & '.\scripts\k2wf.ps1' unlock '<manifest.json>' --confirm

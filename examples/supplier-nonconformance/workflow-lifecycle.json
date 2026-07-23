@@ -1,0 +1,9 @@
+{
+  "schemaVersion":1,"name":"SNC.Supplier Nonconformance lifecycle",
+  "k2":{"designerHost":"smartforms","host":"localhost","port":5555,"integrated":true,"securityLabel":"K2"},
+  "application":{"rootCategoryPath":"K2 Skills\\SNC.Supplier Nonconformance","workflowCategoryName":"SNC.Supplier Nonconformance WFs"},
+  "workflow":{"name":"SNC.Case Lifecycle","kind":"case-lifecycle","publish":true,"replaceExisting":true,"comment":"Configuration-driven parent case lifecycle",
+    "caseLifecycle":{"resolverSmartObject":"SNC_SupplierNonconformance_SNC_ResolveCaseLifecycleStage","resolverMethod":"List","stateSmartObject":"SNC_SupplierNonconformance_SNC_CaseLifecycleState","stateMethod":"Read","caseIdInput":"CaseId","caseIdDataField":"CaseId","stageInstanceProperty":"CaseStageInstanceId","stageWorkflowProperty":"StageWorkflowName","isTerminalProperty":"IsTerminal","childStageInstanceInput":"CaseStageInstanceId","workflowIds":{"SNC.Supplier Nonconformance WFs\\SNC.Stage Capture":1062,"SNC.Supplier Nonconformance WFs\\SNC.Stage Validate":1068,"SNC.Supplier Nonconformance WFs\\SNC.Stage Classify":1063,"SNC.Supplier Nonconformance WFs\\SNC.Stage Assign":1061,"SNC.Supplier Nonconformance WFs\\SNC.Stage Investigate":1066,"SNC.Supplier Nonconformance WFs\\SNC.Stage Decide":1065,"SNC.Supplier Nonconformance WFs\\SNC.Stage Resolve":1067,"SNC.Supplier Nonconformance WFs\\SNC.Stage Close":1064}},
+    "smartForms":{"form":"SNC.New Nonconformance","startState":"SNC.Lifecycle Start","startRuleContains":"btnSubmitCase","makeStartStateDefault":false,"startOnly":true,"primarySmartObject":"SNC_SupplierNonconformance_SNC_Case"}
+  }
+}

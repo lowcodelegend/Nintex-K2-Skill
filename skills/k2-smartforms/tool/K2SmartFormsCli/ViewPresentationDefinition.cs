@@ -10,7 +10,9 @@ namespace K2SmartFormsCli
         public static string Apply(string xml, ViewDefinition view, bool master, bool detail)
         {
             var document = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
-            if (view.Type == "capture")
+            ApplyHiddenProperties(document, view);
+            ApplyPropertyLabels(document, view);
+            if (view.Type == "capture" && (view.Charts == null || view.Charts.Count == 0))
             {
                 if (view.LayoutColumns == 4) ApplyFourColumnLayout(document, view.Name);
                 else ApplyTwoColumnLayout(document, view.Name);
@@ -35,7 +37,9 @@ namespace K2SmartFormsCli
         public static void Verify(string xml, ViewDefinition view, bool master, bool detail)
         {
             var document = XDocument.Parse(xml);
-            if (view.Type == "capture")
+            VerifyHiddenProperties(document, view);
+            VerifyPropertyLabels(document, view);
+            if (view.Type == "capture" && (view.Charts == null || view.Charts.Count == 0))
             {
                 var body = FindBodyGrid(document, view.Name);
                 var expected = view.LayoutColumns == 4 ? new[] { "20%", "30%", "20%", "30%" } : new[] { "40%", "60%" };
@@ -72,6 +76,80 @@ namespace K2SmartFormsCli
         private static bool IsButtonControl(string type)
         {
             return !string.IsNullOrWhiteSpace(type) && type.EndsWith("Button", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static void ApplyHiddenProperties(XDocument document, ViewDefinition view)
+        {
+            foreach (var property in view.HiddenProperties)
+            {
+                var field = document.Descendants().FirstOrDefault(x => x.Name.LocalName == "Field" &&
+                    string.Equals(ChildValue(x, "FieldName"), property, StringComparison.OrdinalIgnoreCase));
+                if (field == null) throw new CliException("Generated View '" + view.Name + "' has no field for hidden property '" + property + "'.");
+                var fieldId = (string)field.Attribute("ID");
+                var controlIds = document.Descendants().Where(x => x.Name.LocalName == "Control" &&
+                    string.Equals((string)x.Attribute("FieldID"), fieldId, StringComparison.OrdinalIgnoreCase))
+                    .Select(x => (string)x.Attribute("ID")).Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+                if (controlIds.Count == 0) throw new CliException("Generated View '" + view.Name + "' has no control for hidden property '" + property + "'.");
+                foreach (var row in document.Descendants().Where(x => x.Name.LocalName == "Row" &&
+                    x.Descendants().Any(reference => reference.Name.LocalName == "Control" && controlIds.Contains((string)reference.Attribute("ID"), StringComparer.OrdinalIgnoreCase))).ToList()) row.Remove();
+            }
+        }
+
+        private static void VerifyHiddenProperties(XDocument document, ViewDefinition view)
+        {
+            foreach (var property in view.HiddenProperties)
+            {
+                var field = document.Descendants().FirstOrDefault(x => x.Name.LocalName == "Field" && string.Equals(ChildValue(x, "FieldName"), property, StringComparison.OrdinalIgnoreCase));
+                if (field == null) throw new CliException("View '" + view.Name + "' has no field for hidden property '" + property + "'.");
+                var fieldId = (string)field.Attribute("ID");
+                var controlIds = document.Descendants().Where(x => x.Name.LocalName == "Control" && string.Equals((string)x.Attribute("FieldID"), fieldId, StringComparison.OrdinalIgnoreCase))
+                    .Select(x => (string)x.Attribute("ID")).Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+                if (document.Descendants().Where(x => x.Name.LocalName == "Row").Any(row => row.Descendants().Any(reference => reference.Name.LocalName == "Control" && controlIds.Contains((string)reference.Attribute("ID"), StringComparer.OrdinalIgnoreCase))))
+                    throw new CliException("View '" + view.Name + "' hidden property '" + property + "' remains placed in the visible layout.");
+            }
+        }
+
+        private static void ApplyPropertyLabels(XDocument document, ViewDefinition view)
+        {
+            foreach (var label in view.PropertyLabels)
+            {
+                var row = FindPropertyRow(document, view, label.Key);
+                var labelControl = row.Descendants().Where(x => x.Name.LocalName == "Control").Select(reference => FindControlDefinition(document, (string)reference.Attribute("ID")))
+                    .FirstOrDefault(control => control != null && string.Equals((string)control.Attribute("Type"), "Label", StringComparison.OrdinalIgnoreCase));
+                if (labelControl == null) throw new CliException("Generated View '" + view.Name + "' has no label control for property '" + label.Key + "'.");
+                var properties = labelControl.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
+                if (properties == null) { properties = new XElement(labelControl.Name.Namespace + "Properties"); labelControl.Add(properties); }
+                SetProperty(properties, "Text", label.Value);
+            }
+        }
+
+        private static void VerifyPropertyLabels(XDocument document, ViewDefinition view)
+        {
+            foreach (var label in view.PropertyLabels)
+            {
+                var row = FindPropertyRow(document, view, label.Key);
+                var labelControl = row.Descendants().Where(x => x.Name.LocalName == "Control").Select(reference => FindControlDefinition(document, (string)reference.Attribute("ID")))
+                    .FirstOrDefault(control => control != null && string.Equals((string)control.Attribute("Type"), "Label", StringComparison.OrdinalIgnoreCase));
+                if (labelControl == null || !string.Equals(PropertyValue(labelControl, "Text"), label.Value, StringComparison.Ordinal))
+                    throw new CliException("View '" + view.Name + "' property '" + label.Key + "' does not use label '" + label.Value + "'.");
+            }
+        }
+
+        private static XElement FindPropertyRow(XDocument document, ViewDefinition view, string property)
+        {
+            var field = document.Descendants().FirstOrDefault(x => x.Name.LocalName == "Field" && string.Equals(ChildValue(x, "FieldName"), property, StringComparison.OrdinalIgnoreCase));
+            if (field == null) throw new CliException("View '" + view.Name + "' has no field for property label '" + property + "'.");
+            var fieldId = (string)field.Attribute("ID");
+            var control = document.Descendants().FirstOrDefault(x => x.Name.LocalName == "Control" && string.Equals((string)x.Attribute("FieldID"), fieldId, StringComparison.OrdinalIgnoreCase));
+            var controlId = control == null ? null : (string)control.Attribute("ID");
+            var row = document.Descendants().FirstOrDefault(x => x.Name.LocalName == "Row" && x.Descendants().Any(reference => reference.Name.LocalName == "Control" && string.Equals((string)reference.Attribute("ID"), controlId, StringComparison.OrdinalIgnoreCase)));
+            if (row == null) throw new CliException("View '" + view.Name + "' property '" + property + "' is not placed in the visible layout for label override.");
+            return row;
+        }
+
+        private static XElement FindControlDefinition(XDocument document, string id)
+        {
+            return document.Descendants().FirstOrDefault(x => x.Name.LocalName == "Control" && string.Equals((string)x.Attribute("ID"), id, StringComparison.OrdinalIgnoreCase) && x.Attribute("Type") != null);
         }
 
         private static void ApplyFourColumnLayout(XDocument document, string viewName)

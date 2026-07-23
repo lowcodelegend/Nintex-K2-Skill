@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "name": "SNC.Classify stage",
+  "k2": {
+    "designerHost": "smartforms",
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "application": {
+    "rootCategoryPath": "K2 Skills\\SNC.Supplier Nonconformance",
+    "workflowCategoryName": "SNC.Supplier Nonconformance WFs"
+  },
+  "workflow": {
+    "name": "SNC.Stage Classify",
+    "kind": "request-approval",
+    "publish": true,
+    "replaceExisting": true,
+    "comment": "Reusable classification stage",
+    "requestStatusUpdate": {
+      "name": "SNC.Record Classification Result",
+      "smartObject": "SNC_SupplierNonconformance_SNC_CaseStageInstance",
+      "method": "Update",
+      "identifierProperty": "CaseStageInstanceId",
+      "identifierDataField": "CaseStageInstanceId",
+      "statusProperty": "OutcomeCode",
+      "statusValue": "PENDING",
+      "approvedStatusValue": "CLASSIFIED",
+      "rejectedStatusValue": "ESCALATED"
+    },
+    "email": {
+      "name": "SNC.Classification assigned",
+      "from": "$environment:From Address",
+      "to": [
+        "$originator"
+      ],
+      "subject": "Classify supplier nonconformance",
+      "body": "Classify severity, risk and priority.",
+      "html": false
+    },
+    "userTask": {
+      "name": "SNC.Classify Case",
+      "assignees": [
+        "$originator"
+      ],
+      "instructions": "Classify and prioritise the case.",
+      "actions": [
+        "Approve",
+        "Reject"
+      ],
+      "formUrl": "https://spk2.trials.demome.tech/Runtime/Form/SNC.Supplier%20Nonconformance/",
+      "requestIdParameter": "CaseStageInstanceId"
+    },
+    "smartForms": {
+      "form": "SNC.Stage Task",
+      "startState": "SNC.Classify Start",
+      "taskState": "SNC.Classify Task",
+      "startRuleContains": "Create Button",
+      "makeStartStateDefault": false,
+      "workflowStripLocation": "bottom"
+    }
+  }
+}

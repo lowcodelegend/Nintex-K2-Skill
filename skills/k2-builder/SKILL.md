@@ -11,6 +11,8 @@ Coordinate the installed specialists in dependency order:
 2. `$k2-smartforms` for Views, Forms, rules, and runtime CRUD.
 3. `$k2-workflows` for HTML5 workflows and SmartForms integration.
 
+For persistent case-management applications, use `$k2-case-management` first to define the canonical/extended case model, lifecycle, parent and stage workflows, transitions, SLAs, decisions, evidence, and audit contract. This skill remains authoritative for turning that design into supported K2 artifacts and verifying the implementation.
+
 Specialist manifests remain authoritative for their artifacts. The solution manifest owns dependencies, shared policy, entry points, scenarios, and cleanup scope.
 
 ## Environment

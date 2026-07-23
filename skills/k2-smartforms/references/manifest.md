@@ -58,6 +58,75 @@
 }
 ```
 
+## Native charts
+
+Add `charts` to a dedicated `capture` View. Category and value properties must also be selected in `properties`; a parameterless `defaultListMethod` supplies the chart data. The chart transformer removes the generated source-property rows. Declare a separate `list` View over the same SmartObject/properties beside it as the accessible, sortable, exportable data alternative.
+
+```json
+"charts": [{
+  "name": "chtCasesByStage",
+  "title": "Open cases by stage",
+  "type": "bar",
+  "categoryProperty": "StageLabel",
+  "valueProperty": "CaseCount",
+  "height": 260,
+  "showLegend": false,
+  "showLabels": true,
+  "emptyState": "No open cases."
+}]
+```
+
+Supported types are `column`, `bar`, `line`, `area`, `pie`, and `donut`; height must be 180–800 pixels. The live environment must register `GenericChart`. Use a governed aggregate SmartObject projection, not an unbounded transactional List.
+
+## Metric cards
+
+Add `metricCards` to a dedicated `capture` View whose parameterless List method returns exactly one summary row. Each property must also appear in `properties`. The generated View maps the result into responsive read-only Data Labels with concise labels and explanatory tooltips, then removes the generated source-property rows.
+
+```json
+"metricCards": [{
+  "property": "OpenCaseCount",
+  "label": "Open cases",
+  "tone": "neutral",
+  "explanation": "Cases not in a terminal state."
+}, {
+  "property": "SLAAtRiskCount",
+  "label": "SLA at risk",
+  "tone": "warning",
+  "explanation": "Open cases approaching or beyond their SLA threshold."
+}]
+```
+
+Supported tones are `neutral`, `positive`, `warning`, `critical`, and `info`. Tone is semantic metadata for consistent Style Profile treatment; never rely on colour alone to convey status. Keep KPI definitions in a governed SQL view or procedure and document the population, time basis, and threshold behind each value.
+
+## Hidden bound properties
+
+Use `hiddenProperties` on a capture View when a generated method still requires technical/defaulted fields but the user should not see them. Every name must remain selected in `properties`; the CLI preserves its SmartObject field, control, defaults, and method/rule mappings while removing its generated row from the visible layout. Use this for a dedicated initiation View, never to conceal workflow state on a general workspace where operators need context, and never to bypass required user input.
+
+```json
+"hiddenProperties": ["CaseId", "Status", "CurrentStageCode", "ConfigurationVersion"]
+```
+
+Use `propertyLabels` on task-specific capture Views to replace technical property captions without changing the SmartObject contract, for example `{ "PriorityCode": "Priority", "OwnerFQN": "Owner" }`. Keys must be selected, visible properties and values must be non-empty. Prefer business language; keep database suffixes such as `Code`, `Id`, and `FQN` out of reporter-facing Forms unless they carry necessary meaning.
+
+## Lifecycle trackers
+
+Add `lifecycleTrackers` to a `capture` View and select the current-stage property in `properties`. The CLI transforms that property's generated control into the registered native K2 `Progress` control while preserving its field ID, Read result mapping, method mappings, and any declared default value.
+
+```json
+"lifecycleTrackers": [{
+  "name": "Case Lifecycle",
+  "property": "CurrentStageCode",
+  "stages": [
+    { "code": "CAPTURE", "label": "Capture" },
+    { "code": "INVESTIGATE", "label": "Investigate" },
+    { "code": "DECIDE", "label": "Review & Decide" },
+    { "code": "CLOSE", "label": "Close & Learn" }
+  ]
+}]
+```
+
+Stage codes must be unique and match the values persisted by the lifecycle model. At least two stages are required. The generated control is read-only and disabled; lifecycle changes must use governed commands rather than direct selection.
+
 ## Fields
 
 `k2` supports integrated authentication by default. For explicit AD authentication, set `integrated` false plus `domain`, `userName`, and `passwordEnvironmentVariable`; never store the password itself.
@@ -232,6 +301,8 @@ Declare one master and one or more editable-list children on a Form:
 ```
 
 The master must be a `capture` View containing its key and selected Create/Update/Read methods. Each detail must be `capture-list` with `editable` and selected Create/Update/Delete/List methods. Put every required child collection in `details`; generation or integration drift never authorizes collapsing it into the master. The CLI adds one Form-level button (`saveButtonText`, default `Save`) with Create and Update branches based on whether the master key is blank. `successMessageTitle` and `successMessageBody` customize the small informational popup that executes last after either successful persistence branch; their defaults are `Saved` and `The record and its line items were saved successfully.` Create maps the returned SmartObject identity to the master View field before child foreign-key use; Update processes `Changed`, `Added`, and `Removed` states. The CLI removes every detail View's unfiltered List initialization/refresh actions. After each master Read path, a separate Form handler tests that the master key is not blank and passes it to every detail foreign-key List input. The CLI hides every generated master Item View button plus detail Save/Refresh buttons, while retaining detail Add/Edit/Delete controls for item-state editing. Verification rejects missing, duplicate, unfiltered, ungated, or misordered detail List actions on any master Read path, visible bypass buttons, missing success feedback or returned-key mappings, and persistence outside the Form Save event.
+
+For a guided initiation journey, add `masterDetail.review` with `view`, `keyProperty`, `readMethod`, and `tab`. Both Save branches load that review View from the returned/current master key before focusing the review tab. Add `workflowStartButton` at Form level with `name`, `text`, and final `tab`; this emits one stable native OnClick rule in the base state for start-only workflow integration. Workflow-created states may clone base rules, so reconciliation and verification preserve those states while enforcing the master-detail contract on the authoritative base state.
 
 `capture-list` is a manifest intent: the CLI uses K2's List generator with editable mode, producing the native editable-list View and item-state rules. On complete solution forms, combine it with a list tab and `listClickTabNavigation` so a selected master is read before its child List runs.
 

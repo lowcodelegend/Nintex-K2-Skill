@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "application": {"name":"{{CODE}}.Case Experience","rootCategoryPath":"K2 Skills\\{{CODE}}.Case","solutionCode":"{{CODE}}","theme":"Lithium","styleProfile":"{{STYLE_PROFILE}}"},
+  "dashboard": {
+    "page":"operations-dashboard","formName":"{{CODE}}.Quality Operations",
+    "summary":{"viewName":"{{CODE}}.Operations KPIs","smartObject":"{{SUMMARY_SMARTOBJECT}}","components":[{"id":"open-cases","property":"OpenCaseCount"}]},
+    "charts":[{"component":"cases-by-stage","viewName":"{{CODE}}.Cases by Stage","smartObject":"{{STAGE_METRICS_SMARTOBJECT}}","categoryProperty":"StageLabel","valueProperty":"CaseCount"}],
+    "queues":[{"component":"urgent-work","viewName":"{{CODE}}.Urgent Work","smartObject":"{{URGENT_WORK_SMARTOBJECT}}","properties":["CaseId","CaseNumber","Title"]}]
+  },
+  "myWork": {
+    "formName":"{{CODE}}.My Work",
+    "worklistTab":"My Tasks",
+    "worklist":{"rows":20,"refreshIntervalSeconds":120,"showToolbar":true,"showFilter":true,"showSearch":false,"enableSearch":true,"height":"445px","openTaskInNewWindow":true,"actions":["viewWorkflow","sleep","redirect","release","share"]},
+    "queues":[{"tab":"Urgent Team Work","viewName":"{{CODE}}.Urgent Work","title":"Urgent cases needing attention"}]
+  },
+  "workspace": {
+    "viewName":"{{CODE}}.Case Workspace",
+    "shellFormName":"{{CODE}}.Case Management",
+    "workspaceTab":"Case Workspace",
+    "sectionTabs":[
+      {"name":"Overview","views":["{{CODE}}.Case Workspace","{{CODE}}.Commands","{{CODE}}.Case Detail","{{CODE}}.Parties"]},
+      {"name":"Investigation","views":["{{CODE}}.Evidence","{{CODE}}.AI Interactions"]},
+      {"name":"Collaboration","views":["{{CODE}}.Communications","{{CODE}}.Comments"]},
+      {"name":"Decisions & Actions","views":["{{CODE}}.Decisions","{{CODE}}.Corrective Actions"]},
+      {"name":"Activity & History","views":["{{CODE}}.Case Tasks","{{CODE}}.Stage History"]}
+    ],
+    "analyticsTab":"Analytics",
+    "lifecycleComponent":"case-lifecycle",
+    "title":"Case Lifecycle",
+    "currentStageProperty":"CurrentStageCode",
+    "stages":[
+      {"code":"CAPTURE","label":"Capture"},
+      {"code":"VALIDATE","label":"Validate"},
+      {"code":"CLASSIFY","label":"Classify & Prioritise"},
+      {"code":"ASSIGN","label":"Assign & Route"},
+      {"code":"INVESTIGATE","label":"Investigate or Fulfil"},
+      {"code":"DECIDE","label":"Review & Decide"},
+      {"code":"RESOLVE","label":"Resolve & Communicate"},
+      {"code":"CLOSE","label":"Close & Learn"}
+    ]
+  },
+  "reports": {
+    "formName":"{{CODE}}.Reports",
+    "shellTab":"Reports",
+    "views":[
+      {"group":"Operations","viewName":"{{CODE}}.Backlog Aging","title":"Backlog and aging","smartObject":"{{REPORT_AGING_SMARTOBJECT}}","categoryProperty":"AgingBucket","valueProperty":"CaseCount","type":"column"},
+      {"group":"Operations","viewName":"{{CODE}}.SLA Performance","title":"SLA performance","smartObject":"{{REPORT_SLA_SMARTOBJECT}}","categoryProperty":"SLAStatus","valueProperty":"CaseCount","type":"donut","showLegend":true},
+      {"group":"Performance","viewName":"{{CODE}}.Closure Throughput","title":"Closure throughput","smartObject":"{{REPORT_THROUGHPUT_SMARTOBJECT}}","categoryProperty":"PeriodLabel","valueProperty":"ClosedCaseCount","type":"line"},
+      {"group":"Performance","viewName":"{{CODE}}.CAPA Effectiveness","title":"Corrective action status","smartObject":"{{REPORT_CAPA_SMARTOBJECT}}","categoryProperty":"ActionStatus","valueProperty":"ActionCount","type":"bar"},
+      {"group":"Quality","viewName":"{{CODE}}.Case Outcomes","title":"Case outcomes","smartObject":"{{REPORT_OUTCOMES_SMARTOBJECT}}","categoryProperty":"OutcomeLabel","valueProperty":"CaseCount","type":"bar"},
+      {"group":"Quality","viewName":"{{CODE}}.Recurrence","title":"Recurrence","smartObject":"{{REPORT_RECURRENCE_SMARTOBJECT}}","categoryProperty":"RecurrenceLabel","valueProperty":"CaseCount","type":"bar"}
+    ]
+  },
+  "initiation": {
+    "journey":"canonical-initiation",
+    "formName":"{{CODE}}.New Case",
+    "masterView":"{{CODE}}.Case Workspace",
+    "captureViewName":"{{CODE}}.New Case Details",
+    "entryProperties":["Title","Description","Source","PriorityCode","SeverityCode","RiskCode","ConfidentialityCode"],
+    "propertyLabels":{"PriorityCode":"Priority","SeverityCode":"Severity","RiskCode":"Risk","ConfidentialityCode":"Confidentiality"},
+    "masterKeyProperty":"CaseId",
+    "reviewViewName":"{{CODE}}.New Case Review",
+    "smartObject":"{{CASE_SMARTOBJECT}}",
+    "reviewProperties":["CaseId","CaseNumber","Title","Description","PriorityCode","TargetDate"],
+    "detailsTab":"Case Details",
+    "evidenceTab":"Evidence",
+    "reviewTab":"Review & Submit",
+    "saveButtonText":"Save draft and review",
+    "submitButtonName":"btnSubmitCase",
+    "submitButtonText":"Submit case",
+    "details":[
+      {"step":"details","view":"{{CODE}}.Case Detail","foreignKeyProperty":"CaseId"},
+      {"step":"evidence","view":"{{CODE}}.Evidence","foreignKeyProperty":"CaseId"}
+    ]
+  },
+  "runtimeBaseUrl":"https://k2.example.test/Runtime"
+}

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "name": "SNC.Call Sub Workflow parent smoke",
+  "k2": {"designerHost":"smartforms","host":"localhost","port":5555,"integrated":true,"securityLabel":"K2"},
+  "application": {"rootCategoryPath":"K2 Skills\\SNC.Supplier Nonconformance","workflowCategoryName":"SNC.Supplier Nonconformance WFs"},
+  "workflow": {
+    "name":"SNC.Parent Smoke","kind":"call-subworkflow","publish":true,"replaceExisting":true,"comment":"Synchronous Call Sub Workflow publication probe",
+    "callSubWorkflow":{"workflow":"SNC.Supplier Nonconformance WFs\\SNC.Stage Smoke","workflowId":1059,"account":"Originator","waitFor":"all"}
+  }
+}

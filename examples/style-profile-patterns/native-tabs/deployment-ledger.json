@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 2,
+  "shortCode": "SPT",
+  "solution": "SPT.Native Tabs Example",
+  "deployedAtUtc": "2026-07-23T12:04:00Z",
+  "environment": "spk2-local",
+  "sourceRevision": "bc7d23c4bba36f895fafdfcfbaf292eabae62673",
+  "result": "complete",
+  "manifestChecksums": {
+    "manifest.json": "4feb3423e5d50c4745ec268f3405326614ec065a447bf581dd7fe70b37fd197",
+    "smartforms-manifest.json": "debb8e12959e04d5f565fcfd53021aef96aa94404f63de9b17a139f412c2b241",
+    "style-profile-manifest.json": "927346bc339035603ec2ec2e12db8ccac33454263a4649a25bdf3faac9dfd24c",
+    "solution-manifest.json": "b171e8fffd630664c0a90b9d483243c794909247a8e389b0a564b41ca43088fe"
+  },
+  "artifacts": [
+    { "id": "sql-database:SPT.NativeTabsExample", "layer": "sql", "kind": "database", "name": "SPT.NativeTabsExample", "action": "created", "location": "localhost", "identifier": null, "version": null, "source": "manifest.json", "verification": "SQL verification passed" },
+    { "id": "sql-schema:SPT", "layer": "sql", "kind": "schema", "name": "SPT", "action": "created", "location": "SPT.NativeTabsExample", "identifier": null, "version": null, "source": "sql/001_schema.sql", "verification": "verified" },
+    { "id": "sql-table:SPT.WorkItem", "layer": "sql", "kind": "table", "name": "SPT.WorkItem", "action": "created", "location": "SPT.NativeTabsExample", "identifier": null, "version": null, "source": "sql/001_schema.sql", "verification": "seeded and verified" },
+    { "id": "sql-view:SPT.DashboardSummary", "layer": "sql", "kind": "view", "name": "SPT.DashboardSummary", "action": "created", "location": "SPT.NativeTabsExample", "identifier": null, "version": null, "source": "sql/001_schema.sql", "verification": "List smoke passed" },
+    { "id": "k2-service:SPT.NativeTabsExampleSql", "layer": "smartobjects", "kind": "sql-service-instance", "name": "SPT.NativeTabsExampleSql", "action": "created", "location": "K2 management server", "identifier": "eadb4056-6a67-40f5-a2e8-0695ce492e8d", "version": null, "source": "manifest.json", "verification": "two generated SmartObjects verified" },
+    { "id": "smartobject:SPT.WorkItem", "layer": "smartobjects", "kind": "SmartObject", "name": "SPT_NativeTabsExampleSql_SPT_WorkItem", "action": "created", "location": "K2 Skills\\SPT.Native Tabs Example\\Data", "identifier": "SPT-WorkItem", "version": null, "source": "manifest.json", "verification": "CRUD/List and List smoke passed" },
+    { "id": "smartobject:SPT.DashboardSummary", "layer": "smartobjects", "kind": "SmartObject", "name": "SPT_NativeTabsExampleSql_SPT_DashboardSummary", "action": "created", "location": "K2 Skills\\SPT.Native Tabs Example\\Data", "identifier": "SPT-DashboardSummary", "version": null, "source": "manifest.json", "verification": "List smoke passed" },
+    { "id": "style-profile:SPT Native Tabs Sidebar", "layer": "style-profile", "kind": "style-profile", "name": "SPT Native Tabs Sidebar", "action": "created", "location": "K2 Skills\\SPT.Native Tabs Example", "identifier": "666f5054-7a2a-4bd6-b550-42626e4e6f48", "version": 1, "source": "style-profile-manifest.json", "verification": "profile and five HTTPS assets verified" },
+    { "id": "hosting:SPTAssets", "layer": "style-profile", "kind": "IIS-virtual-directory", "name": "SPTAssets", "action": "created", "location": "K2/SPTAssets", "identifier": "C:\\inetpub\\spt-style-example-assets", "version": null, "source": "style-profile-manifest.json", "verification": "critical CSS, polish CSS, configuration JS, shell JS and application CSS returned HTTP 200" },
+    { "id": "view:SPT.Dashboard Summary", "layer": "smartforms", "kind": "view", "name": "SPT.Dashboard Summary", "action": "created", "location": "K2 Skills\\SPT.Native Tabs Example\\Views", "identifier": "8d21007e-d92a-446e-9c4b-124309c4df60", "version": 1, "source": "smartforms-manifest.json", "verification": "Capture metric View verified" },
+    { "id": "view:SPT.Work Queue", "layer": "smartforms", "kind": "view", "name": "SPT.Work Queue", "action": "created", "location": "K2 Skills\\SPT.Native Tabs Example\\Views", "identifier": "d2222395-2e6f-4021-94f7-acfbc05d7363", "version": 1, "source": "smartforms-manifest.json", "verification": "List View verified" },
+    { "id": "view:SPT.Work Details", "layer": "smartforms", "kind": "view", "name": "SPT.Work Details", "action": "created", "location": "K2 Skills\\SPT.Native Tabs Example\\Views", "identifier": "ad88a430-c385-423f-9a36-aef9b01d7050", "version": 1, "source": "smartforms-manifest.json", "verification": "Capture View verified" },
+    { "id": "form:SPT.Tab Workspace", "layer": "smartforms", "kind": "form", "name": "SPT.Tab Workspace", "action": "created", "location": "K2 Skills\\SPT.Native Tabs Example\\Forms", "identifier": "b3c7a552-324e-4922-b4fb-0f70ed088a30", "version": 1, "source": "smartforms-manifest.json", "verification": "Style Profile, three native tabs, list-click rule and authenticated rendering verified" }
+  ],
+  "runtimeUrls": [
+    "https://spk2.trials.demome.tech/Runtime/Runtime/Form/SPT.Tab%20Workspace/"
+  ],
+  "verification": {
+    "finalBuilderGate": { "status": "passed", "evidence": "k2build verify exited 0 after both SmartObject and SmartForms checkpoints" },
+    "specialistChecks": [
+      "k2env validate passed",
+      "k2sql doctor, deploy and verify passed",
+      "k2style doctor, deploy and verify passed",
+      "k2forms doctor, deploy and verify passed",
+      "reusable fixture passed nine relocation, accessibility, keyboard, collapse, mobile, Designer-isolation and fail-open checks",
+      "authenticated live Form passed six relocation, selection, navigation, overflow and diagnostics checks",
+      "desktop and mobile screenshots have no horizontal overflow"
+    ],
+    "endToEndScenarios": [
+      {
+        "name": "Use relocated native tabs",
+        "status": "passed",
+        "evidence": "Authenticated Edge verified one relocated three-tab strip and selected Overview, Work Queue and Details in sequence without changing the Form URL or creating duplicate selection."
+      }
+    ]
+  },
+  "errata": [],
+  "rollbackNotes": [
+    "Use k2build cleanup with the solution manifest for Forms and SmartObjects, and k2style cleanup with the Style Profile manifest for the profile and hosted assets.",
+    "The source revision records the repository base; the example source and checksums include uncommitted work created during this deployment."
+  ]
+}

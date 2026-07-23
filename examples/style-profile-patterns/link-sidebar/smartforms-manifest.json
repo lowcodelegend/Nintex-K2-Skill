@@ -1,0 +1,93 @@
+{
+  "name": "SPL.Link Sidebar Example",
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "application": {
+    "rootCategoryPath": "K2 Skills\\SPL.Link Sidebar Example",
+    "theme": "Lithium",
+    "styleProfile": "SPL Link Sidebar",
+    "solutionCode": "SPL",
+    "replaceExisting": false,
+    "checkIn": true,
+    "commonHeader": {
+      "enabled": false,
+      "reason": "This example intentionally demonstrates its own isolated cross-Form shell."
+    },
+    "views": [
+      {
+        "name": "SPL.Application Navigation",
+        "smartObject": "SPL_LinkSidebarExampleSql_SPL_ApplicationNavigation",
+        "type": "list",
+        "properties": [
+          "NavigationCode",
+          "SectionLabel",
+          "Label",
+          "IconToken",
+          "TargetFormName",
+          "SortOrder",
+          "IsActive",
+          "ConfigurationVersion"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": []
+      },
+      {
+        "name": "SPL.Dashboard Summary",
+        "smartObject": "SPL_LinkSidebarExampleSql_SPL_DashboardSummary",
+        "type": "capture",
+        "properties": ["TotalItems", "OpenItems", "HighPriorityItems", "CompletedItems"],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
+        "metricCards": [
+          { "property": "TotalItems", "label": "All work", "tone": "neutral", "explanation": "All seeded example work items." },
+          { "property": "OpenItems", "label": "Open", "tone": "neutral", "explanation": "Work not yet completed." },
+          { "property": "HighPriorityItems", "label": "High priority", "tone": "warning", "explanation": "Open items marked high priority." },
+          { "property": "CompletedItems", "label": "Completed", "tone": "positive", "explanation": "Completed example work." }
+        ]
+      },
+      {
+        "name": "SPL.Work Items",
+        "smartObject": "SPL_LinkSidebarExampleSql_SPL_WorkItem",
+        "type": "list",
+        "properties": ["Reference", "Title", "OwnerName", "Status", "Priority", "DueDate"],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": ["toolbar"]
+      }
+    ],
+    "forms": [
+      {
+        "name": "SPL.Link Dashboard",
+        "useLegacyTheme": false,
+        "views": ["SPL.Application Navigation", "SPL.Dashboard Summary"],
+        "options": ["no-tabs"],
+        "viewTitles": {
+          "SPL.Application Navigation": "Application navigation",
+          "SPL.Dashboard Summary": "Workspace overview"
+        }
+      },
+      {
+        "name": "SPL.Link Work",
+        "useLegacyTheme": false,
+        "views": ["SPL.Application Navigation", "SPL.Work Items"],
+        "options": ["no-tabs"],
+        "viewTitles": {
+          "SPL.Application Navigation": "Application navigation",
+          "SPL.Work Items": "Work items"
+        }
+      }
+    ]
+  },
+  "verification": {
+    "expectedViews": ["SPL.Application Navigation", "SPL.Dashboard Summary", "SPL.Work Items"],
+    "expectedForms": ["SPL.Link Dashboard", "SPL.Link Work"],
+    "smokeTestRuntime": true,
+    "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime"
+  }
+}

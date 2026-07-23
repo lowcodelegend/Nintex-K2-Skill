@@ -1,0 +1,75 @@
+{
+  "name": "LPR.Leave Request Process data",
+  "application": {
+    "rootCategoryPath": "K2 Skills\\LPR.Leave Request Process"
+  },
+  "database": {
+    "server": "localhost",
+    "name": "LPR.LeaveRequestProcess",
+    "integratedSecurity": true,
+    "createIfMissing": true,
+    "commandTimeoutSeconds": 120,
+    "runtimePrincipal": "TRIALS\\k2svc",
+    "scripts": [
+      "sql/001_leave_request.sql"
+    ]
+  },
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2",
+    "serviceInstance": {
+      "systemName": "LPR.LeaveRequestProcess",
+      "displayName": "LPR.Leave Request Process",
+      "description": "SQL data service for the LPR leave request process",
+      "authenticationMode": "service-account",
+      "commandTimeoutSeconds": 30,
+      "useNativeSqlExecution": true,
+      "useSqlPaging": false,
+      "encryptConnection": false,
+      "onDifferentSqlServer": false
+    },
+    "smartObjects": {
+      "createNew": true,
+      "updateExisting": true,
+      "deleteRemoved": false
+    }
+  },
+  "verification": {
+    "sqlObjects": [
+      { "type": "table", "schema": "LPR", "name": "LeaveType" },
+      { "type": "table", "schema": "LPR", "name": "LeaveStatus" },
+      { "type": "table", "schema": "LPR", "name": "LeaveRequest" }
+    ],
+    "queries": [
+      {
+        "name": "LPR.Leave types seeded",
+        "sql": "SELECT COUNT(*) FROM LPR.LeaveType",
+        "expectedScalar": "4"
+      },
+      {
+        "name": "LPR.Workflow statuses seeded",
+        "sql": "SELECT COUNT(*) FROM LPR.LeaveStatus",
+        "expectedScalar": "4"
+      },
+      {
+        "name": "LPR.Lookup foreign keys enforced",
+        "sql": "SELECT COUNT(*) FROM sys.foreign_keys WHERE parent_object_id = OBJECT_ID(N'LPR.LeaveRequest') AND name IN (N'FK_LeaveRequest_LeaveType', N'FK_LeaveRequest_Status')",
+        "expectedScalar": "2"
+      },
+      {
+        "name": "LPR.Request checks enforced",
+        "sql": "SELECT COUNT(*) FROM sys.check_constraints WHERE parent_object_id = OBJECT_ID(N'LPR.LeaveRequest') AND name IN (N'CK_LeaveRequest_DateRange', N'CK_LeaveRequest_DaysRequested')",
+        "expectedScalar": "2"
+      }
+    ],
+    "smartObjectServiceObjects": [
+      "LPR-LeaveType",
+      "LPR-LeaveStatus",
+      "LPR-LeaveRequest"
+    ],
+    "minimumGeneratedSmartObjects": 3,
+    "smokeTestListMethods": true
+  }
+}

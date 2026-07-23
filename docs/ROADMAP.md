@@ -12,7 +12,7 @@ The target solution flow is:
 
 The SQL SmartObjects, SmartForms, and workflow skills should evolve from repeatable full generation/replacement into safe iterative reconcilers. Each tool should be able to import or discover the current artifact state, compare it semantically with manifest intent, preview a dependency-aware patch, modify only tool-owned elements, preserve compatible unmanaged Designer work, detect drift and edit conflicts, verify the result, and retain an export/version checkpoint for rollback. This is a mid-horizon goal, not a capability of the current releases.
 
-## K2 solution builder — v0.20 manifest-led fast cleanup implemented
+## K2 solution builder — v0.22 manifest-led orchestration implemented
 
 The `k2-builder` meta-skill defines the complete solution contract. `k2build deploy/verify` orchestrates specialist checkpoints and resumes interrupted solutions. `k2build cleanup` now consumes the same manifest and tears down workflow → forms → SmartObjects directly. SmartForms manifest-only cleanup skips broad dependency scans while enforcing exact category ownership, and workflow cleanup performs one runtime query and returns immediately when already absent.
 
@@ -20,7 +20,7 @@ Next increments should aggregate structured deployment results into the ledger, 
 
 ## Sub-skills
 
-### 1. K2 SQL SmartObjects — v0.4 master-detail verification implemented
+### 1. K2 SQL SmartObjects — v0.4.2 master-detail verification implemented
 
 Own SQL data modeling, scripts, generic approval matrices, declared master-detail PK/identity/FK/type/index verification, SQL Server Service Instances, generated SQL SmartObjects, and runtime List smoke tests.
 
@@ -39,9 +39,9 @@ Next increments:
 
 Create advanced/composite SmartObjects with controlled names, properties, methods, defaults, associations, and mappings to service objects. Cover cases where automatic generation is too coarse.
 
-### 3. K2 SmartForms builder — v0.13 master-detail feedback and presentation implemented
+### 3. K2 SmartForms builder — v0.21 operational presentation implemented
 
-The tool creates checked-in capture/list/content/editable-list views and multi-view forms using supported K2 APIs. Its Form-level master-detail transaction includes returned-key transfer, child item-state persistence, guarded/filtered loading, a configurable final success popup, and structural hiding of generated master buttons plus detail Save/Refresh. Generated labels are bold; capture grids use verified 40/60 or 20/30/20/30 label/control widths. It also supports cascading dropdowns, read-only properties, and hidden `tblDebug` variables. The bundled expense-claim fixture expresses the cross-layer contract and a disposable live regression proved its deployed definitions.
+The tool creates checked-in capture/list/content/editable-list views and multi-view forms using supported K2 APIs. Its Form-level master-detail transaction includes returned-key transfer, child item-state persistence, guarded/filtered loading, a configurable final success popup, and structural hiding of generated master buttons plus detail Save/Refresh. It also supports cascading dropdowns, read-only/hidden properties, business labels, metric cards, SmartObject-backed charts with accessible paired Lists, lifecycle Progress controls, flat dashboard/report ordering, and supported Form-definition diagnostics. The bundled fixtures and deployed case-management proof exercise these contracts.
 
 Next increments:
 
@@ -52,14 +52,14 @@ Next increments:
 - Hand-author responsive sections, tabs, controls, expressions, and conditional formatting through supported authoring APIs.
 - Add explicit confirmation dialogs and stronger generated delete patterns.
 - Preserve or export existing artifacts before replacement and add rollback.
-- Add authenticated browser automation for visual, accessibility, and full CRUD tests.
+- Extend authenticated browser automation from the implemented responsive/overflow/shell gates into full CRUD and task-action tests.
 - Add workflow start/action rules after the workflow-builder contract exists.
 - Add declarative process/activity filters for native Worklist tabs.
 - **Mid-horizon iterative improvement:** import existing form/view definitions with stable artifact, control, and rule identities; track tool ownership; patch only declared layout, control, method, and rule changes; preserve unmanaged Designer customizations; surface merge conflicts before deployment; and support export-backed rollback.
 
-### 4. K2 workflow builder — v0.8 approval matrices implemented
+### 4. K2 workflow builder — v0.13 approval matrices and stage workflows implemented
 
-The builder creates, exports, saves, publishes, inspects, verifies, and safely removes K2 Five HTML5 Workflow Designer JSON definitions. Its direct request-approval path retains the Human-example baseline. The new matrix path adds a native resolver SmartObject event, typed output data fields, a has-approver decision, data-driven User Task assignment, and an Approve loop for multi-stage routing; Reject exits immediately and no-more-stages completes approval. SmartForms Start/Task integration and customized task notification remain native.
+The builder creates, exports, saves, publishes, inspects, verifies, and safely removes K2 Five HTML5 Workflow Designer JSON definitions. Its direct request-approval path retains the Human-example baseline. The matrix path adds a native resolver SmartObject event, typed output data fields, a has-approver decision, data-driven User Task assignment, and an Approve loop for multi-stage routing. Declarative process/data fields and child-workflow calls support configuration-driven parent/stage lifecycles. SmartForms Start/Task integration and customized task notification remain native.
 
 Next increments:
 
@@ -69,19 +69,43 @@ Next increments:
 - Add subworkflows, exception paths, instance-start/task-action smoke tests, and rollback/import.
 - **Mid-horizon iterative improvement:** import the current HTML5 workflow JSON graph and K2 version metadata; assign stable ownership-aware node/link identities; generate a semantic graph diff; patch supported nodes, routes, mappings, and integrations without replacing unrelated Designer work; detect concurrent/manual edit conflicts; and support version/export-backed rollback.
 
-### 5. K2 categories and packaging
+### 5. K2 Style Profiles — v0.3 implemented
+
+Create, update, inspect, verify, and safely remove modern Style Profiles through the installed K2 Designer save implementation. Host exact CSS/JavaScript assets in isolated same-origin IIS virtual directories, preserve deterministic file order, and verify K2 metadata plus served bytes.
+
+The current release includes a SmartObject-backed cross-Form sidebar and a native-tabs relocation pattern. Both enforce Designer isolation, critical/application CSS separation, bounded fail-open behavior, responsive navigation, accessibility, and authenticated cold/warm/transition browser gates.
+
+Next increments:
+
+- Add content-hashed asset-name generation and manifest rewriting.
+- Add structured JSON output and reusable live validation for native-tab deployments.
+- Add CSP/nonces and cache-policy diagnostics for hardened environments.
+- Add an export/import handoff helper for K2 Package and Deployment scenarios without weakening absolute-URL review.
+
+### 6. K2 case management — v0.4 implemented
+
+Define configuration-driven persistent cases over a canonical extensible model, stable parent lifecycle, reusable child stages, governed transitions/commands, evidence, SLAs, assignments, decisions, audit, and bounded AI assistance. Compose a reusable operations dashboard, personal work, guided initiation, case workspace, reports, state variants, and solution-specific overlays before handing construction to the specialist skills.
+
+Next increments:
+
+- Compile more lifecycle/security contracts directly into specialist manifests.
+- Add reusable CAPA, complaint, grievance, claim, request, and authorisation overlays.
+- Add automated transition/SLA boundary tests and a compact deployment-ledger result feed.
+- Extend native browser scenarios from responsive evidence into complete role-based lifecycle journeys.
+
+### 7. K2 categories and packaging
 
 Manage category structure, artifact placement, dependency-aware package creation, environment-field substitution, promotion between environments, versioning, and rollback practices.
 
-### 6. K2 security and governance
+### 8. K2 security and governance
 
 Manage design-time authorization, runtime permissions, SmartObject data access policies, service-instance rights, workflow rights, identities, roles, and environment-specific security reviews.
 
-### 7. K2 integrations and extensions
+### 9. K2 integrations and extensions
 
 Handle REST/OData/web-service/assembly endpoints, custom service brokers, custom controls, custom workflow steps, JavaScript, and .NET extensions. Keep each connector family isolated behind its own reference/tooling module.
 
-### 8. K2 operations and diagnostics
+### 10. K2 operations and diagnostics
 
 Inspect workflow errors and instances, service health, SmartObject execution failures, logs, performance, reporting, deployment drift, and environment usage. Produce safe diagnostic bundles without modifying K2 databases.
 

@@ -24,7 +24,11 @@ If a browser/tool session left a lock, run `unlock <manifest> --confirm` and ref
 - With threshold, dimension, or stage routing, read [approval-matrices.md](references/approval-matrices.md). Omit direct assignees: the resolver's `ApproverValue` is authoritative and Approve loops until `HasApprover=false`.
 - Use `$environment:From Address` and `$originator` for supported dynamic fields. Prefer built-in `userTask.notification`; its templates support `{{request.<Property>}}`, `{{task.participantName}}`, and `{{task.worklistLink}}`.
 - Prefer native SmartForms integration because it creates StartProcess, LoadProcess, and ActionProcess rules. The Form must expose the request SmartObject as its primary Create reference. Deployment reconciles an existing tool-owned Start default in place and requires Task never be default.
+- For a parent lifecycle launched from a reviewed draft, set `smartForms.startOnly=true`, provide `primarySmartObject`, and target the dedicated final submit rule. Start-only integration adds StartProcess without requiring a User Task or Task state.
 - Use `start-end` only for a minimal smoke test. Use `json-file` only for compatible HTML5 Designer JSON.
+- Use `call-subworkflow` for one native child invocation with an explicit deployed target and wait policy. Deploy the child first; do not represent this primitive alone as a configuration-driven case lifecycle.
+- Use `case-lifecycle` for a configuration-driven parent that resolves and persists one lifecycle-state row, loads it through a normal SmartObject Read method, selects one of the eight canonical stage workflows, invokes it synchronously, and loops after the child persists its result. Deploy every child and its scalar stage-instance data field first.
+- For runtime validation, `start` supplies declared process data, `status` reports active/error instances, `worklist` reports current-user tasks, `instance-data` exposes diagnostic process fields, and confirmed `action` executes an explicitly named task action. These commands are test/operations aids and do not replace browser validation.
 
 ## Safety and boundary
 

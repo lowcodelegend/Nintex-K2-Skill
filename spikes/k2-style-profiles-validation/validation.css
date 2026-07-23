@@ -1,0 +1,9 @@
+/* K2 Style Profile creation/deployment validation. Runtime only. */
+html:not(.designer) {
+  --k2sp-validation-accent: #0f766e;
+}
+
+html:not(.designer) body.k2sp-validation,
+html:not(.designer) body {
+  accent-color: var(--k2sp-validation-accent);
+}

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime",
+  "designerUrl": "https://spk2.trials.demome.tech/Designer/",
+  "trustedAuthHost": "spk2.trials.demome.tech",
+  "assetUrls": {
+    "criticalCss": "https://spk2.trials.demome.tech/SPLAssets/spl-critical.v1.css",
+    "applicationCss": "https://spk2.trials.demome.tech/SPLAssets/spl-application.v1.css",
+    "bootJavaScript": "https://spk2.trials.demome.tech/SPLAssets/spl-shell.v1.js"
+  },
+  "startForm": {
+    "name": "SPL.Link Dashboard",
+    "title": "SPL.Link Dashboard"
+  },
+  "transitionForm": {
+    "name": "SPL.Link Work",
+    "title": "SPL.Link Work",
+    "navigationCode": "WORK"
+  },
+  "selectors": {
+    "shell": "#k2sp-shell",
+    "route": "[data-k2sp-route]",
+    "activeRoute": "[data-k2sp-route][aria-current=\"page\"]",
+    "nativeNavigationTitle": "[data-sf-title=\"Application navigation\"]",
+    "transition": ".k2sp-transition"
+  },
+  "stateObject": "__k2spSidebarBoot",
+  "readyClass": "k2sp-ready",
+  "leavingClass": "k2sp-leaving",
+  "runtimeRootClass": "k2sp-runtime",
+  "cacheVersionKey": "spl:navigation:version",
+  "bootTimeoutMilliseconds": 2500,
+  "requireCompression": true,
+  "requireCacheHeaders": true
+}

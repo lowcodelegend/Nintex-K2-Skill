@@ -18,7 +18,16 @@ namespace K2WorkflowCli
             var matrix = WorkflowJsonBuilder.BuildTaskDestinationItems(new UserTaskSettings { Assignees = new List<string>() }, 3, out title);
             Assert(title == "Approval Matrix Approver" && matrix.Count == 1, "matrix destination count");
             Assert(Convert.ToString(matrix[0]["smartFields"][0]["dataFieldReference"]).EndsWith("[{\"internalId\":3}]", StringComparison.Ordinal), "matrix data-field destination");
-            Console.WriteLine("SELFTEST SUCCEEDED: explicit direct assignees and authoritative matrix destination");
+            var workflow = new WorkflowSettings { Name = "Parent", DataFields = new List<WorkflowDataFieldSettings> { new WorkflowDataFieldSettings { Name = "CaseStageInstanceId", Type = "text" } }, CallSubWorkflow = new CallSubWorkflowSettings { Workflow = "App WFs\\Child", WorkflowId = 42, Account = "Originator", WaitFor = "all", Inputs = new Dictionary<string,string> { { "CaseStageInstanceId", "CaseStageInstanceId" } } } };
+            var root = JObject.Parse(WorkflowJsonBuilder.BuildCallSubWorkflow(workflow));
+            var call = (JObject)root["nodes"][1]["children"][0];
+            Assert((int)call["componentId"] == 30021, "Call Sub Workflow component");
+            Assert((int)call["configuration"]["waitMode"] == 1 && (bool)call["configuration"]["synchronous"], "Call Sub Workflow synchronous wait");
+            Assert((string)call["configuration"]["selectedWorkflowFullName"] == "App WFs\\Child", "Call Sub Workflow target");
+            Assert((int)call["configuration"]["selectedWorkflowId"] == 42, "Call Sub Workflow deployed target ID");
+            var send = (JObject)call["configuration"]["processSendFields"]["CaseStageInstanceId"];
+            Assert((string)send["value"]["smartFields"][0]["customTitle"] == "CaseStageInstanceId", "Call Sub Workflow scalar input mapping");
+            Console.WriteLine("SELFTEST SUCCEEDED: destinations, matrix routing, and synchronous Call Sub Workflow generation and data mapping");
         }
 
         private static void Assert(bool condition, string name)

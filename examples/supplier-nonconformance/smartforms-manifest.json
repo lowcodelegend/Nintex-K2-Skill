@@ -1,0 +1,109 @@
+{
+  "name": "SNC.Supplier Nonconformance Workspace",
+  "k2": { "host": "localhost", "port": 5555, "integrated": true, "securityLabel": "K2" },
+  "application": {
+    "rootCategoryPath": "K2 Skills\\SNC.Supplier Nonconformance",
+    "theme": "Lithium",
+    "styleProfile": "PSF UX v1",
+    "solutionCode": "SNC",
+    "replaceExisting": true,
+    "checkIn": true,
+    "views": [
+      {
+        "name": "SNC.Case List", "smartObject": "SNC_SupplierNonconformance_SNC_Case", "type": "list",
+        "properties": ["CaseNumber", "Title", "CaseId", "CurrentStageCode", "PriorityCode", "RiskCode", "OwnerFQN", "TargetDate", "SLAStatus"],
+        "methods": [], "defaultListMethod": "List", "options": ["toolbar"]
+      },
+      {
+        "name": "SNC.Case Workspace", "smartObject": "SNC_SupplierNonconformance_SNC_Case", "type": "capture",
+        "properties": ["CaseId", "CaseNumber", "CaseTypeId", "Title", "Description", "Source", "Status", "CurrentStageCode", "PreviousStageCode", "PriorityCode", "SeverityCode", "RiskCode", "ConfidentialityCode", "JurisdictionCode", "OwningTeam", "OwnerFQN", "OpenedDate", "TargetDate", "ClosedDate", "LastUpdatedDate", "StageEnteredDate", "SLAStatus", "IsOnHold", "HoldReasonCode", "OutcomeCode", "ResolutionSummary", "ConfigurationVersion", "WorkflowInstanceId"],
+        "readOnlyProperties": ["CaseId", "CaseTypeId", "Status", "CurrentStageCode", "PreviousStageCode", "OpenedDate", "ClosedDate", "LastUpdatedDate", "StageEnteredDate", "SLAStatus", "OutcomeCode", "ConfigurationVersion", "WorkflowInstanceId"],
+        "defaultValues": { "CaseTypeId": "1", "Status": "Draft", "CurrentStageCode": "CAPTURE", "PriorityCode": "Normal", "SeverityCode": "Minor", "RiskCode": "Low", "ConfidentialityCode": "Internal", "OpenedDate": "2026-07-21T00:00:00", "LastUpdatedDate": "2026-07-21T00:00:00", "StageEnteredDate": "2026-07-21T00:00:00", "SLAStatus": "OnTrack", "IsOnHold": "false", "ConfigurationVersion": "1" },
+        "methods": ["Create", "Read", "Update"], "layoutColumns": 2, "options": ["editable", "labels-left", "colon-labels", "toolbar"],
+        "lifecycleTrackers": [{
+          "name": "Case Lifecycle", "property": "CurrentStageCode",
+          "stages": [
+            { "code": "CAPTURE", "label": "Capture" },
+            { "code": "VALIDATE", "label": "Validate" },
+            { "code": "CLASSIFY", "label": "Classify & Prioritise" },
+            { "code": "ASSIGN", "label": "Assign & Route" },
+            { "code": "INVESTIGATE", "label": "Investigate" },
+            { "code": "DECIDE", "label": "Review & Decide" },
+            { "code": "RESOLVE", "label": "Resolve" },
+            { "code": "CLOSE", "label": "Close & Learn" }
+          ]
+        }]
+      },
+      {
+        "name": "SNC.Nonconformance Details", "smartObject": "SNC_SupplierNonconformance_SNC_NonconformanceDetail", "type": "capture-list",
+        "properties": ["NonconformanceDetailId", "CaseId", "SupplierId", "SupplierName", "PartNumber", "LotNumber", "QuantityAffected", "SpecificationReference", "ContainmentRequired", "ContainmentSummary"],
+        "readOnlyProperties": ["NonconformanceDetailId", "CaseId"], "methods": ["Create", "Update", "Delete", "List"], "defaultListMethod": "List", "options": ["editable", "toolbar"]
+      },
+      {
+        "name": "SNC.Evidence", "smartObject": "SNC_SupplierNonconformance_SNC_EvidenceItem", "type": "capture-list",
+        "properties": ["EvidenceId", "CaseId", "StageInstanceId", "EvidenceTypeCode", "Title", "Description", "DocumentReference", "SourceSystem", "SourceRecordId", "Version", "ReceivedDate", "SubmittedByFQN", "VerificationStatus", "VerifiedByFQN", "VerifiedDate", "ConfidentialityCode", "Hash", "IsRequired", "IsCurrent"],
+        "readOnlyProperties": ["EvidenceId", "CaseId"], "methods": ["Create", "Update", "Delete", "List"], "defaultListMethod": "List", "options": ["editable", "toolbar"]
+      },
+      {
+        "name": "SNC.Comments", "smartObject": "SNC_SupplierNonconformance_SNC_CaseComment", "type": "capture-list",
+        "properties": ["CommentId", "CaseId", "StageInstanceId", "CommentTypeCode", "CommentText", "CreatedByFQN", "CreatedDate", "VisibilityCode", "IsPinned"],
+        "readOnlyProperties": ["CommentId", "CaseId"], "methods": ["Create", "Update", "Delete", "List"], "defaultListMethod": "List", "options": ["editable", "toolbar"]
+      },
+      {
+        "name": "SNC.Corrective Actions", "smartObject": "SNC_SupplierNonconformance_SNC_CorrectiveAction", "type": "capture-list",
+        "properties": ["CorrectiveActionId", "CaseId", "StageInstanceId", "ActionTypeCode", "Description", "OwnerFQN", "DueDate", "Status", "VerificationResult", "CompletedDate"],
+        "readOnlyProperties": ["CorrectiveActionId", "CaseId"], "methods": ["Create", "Update", "Delete", "List"], "defaultListMethod": "List", "options": ["editable", "toolbar"]
+      },
+      { "name":"SNC.Stage History", "smartObject":"SNC_SupplierNonconformance_SNC_CaseStageInstance", "type":"capture-list", "properties":["CaseStageInstanceId","CaseId","StageCode","Iteration","Status","StartedDate","TargetDate","CompletedDate","CompletedByFQN","OutcomeCode","SLAStatus","EscalationLevel","IsCurrent"], "readOnlyProperties":["CaseStageInstanceId","CaseId","StageCode","Iteration","Status","StartedDate","TargetDate","CompletedDate","CompletedByFQN","OutcomeCode","SLAStatus","EscalationLevel","IsCurrent"], "defaultValues":{"StageCode":"CAPTURE","Iteration":"1","Status":"Active","StartedDate":"2026-07-21T00:00:00","SLAStatus":"OnTrack","EscalationLevel":"0","IsCurrent":"false"}, "methods":["Create","Update","Delete","List"], "defaultListMethod":"List", "options":["editable","toolbar"] },
+      { "name":"SNC.Parties", "smartObject":"SNC_SupplierNonconformance_SNC_CaseParty", "type":"capture-list", "properties":["CasePartyId","CaseId","PartyType","RoleCode","DisplayName","ExternalReference","Email","Phone","Organisation","SensitivityCode","IsPrimary"], "readOnlyProperties":["CasePartyId","CaseId"], "defaultValues":{"IsPrimary":"false"}, "methods":["Create","Update","Delete","List"], "defaultListMethod":"List", "options":["editable","toolbar"] },
+      { "name":"SNC.Case Tasks", "smartObject":"SNC_SupplierNonconformance_SNC_CaseTask", "type":"capture-list", "properties":["CaseTaskId","CaseId","StageInstanceId","TaskTypeCode","AssignedRole","AssignedGroup","AssignedUserFQN","Status","CreatedDate","AcceptedDate","DueDate","CompletedDate","OutcomeCode","EscalationLevel","IsBlocking","WorkflowSerialNumber"], "readOnlyProperties":["CaseTaskId","CaseId","WorkflowSerialNumber"], "defaultValues":{"Status":"Open","CreatedDate":"2026-07-21T00:00:00","EscalationLevel":"0","IsBlocking":"true"}, "methods":["Create","Update","Delete","List"], "defaultListMethod":"List", "options":["editable","toolbar"] },
+      { "name":"SNC.AI Interactions", "smartObject":"SNC_SupplierNonconformance_SNC_AIInteraction", "type":"capture-list", "properties":["AIInteractionId","CaseId","StageInstanceId","PurposeCode","ProviderCode","ModelId","ModelVersion","PromptTemplateCode","InputReference","OutputReference","ConfidenceScore","CreatedDate","ReviewedByFQN","ReviewedDate","HumanDispositionCode","ErrorCode","ContainsSensitiveData","CorrelationId"], "readOnlyProperties":["AIInteractionId","CaseId","CreatedDate","ErrorCode"], "defaultValues":{"CreatedDate":"2026-07-21T00:00:00","ContainsSensitiveData":"false"}, "methods":["Create","Update","Delete","List"], "defaultListMethod":"List", "options":["editable","toolbar"] },
+      { "name":"SNC.Decisions", "smartObject":"SNC_SupplierNonconformance_SNC_Decision", "type":"capture-list", "properties":["DecisionId","CaseId","StageInstanceId","DecisionTypeCode","RecommendationCode","DispositionCode","Rationale","DeciderFQN","DecisionDate","ApprovalLevel","AdverseFlag","EffectiveDate","ExpiryDate","SupersedesDecisionId","AIInteractionId"], "readOnlyProperties":["DecisionId","CaseId"], "defaultValues":{"DecisionDate":"2026-07-21T00:00:00","AdverseFlag":"false"}, "methods":["Create","Update","Delete","List"], "defaultListMethod":"List", "options":["editable","toolbar"] },
+      { "name":"SNC.Communications", "smartObject":"SNC_SupplierNonconformance_SNC_Communication", "type":"capture-list", "properties":["CommunicationId","CaseId","StageInstanceId","Direction","ChannelCode","Recipient","Subject","BodyReference","TemplateCode","CreatedDate","SentDate","DeliveryStatus","ExternalMessageId"], "readOnlyProperties":["CommunicationId","CaseId","ExternalMessageId"], "defaultValues":{"CreatedDate":"2026-07-21T00:00:00","DeliveryStatus":"Draft"}, "methods":["Create","Update","Delete","List"], "defaultListMethod":"List", "options":["editable","toolbar"] },
+      { "name":"SNC.Commands", "smartObject":"SNC_SupplierNonconformance_SNC_CaseCommand", "type":"capture-list", "properties":["CommandId","CaseId","CommandTypeCode","RequestedByFQN","RequestedDate","Reason","Status","ProcessedDate","ProcessingResult","CorrelationId"], "readOnlyProperties":["CommandId","CaseId","ProcessedDate","ProcessingResult"], "defaultValues":{"RequestedDate":"2026-07-21T00:00:00","Status":"Requested"}, "methods":["Create","Update","Delete","List"], "defaultListMethod":"List", "options":["editable","toolbar"] },
+      {
+        "name": "SNC.Stage Task", "smartObject": "SNC_SupplierNonconformance_SNC_CaseStageInstance", "type": "capture",
+        "properties": ["CaseStageInstanceId", "CaseId", "StageCode", "Iteration", "Status", "StartedDate", "TargetDate", "CompletedDate", "CompletedByFQN", "OutcomeCode", "OutcomeReason", "SLAStatus", "EscalationLevel", "IsCurrent", "StageStatus", "RequestedNextStageCode", "CompletionReason", "RequiresEscalation", "EscalationReasonCode", "RequiresApproval", "DecisionId", "ErrorCode", "ErrorMessage", "ResultReference"],
+        "readOnlyProperties": ["CaseStageInstanceId", "CaseId", "StageCode", "Iteration", "Status", "StartedDate", "TargetDate", "CompletedDate", "CompletedByFQN", "OutcomeCode", "SLAStatus", "EscalationLevel", "IsCurrent", "ErrorCode", "ErrorMessage"],
+        "defaultValues": { "CaseId": "1", "StageCode": "CAPTURE", "Iteration": "1", "Status": "Active", "StartedDate": "2026-07-21T00:00:00", "SLAStatus": "OnTrack", "EscalationLevel": "0", "IsCurrent": "true" },
+        "methods": ["Create", "Read", "Update"], "layoutColumns": 2, "options": ["editable", "labels-left", "colon-labels", "toolbar"]
+      }
+    ],
+    "forms": [
+      {
+        "name": "SNC.Supplier Nonconformance", "useLegacyTheme": false,
+        "views": ["SNC.Case List", "SNC.Case Workspace", "SNC.Nonconformance Details", "SNC.Stage History", "SNC.Parties", "SNC.Evidence", "SNC.Case Tasks", "SNC.AI Interactions", "SNC.Decisions", "SNC.Communications", "SNC.Comments", "SNC.Commands", "SNC.Corrective Actions"],
+        "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"],
+        "viewTitles": { "SNC.Case List": "Nonconformance Cases", "SNC.Case Workspace": "Case Summary", "SNC.Nonconformance Details": "Supplier Nonconformance", "SNC.Stage History":"Stage History", "SNC.Parties":"Parties", "SNC.Evidence": "Evidence", "SNC.Case Tasks":"Case Task History", "SNC.AI Interactions":"AI Assistance and Review", "SNC.Decisions":"Decisions", "SNC.Communications":"Communications", "SNC.Comments": "Comments", "SNC.Commands":"Governed Commands", "SNC.Corrective Actions": "Corrective and Preventive Actions" },
+        "tabs": [
+          { "name": "Cases", "views": ["SNC.Case List"] },
+          { "name": "Case Workspace", "views": ["SNC.Case Workspace", "SNC.Nonconformance Details", "SNC.Stage History", "SNC.Parties", "SNC.Evidence", "SNC.Case Tasks", "SNC.AI Interactions", "SNC.Decisions", "SNC.Communications", "SNC.Comments", "SNC.Commands", "SNC.Corrective Actions"] },
+          { "name": "My Tasks", "worklist": { "rows": 20, "refreshIntervalSeconds": 120, "showToolbar": true, "showFilter": true, "showSearch": false, "enableSearch": true, "height": "445px", "openTaskInNewWindow": true, "actions": ["viewWorkflow", "sleep", "redirect", "release", "share"] } }
+        ],
+        "listClickTabNavigation": [{ "sourceView": "SNC.Case List", "targetTab": "Case Workspace" }],
+        "masterDetail": {
+          "masterView": "SNC.Case Workspace", "masterKeyProperty": "CaseId", "masterCreateMethod": "Create", "masterUpdateMethod": "Update", "masterReadMethod": "Read", "saveButtonText": "Save Case",
+          "successMessageTitle": "Case saved", "successMessageBody": "The nonconformance case and its supporting records were saved successfully.",
+          "details": [
+            { "view": "SNC.Nonconformance Details", "foreignKeyProperty": "CaseId", "createMethod": "Create", "updateMethod": "Update", "deleteMethod": "Delete", "listMethod": "List" },
+            { "view": "SNC.Stage History", "foreignKeyProperty": "CaseId", "createMethod": "Create", "updateMethod": "Update", "deleteMethod": "Delete", "listMethod": "List" },
+            { "view": "SNC.Parties", "foreignKeyProperty": "CaseId", "createMethod": "Create", "updateMethod": "Update", "deleteMethod": "Delete", "listMethod": "List" },
+            { "view": "SNC.Evidence", "foreignKeyProperty": "CaseId", "createMethod": "Create", "updateMethod": "Update", "deleteMethod": "Delete", "listMethod": "List" },
+            { "view": "SNC.Case Tasks", "foreignKeyProperty": "CaseId", "createMethod": "Create", "updateMethod": "Update", "deleteMethod": "Delete", "listMethod": "List" },
+            { "view": "SNC.AI Interactions", "foreignKeyProperty": "CaseId", "createMethod": "Create", "updateMethod": "Update", "deleteMethod": "Delete", "listMethod": "List" },
+            { "view": "SNC.Decisions", "foreignKeyProperty": "CaseId", "createMethod": "Create", "updateMethod": "Update", "deleteMethod": "Delete", "listMethod": "List" },
+            { "view": "SNC.Communications", "foreignKeyProperty": "CaseId", "createMethod": "Create", "updateMethod": "Update", "deleteMethod": "Delete", "listMethod": "List" },
+            { "view": "SNC.Comments", "foreignKeyProperty": "CaseId", "createMethod": "Create", "updateMethod": "Update", "deleteMethod": "Delete", "listMethod": "List" },
+            { "view": "SNC.Commands", "foreignKeyProperty": "CaseId", "createMethod": "Create", "updateMethod": "Update", "deleteMethod": "Delete", "listMethod": "List" },
+            { "view": "SNC.Corrective Actions", "foreignKeyProperty": "CaseId", "createMethod": "Create", "updateMethod": "Update", "deleteMethod": "Delete", "listMethod": "List" }
+          ]
+        }
+      },
+      {
+        "name": "SNC.Stage Task", "useLegacyTheme": false, "views": ["SNC.Stage Task"], "options": ["no-tabs"],
+        "viewTitles": { "SNC.Stage Task": "Case Stage Task" }
+      }
+    ]
+  },
+  "verification": { "expectedViews": ["SNC.Case List", "SNC.Case Workspace", "SNC.Nonconformance Details", "SNC.Stage History", "SNC.Parties", "SNC.Evidence", "SNC.Case Tasks", "SNC.AI Interactions", "SNC.Decisions", "SNC.Communications", "SNC.Comments", "SNC.Commands", "SNC.Corrective Actions", "SNC.Stage Task"], "expectedForms": ["SNC.Supplier Nonconformance", "SNC.Stage Task"], "smokeTestRuntime": true, "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime" }
+}

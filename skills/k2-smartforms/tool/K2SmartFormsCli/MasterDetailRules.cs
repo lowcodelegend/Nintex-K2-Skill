@@ -15,6 +15,10 @@ namespace K2SmartFormsCli
         public string MasterCreateAction { get; set; }
         public string MasterUpdateAction { get; set; }
         public List<ResolvedMasterDetailChild> Details { get; set; }
+        public Guid ReviewViewGuid { get; set; }
+        public string ReviewViewName { get; set; }
+        public ResolvedViewField ReviewKey { get; set; }
+        public string ReviewReadAction { get; set; }
 
         public static ResolvedMasterDetailRules Resolve(FormsManager manager, FormDefinition form)
         {
@@ -46,6 +50,15 @@ namespace K2SmartFormsCli
                     DeleteAction = ResolveAction(document, child.DeleteMethod, "Removed", child.View),
                     ListAction = ResolveOptionalAction(document, child.ListMethod, null)
                 });
+            }
+            if (form.MasterDetail.Review != null)
+            {
+                var reviewInfo = manager.GetView(form.MasterDetail.Review.View);
+                var reviewDocument = XDocument.Parse(manager.GetViewDefinition(reviewInfo.Guid));
+                result.ReviewViewGuid = reviewInfo.Guid;
+                result.ReviewViewName = reviewInfo.Name;
+                result.ReviewKey = ResolveField(reviewDocument, form.MasterDetail.Review.KeyProperty, form.MasterDetail.Review.View);
+                result.ReviewReadAction = ResolveAction(reviewDocument, form.MasterDetail.Review.ReadMethod, null, form.MasterDetail.Review.View);
             }
             return result;
         }
@@ -190,19 +203,20 @@ namespace K2SmartFormsCli
             if (relationship == null) return xml;
             var document = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
             var form = document.Descendants().First(x => x.Name.LocalName == "Form");
+            var baseState = form.Elements().First(x => x.Name.LocalName == "States").Elements().First(x => x.Name.LocalName == "State");
             var masterInstance = FindInstance(form, relationship.MasterViewGuid, relationship.MasterViewName, formDefinition.Name);
-            var masterReads = FindMethodActions(form, masterInstance, relationship.Definition.MasterReadMethod, null).ToList();
+            var masterReads = FindMethodActions(baseState, masterInstance, relationship.Definition.MasterReadMethod, null).ToList();
             if (masterReads.Count == 0)
                 throw new CliException("K2 Form '" + formDefinition.Name + "' has no master Read action for '" + relationship.MasterViewName + "'.");
             var readHandlers = masterReads.Select(x => x.Ancestors().FirstOrDefault(y => y.Name.LocalName == "Handler"))
                 .Where(x => x != null).Distinct().ToList();
-            if (!DetailLoadsNeedReconciliation(form, relationship, masterInstance, readHandlers, formDefinition.Name)) return xml;
+            if (!DetailLoadsNeedReconciliation(form, baseState, relationship, masterInstance, readHandlers, formDefinition.Name)) return xml;
 
             var before = CaptureNonDetailContract(form, relationship, formDefinition.Name);
             foreach (var child in relationship.Details)
             {
                 var detailInstance = FindInstance(form, child.ViewGuid, child.ViewName, formDefinition.Name);
-                RemoveDetailListActions(form, child, detailInstance);
+                RemoveDetailListActions(baseState, child, detailInstance);
             }
             foreach (var handler in readHandlers)
                 handler.AddAfterSelf(BuildFilteredListHandler(form, relationship, masterInstance, formDefinition.Name));
@@ -210,7 +224,7 @@ namespace K2SmartFormsCli
             var after = CaptureNonDetailContract(form, relationship, formDefinition.Name);
             if (!before.SequenceEqual(after, StringComparer.Ordinal))
                 throw new CliException("Master-detail reconciliation changed Form states or non-detail actions for '" + formDefinition.Name + "'.");
-            VerifyDetailLoads(form, formDefinition, relationship, masterInstance, readHandlers);
+            VerifyDetailLoads(form, baseState, formDefinition, relationship, masterInstance, readHandlers);
             changed = true;
             return document.ToString(SaveOptions.DisableFormatting);
         }
@@ -220,31 +234,50 @@ namespace K2SmartFormsCli
             if (relationship == null) return;
             var document = XDocument.Parse(xml);
             var form = document.Descendants().First(x => x.Name.LocalName == "Form");
+            var baseState = form.Elements().First(x => x.Name.LocalName == "States").Elements().First(x => x.Name.LocalName == "State");
             var masterInstance = FindInstance(form, relationship.MasterViewGuid, relationship.MasterViewName, formDefinition.Name);
             var saveEvent = FindFormSaveEvent(form, relationship.Definition.SaveButtonText);
             if (saveEvent == null) throw new CliException("K2 Form '" + formDefinition.Name + "' has no Form-level master-detail Save button rule.");
             VerifyBatch(form, saveEvent, masterInstance, relationship.Definition.MasterCreateMethod, relationship.Details, new[] { "Added" }, relationship.MasterKey, formDefinition.Name);
             VerifyBatch(form, saveEvent, masterInstance, relationship.Definition.MasterUpdateMethod, relationship.Details, new[] { "Changed", "Added", "Removed" }, relationship.MasterKey, formDefinition.Name);
             VerifySuccessMessages(saveEvent, masterInstance, relationship, formDefinition.Name);
+            VerifyReviewNavigation(form, saveEvent, masterInstance, relationship, formDefinition.Name);
             var create = FindMethodActions(saveEvent, masterInstance, relationship.Definition.MasterCreateMethod, null).First();
             if (!HasMasterKeyResult(create, masterInstance, relationship.MasterKey.Id))
                 throw new CliException("K2 Form '" + formDefinition.Name + "' Form-level Create does not transfer the generated master key back to the master View field.");
-            var masterReads = FindMethodActions(form, masterInstance, relationship.Definition.MasterReadMethod, null).ToList();
+            var masterReads = FindMethodActions(baseState, masterInstance, relationship.Definition.MasterReadMethod, null).ToList();
             if (masterReads.Count == 0)
                 throw new CliException("K2 Form '" + formDefinition.Name + "' has no master Read action for '" + relationship.MasterViewName + "'.");
             var readHandlers = masterReads.Select(x => x.Ancestors().FirstOrDefault(y => y.Name.LocalName == "Handler"))
                 .Where(x => x != null).Distinct().ToList();
-            VerifyDetailPersistence(form, formDefinition, relationship, masterInstance);
-            VerifyDetailLoads(form, formDefinition, relationship, masterInstance, readHandlers);
+            VerifyDetailPersistence(form, baseState, formDefinition, relationship, masterInstance);
+            VerifyDetailLoads(form, baseState, formDefinition, relationship, masterInstance, readHandlers);
             Console.WriteLine("Master-detail form rules: OK (" + formDefinition.Name + ", master=" + relationship.MasterViewName + ", details=" + relationship.Details.Count + ", read paths=" + readHandlers.Count + ")");
         }
 
-        private static void VerifyDetailLoads(XElement form, FormDefinition formDefinition, ResolvedMasterDetailRules relationship, string masterInstance, IList<XElement> readHandlers)
+        private static void VerifyReviewNavigation(XElement form, XElement saveEvent, string masterInstance, ResolvedMasterDetailRules relationship, string formName)
+        {
+            if (relationship.Definition.Review == null) return;
+            var reviewInstance = FindInstance(form, relationship.ReviewViewGuid, relationship.ReviewViewName, formName);
+            var panel = form.Descendants().First(x => x.Name.LocalName == "Panel" && string.Equals(ChildValue(x, "Name"), relationship.Definition.Review.Tab, StringComparison.OrdinalIgnoreCase));
+            var panelId = (string)panel.Attribute("ID");
+            foreach (var method in new[] { relationship.Definition.MasterCreateMethod, relationship.Definition.MasterUpdateMethod })
+            {
+                var masterAction = FindMethodActions(saveEvent, masterInstance, method, null).Single();
+                var actions = masterAction.Parent.Elements().Where(x => x.Name.LocalName == "Action").ToList();
+                var read = actions.SingleOrDefault(x => string.Equals((string)x.Attribute("InstanceID"), reviewInstance, StringComparison.OrdinalIgnoreCase) && string.Equals(ReadProperty(x, "Method"), relationship.Definition.Review.ReadMethod, StringComparison.OrdinalIgnoreCase));
+                if (read == null || !HasMasterKeyMapping(read, masterInstance, relationship.MasterKey.Id, relationship.Definition.Review.KeyProperty)) throw new CliException("K2 Form '" + formName + "' does not load review View '" + relationship.ReviewViewName + "' from the saved master key after " + method + ".");
+                var focus = actions.SingleOrDefault(x => string.Equals((string)x.Attribute("Type"), "Focus", StringComparison.OrdinalIgnoreCase) && string.Equals(ReadProperty(x, "PanelID"), panelId, StringComparison.OrdinalIgnoreCase));
+                if (focus == null || actions.IndexOf(focus) <= actions.IndexOf(read)) throw new CliException("K2 Form '" + formName + "' must load the review before focusing tab '" + relationship.Definition.Review.Tab + "'.");
+            }
+        }
+
+        private static void VerifyDetailLoads(XElement form, XElement baseState, FormDefinition formDefinition, ResolvedMasterDetailRules relationship, string masterInstance, IList<XElement> readHandlers)
         {
             foreach (var child in relationship.Details)
             {
                 var detailInstance = FindInstance(form, child.ViewGuid, child.ViewName, formDefinition.Name);
-                var listActions = FindMethodActions(form, detailInstance, child.Definition.ListMethod, null).ToList();
+                var listActions = FindMethodActions(baseState, detailInstance, child.Definition.ListMethod, null).ToList();
                 if (listActions.Count == 0)
                     throw new CliException("K2 Form '" + formDefinition.Name + "' loads the master but has no Form-level List action for detail view '" + child.ViewName + "'.");
                 if (listActions.Any(x => !HasMasterKeyMapping(x, masterInstance, relationship.MasterKey.Id, child.Definition.ForeignKeyProperty)))
@@ -264,14 +297,14 @@ namespace K2SmartFormsCli
             }
         }
 
-        private static void VerifyDetailPersistence(XElement form, FormDefinition formDefinition, ResolvedMasterDetailRules relationship, string masterInstance)
+        private static void VerifyDetailPersistence(XElement form, XElement baseState, FormDefinition formDefinition, ResolvedMasterDetailRules relationship, string masterInstance)
         {
             foreach (var child in relationship.Details)
             {
                 var detailInstance = FindInstance(form, child.ViewGuid, child.ViewName, formDefinition.Name);
                 foreach (var state in new[] { "Added", "Changed", "Removed" })
                 {
-                    var matches = FindMethodActions(form, detailInstance, MethodForState(child, state), state)
+                    var matches = FindMethodActions(baseState, detailInstance, MethodForState(child, state), state)
                         .Where(x => state == "Removed" || HasMasterKeyMapping(x, masterInstance, relationship.MasterKey.Id, child.Definition.ForeignKeyProperty)).ToList();
                     if (matches.Count == 0)
                         throw new CliException("K2 Form '" + formDefinition.Name + "' has no valid Form-level " + state + " persistence action for detail view '" + child.ViewName + "'.");
@@ -279,12 +312,12 @@ namespace K2SmartFormsCli
             }
         }
 
-        private static bool DetailLoadsNeedReconciliation(XElement form, ResolvedMasterDetailRules relationship, string masterInstance, IList<XElement> readHandlers, string formName)
+        private static bool DetailLoadsNeedReconciliation(XElement form, XElement scope, ResolvedMasterDetailRules relationship, string masterInstance, IList<XElement> readHandlers, string formName)
         {
             foreach (var child in relationship.Details)
             {
                 var detailInstance = FindInstance(form, child.ViewGuid, child.ViewName, formName);
-                var actions = FindMethodActions(form, detailInstance, child.Definition.ListMethod, null).ToList();
+                var actions = FindMethodActions(scope, detailInstance, child.Definition.ListMethod, null).ToList();
                 if (actions.Count != readHandlers.Count || actions.Any(x =>
                     !HasMasterKeyMapping(x, masterInstance, relationship.MasterKey.Id, child.Definition.ForeignKeyProperty) ||
                     !HasMasterKeyNotBlankCondition(x, masterInstance, relationship.MasterKey.Id) ||
@@ -398,10 +431,40 @@ namespace K2SmartFormsCli
                     actions.Add(BuildStateAction(ns, child, child.DeleteAction, "Removed", masterInstance, relationship.MasterKey, detailInstance));
                 }
             }
+            if (relationship.Definition.Review != null)
+            {
+                var reviewInstance = FindInstance(form, relationship.ReviewViewGuid, relationship.ReviewViewName, ChildValue(form, "Name"));
+                actions.Add(BuildReviewReadAction(ns, relationship, masterInstance, reviewInstance));
+                actions.Add(BuildReviewFocusAction(form, relationship.Definition.Review.Tab));
+            }
             actions.Add(BuildSuccessMessage(ns, relationship.Definition.SuccessMessageTitle, relationship.Definition.SuccessMessageBody));
             return new XElement(ns + "Handler", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
                 new XElement(ns + "Properties", Property(ns, "HandlerName", "IfLogicalHandler", null, null), Property(ns, "Location", "form", null, null)),
                 new XElement(ns + "Conditions", BuildMasterKeyCondition(ns, masterInstance, relationship.MasterKey, !create)), actions);
+        }
+
+        private static XElement BuildReviewReadAction(XNamespace ns, ResolvedMasterDetailRules relationship, string masterInstance, string reviewInstance)
+        {
+            var action = XElement.Parse(relationship.ReviewReadAction);
+            action.SetAttributeValue("ID", NewId()); action.SetAttributeValue("DefinitionID", NewId());
+            action.SetAttributeValue("InstanceID", reviewInstance); action.SetAttributeValue("ExecutionType", "Synchronous");
+            action.Attributes("IsReference").Remove(); action.Attributes("IsInherited").Remove();
+            var parameters = action.Elements().FirstOrDefault(x => x.Name.LocalName == "Parameters");
+            if (parameters == null) { parameters = new XElement(ns + "Parameters"); action.Add(parameters); }
+            parameters.RemoveNodes();
+            parameters.Add(BuildMasterKeyParameter(ns, relationship.Definition.Review.KeyProperty, masterInstance, relationship.MasterKey));
+            var results = action.Elements().FirstOrDefault(x => x.Name.LocalName == "Results");
+            if (results != null) foreach (var result in results.Elements()) result.SetAttributeValue("TargetInstanceID", reviewInstance);
+            return action;
+        }
+
+        private static XElement BuildReviewFocusAction(XElement form, string tabName)
+        {
+            var ns = form.Name.Namespace;
+            var panel = form.Descendants().First(x => x.Name.LocalName == "Panel" && string.Equals(ChildValue(x, "Name"), tabName, StringComparison.OrdinalIgnoreCase));
+            var panelId = (string)panel.Attribute("ID");
+            return new XElement(ns + "Action", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()), new XAttribute("Type", "Focus"), new XAttribute("ExecutionType", "Synchronous"),
+                new XElement(ns + "Properties", Property(ns, "Location", "Form", null, null), Property(ns, "PanelID", panelId, tabName, tabName)));
         }
 
         private static XElement BuildSuccessMessage(XNamespace ns, string title, string body)

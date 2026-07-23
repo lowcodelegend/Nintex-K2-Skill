@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "name": "SNC.Validate stage",
+  "k2": {
+    "designerHost": "smartforms",
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "application": {
+    "rootCategoryPath": "K2 Skills\\SNC.Supplier Nonconformance",
+    "workflowCategoryName": "SNC.Supplier Nonconformance WFs"
+  },
+  "workflow": {
+    "name": "SNC.Stage Validate",
+    "kind": "request-approval",
+    "publish": true,
+    "replaceExisting": true,
+    "comment": "Reusable Validate stage",
+    "requestStatusUpdate": {
+      "name": "SNC.Record Validation Result",
+      "smartObject": "SNC_SupplierNonconformance_SNC_CaseStageInstance",
+      "method": "Update",
+      "identifierProperty": "CaseStageInstanceId",
+      "identifierDataField": "CaseStageInstanceId",
+      "statusProperty": "OutcomeCode",
+      "statusValue": "PENDING",
+      "approvedStatusValue": "VALID",
+      "rejectedStatusValue": "MORE_INFORMATION_REQUIRED"
+    },
+    "email": {
+      "name": "SNC.Validation assigned",
+      "from": "$environment:From Address",
+      "to": [
+        "$originator"
+      ],
+      "subject": "Supplier nonconformance validation",
+      "body": "Validate the case data and evidence.",
+      "html": false
+    },
+    "userTask": {
+      "name": "SNC.Validate Case",
+      "assignees": [
+        "$originator"
+      ],
+      "instructions": "Confirm eligibility, evidence and confidentiality.",
+      "actions": [
+        "Approve",
+        "Reject"
+      ],
+      "formUrl": "https://spk2.trials.demome.tech/Runtime/Form/SNC.Supplier%20Nonconformance/",
+      "requestIdParameter": "CaseStageInstanceId"
+    },
+    "smartForms": {
+      "form": "SNC.Stage Task",
+      "startState": "SNC.Validate Start",
+      "taskState": "SNC.Validate Task",
+      "startRuleContains": "Create Button",
+      "makeStartStateDefault": false,
+      "workflowStripLocation": "bottom"
+    }
+  }
+}

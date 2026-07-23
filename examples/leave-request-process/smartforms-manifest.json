@@ -1,0 +1,200 @@
+{
+  "name": "LPR.Leave Request Process UX",
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "application": {
+    "rootCategoryPath": "K2 Skills\\LPR.Leave Request Process",
+    "solutionCode": "LPR",
+    "theme": "Lithium",
+    "styleProfile": "LPR Blue and White",
+    "replaceExisting": false,
+    "checkIn": true,
+    "lookups": [
+      {
+        "name": "Leave Type",
+        "smartObject": "LPR_LeaveRequestProcess_LPR_LeaveType",
+        "method": "List",
+        "valueProperty": "LeaveTypeCode",
+        "displayProperty": "LeaveTypeName",
+        "adminForm": "LPR.Leave Type Administration"
+      }
+    ],
+    "views": [
+      {
+        "name": "LPR.Leave Request Editor",
+        "smartObject": "LPR_LeaveRequestProcess_LPR_LeaveRequest",
+        "type": "capture",
+        "properties": [
+          "LeaveRequestId",
+          "EmployeeName",
+          "LeaveTypeCode",
+          "StartDate",
+          "EndDate",
+          "DaysRequested",
+          "Reason",
+          "Status",
+          "SubmittedOn",
+          "DecisionOn",
+          "CreatedOn",
+          "ModifiedOn"
+        ],
+        "readOnlyProperties": [
+          "LeaveRequestId",
+          "Status",
+          "SubmittedOn",
+          "DecisionOn",
+          "CreatedOn",
+          "ModifiedOn"
+        ],
+        "defaultValues": {
+          "Status": "Draft"
+        },
+        "methods": ["Create", "Read", "Update"],
+        "lookupControls": [
+          {
+            "property": "LeaveTypeCode",
+            "lookup": "Leave Type",
+            "allowEmptySelection": false
+          }
+        ],
+        "layoutColumns": 2,
+        "options": ["editable", "labels-left", "colon-labels", "toolbar"]
+      },
+      {
+        "name": "LPR.Leave Request List",
+        "smartObject": "LPR_LeaveRequestProcess_LPR_LeaveRequest",
+        "type": "list",
+        "properties": [
+          "LeaveRequestId",
+          "EmployeeName",
+          "LeaveTypeCode",
+          "StartDate",
+          "EndDate",
+          "DaysRequested",
+          "Status"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": ["toolbar"]
+      },
+      {
+        "name": "LPR.Leave Type Editor",
+        "smartObject": "LPR_LeaveRequestProcess_LPR_LeaveType",
+        "type": "capture",
+        "properties": [
+          "LeaveTypeCode",
+          "LeaveTypeName",
+          "Description",
+          "SortOrder",
+          "IsActive"
+        ],
+        "methods": ["Create", "Read", "Update", "Delete"],
+        "area": "admin",
+        "layoutColumns": 2,
+        "options": ["editable", "labels-left", "colon-labels", "toolbar"]
+      },
+      {
+        "name": "LPR.Leave Type List",
+        "smartObject": "LPR_LeaveRequestProcess_LPR_LeaveType",
+        "type": "list",
+        "properties": [
+          "LeaveTypeCode",
+          "LeaveTypeName",
+          "SortOrder",
+          "IsActive"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "area": "admin",
+        "options": ["toolbar"]
+      }
+    ],
+    "forms": [
+      {
+        "name": "LPR.Leave Request",
+        "useLegacyTheme": false,
+        "views": [
+          "LPR.Leave Request Editor",
+          "LPR.Leave Request List"
+        ],
+        "viewTitles": {
+          "LPR.Leave Request Editor": "Leave Request Details",
+          "LPR.Leave Request List": "Leave Requests"
+        },
+        "tabs": [
+          {
+            "name": "Requests",
+            "views": ["LPR.Leave Request List"]
+          },
+          {
+            "name": "Leave Request Details",
+            "views": ["LPR.Leave Request Editor"]
+          },
+          {
+            "name": "My Tasks",
+            "worklist": {
+              "rows": 20,
+              "refreshIntervalSeconds": 300,
+              "showToolbar": true,
+              "showFilter": true,
+              "showSearch": false,
+              "enableSearch": true,
+              "height": "445px",
+              "openTaskInNewWindow": true,
+              "actions": ["viewWorkflow", "sleep", "redirect", "release", "share"]
+            }
+          }
+        ],
+        "listClickTabNavigation": [
+          {
+            "sourceView": "LPR.Leave Request List",
+            "targetTab": "Leave Request Details"
+          }
+        ],
+        "options": [],
+        "behaviors": [
+          "load-form-list-click",
+          "refresh-list-form-submit",
+          "refresh-list-form-load"
+        ]
+      },
+      {
+        "name": "LPR.Leave Type Administration",
+        "useLegacyTheme": false,
+        "views": [
+          "LPR.Leave Type Editor",
+          "LPR.Leave Type List"
+        ],
+        "viewTitles": {
+          "LPR.Leave Type Editor": "Leave Type Details",
+          "LPR.Leave Type List": "Leave Types"
+        },
+        "area": "admin",
+        "options": ["no-tabs"],
+        "behaviors": [
+          "load-form-list-click",
+          "refresh-list-form-submit",
+          "refresh-list-form-load"
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "expectedViews": [
+      "LPR.Leave Request Editor",
+      "LPR.Leave Request List",
+      "LPR.Leave Type Editor",
+      "LPR.Leave Type List"
+    ],
+    "expectedForms": [
+      "LPR.Leave Request",
+      "LPR.Leave Type Administration"
+    ],
+    "smokeTestRuntime": true,
+    "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime"
+  }
+}

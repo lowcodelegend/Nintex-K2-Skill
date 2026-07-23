@@ -10,7 +10,7 @@ namespace K2WorkflowCli
         {
             if (args.Length == 0 || Has(args, "--help") || Has(args, "-h")) { Help(); return 0; }
             var command = args[0].ToLowerInvariant();
-            if (command == "version") { Console.WriteLine("k2wf 0.10.0"); return 0; }
+            if (command == "version") { Console.WriteLine("k2wf 0.13.0"); return 0; }
             if (command == "selftest") { SelfTests.Run(); return 0; }
             if (command == "doctor") { WorkflowManager.Doctor(); return 0; }
             if (args.Length < 2) throw new CliException("A manifest path is required.");
@@ -35,6 +35,18 @@ namespace K2WorkflowCli
                         manager.Export(Path.GetFullPath(exportOutput));
                         return 0;
                     case "deploy": RequireConfirm(args); manager.Deploy(); manager.Verify(); return 0;
+                    case "start": RequireConfirm(args); manager.Start(ParseData(args)); return 0;
+                    case "status": manager.RuntimeStatus(); return 0;
+                    case "instance-data":
+                        int instanceId;
+                        if (!int.TryParse(Value(args, "--id"), out instanceId)) throw new CliException("instance-data requires --id <process-instance-id>.");
+                        manager.ReportInstanceData(instanceId); return 0;
+                    case "worklist": manager.ReportWorklist(); return 0;
+                    case "action":
+                        RequireConfirm(args);
+                        var serial = Value(args, "--serial"); var action = Value(args, "--action");
+                        if (string.IsNullOrWhiteSpace(serial) || string.IsNullOrWhiteSpace(action)) throw new CliException("action requires --serial <serial-number> --action <action-name>.");
+                        manager.ExecuteAction(serial, action); return 0;
                     case "inspect": manager.Inspect(); return 0;
                     case "verify": manager.Verify(); return 0;
                     case "unlock": RequireConfirm(args); manager.Unlock(); return 0;
@@ -51,15 +63,31 @@ namespace K2WorkflowCli
             return null;
         }
         private static void RequireConfirm(string[] args) { if (!Has(args, "--confirm")) throw new CliException("This command changes K2. Re-run with --confirm after reviewing plan."); }
+        private static System.Collections.Generic.IDictionary<string, string> ParseData(string[] args)
+        {
+            var values = new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            for (var i = 2; i < args.Length - 1; i++) if (string.Equals(args[i], "--data", StringComparison.OrdinalIgnoreCase))
+            {
+                var pair = args[++i]; var split = pair.IndexOf('=');
+                if (split < 1) throw new CliException("--data requires Name=Value.");
+                values[pair.Substring(0, split)] = pair.Substring(split + 1);
+            }
+            return values;
+        }
         private static void Help()
         {
-            Console.WriteLine("k2wf 0.10.0 - K2 Five HTML5 Workflow Designer JSON CLI");
+            Console.WriteLine("k2wf 0.13.0 - K2 Five HTML5 Workflow Designer JSON CLI");
             Console.WriteLine("Commands:");
             Console.WriteLine("  doctor");
             Console.WriteLine("  plan <manifest.json>");
             Console.WriteLine("  render <manifest.json> --output <workflow.json>");
             Console.WriteLine("  export <manifest.json> --output <workflow.json>");
             Console.WriteLine("  deploy <manifest.json> --confirm");
+            Console.WriteLine("  start <manifest.json> --data Name=Value [--data Name=Value] --confirm");
+            Console.WriteLine("  status <manifest.json>");
+            Console.WriteLine("  instance-data <manifest.json> --id <process-instance-id>");
+            Console.WriteLine("  worklist <manifest.json>");
+            Console.WriteLine("  action <manifest.json> --serial <serial-number> --action <action-name> --confirm");
             Console.WriteLine("  inspect <manifest.json>");
             Console.WriteLine("  verify <manifest.json>");
             Console.WriteLine("  unlock <manifest.json> --confirm");

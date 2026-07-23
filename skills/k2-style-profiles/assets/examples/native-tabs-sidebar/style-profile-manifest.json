@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "name": "APP native tabs sidebar Style Profile",
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "styleProfile": {
+    "systemName": "APP Native Tabs Sidebar",
+    "displayName": "APP Native Tabs Sidebar",
+    "description": "Relocates a native K2 Form tab strip into a responsive runtime sidebar.",
+    "categoryPath": "APP\\UX",
+    "previewFormId": null,
+    "replaceExisting": false,
+    "files": [
+      {
+        "type": "css",
+        "source": "dist/tabs-sidebar-critical.min.css",
+        "target": "tabs-sidebar-critical.min.css"
+      },
+      {
+        "type": "js",
+        "source": "dist/tabs-sidebar-config.min.js",
+        "target": "tabs-sidebar-config.min.js"
+      },
+      {
+        "type": "js",
+        "source": "dist/tabs-sidebar.min.js",
+        "target": "tabs-sidebar.min.js"
+      }
+    ]
+  },
+  "hosting": {
+    "enabled": true,
+    "configureIis": true,
+    "siteName": "K2",
+    "applicationPath": "K2/",
+    "virtualPath": "/APPTabAssets",
+    "physicalPath": "C:\\inetpub\\app-tab-assets",
+    "baseUrl": "https://k2.example.com/APPTabAssets",
+    "additionalFiles": [
+      {
+        "type": "css",
+        "source": "dist/tabs-sidebar-application.min.css",
+        "target": "tabs-sidebar-application.min.css"
+      }
+    ]
+  },
+  "verification": {
+    "requireHttps": true,
+    "requireDesignerIsolation": true,
+    "verifyHttp": true,
+    "httpTimeoutSeconds": 20
+  }
+}

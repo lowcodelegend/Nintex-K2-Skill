@@ -1,0 +1,38 @@
+[
+  {
+    "page": "case-initiation",
+    "viewport": "desktop",
+    "width": 1440,
+    "height": 1000,
+    "clientWidth": 1440,
+    "scrollWidth": 1440,
+    "horizontalOverflow": false
+  },
+  {
+    "page": "case-initiation",
+    "viewport": "laptop",
+    "width": 1280,
+    "height": 800,
+    "clientWidth": 1280,
+    "scrollWidth": 1280,
+    "horizontalOverflow": false
+  },
+  {
+    "page": "case-initiation",
+    "viewport": "tablet",
+    "width": 768,
+    "height": 1024,
+    "clientWidth": 768,
+    "scrollWidth": 768,
+    "horizontalOverflow": false
+  },
+  {
+    "page": "case-initiation",
+    "viewport": "mobile",
+    "width": 390,
+    "height": 844,
+    "clientWidth": 390,
+    "scrollWidth": 390,
+    "horizontalOverflow": false
+  }
+]

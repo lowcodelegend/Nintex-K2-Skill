@@ -1,0 +1,13 @@
+{
+  "name":"RQT.Request Case",
+  "k2":{"host":"localhost","port":5555,"integrated":true,"securityLabel":"K2"},
+  "application":{"rootCategoryPath":"K2 Skills\\RQT.Request Case","theme":"Lithium","styleProfile":"Test Style","solutionCode":"RQT","replaceExisting":true,"checkIn":true,
+    "views":[
+      {"name":"RQT.Case Workspace","smartObject":"RQT_Case","type":"capture","properties":["CaseId","CaseNumber","Title","Description","CurrentStageCode"],"methods":["Create","Update","Read"]},
+      {"name":"RQT.Request Detail","smartObject":"RQT_RequestDetail","type":"capture-list","properties":["RequestDetailId","CaseId","RequestType","RequestedOutcome"],"methods":["Create","Update","Delete","List"],"options":["editable"]},
+      {"name":"RQT.Evidence","smartObject":"RQT_Evidence","type":"capture-list","properties":["EvidenceId","CaseId","Title","DocumentReference"],"methods":["Create","Update","Delete","List"],"options":["editable"]}
+    ],
+    "forms":[{"name":"RQT.Case Management","useLegacyTheme":false,"views":["RQT.Case Workspace"],"tabs":[{"name":"Cases","views":["RQT.Case Workspace"]},{"name":"My Tasks","worklist":{"rows":20}}]}]
+  },
+  "verification":{"expectedViews":["RQT.Case Workspace","RQT.Request Detail","RQT.Evidence"],"expectedForms":["RQT.Case Management"],"smokeTestRuntime":false}
+}

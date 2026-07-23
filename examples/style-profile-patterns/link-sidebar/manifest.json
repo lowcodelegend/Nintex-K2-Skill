@@ -1,0 +1,51 @@
+{
+  "name": "SPL.Link Sidebar Example Data",
+  "application": {
+    "rootCategoryPath": "K2 Skills\\SPL.Link Sidebar Example"
+  },
+  "database": {
+    "server": "localhost",
+    "name": "SPL.LinkSidebarExample",
+    "integratedSecurity": true,
+    "createIfMissing": true,
+    "runtimePrincipal": "TRIALS\\k2svc",
+    "scripts": ["sql/001_schema.sql"]
+  },
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2",
+    "serviceInstance": {
+      "systemName": "SPL.LinkSidebarExampleSql",
+      "displayName": "SPL.Link Sidebar Example SQL",
+      "authenticationMode": "service-account",
+      "useNativeSqlExecution": true
+    },
+    "smartObjects": {
+      "createNew": true,
+      "updateExisting": true,
+      "deleteRemoved": false
+    }
+  },
+  "verification": {
+    "sqlObjects": [
+      { "type": "table", "schema": "SPL", "name": "NavigationItem" },
+      { "type": "table", "schema": "SPL", "name": "WorkItem" },
+      { "type": "view", "schema": "SPL", "name": "ApplicationNavigation" },
+      { "type": "view", "schema": "SPL", "name": "DashboardSummary" }
+    ],
+    "queries": [
+      { "name": "navigation seed", "sql": "SELECT COUNT(*) FROM SPL.ApplicationNavigation", "expectedScalar": "2" },
+      { "name": "work item seed", "sql": "SELECT COUNT(*) FROM SPL.WorkItem", "expectedScalar": "5" }
+    ],
+    "smartObjectServiceObjects": [
+      "SPL-NavigationItem",
+      "SPL-WorkItem",
+      "SPL-ApplicationNavigation",
+      "SPL-DashboardSummary"
+    ],
+    "minimumGeneratedSmartObjects": 4,
+    "smokeTestListMethods": true
+  }
+}

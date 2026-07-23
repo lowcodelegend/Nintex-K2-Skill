@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "name": "LPR Blue and White",
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "styleProfile": {
+    "systemName": "LPR Blue and White",
+    "displayName": "LPR Blue and White",
+    "description": "",
+    "categoryPath": "K2 Skills\\LPR.Leave Request Process",
+    "previewFormId": null,
+    "replaceExisting": false,
+    "files": [
+      {
+        "type": "css",
+        "source": "assets/lpr-blue-white.v1.css",
+        "target": "lpr-blue-white.v1.css"
+      }
+    ]
+  },
+  "hosting": {
+    "enabled": true,
+    "configureIis": true,
+    "siteName": "K2",
+    "applicationPath": "K2/",
+    "virtualPath": "/LPRAssets",
+    "physicalPath": "C:\\inetpub\\lpr-blue-white-assets",
+    "baseUrl": "https://spk2.trials.demome.tech/LPRAssets",
+    "additionalFiles": []
+  },
+  "verification": {
+    "requireHttps": true,
+    "requireDesignerIsolation": true,
+    "verifyHttp": true,
+    "httpTimeoutSeconds": 20
+  }
+}

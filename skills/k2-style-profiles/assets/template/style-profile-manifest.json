@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "name": "My K2 Style Profile",
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "styleProfile": {
+    "systemName": "My Solution Style Profile",
+    "displayName": "My Solution Style Profile",
+    "description": "Custom runtime styling for My Solution.",
+    "categoryPath": "K2 Skills\\My Solution",
+    "previewFormId": null,
+    "replaceExisting": false,
+    "files": [
+      {
+        "type": "css",
+        "source": "style-profile.css",
+        "target": "style-profile.css"
+      },
+      {
+        "type": "js",
+        "source": "style-profile.js",
+        "target": "style-profile.js"
+      }
+    ]
+  },
+  "hosting": {
+    "enabled": true,
+    "configureIis": true,
+    "siteName": "K2",
+    "applicationPath": "K2/",
+    "virtualPath": "/MySolutionAssets",
+    "physicalPath": "C:\\inetpub\\my-solution-assets",
+    "baseUrl": "https://k2.example.com/MySolutionAssets",
+    "additionalFiles": []
+  },
+  "verification": {
+    "requireHttps": true,
+    "requireDesignerIsolation": true,
+    "verifyHttp": true,
+    "httpTimeoutSeconds": 20
+  }
+}

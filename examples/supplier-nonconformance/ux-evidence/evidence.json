@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "manifest": "C:\\Users\\Administrator\\K2Skills\\examples\\supplier-nonconformance\\case-ux.composed.json",
+  "generatedAtUtc": "2026-07-21T15:37:42.1259589Z",
+  "states": [
+    {
+      "state": "populated",
+      "pages": [
+        "operations-dashboard",
+        "my-work",
+        "case-initiation",
+        "case-workspace",
+        "reports"
+      ],
+      "viewports": [
+        "desktop",
+        "laptop",
+        "tablet",
+        "mobile"
+      ]
+    },
+    {
+      "state": "empty",
+      "pages": [
+        "operations-dashboard",
+        "my-work"
+      ],
+      "viewports": [
+        "desktop",
+        "laptop",
+        "tablet",
+        "mobile"
+      ]
+    },
+    {
+      "state": "validation-error",
+      "pages": [
+        "case-initiation"
+      ],
+      "viewports": [
+        "desktop",
+        "laptop",
+        "tablet",
+        "mobile"
+      ]
+    },
+    {
+      "state": "sla-breached",
+      "pages": [
+        "case-workspace"
+      ],
+      "viewports": [
+        "desktop",
+        "laptop",
+        "tablet",
+        "mobile"
+      ]
+    },
+    {
+      "state": "read-only",
+      "pages": [
+        "case-workspace"
+      ],
+      "viewports": [
+        "desktop",
+        "laptop",
+        "tablet",
+        "mobile"
+      ]
+    },
+    {
+      "state": "long-content",
+      "pages": [
+        "case-workspace"
+      ],
+      "viewports": [
+        "desktop",
+        "laptop",
+        "tablet",
+        "mobile"
+      ]
+    }
+  ]
+}

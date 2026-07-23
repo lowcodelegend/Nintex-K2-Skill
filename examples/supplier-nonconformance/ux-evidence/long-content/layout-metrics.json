@@ -1,0 +1,38 @@
+[
+  {
+    "page": "case-workspace",
+    "viewport": "desktop",
+    "width": 1440,
+    "height": 1000,
+    "clientWidth": 1425,
+    "scrollWidth": 1425,
+    "horizontalOverflow": false
+  },
+  {
+    "page": "case-workspace",
+    "viewport": "laptop",
+    "width": 1280,
+    "height": 800,
+    "clientWidth": 1265,
+    "scrollWidth": 1265,
+    "horizontalOverflow": false
+  },
+  {
+    "page": "case-workspace",
+    "viewport": "tablet",
+    "width": 768,
+    "height": 1024,
+    "clientWidth": 753,
+    "scrollWidth": 753,
+    "horizontalOverflow": false
+  },
+  {
+    "page": "case-workspace",
+    "viewport": "mobile",
+    "width": 390,
+    "height": 844,
+    "clientWidth": 390,
+    "scrollWidth": 390,
+    "horizontalOverflow": false
+  }
+]

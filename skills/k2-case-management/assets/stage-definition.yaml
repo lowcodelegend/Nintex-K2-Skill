@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "stage": {
+    "code": "INVESTIGATE",
+    "name": "Investigate or Fulfil",
+    "workflow": "CM.Stage.Investigate",
+    "sequence": 50,
+    "entry_rule": "INVESTIGATION_READY",
+    "exit_rule": "EVIDENCE_COMPLETE",
+    "sla_profile": "STANDARD_INVESTIGATION",
+    "assignment_rule": "QUALIFIED_OWNER",
+    "allow_reentry": true,
+    "allow_skip": false,
+    "requires_human_completion": true,
+    "terminal": false,
+    "required_data": ["Case", "CaseParty", "EvidenceItem"],
+    "outcomes": ["EVIDENCE_COMPLETE", "MORE_INFORMATION_REQUIRED", "UNABLE_TO_COMPLETE", "ESCALATED"],
+    "audit_events": ["STAGE_STARTED", "EVIDENCE_ADDED", "STAGE_COMPLETED"],
+    "failure_policy": {"retry": "bounded-idempotent", "operational_record": true}
+  }
+}

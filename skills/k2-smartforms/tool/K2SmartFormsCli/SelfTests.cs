@@ -13,8 +13,13 @@ namespace K2SmartFormsCli
             TestRequiredReadOnlyCreateInputGate();
             TestLookupAndDefaultValueRoundTrip();
             TestMasterButtonSuppression();
+            TestNativeChartComposition();
+            TestMetricCardComposition();
+            TestLifecycleComposition();
+            TestHiddenPropertyComposition();
+            TestFlatFormViewOrdering();
             TestMultiTableWorkflowStateReconciliation();
-            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, required/read-only gate, live lookup placement, defaults, master-detail buttons, multi-table workflow-state reconciliation");
+            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, required/read-only gate, live lookup placement, defaults, master-detail buttons, native chart, metric-card, lifecycle and hidden-property composition, flat Form ordering, multi-table workflow-state reconciliation");
         }
 
         private static void TestIdentityNormalization()
@@ -119,6 +124,95 @@ namespace K2SmartFormsCli
             bool changedAgain;
             var secondPass = MasterDetailRules.ReconcileDetailLoads(reconciled, form, resolved, out changedAgain);
             Assert(!changedAgain && string.Equals(reconciled, secondPass, StringComparison.Ordinal), "master-detail reconciliation is idempotent");
+        }
+
+        private static void TestNativeChartComposition()
+        {
+            var view = NewView("Case Trend", "CaseMetrics", "capture", "Period", "Count");
+            view.DefaultListMethod = "List";
+            view.Charts.Add(new ViewChartDefinition { Name = "chtCaseTrend", Title = "Case intake trend", Type = "line", CategoryProperty = "Period", ValueProperty = "Count", Height = 240 });
+            var xml = "<Views><View ID='view-id'><Name>Case Trend</Name><Controls/><Canvas><Sections><Section Type='Body'><Control LayoutType='Grid'><Columns><Column/><Column/></Columns><Rows><Row ID='existing'><Cells><Cell/><Cell/></Cells></Row></Rows></Control></Section></Sections></Canvas><Sources/><Events><Event Type='User' SourceType='View'><Name>Init</Name><Handlers><Handler><Actions><Action ID='a' DefinitionID='d' Type='Execute' ExecutionType='Synchronous'><Properties>" +
+                "<Property><Name>Location</Name><Value>View</Value></Property><Property><Name>Method</Name><DisplayValue>List</DisplayValue><NameValue>List</NameValue><Value>List</Value></Property>" +
+                "<Property><Name>ViewID</Name><DisplayValue>Case Trend</DisplayValue><NameValue>Case Trend</NameValue><Value>view-id</Value></Property>" +
+                "<Property><Name>ObjectID</Name><DisplayValue>Case Metrics</DisplayValue><NameValue>CaseMetrics</NameValue><Value>object-id</Value></Property></Properties><Results/></Action></Actions></Handler></Handlers></Event></Events></View></Views>";
+            var transformed = ViewChartLayoutDefinition.Apply(xml, view);
+            ViewChartLayoutDefinition.Verify(transformed, view);
+            var document = XDocument.Parse(transformed);
+            Assert(document.Descendants("Control").Any(x => (string)x.Attribute("Type") == "GenericChart" && (string)x.Element("Name") == "chtCaseTrend"), "native GenericChart emitted");
+            Assert(document.Descendants("Cell").Any(x => (string)x.Attribute("ColumnSpan") == "2"), "chart spans generated grid");
+        }
+
+        private static void TestMetricCardComposition()
+        {
+            var view=NewView("Operations KPIs","DashboardSummary","capture","OpenCaseCount","SLAAtRiskCount");view.DefaultListMethod="List";
+            view.MetricCards.Add(new ViewMetricCardDefinition{Property="OpenCaseCount",Label="Open cases",Tone="neutral"});
+            view.MetricCards.Add(new ViewMetricCardDefinition{Property="SLAAtRiskCount",Label="SLA at risk",Tone="warning"});
+            var xml="<Views><View ID='view-id'><Controls/><Canvas><Sections><Section Type='Body'><Control LayoutType='Grid'><Columns><Column/><Column/></Columns><Rows><Row><Cells><Cell/><Cell/></Cells></Row></Rows></Control></Section></Sections></Canvas><Events><Event><Name>Init</Name><Handlers><Handler><Actions><Action ID='a' DefinitionID='d' Type='Execute'><Properties><Property><Name>Method</Name><Value>List</Value></Property></Properties><Results><Result SourceID='object-id' SourceName='OpenCaseCount' SourceDisplayName='OpenCaseCount'/><Result SourceID='object-id' SourceName='SLAAtRiskCount' SourceDisplayName='SLAAtRiskCount'/></Results></Action></Actions></Handler></Handlers></Event></Events></View></Views>";
+            var transformed=ViewMetricCardLayoutDefinition.Apply(xml,view);ViewMetricCardLayoutDefinition.Verify(transformed,view);var document=XDocument.Parse(transformed);
+            Assert(document.Descendants("Control").Count(x=>(string)x.Attribute("Type")=="DataLabel")==2,"metric-card data labels emitted");
+            Assert(document.Descendants("Result").Count(x=>((string)x.Attribute("TargetName")??string.Empty).StartsWith("dlb"))==2,"metric-card results mapped");
+        }
+
+        private static void TestLifecycleComposition()
+        {
+            var view = NewView("Case Header", "Case", "capture", "CaseNumber", "CurrentStageCode");
+            var tracker = new ViewLifecycleDefinition { Name = "Case Lifecycle", Property = "CurrentStageCode" };
+            tracker.Stages.Add(new ViewLifecycleStageDefinition { Code = "CAPTURE", Label = "Capture" });
+            tracker.Stages.Add(new ViewLifecycleStageDefinition { Code = "INVESTIGATE", Label = "Investigate" });
+            tracker.Stages.Add(new ViewLifecycleStageDefinition { Code = "CLOSE", Label = "Close" });
+            view.LifecycleTrackers.Add(tracker);
+            var xml = "<View><Fields><Field ID='case'><FieldName>CaseNumber</FieldName></Field><Field ID='stage'><FieldName>CurrentStageCode</FieldName></Field></Fields><Controls><Control ID='case-control' Type='TextBox' FieldID='case'><Name>CaseNumber</Name><Properties/></Control><Control ID='stage-control' Type='TextBox' FieldID='stage'><Name>CurrentStageCode</Name><Properties/></Control></Controls><Layout><Control ID='case-control'/><Control ID='stage-control'/></Layout></View>";
+            var transformed = ViewLifecycleLayoutDefinition.Apply(xml, view);
+            ViewLifecycleLayoutDefinition.Verify(transformed, view);
+            var document = XDocument.Parse(transformed);
+            var progress = document.Descendants("Control").Single(x => (string)x.Attribute("ID") == "stage-control" && x.Attribute("Type") != null);
+            Assert((string)progress.Attribute("Type") == "Progress", "lifecycle property control transformed to native Progress");
+            Assert((string)progress.Attribute("FieldID") == "stage", "lifecycle SmartObject field binding preserved");
+        }
+
+        private static void TestFlatFormViewOrdering()
+        {
+            var definition = new FormDefinition { Name = "Operations" };
+            definition.Views.Add("KPIs");
+            definition.Views.Add("Chart");
+            definition.Views.Add("Chart Data");
+            var xml = "<Forms><Form ID='form'><Controls>" +
+                "<Control ID='kpis' Type='AreaItem'><Properties/></Control>" +
+                "<Control ID='chart' Type='AreaItem'><Properties/></Control>" +
+                "<Control ID='data' Type='AreaItem'><Properties/></Control>" +
+                "</Controls><Panels><Panel><Areas>" +
+                "<Area><Items><Item ID='data' ViewID='3' ViewName='Chart Data'/></Items></Area>" +
+                "<Area><Items><Item ID='chart' ViewID='2' ViewName='Chart'/></Items></Area>" +
+                "<Area><Items><Item ID='kpis' ViewID='1' ViewName='KPIs'/></Items></Area>" +
+                "</Areas></Panel></Panels></Form></Forms>";
+            var transformed = FormLayoutDefinition.Apply(xml, definition, null,
+                new Dictionary<string, string>(), new Dictionary<Guid, ResolvedHeaderControlTransfer>());
+            FormLayoutDefinition.Verify(transformed, definition, null,
+                new Dictionary<string, string>(), new Dictionary<Guid, ResolvedHeaderControlTransfer>());
+            var actual = XDocument.Parse(transformed).Descendants("Item").Select(x => (string)x.Attribute("ViewName")).ToList();
+            Assert(actual.SequenceEqual(definition.Views), "flat Form areas follow manifest order");
+        }
+
+        private static void TestHiddenPropertyComposition()
+        {
+            var view = NewView("Case Entry", "Case", "capture", "CaseId", "Title");
+            view.HiddenProperties.Add("CaseId");
+            view.PropertyLabels["Title"] = "Case title";
+            var xml = "<View><Fields><Field ID='case-id'><FieldName>CaseId</FieldName></Field><Field ID='title'><FieldName>Title</FieldName></Field></Fields><Controls>" +
+                "<Control ID='case-label' Type='Label'><Properties><Property><Name>Text</Name><Value>Case Id</Value></Property></Properties></Control>" +
+                "<Control ID='case-control' Type='TextBox' FieldID='case-id'><Properties/></Control>" +
+                "<Control ID='title-label' Type='Label'><Properties><Property><Name>Text</Name><Value>Title</Value></Property></Properties></Control>" +
+                "<Control ID='title-control' Type='TextBox' FieldID='title'><Properties/></Control></Controls>" +
+                "<Canvas><Sections><Section Type='Body'><Control LayoutType='Grid'><Columns><Column ID='column-1'/><Column ID='column-2'/></Columns><Rows>" +
+                "<Row><Cells><Cell><Control ID='case-label'/></Cell><Cell><Control ID='case-control'/></Cell></Cells></Row>" +
+                "<Row><Cells><Cell><Control ID='title-label'/></Cell><Cell><Control ID='title-control'/></Cell></Cells></Row>" +
+                "</Rows></Control></Section></Sections></Canvas></View>";
+            var transformed = ViewPresentationDefinition.Apply(xml, view, false, false);
+            ViewPresentationDefinition.Verify(transformed, view, false, false);
+            var document = XDocument.Parse(transformed);
+            Assert(!document.Descendants("Row").Any(row => row.Descendants("Control").Any(control => (string)control.Attribute("ID") == "case-control")), "hidden property row removed");
+            Assert(document.Descendants("Row").Any(row => row.Descendants("Control").Any(control => (string)control.Attribute("ID") == "title-control")), "visible property row retained");
+            Assert(document.Descendants("Control").Any(control => (string)control.Attribute("ID") == "title-label" && control.Descendants("Property").Any(property => (string)property.Element("Name") == "Text" && (string)property.Element("Value") == "Case title")), "friendly property label applied");
         }
 
         private static string WorkflowStateXml(string id, string workflowActionType)

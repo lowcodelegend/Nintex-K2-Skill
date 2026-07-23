@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "name": "SNC.Capture stage",
+  "k2": {
+    "designerHost": "smartforms",
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "application": {
+    "rootCategoryPath": "K2 Skills\\SNC.Supplier Nonconformance",
+    "workflowCategoryName": "SNC.Supplier Nonconformance WFs"
+  },
+  "workflow": {
+    "name": "SNC.Stage Capture",
+    "kind": "request-approval",
+    "publish": true,
+    "replaceExisting": true,
+    "comment": "Reusable Capture stage",
+    "requestStatusUpdate": {
+      "name": "SNC.Record Capture Result",
+      "smartObject": "SNC_SupplierNonconformance_SNC_CaseStageInstance",
+      "method": "Update",
+      "identifierProperty": "CaseStageInstanceId",
+      "identifierDataField": "CaseStageInstanceId",
+      "statusProperty": "OutcomeCode",
+      "statusValue": "PENDING",
+      "approvedStatusValue": "SUBMITTED",
+      "rejectedStatusValue": "WITHDRAWN"
+    },
+    "email": {
+      "name": "SNC.Capture assigned",
+      "from": "$environment:From Address",
+      "to": [
+        "$originator"
+      ],
+      "subject": "Supplier nonconformance capture",
+      "body": "Complete capture and submit the case.",
+      "html": false
+    },
+    "userTask": {
+      "name": "SNC.Complete Capture",
+      "assignees": [
+        "$originator"
+      ],
+      "instructions": "Complete the case capture and initial evidence.",
+      "actions": [
+        "Approve",
+        "Reject"
+      ],
+      "formUrl": "https://spk2.trials.demome.tech/Runtime/Form/SNC.Supplier%20Nonconformance/",
+      "requestIdParameter": "CaseStageInstanceId",
+      "notification": {
+        "enabled": true,
+        "from": "$environment:From Address",
+        "subject": "Capture task",
+        "body": "Complete the supplier nonconformance capture. {{task.worklistLink}}",
+        "richText": true
+      }
+    },
+    "smartForms": {
+      "form": "SNC.Stage Task",
+      "startState": "SNC.Capture Start",
+      "taskState": "SNC.Capture Task",
+      "startRuleContains": "Create Button",
+      "makeStartStateDefault": false,
+      "workflowStripLocation": "bottom"
+    }
+  }
+}
