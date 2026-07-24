@@ -25,7 +25,7 @@ namespace K2SmartFormsCli
             TestViewIdentityRebase();
             TestFlatFormViewOrdering();
             TestMultiTableWorkflowStateReconciliation();
-            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, Designer-loadable inherited master-detail rules, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, multi-table workflow-state reconciliation");
+            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, Designer-loadable inherited master-detail rules, lookup/detail List classification, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, multi-table workflow-state reconciliation");
         }
 
         private static void TestIdentityNormalization()
@@ -113,6 +113,16 @@ namespace K2SmartFormsCli
             var detailCreate = masterCreate.Parent.Elements("Action").Single(x => (string)x.Attribute("ItemState") == "Added");
             Assert((string)detailCreate.Attribute("DefinitionID") == detailCreateDefinition, "detail View DefinitionID preserved");
             Assert((string)detailCreate.Attribute("ExecutionType") == "Parallel", "editable-list state persistence remains in the parent-child batch");
+
+            var persisted = XDocument.Parse(transformed);
+            var persistedSave = persisted.Descendants("Event").Single(x => (string)x.Attribute("SourceName") == "btnSave");
+            foreach (var action in persistedSave.Descendants("Action").Where(x => (string)x.Attribute("Type") == "Execute"))
+            {
+                action.Attributes("InstanceID").Remove();
+                action.Elements().Where(x => x.Name.LocalName == "Parameters" || x.Name.LocalName == "Results").Remove();
+                action.SetAttributeValue("ExecutionType", action.Attribute("ItemState") == null ? "Synchronous" : "Single");
+            }
+            MasterDetailRules.Verify(persisted.ToString(), formDefinition, resolved);
 
             detailCreate.Attribute("IsReference").Remove();
             AssertThrows(delegate { MasterDetailRules.Verify(document.ToString(), formDefinition, resolved); }, "Designer-loadable batch detail action");
@@ -269,7 +279,14 @@ namespace K2SmartFormsCli
             var document = XDocument.Parse(reconciled);
             Assert(document.Descendants("Action").Count(x => (string)x.Attribute("Type") == "StartProcess") == 1, "StartProcess action preserved");
             Assert(document.Descendants("Action").Count(x => (string)x.Attribute("Type") == "ActionProcess") == 1, "ActionProcess action preserved");
-            Assert(document.Descendants("Action").Count(x => (string)x.Attribute("Type") == "Execute" && ReadMethod(x) == "List") == 4, "two detail tables on two master Read paths");
+            Assert(document.Descendants("Action").Count(x => (string)x.Attribute("Type") == "Execute" &&
+                ReadMethod(x) == "List" &&
+                !x.Descendants("Property").Any(p => (string)p.Element("Name") == "ControlID")) == 4,
+                "two filtered detail tables on two master Read paths");
+            Assert(document.Descendants("Action").Count(x => (string)x.Attribute("Type") == "Execute" &&
+                ReadMethod(x) == "List" &&
+                x.Descendants("Property").Any(p => (string)p.Element("Name") == "ControlID" && (string)p.Element("Value") == "line-type-lookup")) == 2,
+                "inherited lookup population actions preserved and excluded from detail data loads");
             bool changedAgain;
             var secondPass = MasterDetailRules.ReconcileDetailLoads(reconciled, form, resolved, out changedAgain);
             Assert(!changedAgain && string.Equals(reconciled, secondPass, StringComparison.Ordinal), "master-detail reconciliation is idempotent");
@@ -663,6 +680,7 @@ namespace K2SmartFormsCli
         {
             return "<State ID='" + id + "'><Name>" + id + "</Name><Events><Event><Handlers>" +
                 "<Handler ID='read-" + id + "'><Actions><Action ID='read-action-" + id + "' Type='Execute' InstanceID='master'><Properties><Property><Name>Method</Name><Value>Read</Value></Property></Properties></Action></Actions></Handler>" +
+                "<Handler ID='lookup-lines-" + id + "'><Actions><Action ID='lookup-lines-action-" + id + "' DefinitionID='70000000-0000-0000-0000-000000000001' Type='Execute' InstanceID='lines' IsReference='True' IsInherited='True'><Properties><Property><Name>Method</Name><Value>List</Value></Property><Property><Name>ControlID</Name><Value>line-type-lookup</Value></Property><Property><Name>ObjectID</Name><Value>71000000-0000-0000-0000-000000000001</Value></Property></Properties></Action></Actions></Handler>" +
                 "<Handler ID='list-lines-" + id + "'><Actions><Action ID='list-lines-action-" + id + "' Type='Execute' InstanceID='lines'><Properties><Property><Name>Method</Name><Value>List</Value></Property></Properties></Action></Actions></Handler>" +
                 "<Handler ID='list-attachments-" + id + "'><Actions><Action ID='list-attachments-action-" + id + "' Type='Execute' InstanceID='attachments'><Properties><Property><Name>Method</Name><Value>List</Value></Property></Properties></Action></Actions></Handler>" +
                 "<Handler ID='workflow-" + id + "'><Actions><Action ID='workflow-action-" + id + "' Type='" + workflowActionType + "'><Properties><Property><Name>Marker</Name><Value>preserve</Value></Property></Properties></Action></Actions></Handler>" +
