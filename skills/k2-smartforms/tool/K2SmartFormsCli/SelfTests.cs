@@ -10,6 +10,7 @@ namespace K2SmartFormsCli
         public static void Run()
         {
             TestIdentityNormalization();
+            TestDesignerLoadableMasterDetailRules();
             TestRequiredReadOnlyCreateInputGate();
             TestLookupAndDefaultValueRoundTrip();
             TestMasterButtonSuppression();
@@ -24,7 +25,7 @@ namespace K2SmartFormsCli
             TestViewIdentityRebase();
             TestFlatFormViewOrdering();
             TestMultiTableWorkflowStateReconciliation();
-            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, multi-table workflow-state reconciliation");
+            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, Designer-loadable inherited master-detail rules, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, multi-table workflow-state reconciliation");
         }
 
         private static void TestIdentityNormalization()
@@ -32,6 +33,103 @@ namespace K2SmartFormsCli
             Assert(ResolvedMasterDetailRules.NormalizeConditionDataType("AutoNumber") == "Number", "AutoNumber normalization");
             Assert(ResolvedMasterDetailRules.NormalizeConditionDataType("Autonumber") == "Number", "Autonumber normalization");
             Assert(ResolvedMasterDetailRules.NormalizeConditionDataType("AutoGuid") == "Guid", "AutoGuid normalization");
+        }
+
+        private static void TestDesignerLoadableMasterDetailRules()
+        {
+            var masterGuid = Guid.Parse("10000000-0000-0000-0000-000000000010");
+            var detailGuid = Guid.Parse("20000000-0000-0000-0000-000000000010");
+            var createDefinition = "30000000-0000-0000-0000-000000000010";
+            var updateDefinition = "30000000-0000-0000-0000-000000000020";
+            var detailCreateDefinition = "40000000-0000-0000-0000-000000000010";
+            var detailUpdateDefinition = "40000000-0000-0000-0000-000000000020";
+            var detailDeleteDefinition = "40000000-0000-0000-0000-000000000030";
+            var contract = new MasterDetailFormDefinition
+            {
+                MasterView = "Claim",
+                MasterKeyProperty = "ClaimId",
+                MasterCreateMethod = "Create",
+                MasterUpdateMethod = "Update",
+                MasterReadMethod = "Read"
+            };
+            var childDefinition = new MasterDetailChildDefinition
+            {
+                View = "Claim Lines",
+                ForeignKeyProperty = "ClaimId",
+                CreateMethod = "Create",
+                UpdateMethod = "Update",
+                DeleteMethod = "Delete",
+                ListMethod = "List"
+            };
+            contract.Details.Add(childDefinition);
+            var formDefinition = new FormDefinition { Name = "Claim Form", MasterDetail = contract };
+            var resolved = new ResolvedMasterDetailRules
+            {
+                Definition = contract,
+                MasterViewGuid = masterGuid,
+                MasterViewName = "Claim",
+                MasterKey = new ResolvedViewField { Id = "claim-key", Name = "ClaimId", DisplayName = "Claim ID", DataType = "Number" },
+                MasterCreateAction = TestViewAction(createDefinition, masterGuid, "Claim", "Create", null, true),
+                MasterUpdateAction = TestViewAction(updateDefinition, masterGuid, "Claim", "Update", null, false),
+                RequiredControls = new List<ResolvedRequiredControl>
+                {
+                    new ResolvedRequiredControl { Property = "Title", ControlId = "title-control", ControlName = "Title Text Box", ControlDisplayName = "Title" }
+                },
+                Details = new List<ResolvedMasterDetailChild>
+                {
+                    new ResolvedMasterDetailChild
+                    {
+                        Definition = childDefinition,
+                        ViewGuid = detailGuid,
+                        ViewName = "Claim Lines",
+                        ViewDisplayName = "Claim Lines",
+                        CreateAction = TestViewAction(detailCreateDefinition, detailGuid, "Claim Lines", "Create", "Added", false),
+                        UpdateAction = TestViewAction(detailUpdateDefinition, detailGuid, "Claim Lines", "Update", "Changed", false),
+                        DeleteAction = TestViewAction(detailDeleteDefinition, detailGuid, "Claim Lines", "Delete", "Removed", false)
+                    }
+                }
+            };
+            var xml = "<Form ID='form-id'><Name>Claim Form</Name><Controls/>" +
+                "<Areas><Area><Items><Item ID='master-instance' ViewID='" + masterGuid + "' ViewName='Claim'/></Items></Area>" +
+                "<Area><Items><Item ID='detail-instance' ViewID='" + detailGuid + "' ViewName='Claim Lines'/></Items></Area></Areas>" +
+                "<States><State><Events><Event><Handlers><Handler><Actions>" +
+                "<Action ID='read-id' DefinitionID='50000000-0000-0000-0000-000000000010' Type='Execute' ExecutionType='Synchronous' InstanceID='master-instance'>" +
+                "<Properties><Property><Name>Method</Name><Value>Read</Value></Property></Properties></Action>" +
+                "</Actions></Handler></Handlers></Event></Events></State></States></Form>";
+            var transformed = MasterDetailRules.Apply(xml, formDefinition, resolved);
+            MasterDetailRules.Verify(transformed, formDefinition, resolved);
+            var document = XDocument.Parse(transformed);
+            var group = document.Descendants("ValidationGroup").Single();
+            Assert((string)group.Element("Name") == "ValidationGroupForEvent", "native validation-group name");
+            var saveEvent = document.Descendants("Event").Single(x => (string)x.Attribute("SourceName") == "btnSave");
+            foreach (var action in saveEvent.Descendants("Action").Where(x => (string)x.Attribute("Type") == "Execute"))
+            {
+                Assert((string)action.Attribute("IsReference") == "True", "Form View action reference identity");
+                Assert((string)action.Attribute("IsInherited") == "True", "Form View action inherited identity");
+            }
+            var masterCreate = saveEvent.Descendants("Action").Single(x => ReadMethod(x) == "Create" && (string)x.Attribute("InstanceID") == "master-instance");
+            Assert((string)masterCreate.Attribute("DefinitionID") == createDefinition, "master View DefinitionID preserved");
+            Assert((string)masterCreate.Attribute("ExecutionType") == "Parallel", "master persistence remains in the parent-child batch");
+            var detailCreate = masterCreate.Parent.Elements("Action").Single(x => (string)x.Attribute("ItemState") == "Added");
+            Assert((string)detailCreate.Attribute("DefinitionID") == detailCreateDefinition, "detail View DefinitionID preserved");
+            Assert((string)detailCreate.Attribute("ExecutionType") == "Parallel", "editable-list state persistence remains in the parent-child batch");
+
+            detailCreate.Attribute("IsReference").Remove();
+            AssertThrows(delegate { MasterDetailRules.Verify(document.ToString(), formDefinition, resolved); }, "Designer-loadable batch detail action");
+        }
+
+        private static string TestViewAction(string definitionId, Guid viewId, string viewName, string method, string itemState, bool includeKeyResult)
+        {
+            var state = itemState == null ? string.Empty : " ItemState='" + itemState + "'";
+            var results = includeKeyResult
+                ? "<Results><Result SourceID='ClaimId' SourceType='ObjectProperty' TargetID='claim-key' TargetType='ViewField'/></Results>"
+                : string.Empty;
+            return "<Action ID='prototype-id' DefinitionID='" + definitionId + "' Type='Execute' ExecutionType='Synchronous'" + state + ">" +
+                "<Properties><Property><Name>Location</Name><Value>View</Value></Property>" +
+                "<Property><Name>Method</Name><Value>" + method + "</Value></Property>" +
+                "<Property><Name>ViewID</Name><DisplayValue>" + viewName + "</DisplayValue><Value>" + viewId + "</Value></Property></Properties>" +
+                "<Parameters><Parameter SourceID='ClaimId' SourceName='ClaimId' SourceType='ViewField' TargetID='ClaimId' TargetType='ObjectProperty'/></Parameters>" +
+                results + "</Action>";
         }
 
         private static void TestRequiredReadOnlyCreateInputGate()
