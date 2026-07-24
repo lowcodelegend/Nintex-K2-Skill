@@ -7,13 +7,13 @@ a live editable-list View's identity and dependency contract.
    View and one consuming Form under the dedicated `Generator Probes`
    category.
 2. Inspect the baseline and record its live View GUID. Confirm that the View
-   is checked in and `ShowAddRow=false`.
+   is checked in and has no `ShowAddRow` property.
 3. Run `repair-view` with `repair-manifest.json`, the recorded GUID, and a new
    backup path. The repair hides four technical columns.
 4. Verify from a fresh process. The View must retain its GUID, exact
    name/display name, category, primary SmartObject binding and Form
    dependency; it must be checked in with four aligned Header, Display,
-   Footer and Edit cells and `ShowAddRow=false`.
+   Footer and Edit cells and no `ShowAddRow` property.
 5. Run manifest-only cleanup against `repair-manifest.json` to delete only the
    disposable Form and View.
 

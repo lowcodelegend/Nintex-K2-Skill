@@ -304,7 +304,7 @@ The master must be a `capture` View containing its key and selected Create/Updat
 
 For a guided initiation journey, add `masterDetail.review` with `view`, `keyProperty`, `readMethod`, and `tab`. Both Save branches load that review View from the returned/current master key before focusing the review tab. Add `workflowStartButton` at Form level with `name`, `text`, and final `tab`; this emits one stable native OnClick rule in the base state for start-only workflow integration. Workflow-created states may clone base rules, so reconciliation and verification preserve those states while enforcing the master-detail contract on the authoritative base state.
 
-`capture-list` is a manifest intent: the CLI uses K2's List generator with editable mode, producing the native editable-list View and item-state rules. The generated View disables K2's `Enable Add new row link` setting (`ShowAddRow=false`) by default; users stage a new item through the explicit native Add toolbar action. On complete solution forms, combine it with a list tab and `listClickTabNavigation` so a selected master is read before its child List runs.
+`capture-list` is a manifest intent: the CLI uses K2's List generator with editable mode, producing the native editable-list View and item-state rules. The generated View disables K2's `Enable Add new row link` setting by omitting the `ShowAddRow` property; on K2 Five the property's presence enables the option even when its stored value is `false`. Users stage a new item through the explicit native Add toolbar action. On complete solution forms, combine it with a list tab and `listClickTabNavigation` so a selected master is read before its child List runs.
 
 ## Tabs and Worklist
 

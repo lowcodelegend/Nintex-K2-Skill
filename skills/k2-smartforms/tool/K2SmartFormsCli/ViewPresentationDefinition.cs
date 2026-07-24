@@ -91,20 +91,21 @@ namespace K2SmartFormsCli
 
             var viewControl = FindEditableListViewControl(document, view);
             var properties = viewControl.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
-            if (properties == null)
-            {
-                properties = new XElement(viewControl.Name.Namespace + "Properties");
-                viewControl.Add(properties);
-            }
-            SetProperty(properties, "ShowAddRow", "false");
+            if (properties == null) return;
+            foreach (var property in properties.Elements().Where(x => x.Name.LocalName == "Property" &&
+                string.Equals(ChildValue(x, "Name"), "ShowAddRow", StringComparison.OrdinalIgnoreCase)).ToList())
+                property.Remove();
         }
 
         private static void VerifyEditableListDefaults(XDocument document, ViewDefinition view)
         {
             var viewControl = FindEditableListViewControl(document, view);
-            if (!string.Equals(PropertyValue(viewControl, "ShowAddRow"), "false", StringComparison.OrdinalIgnoreCase))
+            var hasShowAddRow = viewControl.Elements().Where(x => x.Name.LocalName == "Properties")
+                .SelectMany(x => x.Elements()).Any(x => x.Name.LocalName == "Property" &&
+                    string.Equals(ChildValue(x, "Name"), "ShowAddRow", StringComparison.OrdinalIgnoreCase));
+            if (hasShowAddRow)
                 throw new CliException("Capture-list View '" + view.Name +
-                    "' must disable the editable-list 'Enable Add new row link' setting (ShowAddRow=false).");
+                    "' must disable the editable-list 'Enable Add new row link' setting by omitting the ShowAddRow property.");
         }
 
         private static XElement FindEditableListViewControl(XDocument document, ViewDefinition view)

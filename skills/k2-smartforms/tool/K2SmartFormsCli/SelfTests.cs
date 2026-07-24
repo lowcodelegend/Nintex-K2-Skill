@@ -238,10 +238,9 @@ namespace K2SmartFormsCli
             Assert(document.Descendants("Control").Count(control => (string)control.Attribute("Type") == "Cell") == 8,
                 "editable-list Cell control definitions reduced from twelve to eight");
             Assert(columns.Sum(column => int.Parse(((string)column.Attribute("Size")).TrimEnd('%'))) == 100, "editable-list widths total 100 percent");
-            Assert(document.Descendants("Control").Single(control => (string)control.Attribute("Type") == "View")
-                .Descendants("Property").Any(property => (string)property.Element("Name") == "ShowAddRow" &&
-                    (string)property.Element("Value") == "false"),
-                "editable-list Add new row link disabled by default");
+            Assert(!document.Descendants("Control").Single(control => (string)control.Attribute("Type") == "View")
+                .Descendants("Property").Any(property => (string)property.Element("Name") == "ShowAddRow"),
+                "editable-list Add new row link disabled by omitting ShowAddRow");
 
             foreach (var visible in new[] { "first", "last" })
             {
@@ -275,7 +274,7 @@ namespace K2SmartFormsCli
             AssertThrows(delegate { ViewPresentationDefinition.Apply(EditableListXml(true), view, false, false); }, "exactly one Header");
 
             var addRowEnabled = EditableListXml(false);
-            AssertThrows(delegate { ViewPresentationDefinition.Verify(addRowEnabled, view, false, false); }, "ShowAddRow=false");
+            AssertThrows(delegate { ViewPresentationDefinition.Verify(addRowEnabled, view, false, false); }, "omitting the ShowAddRow property");
         }
 
         private static string EditableListXml(bool malformed)
