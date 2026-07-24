@@ -181,7 +181,9 @@ namespace K2SmartFormsCli
             var document = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
             var actions = document.Descendants().Where(x => x.Name.LocalName == "Action" &&
                 string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
-                x.Attribute("ItemState") == null && methods.Contains(ReadProperty(x, "Method"))).ToList();
+                x.Attribute("ItemState") == null &&
+                string.IsNullOrWhiteSpace(ReadProperty(x, "ControlID")) &&
+                methods.Contains(ReadProperty(x, "Method"))).ToList();
             foreach (var action in actions) RemoveActionAndEmptyHandler(action);
             return document.ToString(SaveOptions.DisableFormatting);
         }
@@ -193,7 +195,9 @@ namespace K2SmartFormsCli
             var document = XDocument.Parse(xml);
             var unfiltered = document.Descendants().Where(x => x.Name.LocalName == "Action" &&
                 string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
-                x.Attribute("ItemState") == null && methods.Contains(ReadProperty(x, "Method"))).ToList();
+                x.Attribute("ItemState") == null &&
+                string.IsNullOrWhiteSpace(ReadProperty(x, "ControlID")) &&
+                methods.Contains(ReadProperty(x, "Method"))).ToList();
             if (unfiltered.Count > 0)
                 throw new CliException("Master-detail View '" + viewName + "' contains an unfiltered List rule. Detail loading must be owned by the Form and supplied with the master key.");
         }

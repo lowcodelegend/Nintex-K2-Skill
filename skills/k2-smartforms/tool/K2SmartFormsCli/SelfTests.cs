@@ -72,6 +72,35 @@ namespace K2SmartFormsCli
             ViewLookupDefinition.Verify(xml, view, sources);
 
             var document = XDocument.Parse(xml);
+            var lookup = document.Descendants("Control").Single(x => (string)x.Attribute("ID") == "categoryControl" && x.Attribute("Type") != null);
+            Assert(lookup.Descendants("Property").Any(x => (string)x.Element("Name") == "OriginalProperty" &&
+                (string)x.Element("Value") == "CategoryCode"), "lookup original property preserved");
+            var population = document.Descendants("Event").Single(x => (string)x.Element("Name") == "Init")
+                .Descendants("Action").Single(x => (string)x.Attribute("Type") == "Execute" &&
+                    x.Descendants("Property").Any(p => (string)p.Element("Name") == "ControlID" &&
+                        (string)p.Element("Value") == "categoryControl"));
+            Assert(population.Descendants("Property").Any(x => (string)x.Element("Name") == "ObjectID" &&
+                (string)x.Element("Value") == source.SmartObjectGuid.ToString()), "lookup population source rewritten");
+            Assert(population.Descendants("Result").Any(x => (string)x.Attribute("SourceID") == source.SmartObjectGuid.ToString() &&
+                (string)x.Attribute("TargetID") == "categoryControl"), "lookup List result populates dropdown");
+            var secondPass = ViewLookupDefinition.Apply(xml, view, sources);
+            Assert(string.Equals(xml, secondPass, StringComparison.Ordinal), "lookup population transformation is idempotent");
+
+            var child = new MasterDetailChildDefinition { View = view.Name, ListMethod = "List" };
+            var suppressed = MasterDetailRules.SuppressUnfilteredDetailLoads(xml, view.Name, new[] { child });
+            MasterDetailRules.VerifyDetailViewLoads(suppressed, view.Name, new[] { child });
+            ViewLookupDefinition.Verify(suppressed, view, sources);
+            var suppressedDocument = XDocument.Parse(suppressed);
+            Assert(suppressedDocument.Descendants("Action").Count(x => (string)x.Attribute("Type") == "Execute" &&
+                x.Descendants("Property").Any(p => (string)p.Element("Name") == "Method" && (string)p.Element("Value") == "List") &&
+                x.Descendants("Property").Any(p => (string)p.Element("Name") == "ControlID" && (string)p.Element("Value") == "categoryControl")) == 1,
+                "master-detail suppression preserves dropdown population");
+            Assert(!suppressedDocument.Descendants("Action").Any(x => (string)x.Attribute("ID") == "unfiltered-detail-list"),
+                "master-detail suppression removes only the unfiltered detail load");
+
+            population.Remove();
+            AssertThrows(delegate { ViewLookupDefinition.Verify(document.ToString(), view, sources); }, "population actions");
+            document = XDocument.Parse(xml);
             document.Descendants("Layout").Elements("Control").Remove();
             AssertThrows(delegate { ViewLookupDefinition.Verify(document.ToString(), view, sources); }, "not placed in the live View layout");
         }
@@ -482,14 +511,20 @@ namespace K2SmartFormsCli
 
         private static string ViewXml()
         {
-            return "<View><Fields>" +
+            return "<View ID='22222222-2222-2222-2222-222222222222'><Name>Claim Lines</Name><DisplayName>Claim Lines</DisplayName><Fields>" +
                 "<Field ID='category'><FieldName>CategoryCode</FieldName></Field>" +
                 "<Field ID='status'><FieldName>Status</FieldName></Field>" +
                 "</Fields><Controls>" +
                 "<Control ID='categoryControl' Type='TextBox' FieldID='category'><Name>CategoryCode</Name><Properties /></Control>" +
                 "<Control ID='statusControl' Type='TextBox' FieldID='status'><Name>Status</Name><Properties /></Control>" +
                 "</Controls><Layout><Control ID='categoryControl' /><Control ID='statusControl' /></Layout>" +
-                "<Events><Event><Handlers><Handler><Actions><Action Type='Execute'><Properties><Property><Name>Method</Name><Value>Create</Value></Property></Properties>" +
+                "<Events><Event Type='User' SourceType='View' SourceID='22222222-2222-2222-2222-222222222222'><Name>Init</Name><Handlers><Handler><Actions>" +
+                "<Action Type='Execute'><Properties><Property><Name>Location</Name><Value>View</Value></Property><Property><Name>Method</Name><Value>List</Value></Property>" +
+                "<Property><Name>ViewID</Name><Value>22222222-2222-2222-2222-222222222222</Value></Property><Property><Name>ControlID</Name><Value>categoryControl</Value></Property>" +
+                "<Property><Name>ObjectID</Name><Value>99999999-9999-9999-9999-999999999999</Value></Property></Properties><Results><Result SourceID='99999999-9999-9999-9999-999999999999' SourceType='Result' TargetID='categoryControl' TargetType='Control' /></Results></Action>" +
+                "<Action ID='unfiltered-detail-list' Type='Execute'><Properties><Property><Name>Location</Name><Value>View</Value></Property><Property><Name>Method</Name><Value>List</Value></Property>" +
+                "<Property><Name>ViewID</Name><Value>22222222-2222-2222-2222-222222222222</Value></Property><Property><Name>ObjectID</Name><Value>88888888-8888-8888-8888-888888888888</Value></Property></Properties></Action>" +
+                "</Actions></Handler></Handlers></Event><Event><Handlers><Handler><Actions><Action Type='Execute'><Properties><Property><Name>Method</Name><Value>Create</Value></Property></Properties>" +
                 "<Parameters><Parameter SourceID='statusControl' SourceType='Control' TargetID='Status' TargetType='ObjectProperty' /></Parameters>" +
                 "</Action></Actions></Handler></Handlers></Event></Events></View>";
         }

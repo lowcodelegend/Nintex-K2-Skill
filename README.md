@@ -160,7 +160,7 @@ navigation, Designer isolation, and authenticated Runtime validation.
 
 - Generate checked-in capture, list, content, and editable-list views plus composed forms.
 - Use modern Style Profiles with legacy theme mode disabled.
-- Build tabs, list/details navigation, native My Tasks Worklist tabs, lookup and cascading dropdowns, and lookup/approval-matrix Admin UX.
+- Build tabs, list/details navigation, native My Tasks Worklist tabs, lookup and cascading dropdowns with verified View-initialization population rules, and lookup/approval-matrix Admin UX.
 - Build polished master-detail forms with one Form Save action, returned-key transfer, item-state batches, filtered child loads, success feedback, hidden bypass buttons, bold labels, and control-friendly layouts.
 - Generate read-only controls, responsive four-column capture layouts, hidden bound technical properties, business-facing property labels, and hidden `tblDebug` Data Label variables.
 - Generate native responsive KPI cards, SmartObject-backed charts with paired accessible data Views, and read-only lifecycle Progress controls.

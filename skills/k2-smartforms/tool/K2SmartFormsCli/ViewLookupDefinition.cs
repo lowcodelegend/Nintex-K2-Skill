@@ -9,7 +9,7 @@ namespace K2SmartFormsCli
     {
         private static readonly string[] LookupPropertyNames =
         {
-            "DataSourceType", "AssociationSO", "AssociationMethod", "ValueProperty",
+            "DataSourceType", "AssociationSO", "AssociationMethod", "OriginalProperty", "ValueProperty",
             "DisplayTemplate", "AllowEmptySelection", "FixedListItems", "FilterProperty", "WaterMarkText",
             "ParentControl", "ParentJoinProperty", "ChildJoinProperty"
         };
@@ -39,6 +39,7 @@ namespace K2SmartFormsCli
                 SetProperty(properties, "DataSourceType", "SmartObject", "SmartObject", null);
                 SetProperty(properties, "AssociationSO", source.SmartObjectGuid.ToString(), source.SmartObjectDisplayName, source.SmartObjectSystemName);
                 SetProperty(properties, "AssociationMethod", source.MethodName, source.MethodDisplayName, source.MethodName);
+                SetProperty(properties, "OriginalProperty", binding.Property, binding.Property, binding.Property);
                 SetProperty(properties, "ValueProperty", source.ValuePropertyName, source.ValuePropertyDisplayName, source.ValuePropertyName);
                 SetProperty(properties, "DisplayTemplate", BuildTemplate(source), "[" + source.DisplayPropertyDisplayName + "]", null);
                 SetProperty(properties, "AllowEmptySelection", binding.AllowEmptySelection ? "true" : "false", binding.AllowEmptySelection ? "true" : "false", null);
@@ -50,6 +51,7 @@ namespace K2SmartFormsCli
                     SetProperty(properties, "ParentJoinProperty", binding.Cascade.ParentJoinProperty, binding.Cascade.ParentJoinProperty, binding.Cascade.ParentJoinProperty);
                     SetProperty(properties, "ChildJoinProperty", binding.Cascade.ChildJoinProperty, binding.Cascade.ChildJoinProperty, binding.Cascade.ChildJoinProperty);
                 }
+                EnsurePopulationAction(document, view, control, source);
             }
             ApplyDefaultValues(document, view);
             ApplyReadOnly(document, view);
@@ -73,6 +75,7 @@ namespace K2SmartFormsCli
                 AssertProperty(properties, "DataSourceType", "SmartObject", view, binding);
                 AssertProperty(properties, "AssociationSO", source.SmartObjectGuid.ToString(), view, binding);
                 AssertProperty(properties, "AssociationMethod", source.MethodName, view, binding);
+                AssertProperty(properties, "OriginalProperty", binding.Property, view, binding);
                 AssertProperty(properties, "ValueProperty", source.ValuePropertyName, view, binding);
                 AssertProperty(properties, "AllowEmptySelection", binding.AllowEmptySelection ? "true" : "false", view, binding);
                 var displayTemplate = GetPropertyValue(properties, "DisplayTemplate");
@@ -85,9 +88,194 @@ namespace K2SmartFormsCli
                     AssertProperty(properties, "ParentJoinProperty", binding.Cascade.ParentJoinProperty, view, binding);
                     AssertProperty(properties, "ChildJoinProperty", binding.Cascade.ChildJoinProperty, view, binding);
                 }
+                VerifyPopulationAction(document, view, control, source);
             }
             VerifyDefaultValues(document, view);
             VerifyReadOnly(document, view);
+        }
+
+        private static void EnsurePopulationAction(XDocument document, ViewDefinition view, XElement control, LookupRuntimeSource source)
+        {
+            var controlId = (string)control.Attribute("ID");
+            var initEvent = FindInitEvent(document);
+            if (initEvent != null)
+            {
+                var existing = PopulationActions(initEvent, controlId).ToList();
+                if (existing.Count == 1 && IsExpectedPopulationAction(existing[0], document, control, source))
+                    return;
+                foreach (var action in existing) action.Remove();
+            }
+
+            initEvent = EnsureInitEvent(document, view);
+            var actions = EnsureUnconditionalActions(initEvent);
+            var population = BuildPopulationAction(document, control, source);
+            var firstNonPopulation = actions.Elements().FirstOrDefault(x =>
+                x.Name.LocalName == "Action" && !IsPopulationAction(x));
+            if (firstNonPopulation == null) actions.Add(population);
+            else firstNonPopulation.AddBeforeSelf(population);
+        }
+
+        private static void VerifyPopulationAction(XDocument document, ViewDefinition view, XElement control, LookupRuntimeSource source)
+        {
+            var initEvent = FindInitEvent(document);
+            var controlId = (string)control.Attribute("ID");
+            var actions = initEvent == null
+                ? new List<XElement>()
+                : PopulationActions(initEvent, controlId).ToList();
+            if (actions.Count != 1)
+                throw new CliException("View '" + view.Name + "' lookup for '" + ChildValue(control, "Name") +
+                    "' has " + actions.Count + " View Init population actions; expected exactly one.");
+            if (!IsExpectedPopulationAction(actions[0], document, control, source))
+                throw new CliException("View '" + view.Name + "' lookup for '" + ChildValue(control, "Name") +
+                    "' does not populate from " + source.SmartObjectSystemName + "." + source.MethodName + " during View Init.");
+        }
+
+        private static XElement FindInitEvent(XDocument document)
+        {
+            return document.Descendants().FirstOrDefault(x =>
+                x.Name.LocalName == "Event" &&
+                string.Equals(ChildValue(x, "Name"), "Init", StringComparison.OrdinalIgnoreCase) &&
+                (string.IsNullOrWhiteSpace((string)x.Attribute("SourceType")) ||
+                 string.Equals((string)x.Attribute("SourceType"), "View", StringComparison.OrdinalIgnoreCase)));
+        }
+
+        private static XElement EnsureInitEvent(XDocument document, ViewDefinition view)
+        {
+            var existing = FindInitEvent(document);
+            if (existing != null) return existing;
+            var root = document.Descendants().FirstOrDefault(x => x.Name.LocalName == "View");
+            if (root == null) throw new CliException("Generated view '" + view.Name + "' has no View root.");
+            var ns = root.Name.Namespace;
+            var events = root.Elements().FirstOrDefault(x => x.Name.LocalName == "Events");
+            if (events == null)
+            {
+                events = new XElement(ns + "Events");
+                root.Add(events);
+            }
+            var viewId = (string)root.Attribute("ID");
+            if (string.IsNullOrWhiteSpace(viewId))
+                throw new CliException("Generated view '" + view.Name + "' has no View ID for lookup initialization.");
+            var displayName = ChildValue(root, "DisplayName") ?? ChildValue(root, "Name") ?? view.Name;
+            var result = new XElement(ns + "Event",
+                new XAttribute("ID", Guid.NewGuid()),
+                new XAttribute("DefinitionID", Guid.NewGuid()),
+                new XAttribute("Type", "User"),
+                new XAttribute("SourceID", viewId),
+                new XAttribute("SourceType", "View"),
+                new XAttribute("SourceName", view.Name),
+                new XAttribute("SourceDisplayName", displayName),
+                new XElement(ns + "Name", "Init"),
+                new XElement(ns + "Handlers"));
+            events.AddFirst(result);
+            return result;
+        }
+
+        private static XElement EnsureUnconditionalActions(XElement initEvent)
+        {
+            var ns = initEvent.Name.Namespace;
+            var handlers = initEvent.Elements().FirstOrDefault(x => x.Name.LocalName == "Handlers");
+            if (handlers == null)
+            {
+                handlers = new XElement(ns + "Handlers");
+                initEvent.Add(handlers);
+            }
+            var handler = handlers.Elements().FirstOrDefault(x =>
+                x.Name.LocalName == "Handler" &&
+                !x.Elements().Any(e => e.Name.LocalName == "Conditions" && e.Elements().Any()));
+            if (handler == null)
+            {
+                handler = new XElement(ns + "Handler",
+                    new XAttribute("ID", Guid.NewGuid()),
+                    new XAttribute("DefinitionID", Guid.NewGuid()));
+                handlers.AddFirst(handler);
+            }
+            var actions = handler.Elements().FirstOrDefault(x => x.Name.LocalName == "Actions");
+            if (actions == null)
+            {
+                actions = new XElement(ns + "Actions");
+                handler.Add(actions);
+            }
+            return actions;
+        }
+
+        private static IEnumerable<XElement> PopulationActions(XElement initEvent, string controlId)
+        {
+            return initEvent.Descendants().Where(x =>
+                x.Name.LocalName == "Action" &&
+                string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(ActionProperty(x, "ControlID"), controlId, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static bool IsPopulationAction(XElement action)
+        {
+            return string.Equals((string)action.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrWhiteSpace(ActionProperty(action, "ControlID"));
+        }
+
+        private static bool IsExpectedPopulationAction(XElement action, XDocument document, XElement control, LookupRuntimeSource source)
+        {
+            var root = document.Descendants().FirstOrDefault(x => x.Name.LocalName == "View");
+            var viewId = root == null ? null : (string)root.Attribute("ID");
+            var controlId = (string)control.Attribute("ID");
+            if (!string.Equals(ActionProperty(action, "Location"), "View", StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(ActionProperty(action, "Method"), source.MethodName, StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(ActionProperty(action, "ViewID"), viewId, StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(ActionProperty(action, "ControlID"), controlId, StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(ActionProperty(action, "ObjectID"), source.SmartObjectGuid.ToString(), StringComparison.OrdinalIgnoreCase))
+                return false;
+            return action.Descendants().Any(x =>
+                x.Name.LocalName == "Result" &&
+                string.Equals((string)x.Attribute("SourceID"), source.SmartObjectGuid.ToString(), StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("SourceType"), "Result", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("TargetID"), controlId, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("TargetType"), "Control", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static XElement BuildPopulationAction(XDocument document, XElement control, LookupRuntimeSource source)
+        {
+            var root = document.Descendants().First(x => x.Name.LocalName == "View");
+            var ns = root.Name.Namespace;
+            var viewId = (string)root.Attribute("ID");
+            var viewName = ChildValue(root, "Name") ?? string.Empty;
+            var viewDisplayName = ChildValue(root, "DisplayName") ?? viewName;
+            var controlId = (string)control.Attribute("ID");
+            var controlName = ChildValue(control, "Name") ?? controlId;
+            return new XElement(ns + "Action",
+                new XAttribute("ID", Guid.NewGuid()),
+                new XAttribute("DefinitionID", Guid.NewGuid()),
+                new XAttribute("Type", "Execute"),
+                new XAttribute("ExecutionType", "Synchronous"),
+                new XElement(ns + "Properties",
+                    ActionPropertyElement(ns, "Location", "View", null, null),
+                    ActionPropertyElement(ns, "Method", source.MethodName, source.MethodDisplayName, source.MethodName),
+                    ActionPropertyElement(ns, "ViewID", viewId, viewDisplayName, viewName),
+                    ActionPropertyElement(ns, "ControlID", controlId, controlName, controlName),
+                    ActionPropertyElement(ns, "ObjectID", source.SmartObjectGuid.ToString(), source.SmartObjectDisplayName, source.SmartObjectSystemName)),
+                new XElement(ns + "Results",
+                    new XElement(ns + "Result",
+                        new XAttribute("SourceID", source.SmartObjectGuid),
+                        new XAttribute("SourceName", source.SmartObjectSystemName),
+                        new XAttribute("SourceDisplayName", source.SmartObjectDisplayName),
+                        new XAttribute("SourceType", "Result"),
+                        new XAttribute("TargetID", controlId),
+                        new XAttribute("TargetName", controlName),
+                        new XAttribute("TargetDisplayName", controlName),
+                        new XAttribute("TargetType", "Control"))));
+        }
+
+        private static XElement ActionPropertyElement(XNamespace ns, string name, string value, string displayValue, string nameValue)
+        {
+            var property = new XElement(ns + "Property", new XElement(ns + "Name", name));
+            if (displayValue != null) property.Add(new XElement(ns + "DisplayValue", displayValue));
+            if (nameValue != null) property.Add(new XElement(ns + "NameValue", nameValue));
+            property.Add(new XElement(ns + "Value", value));
+            return property;
+        }
+
+        private static string ActionProperty(XElement action, string name)
+        {
+            var properties = action.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
+            return GetPropertyValue(properties, name);
         }
 
         private static void ApplyDefaultValues(XDocument document, ViewDefinition view)

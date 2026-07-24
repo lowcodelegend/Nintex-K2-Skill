@@ -528,7 +528,7 @@ namespace K2SmartFormsCli
                 if (!string.Equals(originalPrimarySource, repairedPrimarySource, StringComparison.OrdinalIgnoreCase))
                     throw new CliException("Refusing to repair View '" + viewName +
                         "': generated primary SmartObject binding differs from the live binding.");
-                VerifyRenderedView(repaired, declaredView);
+                VerifyRenderedView(repaired, declaredView, lookupSources);
 
                 File.WriteAllText(fullBackupPath, original);
                 Console.WriteLine("View repair backup: " + fullBackupPath);
@@ -542,7 +542,7 @@ namespace K2SmartFormsCli
 
                     var draftInfo = manager.GetView(originalInfo.Guid);
                     AssertRepairedViewInvariants(manager, draftInfo, originalInfo, expectedCategory,
-                        originalDependencies, originalPrimarySource, declaredView, true);
+                        originalDependencies, originalPrimarySource, declaredView, lookupSources, true);
 
                     manager.CheckInView(originalInfo.Guid);
                     checkedOutHere = false;
@@ -560,7 +560,7 @@ namespace K2SmartFormsCli
 
                 var updatedInfo = manager.GetView(originalInfo.Guid);
                 AssertRepairedViewInvariants(manager, updatedInfo, originalInfo, expectedCategory,
-                    originalDependencies, originalPrimarySource, declaredView, false);
+                    originalDependencies, originalPrimarySource, declaredView, lookupSources, false);
                 Console.WriteLine("View repair: updated in place (" + viewName + ", " + originalInfo.Guid +
                     ", v" + originalInfo.Version + " -> v" + updatedInfo.Version + ", dependencies=" +
                     originalDependencies.Count + ", checkedIn=true)");
@@ -594,17 +594,18 @@ namespace K2SmartFormsCli
             definition = ViewLifecycleLayoutDefinition.Apply(definition, view);
             if (isDetail)
                 definition = MasterDetailRules.SuppressUnfilteredDetailLoads(definition, view.Name, detailRelationships);
-            VerifyRenderedView(definition, view);
+            VerifyRenderedView(definition, view, lookupSources);
             return definition;
         }
 
-        private void VerifyRenderedView(string definition, ViewDefinition view)
+        private void VerifyRenderedView(string definition, ViewDefinition view, IDictionary<string, LookupRuntimeSource> lookupSources)
         {
             var isMaster = _manifest.Application.Forms.Any(f => f.MasterDetail != null &&
                 string.Equals(f.MasterDetail.MasterView, view.Name, StringComparison.OrdinalIgnoreCase));
             var isDetail = _manifest.Application.Forms.Where(f => f.MasterDetail != null)
                 .SelectMany(f => f.MasterDetail.Details)
                 .Any(d => string.Equals(d.View, view.Name, StringComparison.OrdinalIgnoreCase));
+            ViewLookupDefinition.Verify(definition, view, lookupSources);
             ViewPresentationDefinition.Verify(definition, view, isMaster, isDetail);
         }
 
@@ -668,7 +669,7 @@ namespace K2SmartFormsCli
 
         private void AssertRepairedViewInvariants(FormsManager manager, ViewInfo actual, ViewInfo original,
             string expectedCategory, IList<Guid> expectedDependencies, string expectedPrimarySource,
-            ViewDefinition declaredView, bool expectCheckedOut)
+            ViewDefinition declaredView, IDictionary<string, LookupRuntimeSource> lookupSources, bool expectCheckedOut)
         {
             if (actual.Guid != original.Guid)
                 throw new CliException("View repair changed the View identity: " + declaredView.Name);
@@ -691,7 +692,7 @@ namespace K2SmartFormsCli
                     StringComparison.OrdinalIgnoreCase))
                 throw new CliException("View repair changed the primary SmartObject binding for View '" +
                     declaredView.Name + "'.");
-            VerifyRenderedView(liveDefinition, declaredView);
+            VerifyRenderedView(liveDefinition, declaredView, lookupSources);
         }
 
         public void Deploy(bool resume, bool formsOnly)

@@ -198,6 +198,8 @@ Declare each reusable lookup source once under `application.lookups`, then bind 
 
 The lookup method must be a parameterless SmartObject List method. The target property and lookup `valueProperty` must have compatible K2 types (`Number`/`Autonumber` and `Guid`/`AutoGuid` are compatible pairs). `displayProperty` supplies the dropdown label.
 
+For every binding the CLI writes `OriginalProperty`, rewrites any generated lookup population action, and requires exactly one View `Init` `List` action whose result targets the dropdown control. This applies when FormGenerator originally emitted either a TextBox or a foreign-key dropdown; control datasource properties without the matching action fail verification.
+
 For cascading dropdowns, declare both parent and child controls and add the join contract to the child:
 
 ```json
