@@ -24,10 +24,9 @@
         "properties": ["ExpenseId", "Title", "Amount", "Status"],
         "readOnlyProperties": ["ExpenseId", "Status"],
         "defaultValues": { "Status": "Draft" },
-        "layoutColumns": 4,
         "hiddenVariables": [{ "name": "dlbMode", "dataType": "Text", "defaultValue": "Create" }],
         "methods": ["Create", "Read", "Update", "Delete"],
-        "options": ["editable", "labels-left", "colon-labels", "toolbar"]
+        "options": ["editable", "toolbar"]
       },
       {
         "name": "Expense List",
@@ -260,7 +259,9 @@ Supported view types are `capture`, `list`, `content`, and `capture-list`. Suppo
 
 `defaultValues` maps selected non-lookup capture/capture-list properties to literal initial values and literal SmartObject Create-rule parameters. Use it when a Create input is intentionally system-managed, such as `{ "Status": "Draft", "PreferredLanguageCode": "en" }`; normally also put that property in `hiddenProperties`. The literal rule mapping is authoritative—the save does not depend on a hidden control or SQL default. The CLI rejects a required read-only Create input without this mapping or a `form.masterDetail` foreign-key supply. Keep lookup/user-selectable values editable and never put secrets in defaults.
 
-`layoutColumns` defaults to `4`. Capture Views use a native Table with `IsResponsive=true` and bold 20/30/20/30 label/control pairs. TextArea and File Attachment rows remain full-width. Set `2` for a deliberate narrow/mobile-heavy, narrative-heavy, or attachment-heavy layout; it uses 40/60 widths.
+`layoutColumns` defaults to `2`. Capture Views use K2 label-above mode, a native Table with `IsResponsive=true`, two 50% field cells, and bold colon-suffixed Labels stacked above their controls. TextArea and File rows span both columns, section boundaries restart pairing, and hiding one field preserves its adjacent cell. `colon-labels` is added automatically for capture Views.
+
+For an explicit dense-desktop exception, set `layoutColumns: 4` with `labels-left`; the CLI normalizes this to 20/30/20/30 label/control pairs. `labels-left` with `layoutColumns: 2` retains a deliberate 40/60 single-field row. Omit `labels-left` for the default.
 
 Use these Item View contracts:
 

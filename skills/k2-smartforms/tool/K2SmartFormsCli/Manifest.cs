@@ -131,7 +131,13 @@ namespace K2SmartFormsCli
                 if (!AllowedViewTypes.Contains(view.Type))
                     throw new CliException("Unsupported view type '" + view.Type + "' for " + view.Name + ".");
                 if (!view.LayoutColumns.HasValue)
-                    view.LayoutColumns = view.Type == "capture" ? 4 : 2;
+                    view.LayoutColumns = 2;
+                if (view.Type == "capture" && view.LayoutColumns == 4 &&
+                    !view.Options.Contains("labels-left", StringComparer.OrdinalIgnoreCase))
+                    view.Options.Add("labels-left");
+                if (view.Type == "capture" &&
+                    !view.Options.Contains("colon-labels", StringComparer.OrdinalIgnoreCase))
+                    view.Options.Add("colon-labels");
                 ValidateValues(view.Options, AllowedViewOptions, "view option", view.Name);
                 EnsureUniqueValues(view.Properties, "property", view.Name);
                 EnsureUniqueValues(view.Methods, "method", view.Name);

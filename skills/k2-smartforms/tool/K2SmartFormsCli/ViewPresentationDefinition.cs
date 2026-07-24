@@ -17,12 +17,16 @@ namespace K2SmartFormsCli
             ApplyRequiredInputs(document, view);
             ApplyHiddenProperties(document, view);
             ApplyPropertyLabels(document, view);
+            ApplyColonLabels(document, view);
+            if (view.Type == "capture" && !UsesLabelsLeft(view) &&
+                (view.Charts == null || view.Charts.Count == 0))
+                ApplyLabelAboveTwoColumnLayout(document, view);
             ApplySections(document, view);
             ApplyHelp(document, view);
             if (view.Type == "capture" && (view.Charts == null || view.Charts.Count == 0))
             {
                 if (view.LayoutColumns == 4) ApplyFourColumnLayout(document, view.Name);
-                else ApplyTwoColumnLayout(document, view.Name);
+                else ApplyTwoColumnLayout(document, view);
             }
             if (view.HiddenVariables.Count > 0) AddHiddenVariables(document, view);
             foreach (var control in document.Descendants().Where(x => x.Name.LocalName == "Control"))
@@ -59,11 +63,14 @@ namespace K2SmartFormsCli
             if (view.Type == "capture" && (view.Charts == null || view.Charts.Count == 0))
             {
                 var body = FindBodyGrid(document, view.Name);
-                var expected = view.LayoutColumns == 4 ? new[] { "20%", "30%", "20%", "30%" } : new[] { "40%", "60%" };
+                var expected = view.LayoutColumns == 4
+                    ? new[] { "20%", "30%", "20%", "30%" }
+                    : UsesLabelsLeft(view) ? new[] { "40%", "60%" } : new[] { "50%", "50%" };
                 var actual = body.Elements().First(x => x.Name.LocalName == "Columns").Elements()
                     .Select(x => (string)x.Attribute("Size") ?? string.Empty).ToArray();
                 if (!actual.SequenceEqual(expected, StringComparer.OrdinalIgnoreCase))
                     throw new CliException("View '" + view.Name + "' label/control column widths are " + string.Join("/", actual) + ", expected " + string.Join("/", expected) + ".");
+                if (!UsesLabelsLeft(view)) VerifyLabelAboveTwoColumnLayout(document, view);
             }
             var labels = document.Descendants().Where(x => x.Name.LocalName == "Control" && string.Equals((string)x.Attribute("Type"), "Label", StringComparison.OrdinalIgnoreCase)).ToList();
             if (labels.Any(x => !IsBold(x))) throw new CliException("View '" + view.Name + "' contains a label that is not bold.");
@@ -93,6 +100,11 @@ namespace K2SmartFormsCli
         private static bool IsButtonControl(string type)
         {
             return !string.IsNullOrWhiteSpace(type) && type.EndsWith("Button", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool UsesLabelsLeft(ViewDefinition view)
+        {
+            return view.Options.Contains("labels-left", StringComparer.OrdinalIgnoreCase);
         }
 
         private static void ApplyResponsiveTable(XDocument document, ViewDefinition view)
@@ -318,8 +330,25 @@ namespace K2SmartFormsCli
             foreach (var property in view.HiddenProperties)
             {
                 var controlIds = FindFieldControlIds(document, view, property, "hidden");
+                if (string.Equals(view.Type, "capture", StringComparison.OrdinalIgnoreCase) && !UsesLabelsLeft(view))
+                {
+                    foreach (var cell in document.Descendants().Where(x => x.Name.LocalName == "Cell" &&
+                        x.Descendants().Any(reference => reference.Name.LocalName == "Control" &&
+                            controlIds.Contains((string)reference.Attribute("ID"), StringComparer.OrdinalIgnoreCase))).ToList())
+                    {
+                        var row = cell.Parent == null ? null : cell.Parent.Parent;
+                        cell.Remove();
+                        if (row == null) continue;
+                        var remaining = Cells(row);
+                        if (remaining.Count == 0) row.Remove();
+                        else if (remaining.Count == 1) remaining[0].SetAttributeValue("ColumnSpan", "2");
+                    }
+                    continue;
+                }
                 foreach (var row in document.Descendants().Where(x => x.Name.LocalName == "Row" &&
-                    x.Descendants().Any(reference => reference.Name.LocalName == "Control" && controlIds.Contains((string)reference.Attribute("ID"), StringComparer.OrdinalIgnoreCase))).ToList()) row.Remove();
+                    x.Descendants().Any(reference => reference.Name.LocalName == "Control" &&
+                        controlIds.Contains((string)reference.Attribute("ID"), StringComparer.OrdinalIgnoreCase))).ToList())
+                    row.Remove();
             }
         }
 
@@ -652,7 +681,7 @@ namespace K2SmartFormsCli
                 if (labelControl == null) throw new CliException("Generated View '" + view.Name + "' has no label control for property '" + label.Key + "'.");
                 var properties = labelControl.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
                 if (properties == null) { properties = new XElement(labelControl.Name.Namespace + "Properties"); labelControl.Add(properties); }
-                SetProperty(properties, "Text", label.Value);
+                SetProperty(properties, "Text", EffectivePropertyLabel(view, label.Value));
             }
         }
 
@@ -662,9 +691,40 @@ namespace K2SmartFormsCli
             {
                 var row = FindPropertyRow(document, view, label.Key);
                 var labelControl = FindPropertyLabelControl(document, view, label.Key, row);
-                if (labelControl == null || !string.Equals(PropertyValue(labelControl, "Text"), label.Value, StringComparison.Ordinal))
-                    throw new CliException("View '" + view.Name + "' property '" + label.Key + "' does not use label '" + label.Value +
+                var expected = EffectivePropertyLabel(view, label.Value);
+                if (labelControl == null || !string.Equals(PropertyValue(labelControl, "Text"), expected, StringComparison.Ordinal))
+                    throw new CliException("View '" + view.Name + "' property '" + label.Key + "' does not use label '" + expected +
                         "' (found " + (labelControl == null ? "<none>" : ChildValue(labelControl, "Name") + "='" + PropertyValue(labelControl, "Text") + "'") + ").");
+            }
+        }
+
+        private static string EffectivePropertyLabel(ViewDefinition view, string value)
+        {
+            if (!view.Options.Contains("colon-labels", StringComparer.OrdinalIgnoreCase) ||
+                string.IsNullOrEmpty(value) || value.EndsWith(":", StringComparison.Ordinal))
+                return value;
+            return value + ":";
+        }
+
+        private static void ApplyColonLabels(XDocument document, ViewDefinition view)
+        {
+            if (!view.Options.Contains("colon-labels", StringComparer.OrdinalIgnoreCase)) return;
+            foreach (var property in view.Properties.Where(x =>
+                !view.HiddenProperties.Contains(x, StringComparer.OrdinalIgnoreCase)))
+            {
+                var row = FindPropertyRow(document, view, property);
+                var label = FindPropertyLabelControl(document, view, property, row);
+                if (label == null) continue;
+                var text = PropertyValue(label, "Text") ?? ChildValue(label, "DisplayName") ??
+                    ChildValue(label, "Name") ?? property;
+                if (text.EndsWith(":", StringComparison.Ordinal)) continue;
+                var properties = label.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
+                if (properties == null)
+                {
+                    properties = new XElement(label.Name.Namespace + "Properties");
+                    label.Add(properties);
+                }
+                SetProperty(properties, "Text", text + ":");
             }
         }
 
@@ -742,13 +802,165 @@ namespace K2SmartFormsCli
             }
         }
 
-        private static void ApplyTwoColumnLayout(XDocument document, string viewName)
+        private static void ApplyTwoColumnLayout(XDocument document, ViewDefinition view)
         {
-            var grid = FindBodyGrid(document, viewName);
+            var grid = FindBodyGrid(document, view.Name);
             var columns = grid.Elements().First(x => x.Name.LocalName == "Columns").Elements().Where(x => x.Name.LocalName == "Column").ToList();
-            if (columns.Count != 2) throw new CliException("Generated capture View '" + viewName + "' does not have the expected two-column layout.");
-            SetColumnSize(document, columns[0], "40%", 0);
-            SetColumnSize(document, columns[1], "60%", 1);
+            if (columns.Count != 2) throw new CliException("Generated capture View '" + view.Name + "' does not have the expected two-column layout.");
+            SetColumnSize(document, columns[0], UsesLabelsLeft(view) ? "40%" : "50%", 0);
+            SetColumnSize(document, columns[1], UsesLabelsLeft(view) ? "60%" : "50%", 1);
+        }
+
+        private static void ApplyLabelAboveTwoColumnLayout(XDocument document, ViewDefinition view)
+        {
+            if (view.LayoutColumns != 2)
+                throw new CliException("Label-above capture View '" + view.Name + "' must use layoutColumns=2.");
+            var grid = FindBodyGrid(document, view.Name);
+            var rows = grid.Elements().First(x => x.Name.LocalName == "Rows");
+            var root = document.Descendants().First(x => x.Name.LocalName == "View");
+            var controlsElement = root.Elements().First(x => x.Name.LocalName == "Controls");
+            var controls = controlsElement.Elements().Where(x =>
+                x.Name.LocalName == "Control" && !string.IsNullOrWhiteSpace((string)x.Attribute("ID")))
+                .ToDictionary(x => (string)x.Attribute("ID"), StringComparer.OrdinalIgnoreCase);
+
+            var propertyByControl = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var property in view.Properties.Where(x =>
+                !view.HiddenProperties.Contains(x, StringComparer.OrdinalIgnoreCase)))
+                foreach (var controlId in FindFieldControlIds(document, view, property, "label-above layout"))
+                    propertyByControl[controlId] = property;
+
+            var fieldCells = new List<LabelAboveFieldCell>();
+            foreach (var row in rows.Elements().Where(x => x.Name.LocalName == "Row").ToList())
+            {
+                foreach (var cell in Cells(row).ToList())
+                {
+                    var property = cell.Descendants().Where(x => x.Name.LocalName == "Control")
+                        .Select(x => (string)x.Attribute("ID"))
+                        .Where(x => !string.IsNullOrWhiteSpace(x) && propertyByControl.ContainsKey(x))
+                        .Select(x => propertyByControl[x]).FirstOrDefault();
+                    if (property == null) continue;
+                    fieldCells.Add(new LabelAboveFieldCell
+                    {
+                        Cell = cell,
+                        Property = property,
+                        Section = SectionIndex(view, property),
+                        Long = CellContainsLongInput(cell, controls)
+                    });
+                    cell.Remove();
+                }
+                if (Cells(row).Count == 0) row.Remove();
+            }
+
+            var anchor = rows.Elements().FirstOrDefault(x => x.Name.LocalName == "Row");
+            XElement pending = null;
+            var pendingSection = int.MinValue;
+            var pendingCount = 0;
+            foreach (var fieldCell in fieldCells)
+            {
+                if (fieldCell.Long)
+                {
+                    pending = null;
+                    pendingCount = 0;
+                    fieldCell.Cell.SetAttributeValue("ColumnSpan", "2");
+                    InsertLabelAboveRow(rows, anchor, controlsElement, fieldCell.Cell);
+                    continue;
+                }
+                if (pending == null || pendingCount == 2 || pendingSection != fieldCell.Section)
+                {
+                    pending = InsertLabelAboveRow(rows, anchor, controlsElement, null);
+                    pendingSection = fieldCell.Section;
+                    pendingCount = 0;
+                }
+                fieldCell.Cell.Attributes("ColumnSpan").Remove();
+                pending.Elements().Single(x => x.Name.LocalName == "Cells").Add(fieldCell.Cell);
+                pendingCount++;
+            }
+        }
+
+        private static XElement InsertLabelAboveRow(XElement rows, XElement anchor, XElement controls, XElement cell)
+        {
+            var ns = rows.Name.Namespace;
+            var rowId = NewId();
+            var row = new XElement(ns + "Row", new XAttribute("ID", rowId), new XElement(ns + "Cells"));
+            if (cell != null) row.Elements().Single(x => x.Name.LocalName == "Cells").Add(cell);
+            if (anchor == null) rows.Add(row); else anchor.AddBeforeSelf(row);
+            controls.Add(Control(ns, rowId, "Row", "Label Above Row " + rowId, null, null));
+            return row;
+        }
+
+        private static int SectionIndex(ViewDefinition view, string property)
+        {
+            for (var i = 0; i < view.Sections.Count; i++)
+                if (view.Sections[i].Properties.Contains(property, StringComparer.OrdinalIgnoreCase))
+                    return i;
+            return -1;
+        }
+
+        private static bool CellContainsLongInput(XElement cell, IDictionary<string, XElement> controls)
+        {
+            foreach (var id in cell.Descendants().Where(x => x.Name.LocalName == "Control")
+                .Select(x => (string)x.Attribute("ID")))
+            {
+                XElement control;
+                if (string.IsNullOrWhiteSpace(id) || !controls.TryGetValue(id, out control)) continue;
+                var type = (string)control.Attribute("Type") ?? string.Empty;
+                if (type.IndexOf("Area", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    type.IndexOf("File", StringComparison.OrdinalIgnoreCase) >= 0)
+                    return true;
+            }
+            return false;
+        }
+
+        private static void VerifyLabelAboveTwoColumnLayout(XDocument document, ViewDefinition view)
+        {
+            var controls = document.Descendants().Where(x =>
+                x.Name.LocalName == "Control" && x.Attribute("Type") != null &&
+                !string.IsNullOrWhiteSpace((string)x.Attribute("ID")))
+                .ToDictionary(x => (string)x.Attribute("ID"), StringComparer.OrdinalIgnoreCase);
+            var propertyCells = new Dictionary<string, XElement>(StringComparer.OrdinalIgnoreCase);
+            foreach (var property in view.Properties.Where(x =>
+                !view.HiddenProperties.Contains(x, StringComparer.OrdinalIgnoreCase)))
+            {
+                var ids = FindFieldControlIds(document, view, property, "label-above verification");
+                var cells = document.Descendants().Where(x => x.Name.LocalName == "Cell" &&
+                    x.Descendants().Any(reference => reference.Name.LocalName == "Control" &&
+                        ids.Contains((string)reference.Attribute("ID"), StringComparer.OrdinalIgnoreCase))).ToList();
+                if (cells.Count != 1)
+                    throw new CliException("View '" + view.Name + "' property '" + property +
+                        "' has " + cells.Count + " label-above cells; expected one.");
+                var labels = cells[0].Descendants().Where(x => x.Name.LocalName == "Control")
+                    .Select(x =>
+                    {
+                        XElement control;
+                        return controls.TryGetValue((string)x.Attribute("ID"), out control) ? control : null;
+                    })
+                    .Where(x => x != null &&
+                        string.Equals((string)x.Attribute("Type"), "Label", StringComparison.OrdinalIgnoreCase)).ToList();
+                if (labels.Count != 1)
+                    throw new CliException("View '" + view.Name + "' property '" + property +
+                        "' must place exactly one Label above its control in the same cell.");
+                if (view.Options.Contains("colon-labels", StringComparer.OrdinalIgnoreCase) &&
+                    !(PropertyValue(labels[0], "Text") ?? string.Empty).EndsWith(":", StringComparison.Ordinal))
+                    throw new CliException("View '" + view.Name + "' property '" + property +
+                        "' label does not end with a colon.");
+                propertyCells[property] = cells[0];
+            }
+
+            foreach (var row in FindBodyGrid(document, view.Name).Descendants()
+                .Where(x => x.Name.LocalName == "Row"))
+            {
+                var properties = propertyCells.Where(x => x.Value.Parent != null &&
+                    object.ReferenceEquals(x.Value.Parent.Parent, row)).Select(x => x.Key).ToList();
+                if (properties.Count > 2)
+                    throw new CliException("View '" + view.Name + "' label-above row contains more than two fields.");
+                if (properties.Select(x => SectionIndex(view, x)).Distinct().Count() > 1)
+                    throw new CliException("View '" + view.Name + "' label-above row crosses a section boundary.");
+                foreach (var property in properties)
+                    if (CellContainsLongInput(propertyCells[property], controls) &&
+                        !string.Equals((string)propertyCells[property].Attribute("ColumnSpan"), "2", StringComparison.OrdinalIgnoreCase))
+                        throw new CliException("View '" + view.Name + "' long field '" + property +
+                            "' must span both label-above columns.");
+            }
         }
 
         private static void SetColumnSize(XDocument document, XElement column, string size, int index)
@@ -888,6 +1100,14 @@ namespace K2SmartFormsCli
         {
             var child = parent.Elements().FirstOrDefault(x => x.Name.LocalName == name);
             return child == null ? null : child.Value;
+        }
+
+        private sealed class LabelAboveFieldCell
+        {
+            public XElement Cell { get; set; }
+            public string Property { get; set; }
+            public int Section { get; set; }
+            public bool Long { get; set; }
         }
 
         private sealed class EditableListLayout

@@ -17,13 +17,14 @@ namespace K2SmartFormsCli
             TestMetricCardComposition();
             TestLifecycleComposition();
             TestHiddenPropertyComposition();
+            TestLabelAboveHiddenCellComposition();
             TestResponsiveGroupedItemView();
             TestEditableListHiddenPropertyComposition();
             TestMalformedEditableListRejected();
             TestViewIdentityRebase();
             TestFlatFormViewOrdering();
             TestMultiTableWorkflowStateReconciliation();
-            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, required/read-only gate, live lookup placement, literal Create defaults, responsive four-column sections, semantic TextBox inputs, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, multi-table workflow-state reconciliation");
+            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, multi-table workflow-state reconciliation");
         }
 
         private static void TestIdentityNormalization()
@@ -246,6 +247,7 @@ namespace K2SmartFormsCli
         private static void TestHiddenPropertyComposition()
         {
             var view = NewView("Case Entry", "Case", "capture", "CaseId", "Title");
+            view.Options.Add("labels-left");
             view.HiddenProperties.Add("CaseId");
             view.PropertyLabels["Title"] = "Case title";
             var xml = "<View><Fields><Field ID='case-id'><FieldName>CaseId</FieldName></Field><Field ID='title'><FieldName>Title</FieldName></Field></Fields><Controls>" +
@@ -262,42 +264,52 @@ namespace K2SmartFormsCli
             var document = XDocument.Parse(transformed);
             Assert(!document.Descendants("Row").Any(row => row.Descendants("Control").Any(control => (string)control.Attribute("ID") == "case-control")), "hidden property row removed");
             Assert(document.Descendants("Row").Any(row => row.Descendants("Control").Any(control => (string)control.Attribute("ID") == "title-control")), "visible property row retained");
-            Assert(document.Descendants("Control").Any(control => (string)control.Attribute("ID") == "title-label" && control.Descendants("Property").Any(property => (string)property.Element("Name") == "Text" && (string)property.Element("Value") == "Case title")), "friendly property label applied");
+            Assert(document.Descendants("Control").Any(control => (string)control.Attribute("ID") == "title-label" && control.Descendants("Property").Any(property => (string)property.Element("Name") == "Text" && (string)property.Element("Value") == "Case title:")), "friendly property label and default colon applied");
         }
 
         private static void TestResponsiveGroupedItemView()
         {
             var view = NewView("Public Intake", "Submission", "capture", "EmailAddress", "PhoneNumber", "Narrative", "NDAAccepted");
-            Assert(view.LayoutColumns == 4 && view.Responsive, "four-column responsive Item View defaults");
+            Assert(view.LayoutColumns == 2 && view.Responsive &&
+                !view.Options.Contains("labels-left", StringComparer.OrdinalIgnoreCase) &&
+                view.Options.Contains("colon-labels", StringComparer.OrdinalIgnoreCase),
+                "two-column label-above responsive Item View defaults");
             view.RequiredProperties.Add("EmailAddress");
             view.RequiredProperties.Add("NDAAccepted");
+            view.PropertyLabels["EmailAddress"] = "Email address";
             view.Sections.Add(new ViewSectionDefinition { Title = "Contact", Properties = new List<string> { "EmailAddress", "PhoneNumber" } });
             view.Sections.Add(new ViewSectionDefinition { Title = "Report", Properties = new List<string> { "Narrative", "NDAAccepted" } });
             view.Help.Add(new ViewHelpDefinition { Property = "NDAAccepted", LinkText = "Read the NDA", Title = "NDA", Body = "Approved terms." });
 
             var fields = new XElement("Fields");
             var controls = new XElement("Controls", ControlDefinition("body", "Table", null),
-                ControlDefinition("column-1", "Column", "40%"), ControlDefinition("column-2", "Column", "60%"));
+                ControlDefinition("column-1", "Column", "50%"), ControlDefinition("column-2", "Column", "50%"));
             var rows = new XElement("Rows");
             var names = new[] { "EmailAddress", "PhoneNumber", "Narrative", "NDAAccepted" };
             var types = new[] { "TextArea", "TextBox", "TextArea", "CheckBox" };
+            XElement currentCells = null;
             for (var i = 0; i < names.Length; i++)
             {
                 var key = "p" + i;
                 fields.Add(new XElement("Field", new XAttribute("ID", "field-" + key), new XElement("FieldName", names[i])));
                 controls.Add(FieldControlDefinition("label-" + key, "Label", "field-" + key));
                 controls.Add(FieldControlDefinition("input-" + key, types[i], "field-" + key));
-                rows.Add(new XElement("Row", new XAttribute("ID", "row-" + key), new XElement("Cells",
-                    new XElement("Cell", new XElement("Control", new XAttribute("ID", "label-" + key))),
-                    new XElement("Cell", new XElement("Control", new XAttribute("ID", "input-" + key))))));
+                if (i % 2 == 0)
+                {
+                    currentCells = new XElement("Cells");
+                    rows.Add(new XElement("Row", new XAttribute("ID", "row-" + key), currentCells));
+                }
+                currentCells.Add(new XElement("Cell",
+                    new XElement("Control", new XAttribute("ID", "label-" + key)),
+                    new XElement("Control", new XAttribute("ID", "input-" + key))));
             }
             var xml = new XDocument(new XElement("View", new XAttribute("ID", "view-id"),
                 new XElement("Name", view.Name), fields, controls,
                 new XElement("Canvas", new XElement("Sections", new XElement("Section", new XAttribute("Type", "Body"),
                     new XElement("Control", new XAttribute("ID", "body"), new XAttribute("LayoutType", "Grid"),
                         new XElement("Columns",
-                            new XElement("Column", new XAttribute("ID", "column-1"), new XAttribute("Size", "40%")),
-                            new XElement("Column", new XAttribute("ID", "column-2"), new XAttribute("Size", "60%"))), rows)))),
+                            new XElement("Column", new XAttribute("ID", "column-1"), new XAttribute("Size", "50%")),
+                            new XElement("Column", new XAttribute("ID", "column-2"), new XAttribute("Size", "50%"))), rows)))),
                 new XElement("States", new XElement("State", new XElement("Events"))))).ToString(SaveOptions.DisableFormatting);
 
             var transformed = ViewPresentationDefinition.Apply(xml, view, false, false);
@@ -307,6 +319,21 @@ namespace K2SmartFormsCli
                 "email Memo input promoted to TextBox");
             Assert(document.Descendants("Control").Single(x => (string)x.Attribute("ID") == "body" && x.Attribute("Type") != null).Descendants("Property")
                 .Any(x => (string)x.Element("Name") == "IsResponsive" && (string)x.Element("Value") == "true"), "body Table responsive");
+            Assert(document.Descendants("Control").Single(x => (string)x.Attribute("ID") == "label-p0" && x.Attribute("Type") != null).Descendants("Property")
+                .Any(x => (string)x.Element("Name") == "Text" && (string)x.Element("Value") == "Email address:"), "label-above custom label keeps colon suffix");
+            var generatedRowNames = document.Descendants("Control").Where(x =>
+                (string)x.Attribute("Type") == "Row" &&
+                (((string)x.Element("Name")) ?? string.Empty).StartsWith("Label Above Row ", StringComparison.Ordinal))
+                .Select(x => (string)x.Element("Name")).ToList();
+            Assert(generatedRowNames.Count > 0 &&
+                generatedRowNames.Count == generatedRowNames.Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+                "label-above generated Row control names are unique");
+            Assert(document.Descendants("Cell").Any(cell =>
+                cell.Descendants("Control").Any(x => (string)x.Attribute("ID") == "label-p0") &&
+                cell.Descendants("Control").Any(x => (string)x.Attribute("ID") == "input-p0")), "email label and input share one label-above cell");
+            Assert(document.Descendants("Cell").Single(cell =>
+                cell.Descendants("Control").Any(x => (string)x.Attribute("ID") == "input-p2")).Attribute("ColumnSpan").Value == "2",
+                "narrative TextArea spans both label-above columns");
             var helpButton = document.Descendants("Control").Single(x =>
                 (string)x.Attribute("Type") == "Button" &&
                 (string)x.Element("Name") == "NDAAccepted More Info");
@@ -318,6 +345,31 @@ namespace K2SmartFormsCli
             Assert(document.Descendants("Action").Any(x => (string)x.Attribute("Type") == "ShowMessage"), "NDA help popup rule created");
             Assert(document.Descendants("Control").Count(x => (string)x.Attribute("Type") == "Label" &&
                 (((string)x.Element("Name")) ?? string.Empty).EndsWith("Section Header", StringComparison.Ordinal)) == 2, "section headers created");
+        }
+
+        private static void TestLabelAboveHiddenCellComposition()
+        {
+            var view = NewView("Contact Demo", "Contact", "capture", "TechnicalId", "DisplayName");
+            view.HiddenProperties.Add("TechnicalId");
+            view.PropertyLabels["DisplayName"] = "Display name";
+            var xml = "<View><Fields><Field ID='technical-field'><FieldName>TechnicalId</FieldName></Field><Field ID='name-field'><FieldName>DisplayName</FieldName></Field></Fields><Controls>" +
+                "<Control ID='technical-label' Type='Label'><Name>TechnicalId Label</Name><Properties><Property><Name>Text</Name><Value>Technical Id:</Value></Property></Properties></Control>" +
+                "<Control ID='technical-input' Type='TextBox' FieldID='technical-field'><Name>TechnicalId Text Box</Name><Properties/></Control>" +
+                "<Control ID='name-label' Type='Label'><Name>DisplayName Label</Name><Properties><Property><Name>Text</Name><Value>Display Name:</Value></Property></Properties></Control>" +
+                "<Control ID='name-input' Type='TextBox' FieldID='name-field'><Name>DisplayName Text Box</Name><Properties/></Control></Controls>" +
+                "<Canvas><Sections><Section Type='Body'><Control LayoutType='Grid'><Columns><Column ID='column-1'/><Column ID='column-2'/></Columns><Rows>" +
+                "<Row><Cells><Cell><Control ID='technical-label'/><Control ID='technical-input'/></Cell><Cell><Control ID='name-label'/><Control ID='name-input'/></Cell></Cells></Row>" +
+                "</Rows></Control></Section></Sections></Canvas></View>";
+            var transformed = ViewPresentationDefinition.Apply(xml, view, false, false);
+            ViewPresentationDefinition.Verify(transformed, view, false, false);
+            var document = XDocument.Parse(transformed);
+            Assert(!document.Descendants("Cell").Any(x => x.Descendants("Control").Any(c => (string)c.Attribute("ID") == "technical-input")),
+                "hidden label-above property removes only its cell");
+            Assert(document.Descendants("Cell").Any(x => x.Descendants("Control").Any(c => (string)c.Attribute("ID") == "name-input")),
+                "adjacent visible label-above property is preserved");
+            Assert(document.Descendants("Control").Single(x => (string)x.Attribute("ID") == "name-label" && x.Attribute("Type") != null)
+                .Descendants("Property").Any(x => (string)x.Element("Name") == "Text" && (string)x.Element("Value") == "Display name:"),
+                "label-above friendly label retains the colon suffix");
         }
 
         private static void TestEditableListHiddenPropertyComposition()
@@ -528,7 +580,9 @@ namespace K2SmartFormsCli
         private static ViewDefinition NewView(string name, string smartObject, string type, params string[] properties)
         {
             var view = new ViewDefinition { Name = name, SmartObject = smartObject, Type = type };
-            view.LayoutColumns = string.Equals(type, "capture", StringComparison.OrdinalIgnoreCase) ? 4 : 2;
+            view.LayoutColumns = 2;
+            if (string.Equals(type, "capture", StringComparison.OrdinalIgnoreCase))
+                view.Options.Add("colon-labels");
             view.Properties.AddRange(properties);
             return view;
         }
