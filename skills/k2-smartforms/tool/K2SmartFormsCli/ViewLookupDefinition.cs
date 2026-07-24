@@ -51,6 +51,7 @@ namespace K2SmartFormsCli
                     SetProperty(properties, "ParentJoinProperty", binding.Cascade.ParentJoinProperty, binding.Cascade.ParentJoinProperty, binding.Cascade.ParentJoinProperty);
                     SetProperty(properties, "ChildJoinProperty", binding.Cascade.ChildJoinProperty, binding.Cascade.ChildJoinProperty, binding.Cascade.ChildJoinProperty);
                 }
+                EnsureLookupSource(document, control, source);
                 EnsurePopulationAction(document, view, control, source);
             }
             ApplyDefaultValues(document, view);
@@ -88,10 +89,107 @@ namespace K2SmartFormsCli
                     AssertProperty(properties, "ParentJoinProperty", binding.Cascade.ParentJoinProperty, view, binding);
                     AssertProperty(properties, "ChildJoinProperty", binding.Cascade.ChildJoinProperty, view, binding);
                 }
+                VerifyLookupSource(document, view, control, source);
                 VerifyPopulationAction(document, view, control, source);
             }
             VerifyDefaultValues(document, view);
             VerifyReadOnly(document, view);
+        }
+
+        private static void EnsureLookupSource(XDocument document, XElement control, LookupRuntimeSource source)
+        {
+            var root = document.Descendants().FirstOrDefault(x => x.Name.LocalName == "View");
+            if (root == null) throw new CliException("Generated View has no View root for lookup source registration.");
+            var ns = root.Name.Namespace;
+            var sources = root.Elements().FirstOrDefault(x => x.Name.LocalName == "Sources");
+            if (sources == null)
+            {
+                sources = new XElement(ns + "Sources");
+                var fields = root.Elements().FirstOrDefault(x => x.Name.LocalName == "Fields");
+                if (fields == null) root.Add(sources);
+                else fields.AddBeforeSelf(sources);
+            }
+
+            var controlId = (string)control.Attribute("ID");
+            var contextualSources = LookupSources(sources, controlId).ToList();
+            if (contextualSources.Count == 1 && IsExpectedLookupSource(contextualSources[0], source))
+                return;
+            foreach (var existing in contextualSources) existing.Remove();
+
+            var sourceElement = new XElement(ns + "Source",
+                new XAttribute("ID", Guid.NewGuid()),
+                new XAttribute("SourceType", "Object"),
+                new XAttribute("SourceID", source.SmartObjectGuid),
+                new XAttribute("SourceName", source.SmartObjectSystemName),
+                new XAttribute("SourceDisplayName", source.SmartObjectDisplayName),
+                new XAttribute("ContextType", "Association"),
+                new XAttribute("ContextID", controlId),
+                new XElement(ns + "Name", source.SmartObjectDisplayName),
+                new XElement(ns + "Fields"));
+            var sourceFields = sourceElement.Elements().Single(x => x.Name.LocalName == "Fields");
+            sourceFields.Add(BuildLookupField(ns, source, source.ValuePropertyName,
+                source.ValuePropertyDisplayName, source.ValuePropertyType));
+            if (!string.Equals(source.ValuePropertyName, source.DisplayPropertyName, StringComparison.OrdinalIgnoreCase))
+                sourceFields.Add(BuildLookupField(ns, source, source.DisplayPropertyName,
+                    source.DisplayPropertyDisplayName, source.DisplayPropertyType));
+            sources.Add(sourceElement);
+        }
+
+        private static void VerifyLookupSource(XDocument document, ViewDefinition view, XElement control, LookupRuntimeSource source)
+        {
+            var root = document.Descendants().FirstOrDefault(x => x.Name.LocalName == "View");
+            var sources = root == null ? null : root.Elements().FirstOrDefault(x => x.Name.LocalName == "Sources");
+            var controlId = (string)control.Attribute("ID");
+            var matches = sources == null
+                ? new List<XElement>()
+                : LookupSources(sources, controlId).ToList();
+            if (matches.Count != 1)
+                throw new CliException("View '" + view.Name + "' lookup for '" + ChildValue(control, "Name") +
+                    "' has " + matches.Count + " association sources; expected exactly one.");
+            if (!IsExpectedLookupSource(matches[0], source))
+                throw new CliException("View '" + view.Name + "' lookup for '" + ChildValue(control, "Name") +
+                    "' has an invalid SmartObject source declaration for " + source.SmartObjectSystemName + ".");
+        }
+
+        private static IEnumerable<XElement> LookupSources(XElement sources, string controlId)
+        {
+            return sources.Elements().Where(x =>
+                x.Name.LocalName == "Source" &&
+                string.Equals((string)x.Attribute("SourceType"), "Object", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("ContextType"), "Association", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("ContextID"), controlId, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static bool IsExpectedLookupSource(XElement element, LookupRuntimeSource source)
+        {
+            if (!string.Equals((string)element.Attribute("SourceID"), source.SmartObjectGuid.ToString(), StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals((string)element.Attribute("SourceName"), source.SmartObjectSystemName, StringComparison.OrdinalIgnoreCase))
+                return false;
+            var fields = element.Elements().FirstOrDefault(x => x.Name.LocalName == "Fields");
+            return HasExpectedLookupField(fields, source.ValuePropertyName, source.ValuePropertyType) &&
+                HasExpectedLookupField(fields, source.DisplayPropertyName, source.DisplayPropertyType);
+        }
+
+        private static bool HasExpectedLookupField(XElement fields, string propertyName, string propertyType)
+        {
+            if (fields == null) return false;
+            return fields.Elements().Count(x =>
+                x.Name.LocalName == "Field" &&
+                string.Equals((string)x.Attribute("Type"), "ObjectProperty", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("DataType"), propertyType, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(ChildValue(x, "FieldName"), propertyName, StringComparison.OrdinalIgnoreCase)) == 1;
+        }
+
+        private static XElement BuildLookupField(XNamespace ns, LookupRuntimeSource source,
+            string propertyName, string propertyDisplayName, string propertyType)
+        {
+            return new XElement(ns + "Field",
+                new XAttribute("ID", Guid.NewGuid()),
+                new XAttribute("Type", "ObjectProperty"),
+                new XAttribute("DataType", propertyType),
+                new XElement(ns + "Name", source.SmartObjectSystemName.Replace("_", " ") + "." + propertyName),
+                new XElement(ns + "FieldName", propertyName),
+                new XElement(ns + "FieldDisplayName", propertyDisplayName));
         }
 
         private static void EnsurePopulationAction(XDocument document, ViewDefinition view, XElement control, LookupRuntimeSource source)
@@ -362,20 +460,26 @@ namespace K2SmartFormsCli
 
         private static XElement FindEditableControl(XDocument document, ViewDefinition view, string propertyName)
         {
-            var field = document.Descendants()
-                .Where(x => x.Name.LocalName == "Field")
-                .FirstOrDefault(x => string.Equals(
-                    (string)x.Elements().FirstOrDefault(e => e.Name.LocalName == "FieldName"),
-                    propertyName,
-                    StringComparison.OrdinalIgnoreCase));
-            if (field == null) throw new CliException("Generated view '" + view.Name + "' has no field for lookup property '" + propertyName + "'.");
-            var fieldId = (string)field.Attribute("ID");
-            var candidates = document.Descendants().Where(x =>
+            var controls = document.Descendants().Where(x =>
                 x.Name.LocalName == "Control" &&
-                string.Equals((string)x.Attribute("FieldID"), fieldId, StringComparison.OrdinalIgnoreCase) &&
+                x.Attribute("Type") != null &&
                 !string.Equals((string)x.Attribute("Type"), "Label", StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals((string)x.Attribute("Type"), "DataLabel", StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals((string)x.Attribute("Type"), "ListDisplay", StringComparison.OrdinalIgnoreCase)).ToList();
+            var field = document.Descendants().Where(x =>
+                x.Name.LocalName == "Field" &&
+                string.Equals(ChildValue(x, "FieldName"), propertyName, StringComparison.OrdinalIgnoreCase))
+                .FirstOrDefault(candidate =>
+                {
+                    var candidateId = (string)candidate.Attribute("ID");
+                    return !string.IsNullOrWhiteSpace(candidateId) && controls.Any(control =>
+                        string.Equals((string)control.Attribute("FieldID"), candidateId, StringComparison.OrdinalIgnoreCase));
+                });
+            if (field == null) throw new CliException("Generated view '" + view.Name + "' has no field for lookup property '" + propertyName + "'.");
+            var fieldId = (string)field.Attribute("ID");
+            var candidates = controls.Where(x =>
+                string.Equals((string)x.Attribute("FieldID"), fieldId, StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrWhiteSpace((string)x.Attribute("ID"))).ToList();
             if (candidates.Count != 1)
                 throw new CliException("Generated view '" + view.Name + "' has " + candidates.Count + " editable controls for lookup property '" + propertyName + "'; expected one. Candidates: " + string.Join("; ", candidates.Select(x => ((string)x.Attribute("Type") ?? "<type>") + "/" + (ChildValue(x, "Name") ?? (string)x.Attribute("ID"))).ToArray()));
             return candidates[0];

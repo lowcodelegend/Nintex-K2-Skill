@@ -20,7 +20,7 @@
 | `cleanup --manifest --confirm` | Destructive | Delete exact declared forms then views after environment-wide external dependency checks. |
 | `cleanup --manifest --confirm --manifest-only` | Destructive | Fast builder path: skip broad dependency discovery and delete exact declared Forms/Views from their owned category or strict-ancestor orphan category. |
 | `version` | No | Print the CLI version. |
-| `selftest` | No | Verify identity-key normalization, required/read-only inputs, lookup placement/defaults, bypass-button suppression, native chart composition, capture/editable-list hidden-property transformation and structural rejection, and idempotent multi-child workflow-state reconciliation without connecting to K2. |
+| `selftest` | No | Verify identity-key normalization, required/read-only inputs, control-scoped lookup sources/population/defaults, valid Button help events, bypass-button suppression, native chart composition, capture/editable-list hidden-property transformation and structural rejection, and idempotent multi-child workflow-state reconciliation without connecting to K2. |
 
 Exit `0` means success, `2` means manifest/usage/safety validation failed, and `1` means an unexpected K2, network, or runtime error occurred. Set `K2FORMS_DEBUG=1` for full exception details.
 

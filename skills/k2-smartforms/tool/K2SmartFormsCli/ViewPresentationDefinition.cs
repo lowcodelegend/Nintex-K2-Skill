@@ -212,7 +212,7 @@ namespace K2SmartFormsCli
                 });
                 var linkId = NewId();
                 var linkName = help.Property + " More Info";
-                controls.Add(Control(root.Name.Namespace, linkId, "Hyperlink", linkName, "Text", help.LinkText));
+                controls.Add(Control(root.Name.Namespace, linkId, "Button", linkName, "Text", help.LinkText));
                 labelReference.AddAfterSelf(new XElement(root.Name.Namespace + "Control", new XAttribute("ID", linkId)));
                 events.Add(BuildHelpEvent(root.Name.Namespace, root, linkId, linkName, help));
             }
@@ -247,10 +247,10 @@ namespace K2SmartFormsCli
             foreach (var help in view.Help)
             {
                 var link = document.Descendants().SingleOrDefault(x => x.Name.LocalName == "Control" &&
-                    string.Equals((string)x.Attribute("Type"), "Hyperlink", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals((string)x.Attribute("Type"), "Button", StringComparison.OrdinalIgnoreCase) &&
                     string.Equals(ChildValue(x, "Name"), help.Property + " More Info", StringComparison.OrdinalIgnoreCase));
                 if (link == null || !string.Equals(PropertyValue(link, "Text"), help.LinkText, StringComparison.Ordinal))
-                    throw new CliException("View '" + view.Name + "' is missing help link for '" + help.Property + "'.");
+                    throw new CliException("View '" + view.Name + "' is missing the More info button for '" + help.Property + "'.");
                 var eventRule = document.Descendants().SingleOrDefault(x => x.Name.LocalName == "Event" &&
                     string.Equals((string)x.Attribute("SourceID"), (string)link.Attribute("ID"), StringComparison.OrdinalIgnoreCase) &&
                     string.Equals(ChildValue(x, "Name"), "OnClick", StringComparison.OrdinalIgnoreCase));

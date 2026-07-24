@@ -63,6 +63,7 @@ namespace K2SmartFormsCli
                 MethodDisplayName = "List",
                 ValuePropertyName = "CategoryCode",
                 ValuePropertyDisplayName = "Category Code",
+                ValuePropertyType = "Text",
                 DisplayPropertyName = "CategoryName",
                 DisplayPropertyDisplayName = "Category Name",
                 DisplayPropertyType = "Text"
@@ -83,6 +84,17 @@ namespace K2SmartFormsCli
                 (string)x.Element("Value") == source.SmartObjectGuid.ToString()), "lookup population source rewritten");
             Assert(population.Descendants("Result").Any(x => (string)x.Attribute("SourceID") == source.SmartObjectGuid.ToString() &&
                 (string)x.Attribute("TargetID") == "categoryControl"), "lookup List result populates dropdown");
+            var lookupSource = document.Descendants("Source").Single(x =>
+                (string)x.Attribute("ContextType") == "Association" &&
+                (string)x.Attribute("ContextID") == "categoryControl");
+            Assert((string)lookupSource.Attribute("SourceID") == source.SmartObjectGuid.ToString(),
+                "lookup SmartObject registered as the control association source");
+            Assert(lookupSource.Descendants("Field").Count(x =>
+                (string)x.Element("FieldName") == "CategoryCode" &&
+                (string)x.Attribute("DataType") == "Text") == 1, "lookup value field registered");
+            Assert(lookupSource.Descendants("Field").Count(x =>
+                (string)x.Element("FieldName") == "CategoryName" &&
+                (string)x.Attribute("DataType") == "Text") == 1, "lookup display field registered");
             var secondPass = ViewLookupDefinition.Apply(xml, view, sources);
             Assert(string.Equals(xml, secondPass, StringComparison.Ordinal), "lookup population transformation is idempotent");
 
@@ -100,6 +112,11 @@ namespace K2SmartFormsCli
 
             population.Remove();
             AssertThrows(delegate { ViewLookupDefinition.Verify(document.ToString(), view, sources); }, "population actions");
+            document = XDocument.Parse(xml);
+            document.Descendants("Source").Single(x =>
+                (string)x.Attribute("ContextType") == "Association" &&
+                (string)x.Attribute("ContextID") == "categoryControl").Remove();
+            AssertThrows(delegate { ViewLookupDefinition.Verify(document.ToString(), view, sources); }, "association sources");
             document = XDocument.Parse(xml);
             document.Descendants("Layout").Elements("Control").Remove();
             AssertThrows(delegate { ViewLookupDefinition.Verify(document.ToString(), view, sources); }, "not placed in the live View layout");
@@ -290,7 +307,14 @@ namespace K2SmartFormsCli
                 "email Memo input promoted to TextBox");
             Assert(document.Descendants("Control").Single(x => (string)x.Attribute("ID") == "body" && x.Attribute("Type") != null).Descendants("Property")
                 .Any(x => (string)x.Element("Name") == "IsResponsive" && (string)x.Element("Value") == "true"), "body Table responsive");
-            Assert(document.Descendants("Control").Count(x => (string)x.Attribute("Type") == "Hyperlink") == 1, "NDA help link created");
+            var helpButton = document.Descendants("Control").Single(x =>
+                (string)x.Attribute("Type") == "Button" &&
+                (string)x.Element("Name") == "NDAAccepted More Info");
+            Assert((string)helpButton.Descendants("Property").Single(x => (string)x.Element("Name") == "Text").Element("Value") == "Read the NDA",
+                "NDA More info button created");
+            Assert(document.Descendants("Event").Count(x =>
+                (string)x.Attribute("SourceID") == (string)helpButton.Attribute("ID") &&
+                (string)x.Element("Name") == "OnClick") == 1, "NDA help uses the Button OnClick event");
             Assert(document.Descendants("Action").Any(x => (string)x.Attribute("Type") == "ShowMessage"), "NDA help popup rule created");
             Assert(document.Descendants("Control").Count(x => (string)x.Attribute("Type") == "Label" &&
                 (((string)x.Element("Name")) ?? string.Empty).EndsWith("Section Header", StringComparison.Ordinal)) == 2, "section headers created");

@@ -280,7 +280,7 @@ Use these Item View contracts:
 }]
 ```
 
-Properties containing `Email` automatically use TextBox. `singleLineProperties` is the explicit override for other Memo-mapped strings. `sections` must contain every visible property exactly once and in `properties` order. `requiredProperties` must be visible, editable, and user-supplied; a master-detail Form validates them with K2 rules before saving. `lookupRequiredProperties` makes a missing `lookupControls` binding a manifest error. `help` creates a native Hyperlink and popup rule.
+Properties containing `Email` automatically use TextBox. `singleLineProperties` is the explicit override for other Memo-mapped strings. `sections` must contain every visible property exactly once and in `properties` order. `requiredProperties` must be visible, editable, and user-supplied; a master-detail Form validates them with K2 rules before saving. `lookupRequiredProperties` makes a missing `lookupControls` binding a manifest error. `help` creates a native Button and valid `OnClick` popup rule; K2 Hyperlink does not support `OnClick`.
 
 `hiddenVariables` adds named Data Label controls inside a hidden `tblDebug` table:
 

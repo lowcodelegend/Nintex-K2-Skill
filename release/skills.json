@@ -24,7 +24,7 @@
     },
     {
       "name": "k2-smartforms",
-      "version": "0.25.0",
+      "version": "0.26.0",
       "platform": "win-x64",
       "buildScript": "skills/k2-smartforms/scripts/build.ps1",
       "buildParameters": {
@@ -38,7 +38,7 @@
       "versionCommand": {
         "path": "skills/k2-smartforms/tool/K2SmartFormsCli/bin/Release/k2forms.exe",
         "arguments": ["version"],
-        "expectedOutput": "k2forms 0.25.0"
+        "expectedOutput": "k2forms 0.26.0"
       }
     },
     {
