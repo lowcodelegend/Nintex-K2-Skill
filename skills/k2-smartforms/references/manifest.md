@@ -256,9 +256,29 @@ Supported view types are `capture`, `list`, `content`, and `capture-list`. Suppo
 
 `readOnlyProperties` names selected capture/capture-list properties whose controls remain visible with K2 `IsReadOnly=true`. Use it for generated keys, workflow status, audit timestamps/users, and calculated values. It does not supply required method inputs.
 
-`defaultValues` maps selected non-lookup capture/capture-list properties to literal initial control values. Use it when a required Create input is intentionally system-managed and read-only, such as `{ "Status": "Draft", "TotalAmount": "0" }`. The CLI writes and verifies the live control value and rejects a required read-only Create input without this mapping or a `form.masterDetail` foreign-key supply. Keep lookup/user-selectable values editable and never put secrets in defaults.
+`defaultValues` maps selected non-lookup capture/capture-list properties to literal initial values and literal SmartObject Create-rule parameters. Use it when a Create input is intentionally system-managed, such as `{ "Status": "Draft", "PreferredLanguageCode": "en" }`; normally also put that property in `hiddenProperties`. The literal rule mapping is authoritative—the save does not depend on a hidden control or SQL default. The CLI rejects a required read-only Create input without this mapping or a `form.masterDetail` foreign-key supply. Keep lookup/user-selectable values editable and never put secrets in defaults.
 
-`layoutColumns` defaults to `2`. Capture Views use bold labels and 40/60 label/control widths. Setting `4` repacks short field rows as label/control/label/control with 20/30/20/30 widths; Memo rows remain full-width. Do not use it merely to make a dense View smaller.
+`layoutColumns` defaults to `4`. Capture Views use a native Table with `IsResponsive=true` and bold 20/30/20/30 label/control pairs. TextArea and File Attachment rows remain full-width. Set `2` for a deliberate narrow/mobile-heavy, narrative-heavy, or attachment-heavy layout; it uses 40/60 widths.
+
+Use these Item View contracts:
+
+```json
+"singleLineProperties": ["ContactName", "TelephoneNumber"],
+"requiredProperties": ["FullName", "EmailAddress", "ReportSummary", "NDAAccepted"],
+"lookupRequiredProperties": ["ResidenceCountryCode", "EvidenceTypeCode"],
+"sections": [
+  { "title": "Your details", "properties": ["FullName", "EmailAddress", "TelephoneNumber"] },
+  { "title": "Report", "properties": ["ReportSummary", "NDAAccepted"] }
+],
+"help": [{
+  "property": "NDAAccepted",
+  "linkText": "Read the NDA",
+  "title": "Non-disclosure agreement",
+  "body": "Insert the approved NDA wording here."
+}]
+```
+
+Properties containing `Email` automatically use TextBox. `singleLineProperties` is the explicit override for other Memo-mapped strings. `sections` must contain every visible property exactly once and in `properties` order. `requiredProperties` must be visible, editable, and user-supplied; a master-detail Form validates them with K2 rules before saving. `lookupRequiredProperties` makes a missing `lookupControls` binding a manifest error. `help` creates a native Hyperlink and popup rule.
 
 `hiddenVariables` adds named Data Label controls inside a hidden `tblDebug` table:
 
@@ -302,7 +322,7 @@ Declare one master and one or more editable-list children on a Form:
 
 The master must be a `capture` View containing its key and selected Create/Update/Read methods. Each detail must be `capture-list` with `editable` and selected Create/Update/Delete/List methods. Put every required child collection in `details`; generation or integration drift never authorizes collapsing it into the master. The CLI adds one Form-level button (`saveButtonText`, default `Save`) with Create and Update branches based on whether the master key is blank. `successMessageTitle` and `successMessageBody` customize the small informational popup that executes last after either successful persistence branch; their defaults are `Saved` and `The record and its line items were saved successfully.` Create maps the returned SmartObject identity to the master View field before child foreign-key use; Update processes `Changed`, `Added`, and `Removed` states. The CLI removes every detail View's unfiltered List initialization/refresh actions. After each master Read path, a separate Form handler tests that the master key is not blank and passes it to every detail foreign-key List input. The CLI hides every generated master Item View button plus detail Save/Refresh buttons, while retaining detail Add/Edit/Delete controls for item-state editing. Verification rejects missing, duplicate, unfiltered, ungated, or misordered detail List actions on any master Read path, visible bypass buttons, missing success feedback or returned-key mappings, and persistence outside the Form Save event.
 
-For a guided initiation journey, add `masterDetail.review` with `view`, `keyProperty`, `readMethod`, and `tab`. Both Save branches load that review View from the returned/current master key before focusing the review tab. Add `workflowStartButton` at Form level with `name`, `text`, and final `tab`; this emits one stable native OnClick rule in the base state for start-only workflow integration. Workflow-created states may clone base rules, so reconciliation and verification preserve those states while enforcing the master-detail contract on the authoritative base state.
+For a guided initiation journey, add `masterDetail.review` with `view`, `keyProperty`, `readMethod`, and `tab`. `hiddenUntilSaved` defaults to `true`: the review tab is hidden in the initial Form definition; both Save branches validate, persist, load that review View from the returned/current master key, reveal the tab, and then focus it. Add `workflowStartButton` at Form level with `name`, `text`, and final `tab`; this emits one stable native OnClick rule in the base state for start-only workflow integration. Workflow-created states may clone base rules, so reconciliation and verification preserve those states while enforcing the master-detail contract on the authoritative base state.
 
 `capture-list` is a manifest intent: the CLI uses K2's List generator with editable mode, producing the native editable-list View and item-state rules. The generated View disables K2's `Enable Add new row link` setting by omitting the `ShowAddRow` property; on K2 Five the property's presence enables the option even when its stored value is `false`. Users stage a new item through the explicit native Add toolbar action. On complete solution forms, combine it with a list tab and `listClickTabNavigation` so a selected master is read before its child List runs.
 

@@ -115,6 +115,11 @@ namespace K2SmartFormsCli
                 if (view.HiddenProperties == null) view.HiddenProperties = new List<string>();
                 if (view.PropertyLabels == null) view.PropertyLabels = new Dictionary<string, string>();
                 if (view.DefaultValues == null) view.DefaultValues = new Dictionary<string, string>();
+                if (view.SingleLineProperties == null) view.SingleLineProperties = new List<string>();
+                if (view.RequiredProperties == null) view.RequiredProperties = new List<string>();
+                if (view.LookupRequiredProperties == null) view.LookupRequiredProperties = new List<string>();
+                if (view.Sections == null) view.Sections = new List<ViewSectionDefinition>();
+                if (view.Help == null) view.Help = new List<ViewHelpDefinition>();
                 if (view.HiddenVariables == null) view.HiddenVariables = new List<HiddenVariableDefinition>();
                 if (view.Charts == null) view.Charts = new List<ViewChartDefinition>();
                 if (view.MetricCards == null) view.MetricCards = new List<ViewMetricCardDefinition>();
@@ -125,11 +130,16 @@ namespace K2SmartFormsCli
                 view.Type = (view.Type ?? string.Empty).Trim().ToLowerInvariant();
                 if (!AllowedViewTypes.Contains(view.Type))
                     throw new CliException("Unsupported view type '" + view.Type + "' for " + view.Name + ".");
+                if (!view.LayoutColumns.HasValue)
+                    view.LayoutColumns = view.Type == "capture" ? 4 : 2;
                 ValidateValues(view.Options, AllowedViewOptions, "view option", view.Name);
                 EnsureUniqueValues(view.Properties, "property", view.Name);
                 EnsureUniqueValues(view.Methods, "method", view.Name);
                 EnsureUniqueValues(view.ReadOnlyProperties, "read-only property", view.Name);
                 EnsureUniqueValues(view.HiddenProperties, "hidden property", view.Name);
+                EnsureUniqueValues(view.SingleLineProperties, "single-line property", view.Name);
+                EnsureUniqueValues(view.RequiredProperties, "required property", view.Name);
+                EnsureUniqueValues(view.LookupRequiredProperties, "lookup-required property", view.Name);
                 EnsureUniqueValues(view.HiddenVariables.Select(x => x == null ? null : x.Name), "hidden variable", view.Name);
                 foreach (var variable in view.HiddenVariables)
                 {
@@ -173,16 +183,58 @@ namespace K2SmartFormsCli
                     EnsureUniqueValues(tracker.Stages.Select(x => x == null ? null : x.Code), "lifecycle stage code", view.Name);
                     foreach (var stage in tracker.Stages) { if (stage == null) throw new CliException("View '" + view.Name + "' lifecycle tracker stages cannot contain null entries."); Require(stage.Code, "view.lifecycleTrackers.stages.code"); Require(stage.Label, "view.lifecycleTrackers.stages.label"); }
                 }
-                if (view.LayoutColumns != 0 && view.LayoutColumns != 2 && view.LayoutColumns != 4)
+                if (view.LayoutColumns != 2 && view.LayoutColumns != 4)
                     throw new CliException("View '" + view.Name + "' layoutColumns must be 2 or 4.");
                 if (view.LayoutColumns == 4 && view.Type != "capture")
                     throw new CliException("View '" + view.Name + "' can use layoutColumns=4 only for capture/item views.");
+                if (!view.Responsive && view.Type == "capture")
+                    throw new CliException("View '" + view.Name + "' disables responsive table behavior. Capture Views must remain responsive; use layoutColumns=2 for narrow layouts.");
                 foreach (var property in view.ReadOnlyProperties)
                     if (!view.Properties.Contains(property, StringComparer.OrdinalIgnoreCase))
                         throw new CliException("View '" + view.Name + "' readOnlyProperties entry is not selected in view.properties: " + property);
                 foreach (var property in view.HiddenProperties)
                     if (!view.Properties.Contains(property, StringComparer.OrdinalIgnoreCase))
                         throw new CliException("View '" + view.Name + "' hiddenProperties entry is not selected in view.properties: " + property);
+                foreach (var property in view.SingleLineProperties.Concat(view.RequiredProperties).Concat(view.LookupRequiredProperties))
+                    if (!view.Properties.Contains(property, StringComparer.OrdinalIgnoreCase))
+                        throw new CliException("View '" + view.Name + "' field contract references a property not selected in view.properties: " + property);
+                foreach (var property in view.RequiredProperties)
+                    if (view.HiddenProperties.Contains(property, StringComparer.OrdinalIgnoreCase) ||
+                        view.ReadOnlyProperties.Contains(property, StringComparer.OrdinalIgnoreCase) ||
+                        view.DefaultValues.Keys.Contains(property, StringComparer.OrdinalIgnoreCase))
+                        throw new CliException("View '" + view.Name + "' requiredProperties must be visible, editable, user-supplied fields: " + property);
+                EnsureUniqueValues(view.Sections.Select(x => x == null ? null : x.Title), "section title", view.Name);
+                if (view.Sections.Count > 0)
+                {
+                    if (view.Type != "capture") throw new CliException("View '" + view.Name + "' sections are supported only on capture/item Views.");
+                    var sectionProperties = new List<string>();
+                    foreach (var section in view.Sections)
+                    {
+                        if (section == null) throw new CliException("View '" + view.Name + "' sections cannot contain null entries.");
+                        Require(section.Title, "view.sections.title");
+                        if (section.Properties == null || section.Properties.Count == 0) throw new CliException("View '" + view.Name + "' section '" + section.Title + "' must contain properties.");
+                        sectionProperties.AddRange(section.Properties);
+                    }
+                    EnsureUniqueValues(sectionProperties, "section property", view.Name);
+                    var visible = view.Properties.Where(x => !view.HiddenProperties.Contains(x, StringComparer.OrdinalIgnoreCase)).ToList();
+                    if (!sectionProperties.SequenceEqual(visible, StringComparer.OrdinalIgnoreCase))
+                        throw new CliException("View '" + view.Name + "' sections must contain every visible property exactly once and in view.properties order.");
+                }
+                EnsureUniqueValues(view.Help.Select(x => x == null ? null : x.Property), "help property", view.Name);
+                foreach (var help in view.Help)
+                {
+                    if (help == null) throw new CliException("View '" + view.Name + "' help cannot contain null entries.");
+                    if (view.Type != "capture") throw new CliException("View '" + view.Name + "' help is supported only on capture/item Views.");
+                    Require(help.Property, "view.help.property");
+                    Require(help.Body, "view.help.body");
+                    if (!view.Properties.Contains(help.Property, StringComparer.OrdinalIgnoreCase) ||
+                        view.HiddenProperties.Contains(help.Property, StringComparer.OrdinalIgnoreCase))
+                        throw new CliException("View '" + view.Name + "' help property must be selected and visible: " + help.Property);
+                    if (string.IsNullOrWhiteSpace(help.LinkText)) help.LinkText = "More info";
+                    if (string.IsNullOrWhiteSpace(help.Title)) help.Title = view.PropertyLabels.ContainsKey(help.Property) ? view.PropertyLabels[help.Property] : help.Property;
+                }
+                if (view.SingleLineProperties.Count > 0 && view.Type != "capture")
+                    throw new CliException("View '" + view.Name + "' singleLineProperties are supported only on capture/item Views.");
                 foreach (var label in view.PropertyLabels)
                 {
                     if (!view.Properties.Contains(label.Key, StringComparer.OrdinalIgnoreCase)) throw new CliException("View '" + view.Name + "' propertyLabels entry is not selected in view.properties: " + label.Key);
@@ -225,6 +277,9 @@ namespace K2SmartFormsCli
                     }
                 }
                 var lookupProperties = new HashSet<string>(view.LookupControls.Select(x => x.Property), StringComparer.OrdinalIgnoreCase);
+                var missingLookups = view.LookupRequiredProperties.Where(x => !lookupProperties.Contains(x)).ToList();
+                if (missingLookups.Count > 0)
+                    throw new CliException("View '" + view.Name + "' requires declared lookupControls for controlled properties: " + string.Join(", ", missingLookups.ToArray()) + ".");
                 var defaultedLookups = view.DefaultValues.Keys.Where(lookupProperties.Contains).ToList();
                 if (defaultedLookups.Count > 0)
                     throw new CliException("View '" + view.Name + "' defaultValues cannot initialize lookup controls: " + string.Join(", ", defaultedLookups.ToArray()) + ". Keep the lookup editable; declarative default selection is not supported.");
@@ -636,7 +691,13 @@ namespace K2SmartFormsCli
         public List<string> HiddenProperties { get; set; }
         public Dictionary<string, string> PropertyLabels { get; set; }
         public Dictionary<string, string> DefaultValues { get; set; }
-        public int LayoutColumns { get; set; }
+        public int? LayoutColumns { get; set; }
+        public bool Responsive { get; set; }
+        public List<string> SingleLineProperties { get; set; }
+        public List<string> RequiredProperties { get; set; }
+        public List<string> LookupRequiredProperties { get; set; }
+        public List<ViewSectionDefinition> Sections { get; set; }
+        public List<ViewHelpDefinition> Help { get; set; }
         public List<HiddenVariableDefinition> HiddenVariables { get; set; }
         public List<ViewChartDefinition> Charts { get; set; }
         public List<ViewMetricCardDefinition> MetricCards { get; set; }
@@ -654,12 +715,34 @@ namespace K2SmartFormsCli
             HiddenProperties = new List<string>();
             PropertyLabels = new Dictionary<string, string>();
             DefaultValues = new Dictionary<string, string>();
-            LayoutColumns = 2;
+            LayoutColumns = null;
+            Responsive = true;
+            SingleLineProperties = new List<string>();
+            RequiredProperties = new List<string>();
+            LookupRequiredProperties = new List<string>();
+            Sections = new List<ViewSectionDefinition>();
+            Help = new List<ViewHelpDefinition>();
             HiddenVariables = new List<HiddenVariableDefinition>();
             Charts = new List<ViewChartDefinition>();
             MetricCards = new List<ViewMetricCardDefinition>();
             LifecycleTrackers = new List<ViewLifecycleDefinition>();
         }
+    }
+
+    public sealed class ViewSectionDefinition
+    {
+        public string Title { get; set; }
+        public List<string> Properties { get; set; }
+        public ViewSectionDefinition() { Properties = new List<string>(); }
+    }
+
+    public sealed class ViewHelpDefinition
+    {
+        public string Property { get; set; }
+        public string LinkText { get; set; }
+        public string Title { get; set; }
+        public string Body { get; set; }
+        public ViewHelpDefinition() { LinkText = "More info"; }
     }
 
     public sealed class ViewChartDefinition
@@ -780,7 +863,8 @@ namespace K2SmartFormsCli
         public string KeyProperty { get; set; }
         public string ReadMethod { get; set; }
         public string Tab { get; set; }
-        public MasterDetailReviewDefinition() { ReadMethod = "Read"; }
+        public bool HiddenUntilSaved { get; set; }
+        public MasterDetailReviewDefinition() { ReadMethod = "Read"; HiddenUntilSaved = true; }
     }
 
     public sealed class MasterDetailChildDefinition

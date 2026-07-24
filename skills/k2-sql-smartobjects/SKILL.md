@@ -23,6 +23,8 @@ Deploy a SQL model and its K2 SQL Server Service Instance as one repeatable unit
 - Model repeated rows with a detail table, separate key, non-null type-compatible master foreign key, intentional delete behavior, and leading FK index. Declare every relationship in `masterDetails` and coordinate editable-list/Form behavior with `$k2-smartforms`.
 - Keep derived routing totals authoritative in saved data. Declare maintainable routing under `approvalMatrices`, not workflow branches, and coordinate its Admin UX/workflow resolver contract.
 - Use K2-friendly SQL types and inspect live required SmartObject inputs; SQL defaults do not necessarily make generated Create inputs optional.
+- For SQL-resident attachments, store the complete K2 File XML payload in `varchar(max)` and declare a guarded `k2.smartObjects.propertyTypeOverrides` entry that exposes that generated string property as SmartObject type `File`. Do not use `varbinary`, and do not reduce a file requirement to a path/reference field.
+- If a value is supplied by a SmartForm Create rule rather than the user, keep the SQL column nullable/optional even when it has a defensive SQL default. A `NOT NULL` generated broker input remains required to SmartForms; the rule literal, not the database default, is the UI contract.
 
 ## Safety and cleanup
 
@@ -36,7 +38,7 @@ Deploy a SQL model and its K2 SQL Server Service Instance as one repeatable unit
 
 Deployment order is:
 
-`database → SQL scripts → matrices → runtime grants → Service Instance refresh → SmartObject generation → <root>\Data placement → contract verification → smoke tests`
+`database → SQL scripts → matrices → runtime grants → Service Instance refresh → SmartObject generation → guarded property-type overrides → <root>\Data placement → contract verification → smoke tests`
 
 The x64 .NET Framework CLI discovers K2 through `K2_INSTALL_DIR`, the SourceCode registry key, or `C:\Program Files\K2`. Read [cli.md](references/cli.md) for exact commands, authentication, exit codes, idempotency, and generation boundary.
 

@@ -432,7 +432,7 @@ namespace K2SmartFormsCli
                         throw new CliException("Refusing to reconcile Form '" + form.Name + "' while it is checked out by '" + info.CheckedOutBy + "'.");
 
                     var original = manager.GetFormDefinition(info.Guid);
-                    var relationship = ResolvedMasterDetailRules.Resolve(manager, form);
+                    var relationship = ResolvedMasterDetailRules.Resolve(manager, form, _manifest.Application.Views);
                     bool changed;
                     var reconciled = MasterDetailRules.ReconcileDetailLoads(original, form, relationship, out changed);
                     if (!changed)
@@ -465,7 +465,7 @@ namespace K2SmartFormsCli
                     if (!string.Equals(updated.CategoryPath, expectedCategory, StringComparison.OrdinalIgnoreCase))
                         throw new CliException("Master-detail reconciliation moved Form '" + form.Name + "' out of its manifest category.");
                     var live = manager.GetFormDefinition(updated.Guid);
-                    MasterDetailRules.Verify(live, form, ResolvedMasterDetailRules.Resolve(manager, form));
+                    MasterDetailRules.Verify(live, form, ResolvedMasterDetailRules.Resolve(manager, form, _manifest.Application.Views));
                     Console.WriteLine("Master-detail reconciliation: updated in place (" + form.Name + ", " + info.Guid + ", v" + info.Version + " -> v" + updated.Version + ", " + relationship.Details.Count + " detail view(s))");
                 }
                 return 0;
@@ -799,7 +799,7 @@ namespace K2SmartFormsCli
                         var definition = FormThemeDefinition.SetUseLegacyTheme(generated.ToXml(), form.UseLegacyTheme);
                         if (styleProfile != null) definition = FormThemeDefinition.SetStyleProfile(definition, styleProfile.Guid, styleProfile.Name);
                         definition = FormLayoutDefinition.Apply(definition, form, commonHeader, ResolveHeaderParameters(commonHeader, form), ResolveHeaderControlTransfers(commonHeader, form));
-                        var masterDetail = ResolvedMasterDetailRules.Resolve(manager, form);
+                        var masterDetail = ResolvedMasterDetailRules.Resolve(manager, form, _manifest.Application.Views);
                         definition = MasterDetailRules.Apply(definition, form, masterDetail);
                         manager.DeployForms(definition, _manifest.Application.GetFormCategoryPath(form), _manifest.Application.CheckIn);
                         var info = manager.GetForm(form.Name);
@@ -866,7 +866,7 @@ namespace K2SmartFormsCli
                     if (expectedStyleProfile != null && (actualStyleProfile == null || actualStyleProfile.Guid != expectedStyleProfile.Guid))
                         throw new CliException("K2 Form style profile does not match '" + expectedStyleProfile.DisplayName + "' [" + expectedStyleProfile.Name + "]: " + expected);
                     FormLayoutDefinition.Verify(definition, declaredForm, commonHeader, ResolveHeaderParameters(commonHeader, declaredForm), ResolveHeaderControlTransfers(commonHeader, declaredForm));
-                    MasterDetailRules.Verify(definition, declaredForm, ResolvedMasterDetailRules.Resolve(manager, declaredForm));
+                    MasterDetailRules.Verify(definition, declaredForm, ResolvedMasterDetailRules.Resolve(manager, declaredForm, _manifest.Application.Views));
                     foreach (var viewName in declaredForm.Views)
                     {
                         var viewGuid = manager.GetView(viewName).Guid.ToString();

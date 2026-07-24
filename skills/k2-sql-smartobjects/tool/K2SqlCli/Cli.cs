@@ -103,6 +103,8 @@ namespace K2SqlCli
             }
             Console.WriteLine("  K2 Service Instance: " + serviceState + " " + manifest.K2.ServiceInstance.SystemName);
             Console.WriteLine(string.Format("  SmartObjects: generate createNew={0}, updateExisting={1}, deleteRemoved={2}", manifest.K2.SmartObjects.CreateNew, manifest.K2.SmartObjects.UpdateExisting, manifest.K2.SmartObjects.DeleteRemoved));
+            foreach (var item in manifest.K2.SmartObjects.PropertyTypeOverrides)
+                Console.WriteLine("  SmartObject property type: " + item.SmartObject + "." + item.Property + " -> " + item.Type + " (requires SQL varchar(max))");
             Console.WriteLine("  SmartObject category: " + (manifest.Application.DataCategoryPath ?? "unchanged (no solution root configured)"));
             Console.WriteLine("  Verify: " + manifest.Verification.SqlObjects.Count + " SQL object(s), " + manifest.Verification.Queries.Count + " query assertion(s), minimum " + manifest.Verification.MinimumGeneratedSmartObjects + " SmartObject(s)");
         }
@@ -172,7 +174,7 @@ namespace K2SqlCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2sql 0.4.2");
+            Console.WriteLine("k2sql 0.5.0");
         }
 
         private static void PrintHelp()

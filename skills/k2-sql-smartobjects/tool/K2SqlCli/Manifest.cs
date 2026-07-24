@@ -73,6 +73,7 @@ namespace K2SqlCli
             if (Verification == null) Verification = new VerificationOptions();
             if (K2.ServiceInstance == null) K2.ServiceInstance = new ServiceInstanceOptions();
             if (K2.SmartObjects == null) K2.SmartObjects = new SmartObjectGenerationOptions();
+            if (K2.SmartObjects.PropertyTypeOverrides == null) K2.SmartObjects.PropertyTypeOverrides = new List<SmartObjectPropertyTypeOverride>();
             if (Database.Scripts == null) Database.Scripts = new List<string>();
             if (Verification.SqlObjects == null) Verification.SqlObjects = new List<SqlObjectExpectation>();
             if (Verification.Queries == null) Verification.Queries = new List<QueryExpectation>();
@@ -100,6 +101,18 @@ namespace K2SqlCli
             if (K2.Port <= 0 || K2.Port > 65535) throw new CliException("k2.port must be between 1 and 65535.");
             if (Database.CommandTimeoutSeconds <= 0) Database.CommandTimeoutSeconds = 120;
             if (K2.ServiceInstance.CommandTimeoutSeconds <= 0) K2.ServiceInstance.CommandTimeoutSeconds = 30;
+            var overrideKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in K2.SmartObjects.PropertyTypeOverrides)
+            {
+                if (item == null) throw new CliException("k2.smartObjects.propertyTypeOverrides cannot contain null entries.");
+                Require(item.SmartObject, "k2.smartObjects.propertyTypeOverrides.smartObject");
+                Require(item.Property, "k2.smartObjects.propertyTypeOverrides.property");
+                item.Type = string.IsNullOrWhiteSpace(item.Type) ? "File" : item.Type.Trim();
+                if (!string.Equals(item.Type, "File", StringComparison.OrdinalIgnoreCase))
+                    throw new CliException("k2.smartObjects.propertyTypeOverrides currently supports only type 'File'.");
+                if (!overrideKeys.Add(item.SmartObject + "\n" + item.Property))
+                    throw new CliException("Duplicate SmartObject property type override: " + item.SmartObject + "." + item.Property);
+            }
 
             if (!Regex.IsMatch(K2.ServiceInstance.SystemName, @"^[A-Za-z0-9_.-]+$"))
             {
@@ -433,12 +446,26 @@ namespace K2SqlCli
         public bool CreateNew { get; set; }
         public bool UpdateExisting { get; set; }
         public bool DeleteRemoved { get; set; }
+        public List<SmartObjectPropertyTypeOverride> PropertyTypeOverrides { get; set; }
 
         public SmartObjectGenerationOptions()
         {
             CreateNew = true;
             UpdateExisting = true;
             DeleteRemoved = false;
+            PropertyTypeOverrides = new List<SmartObjectPropertyTypeOverride>();
+        }
+    }
+
+    public sealed class SmartObjectPropertyTypeOverride
+    {
+        public string SmartObject { get; set; }
+        public string Property { get; set; }
+        public string Type { get; set; }
+
+        public SmartObjectPropertyTypeOverride()
+        {
+            Type = "File";
         }
     }
 

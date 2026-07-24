@@ -122,6 +122,25 @@ Use `runtimePrincipal` only when that standard permission set is appropriate. Ap
 
 Other fields are `commandTimeoutSeconds` (30), `useNativeSqlExecution` (true), `useSqlPaging` (false), `encryptConnection` (false), and `onDifferentSqlServer` (false).
 
+## SmartObject property type overrides
+
+Use `k2.smartObjects.propertyTypeOverrides` to publish a SQL `varchar(max)` payload property as a K2 `File`:
+
+```json
+"smartObjects": {
+  "createNew": true,
+  "updateExisting": true,
+  "deleteRemoved": false,
+  "propertyTypeOverrides": [{
+    "smartObject": "RQB_Raqeeb_Sql_RQBSEC_PublicIntakeEvidence",
+    "property": "FileContent",
+    "type": "File"
+  }]
+}
+```
+
+Only `File` is supported. Deployment fails unless the exact SmartObject belongs to the managed SQL Service Instance and every underlying service mapping for the property is `System.String` over SQL `varchar(max)`. The override is reapplied after every Service Instance refresh/generation and runtime verification proves the exposed property type. Use one attachment row per file when multiple files are required.
+
 ## Verification fields
 
 - Use `sqlObjects` types `table`, `view`, or `procedure`.

@@ -99,6 +99,22 @@ namespace K2SmartFormsCli
                 if (properties == null) { properties = new XElement(control.Name.Namespace + "Properties"); control.Add(properties); }
                 foreach (var old in properties.Elements().Where(x => x.Name.LocalName == "Property" && string.Equals(GetPropertyName(x), "Text", StringComparison.OrdinalIgnoreCase)).ToList()) old.Remove();
                 SetProperty(properties, "Text", value.Value, value.Value, value.Value);
+                foreach (var action in document.Descendants().Where(x => x.Name.LocalName == "Action" &&
+                    string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(ReadActionProperty(x, "Method"), "Create", StringComparison.OrdinalIgnoreCase)))
+                {
+                    var parameter = action.Descendants().SingleOrDefault(x => x.Name.LocalName == "Parameter" &&
+                        string.Equals((string)x.Attribute("TargetID"), value.Key, StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals((string)x.Attribute("TargetType"), "ObjectProperty", StringComparison.OrdinalIgnoreCase));
+                    if (parameter == null) continue;
+                    parameter.SetAttributeValue("SourceID", "Sources");
+                    parameter.SetAttributeValue("SourceType", "Value");
+                    parameter.Attributes("SourceName").Remove();
+                    parameter.Attributes("SourceDisplayName").Remove();
+                    parameter.Elements().Where(x => x.Name.LocalName == "SourceValue").Remove();
+                    parameter.Add(new XElement(parameter.Name.Namespace + "SourceValue",
+                        new XAttribute(XNamespace.Xml + "space", "preserve"), value.Value));
+                }
             }
         }
 
@@ -111,7 +127,26 @@ namespace K2SmartFormsCli
                 var properties = control.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
                 if (!string.Equals(GetPropertyValue(properties, "Text"), value.Value, StringComparison.Ordinal))
                     throw new CliException("View '" + view.Name + "' property '" + value.Key + "' does not have the configured default value.");
+                var createParameters = document.Descendants().Where(x => x.Name.LocalName == "Action" &&
+                    string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(ReadActionProperty(x, "Method"), "Create", StringComparison.OrdinalIgnoreCase))
+                    .SelectMany(x => x.Descendants().Where(p => p.Name.LocalName == "Parameter" &&
+                        string.Equals((string)p.Attribute("TargetID"), value.Key, StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals((string)p.Attribute("TargetType"), "ObjectProperty", StringComparison.OrdinalIgnoreCase))).ToList();
+                if (createParameters.Count == 0 || createParameters.Any(x =>
+                    !string.Equals((string)x.Attribute("SourceID"), "Sources", StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals((string)x.Attribute("SourceType"), "Value", StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals(x.Elements().FirstOrDefault(e => e.Name.LocalName == "SourceValue") == null ? null :
+                        x.Elements().First(e => e.Name.LocalName == "SourceValue").Value, value.Value, StringComparison.Ordinal)))
+                    throw new CliException("View '" + view.Name + "' Create rule does not supply literal default '" + value.Key + "=" + value.Value + "'.");
             }
+        }
+
+        private static string ReadActionProperty(XElement action, string name)
+        {
+            var property = action.Descendants().FirstOrDefault(x => x.Name.LocalName == "Property" &&
+                string.Equals(ChildValue(x, "Name"), name, StringComparison.OrdinalIgnoreCase));
+            return property == null ? null : ChildValue(property, "Value");
         }
 
         private static void ApplyReadOnly(XDocument document, ViewDefinition view)

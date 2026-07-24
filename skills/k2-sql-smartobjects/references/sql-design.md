@@ -24,7 +24,19 @@ Prefer K2-friendly SQL types: `int`, `bigint`, `decimal`, `bit`, `uniqueidentifi
 
 Use `nvarchar` for user-entered text. Choose decimal precision deliberately; the SQL Service Instance has a configured maximum decimal mapping. Treat `rowversion` as SQL-managed concurrency data rather than a user-editable value.
 
-Do not assume a SQL `DEFAULT` constraint makes a generated SmartObject Create input optional. After generation, inspect the live method's required properties before designing a SmartForm. For database-managed audit values, prefer a SQL/SmartObject contract that does not require the UI to supply the value, such as an optional column with a server-side default or a purpose-built stored-procedure method. The SmartForms CLI rejects capture views that omit any required selected-method property.
+Do not assume a SQL `DEFAULT` constraint makes a generated SmartObject Create input optional. `NOT NULL` still makes the SQL broker property required. For a system value supplied by a SmartForm Create-rule literal—status, language, channel, configuration version—make the SQL column nullable/optional, retain a defensive server default if useful, keep it off the user-facing layout, and map the literal in the Create rule. For database-managed audit values, use an optional column with a server-side default or a purpose-built stored-procedure method. Keep genuinely user-required business data `NOT NULL` and declare the corresponding visible SmartForm control required.
+
+## SQL-backed K2 File properties
+
+K2's File value is an XML structure containing the file name, MIME/content metadata, and Base64 payload. To persist that native value in the application SQL database:
+
+1. Add a dedicated `varchar(max)` column for the payload. Base64/XML is text; do not use `varbinary`, because the SQL Service broker does not expose binary types as a usable K2 File property.
+2. Generate/refresh the SQL SmartObject normally.
+3. Add `k2.smartObjects.propertyTypeOverrides` for the exact generated SmartObject/property. The CLI guards that the service mapping is SQL `varchar(max)`, changes only the top-level SmartObject property type to `File`, publishes it in place, and verifies the runtime property type.
+4. Use a child attachment/evidence table for multiple files—one row and one File property per document—plus filename/content type, size, hash, upload actor/time, classification, scan status, version/current flag, and parent foreign key as required by the solution.
+5. Bind the property to K2's File Attachment control and set allowed extensions and maximum size. Anonymous public upload requires an explicit platform/security decision; do not enable global anonymous file access incidentally.
+
+Keep a repository reference only when the chosen storage mode is an external document repository. A reference field by itself does not satisfy an upload/storage requirement. This technique is K2-specific: the generated SQL service property remains `System.String`, while the published SmartObject-facing property becomes `File`.
 
 ## Controlled values and lookup tables
 

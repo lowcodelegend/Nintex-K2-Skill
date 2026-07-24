@@ -12,8 +12,13 @@ namespace K2SmartFormsCli
         {
             var document = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
             ApplyEditableListDefaults(document, view);
+            ApplyResponsiveTable(document, view);
+            ApplySingleLineInputs(document, view);
+            ApplyRequiredInputs(document, view);
             ApplyHiddenProperties(document, view);
             ApplyPropertyLabels(document, view);
+            ApplySections(document, view);
+            ApplyHelp(document, view);
             if (view.Type == "capture" && (view.Charts == null || view.Charts.Count == 0))
             {
                 if (view.LayoutColumns == 4) ApplyFourColumnLayout(document, view.Name);
@@ -46,6 +51,11 @@ namespace K2SmartFormsCli
             }
             VerifyHiddenProperties(document, view);
             VerifyPropertyLabels(document, view);
+            VerifyResponsiveTable(document, view);
+            VerifySingleLineInputs(document, view);
+            VerifyRequiredInputs(document, view);
+            VerifySections(document, view);
+            VerifyHelp(document, view);
             if (view.Type == "capture" && (view.Charts == null || view.Charts.Count == 0))
             {
                 var body = FindBodyGrid(document, view.Name);
@@ -83,6 +93,184 @@ namespace K2SmartFormsCli
         private static bool IsButtonControl(string type)
         {
             return !string.IsNullOrWhiteSpace(type) && type.EndsWith("Button", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static void ApplyResponsiveTable(XDocument document, ViewDefinition view)
+        {
+            if (!string.Equals(view.Type, "capture", StringComparison.OrdinalIgnoreCase)) return;
+            var grid = FindBodyGrid(document, view.Name);
+            if (grid.Attribute("ID") == null) return; // compact synthetic self-test definitions do not model control registries
+            var table = FindControlDefinition(document, (string)grid.Attribute("ID"));
+            if (table == null || !string.Equals((string)table.Attribute("Type"), "Table", StringComparison.OrdinalIgnoreCase))
+                throw new CliException("Generated capture View '" + view.Name + "' has no body Table control definition.");
+            var properties = table.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
+            if (properties == null) { properties = new XElement(table.Name.Namespace + "Properties"); table.Add(properties); }
+            SetProperty(properties, "IsResponsive", view.Responsive ? "true" : "false");
+        }
+
+        private static void VerifyResponsiveTable(XDocument document, ViewDefinition view)
+        {
+            if (!string.Equals(view.Type, "capture", StringComparison.OrdinalIgnoreCase)) return;
+            var grid = FindBodyGrid(document, view.Name);
+            if (grid.Attribute("ID") == null) return;
+            var table = FindControlDefinition(document, (string)grid.Attribute("ID"));
+            if (table == null || !string.Equals(PropertyValue(table, "IsResponsive"), view.Responsive ? "true" : "false", StringComparison.OrdinalIgnoreCase))
+                throw new CliException("View '" + view.Name + "' body Table does not have IsResponsive=" + view.Responsive.ToString().ToLowerInvariant() + ".");
+        }
+
+        private static IEnumerable<string> SingleLineProperties(ViewDefinition view)
+        {
+            return view.SingleLineProperties.Concat(view.Properties.Where(x =>
+                x.IndexOf("Email", StringComparison.OrdinalIgnoreCase) >= 0)).Distinct(StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static void ApplySingleLineInputs(XDocument document, ViewDefinition view)
+        {
+            if (!string.Equals(view.Type, "capture", StringComparison.OrdinalIgnoreCase)) return;
+            foreach (var property in SingleLineProperties(view))
+            {
+                var control = FindEditableFieldControl(document, view, property);
+                if (string.Equals((string)control.Attribute("Type"), "TextArea", StringComparison.OrdinalIgnoreCase))
+                    control.SetAttributeValue("Type", "TextBox");
+            }
+        }
+
+        private static void VerifySingleLineInputs(XDocument document, ViewDefinition view)
+        {
+            if (!string.Equals(view.Type, "capture", StringComparison.OrdinalIgnoreCase)) return;
+            foreach (var property in SingleLineProperties(view))
+                if (!string.Equals((string)FindEditableFieldControl(document, view, property).Attribute("Type"), "TextBox", StringComparison.OrdinalIgnoreCase))
+                    throw new CliException("View '" + view.Name + "' single-line property '" + property + "' is not a TextBox.");
+        }
+
+        private static void ApplyRequiredInputs(XDocument document, ViewDefinition view)
+        {
+            foreach (var property in view.RequiredProperties)
+            {
+                var control = FindEditableFieldControl(document, view, property);
+                var properties = control.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
+                if (properties == null) { properties = new XElement(control.Name.Namespace + "Properties"); control.Add(properties); }
+                SetProperty(properties, "IsRequired", "true");
+            }
+        }
+
+        private static void VerifyRequiredInputs(XDocument document, ViewDefinition view)
+        {
+            foreach (var property in view.RequiredProperties)
+                if (!string.Equals(PropertyValue(FindEditableFieldControl(document, view, property), "IsRequired"), "true", StringComparison.OrdinalIgnoreCase))
+                    throw new CliException("View '" + view.Name + "' required property '" + property + "' is not marked IsRequired.");
+        }
+
+        private static void ApplySections(XDocument document, ViewDefinition view)
+        {
+            if (view.Sections.Count == 0) return;
+            var root = document.Descendants().First(x => x.Name.LocalName == "View");
+            var controls = root.Elements().First(x => x.Name.LocalName == "Controls");
+            var ns = root.Name.Namespace;
+            foreach (var section in view.Sections)
+            {
+                var firstRow = FindPropertyRow(document, view, section.Properties[0]);
+                var rowId = NewId(); var cellId = NewId(); var labelId = NewId();
+                controls.Add(Control(ns, rowId, "Row", section.Title + " Section Row", null, null));
+                controls.Add(Control(ns, cellId, "Cell", section.Title + " Section Cell", null, null));
+                controls.Add(Control(ns, labelId, "Label", section.Title + " Section Header", "Text", section.Title));
+                firstRow.AddBeforeSelf(new XElement(ns + "Row", new XAttribute("ID", rowId),
+                    new XElement(ns + "Cells", new XElement(ns + "Cell", new XAttribute("ID", cellId),
+                        new XAttribute("ColumnSpan", view.LayoutColumns == 4 ? "4" : "2"),
+                        new XElement(ns + "Control", new XAttribute("ID", labelId))))));
+            }
+        }
+
+        private static void VerifySections(XDocument document, ViewDefinition view)
+        {
+            foreach (var section in view.Sections)
+            {
+                var firstRow = FindPropertyRow(document, view, section.Properties[0]);
+                var previous = firstRow.ElementsBeforeSelf().LastOrDefault(x => x.Name.LocalName == "Row");
+                if (previous == null || !previous.Descendants().Where(x => x.Name.LocalName == "Control")
+                    .Select(x => FindControlDefinition(document, (string)x.Attribute("ID")))
+                    .Any(x => x != null && string.Equals((string)x.Attribute("Type"), "Label", StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(PropertyValue(x, "Text"), section.Title, StringComparison.Ordinal)))
+                    throw new CliException("View '" + view.Name + "' is missing section header '" + section.Title + "'.");
+            }
+        }
+
+        private static void ApplyHelp(XDocument document, ViewDefinition view)
+        {
+            if (view.Help.Count == 0) return;
+            var root = document.Descendants().First(x => x.Name.LocalName == "View");
+            var controls = root.Elements().First(x => x.Name.LocalName == "Controls");
+            var events = root.Elements().FirstOrDefault(x => x.Name.LocalName == "Events");
+            if (events == null) { events = new XElement(root.Name.Namespace + "Events"); root.Add(events); }
+            foreach (var help in view.Help)
+            {
+                var row = FindPropertyRow(document, view, help.Property);
+                var labelReference = row.Descendants().Where(x => x.Name.LocalName == "Control").First(x =>
+                {
+                    var definition = FindControlDefinition(document, (string)x.Attribute("ID"));
+                    return definition != null && string.Equals((string)definition.Attribute("Type"), "Label", StringComparison.OrdinalIgnoreCase);
+                });
+                var linkId = NewId();
+                var linkName = help.Property + " More Info";
+                controls.Add(Control(root.Name.Namespace, linkId, "Hyperlink", linkName, "Text", help.LinkText));
+                labelReference.AddAfterSelf(new XElement(root.Name.Namespace + "Control", new XAttribute("ID", linkId)));
+                events.Add(BuildHelpEvent(root.Name.Namespace, root, linkId, linkName, help));
+            }
+        }
+
+        private static XElement BuildHelpEvent(XNamespace ns, XElement view, string linkId, string linkName, ViewHelpDefinition help)
+        {
+            return new XElement(ns + "Event", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                new XAttribute("Type", "User"), new XAttribute("SourceID", linkId), new XAttribute("SourceType", "Control"),
+                new XAttribute("SourceName", linkName), new XAttribute("SourceDisplayName", linkName),
+                new XElement(ns + "Name", "OnClick"),
+                new XElement(ns + "Properties", Property(ns, "ViewID", (string)view.Attribute("ID"))),
+                new XElement(ns + "Handlers", new XElement(ns + "Handler", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                    new XElement(ns + "Actions", new XElement(ns + "Action", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                        new XAttribute("Type", "ShowMessage"), new XAttribute("ExecutionType", "Synchronous"),
+                        new XElement(ns + "Properties", Property(ns, "Location", "View"), Property(ns, "MessageLocation", "Popup")),
+                        new XElement(ns + "Parameters",
+                            MessageParameter(ns, "Size", "medium"), MessageParameter(ns, "Type", "info"),
+                            MessageParameter(ns, "Title", help.Title), MessageParameter(ns, "Body", help.Body)))))));
+        }
+
+        private static XElement MessageParameter(XNamespace ns, string target, string value)
+        {
+            return new XElement(ns + "Parameter", new XAttribute("SourceID", "Sources"), new XAttribute("SourceType", "Value"),
+                new XAttribute("TargetID", target), new XAttribute("TargetName", target), new XAttribute("TargetType", "MessageProperty"),
+                new XElement(ns + "SourceValue", new XAttribute(XNamespace.Xml + "space", "preserve"),
+                    new XElement(ns + "Source", new XAttribute("SourceType", "Value"), value)));
+        }
+
+        private static void VerifyHelp(XDocument document, ViewDefinition view)
+        {
+            foreach (var help in view.Help)
+            {
+                var link = document.Descendants().SingleOrDefault(x => x.Name.LocalName == "Control" &&
+                    string.Equals((string)x.Attribute("Type"), "Hyperlink", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(ChildValue(x, "Name"), help.Property + " More Info", StringComparison.OrdinalIgnoreCase));
+                if (link == null || !string.Equals(PropertyValue(link, "Text"), help.LinkText, StringComparison.Ordinal))
+                    throw new CliException("View '" + view.Name + "' is missing help link for '" + help.Property + "'.");
+                var eventRule = document.Descendants().SingleOrDefault(x => x.Name.LocalName == "Event" &&
+                    string.Equals((string)x.Attribute("SourceID"), (string)link.Attribute("ID"), StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(ChildValue(x, "Name"), "OnClick", StringComparison.OrdinalIgnoreCase));
+                if (eventRule == null || !eventRule.Descendants().Any(x => x.Name.LocalName == "Action" &&
+                    string.Equals((string)x.Attribute("Type"), "ShowMessage", StringComparison.OrdinalIgnoreCase)))
+                    throw new CliException("View '" + view.Name + "' help link for '" + help.Property + "' has no popup rule.");
+            }
+        }
+
+        private static XElement FindEditableFieldControl(XDocument document, ViewDefinition view, string property)
+        {
+            var field = document.Descendants().FirstOrDefault(x => x.Name.LocalName == "Field" &&
+                string.Equals(ChildValue(x, "FieldName"), property, StringComparison.OrdinalIgnoreCase));
+            if (field == null) throw new CliException("View '" + view.Name + "' has no field for property '" + property + "'.");
+            var fieldId = (string)field.Attribute("ID");
+            var candidates = document.Descendants().Where(x => x.Name.LocalName == "Control" &&
+                string.Equals((string)x.Attribute("FieldID"), fieldId, StringComparison.OrdinalIgnoreCase) &&
+                !new[] { "Label", "DataLabel", "ListDisplay" }.Contains((string)x.Attribute("Type"), StringComparer.OrdinalIgnoreCase)).ToList();
+            if (candidates.Count != 1) throw new CliException("View '" + view.Name + "' property '" + property + "' has " + candidates.Count + " editable controls; expected one.");
+            return candidates[0];
         }
 
         private static void ApplyEditableListDefaults(XDocument document, ViewDefinition view)
@@ -460,8 +648,7 @@ namespace K2SmartFormsCli
             foreach (var label in view.PropertyLabels)
             {
                 var row = FindPropertyRow(document, view, label.Key);
-                var labelControl = row.Descendants().Where(x => x.Name.LocalName == "Control").Select(reference => FindControlDefinition(document, (string)reference.Attribute("ID")))
-                    .FirstOrDefault(control => control != null && string.Equals((string)control.Attribute("Type"), "Label", StringComparison.OrdinalIgnoreCase));
+                var labelControl = FindPropertyLabelControl(document, view, label.Key, row);
                 if (labelControl == null) throw new CliException("Generated View '" + view.Name + "' has no label control for property '" + label.Key + "'.");
                 var properties = labelControl.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
                 if (properties == null) { properties = new XElement(labelControl.Name.Namespace + "Properties"); labelControl.Add(properties); }
@@ -474,11 +661,29 @@ namespace K2SmartFormsCli
             foreach (var label in view.PropertyLabels)
             {
                 var row = FindPropertyRow(document, view, label.Key);
-                var labelControl = row.Descendants().Where(x => x.Name.LocalName == "Control").Select(reference => FindControlDefinition(document, (string)reference.Attribute("ID")))
-                    .FirstOrDefault(control => control != null && string.Equals((string)control.Attribute("Type"), "Label", StringComparison.OrdinalIgnoreCase));
+                var labelControl = FindPropertyLabelControl(document, view, label.Key, row);
                 if (labelControl == null || !string.Equals(PropertyValue(labelControl, "Text"), label.Value, StringComparison.Ordinal))
-                    throw new CliException("View '" + view.Name + "' property '" + label.Key + "' does not use label '" + label.Value + "'.");
+                    throw new CliException("View '" + view.Name + "' property '" + label.Key + "' does not use label '" + label.Value +
+                        "' (found " + (labelControl == null ? "<none>" : ChildValue(labelControl, "Name") + "='" + PropertyValue(labelControl, "Text") + "'") + ").");
             }
+        }
+
+        private static XElement FindPropertyLabelControl(XDocument document, ViewDefinition view, string property, XElement row)
+        {
+            var field = document.Descendants().FirstOrDefault(x => x.Name.LocalName == "Field" &&
+                string.Equals(ChildValue(x, "FieldName"), property, StringComparison.OrdinalIgnoreCase));
+            if (field == null) throw new CliException("View '" + view.Name + "' has no field for property label '" + property + "'.");
+            var fieldId = (string)field.Attribute("ID");
+            var labels = row.Descendants().Where(x => x.Name.LocalName == "Control")
+                .Select(reference => FindControlDefinition(document, (string)reference.Attribute("ID")))
+                .Where(control => control != null && string.Equals((string)control.Attribute("Type"), "Label", StringComparison.OrdinalIgnoreCase)).ToList();
+            var bound = labels.Where(x =>
+                string.Equals((string)x.Attribute("FieldID"), fieldId, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(PropertyValue(x, "Field"), fieldId, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(ChildValue(x, "Name"), property + " Label", StringComparison.OrdinalIgnoreCase)).ToList();
+            if (bound.Count == 1) return bound[0];
+            if (bound.Count == 0 && labels.Count == 1) return labels[0];
+            return null;
         }
 
         private static XElement FindPropertyRow(XDocument document, ViewDefinition view, string property)
@@ -516,13 +721,19 @@ namespace K2SmartFormsCli
             var controls = document.Descendants().First(x => x.Name.LocalName == "View").Elements().First(x => x.Name.LocalName == "Controls")
                 .Elements().Where(x => x.Name.LocalName == "Control").ToDictionary(x => (string)x.Attribute("ID"), StringComparer.OrdinalIgnoreCase);
             var rows = grid.Elements().First(x => x.Name.LocalName == "Rows");
-            var candidates = rows.Elements().Where(x => IsFieldPairRow(x, controls) && !IsLongFieldRow(x, controls)).ToList();
-            for (var i = 0; i + 1 < candidates.Count; i += 2)
+            XElement pending = null;
+            foreach (var current in rows.Elements().Where(x => x.Name.LocalName == "Row").ToList())
             {
-                var first = candidates[i]; var second = candidates[i + 1];
-                var firstCells = first.Descendants().First(x => x.Name.LocalName == "Cells");
-                foreach (var cell in second.Descendants().First(x => x.Name.LocalName == "Cells").Elements().ToList()) firstCells.Add(cell);
-                second.Remove();
+                if (!IsFieldPairRow(current, controls) || IsLongFieldRow(current, controls))
+                {
+                    pending = null;
+                    continue;
+                }
+                if (pending == null) { pending = current; continue; }
+                var firstCells = pending.Descendants().First(x => x.Name.LocalName == "Cells");
+                foreach (var cell in current.Descendants().First(x => x.Name.LocalName == "Cells").Elements().ToList()) firstCells.Add(cell);
+                current.Remove();
+                pending = null;
             }
             foreach (var row in rows.Elements().Where(x => x.Name.LocalName == "Row"))
             {
@@ -602,8 +813,8 @@ namespace K2SmartFormsCli
             XElement control;
             if (id == null || !controls.TryGetValue(id, out control)) return false;
             var type = (string)control.Attribute("Type") ?? string.Empty;
-            var dataType = PropertyValue(control, "DataType") ?? string.Empty;
-            return type.IndexOf("Area", StringComparison.OrdinalIgnoreCase) >= 0 || dataType.Equals("Memo", StringComparison.OrdinalIgnoreCase);
+            return type.IndexOf("Area", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   string.Equals(type, "FilePostBack", StringComparison.OrdinalIgnoreCase);
         }
 
         private static void AddHiddenVariables(XDocument document, ViewDefinition view)

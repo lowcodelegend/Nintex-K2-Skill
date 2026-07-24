@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "suiteName": "k2-skills",
-  "suiteVersion": "0.46.1",
+  "suiteVersion": "0.47.0",
   "skills": [
     {
       "name": "k2-sql-smartobjects",
-      "version": "0.4.2",
+      "version": "0.5.0",
       "platform": "win-x64",
       "buildScript": "skills/k2-sql-smartobjects/scripts/build.ps1",
       "buildParameters": {
@@ -19,12 +19,12 @@
       "versionCommand": {
         "path": "skills/k2-sql-smartobjects/tool/K2SqlCli/bin/Release/k2sql.exe",
         "arguments": ["version"],
-        "expectedOutput": "k2sql 0.4.2"
+        "expectedOutput": "k2sql 0.5.0"
       }
     },
     {
       "name": "k2-smartforms",
-      "version": "0.23.1",
+      "version": "0.24.0",
       "platform": "win-x64",
       "buildScript": "skills/k2-smartforms/scripts/build.ps1",
       "buildParameters": {
@@ -38,7 +38,7 @@
       "versionCommand": {
         "path": "skills/k2-smartforms/tool/K2SmartFormsCli/bin/Release/k2forms.exe",
         "arguments": ["version"],
-        "expectedOutput": "k2forms 0.23.1"
+        "expectedOutput": "k2forms 0.24.0"
       }
     },
     {

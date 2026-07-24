@@ -19,12 +19,14 @@ namespace K2SmartFormsCli
         public string ReviewViewName { get; set; }
         public ResolvedViewField ReviewKey { get; set; }
         public string ReviewReadAction { get; set; }
+        public List<ResolvedRequiredControl> RequiredControls { get; set; }
 
-        public static ResolvedMasterDetailRules Resolve(FormsManager manager, FormDefinition form)
+        public static ResolvedMasterDetailRules Resolve(FormsManager manager, FormDefinition form, IEnumerable<ViewDefinition> views)
         {
             if (form.MasterDetail == null) return null;
             var masterInfo = manager.GetView(form.MasterDetail.MasterView);
             var masterDocument = XDocument.Parse(manager.GetViewDefinition(masterInfo.Guid));
+            var masterDefinition = views.Single(x => string.Equals(x.Name, form.MasterDetail.MasterView, StringComparison.OrdinalIgnoreCase));
             var result = new ResolvedMasterDetailRules
             {
                 Definition = form.MasterDetail,
@@ -33,7 +35,8 @@ namespace K2SmartFormsCli
                 MasterKey = ResolveField(masterDocument, form.MasterDetail.MasterKeyProperty, form.MasterDetail.MasterView),
                 MasterCreateAction = ResolveAction(masterDocument, form.MasterDetail.MasterCreateMethod, null, form.MasterDetail.MasterView),
                 MasterUpdateAction = ResolveAction(masterDocument, form.MasterDetail.MasterUpdateMethod, null, form.MasterDetail.MasterView),
-                Details = new List<ResolvedMasterDetailChild>()
+                Details = new List<ResolvedMasterDetailChild>(),
+                RequiredControls = masterDefinition.RequiredProperties.Select(x => ResolveRequiredControl(masterDocument, x, form.MasterDetail.MasterView)).ToList()
             };
             foreach (var child in form.MasterDetail.Details)
             {
@@ -61,6 +64,25 @@ namespace K2SmartFormsCli
                 result.ReviewReadAction = ResolveAction(reviewDocument, form.MasterDetail.Review.ReadMethod, null, form.MasterDetail.Review.View);
             }
             return result;
+        }
+
+        private static ResolvedRequiredControl ResolveRequiredControl(XDocument document, string property, string viewName)
+        {
+            var field = document.Descendants().FirstOrDefault(x => x.Name.LocalName == "Field" &&
+                string.Equals(ChildValue(x, "FieldName"), property, StringComparison.OrdinalIgnoreCase));
+            if (field == null) throw new CliException("Master View '" + viewName + "' has no field for required property '" + property + "'.");
+            var fieldId = (string)field.Attribute("ID");
+            var controls = document.Descendants().Where(x => x.Name.LocalName == "Control" &&
+                string.Equals((string)x.Attribute("FieldID"), fieldId, StringComparison.OrdinalIgnoreCase) &&
+                !new[] { "Label", "DataLabel", "ListDisplay" }.Contains((string)x.Attribute("Type"), StringComparer.OrdinalIgnoreCase)).ToList();
+            if (controls.Count != 1) throw new CliException("Master View '" + viewName + "' required property '" + property + "' must have exactly one editable control.");
+            return new ResolvedRequiredControl
+            {
+                Property = property,
+                ControlId = (string)controls[0].Attribute("ID"),
+                ControlName = ChildValue(controls[0], "Name") ?? property,
+                ControlDisplayName = ChildValue(controls[0], "DisplayName") ?? property
+            };
         }
 
         private static ResolvedViewField ResolveField(XDocument document, string property, string viewName)
@@ -142,6 +164,14 @@ namespace K2SmartFormsCli
         public string DataType { get; set; }
     }
 
+    internal sealed class ResolvedRequiredControl
+    {
+        public string Property { get; set; }
+        public string ControlId { get; set; }
+        public string ControlName { get; set; }
+        public string ControlDisplayName { get; set; }
+    }
+
     internal static class MasterDetailRules
     {
         public static string SuppressUnfilteredDetailLoads(string xml, string viewName, IEnumerable<MasterDetailChildDefinition> relationships)
@@ -174,8 +204,10 @@ namespace K2SmartFormsCli
             var document = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
             var form = document.Descendants().First(x => x.Name.LocalName == "Form");
             var masterInstance = FindInstance(form, relationship.MasterViewGuid, relationship.MasterViewName, formDefinition.Name);
+            var validationGroupId = AddRequiredValidationGroup(form, relationship, masterInstance);
+            HideReviewUntilSaved(form, relationship);
 
-            AddFormSaveButton(form, formDefinition, relationship, masterInstance);
+            AddFormSaveButton(form, formDefinition, relationship, masterInstance, validationGroupId);
 
             foreach (var child in relationship.Details)
             {
@@ -241,6 +273,7 @@ namespace K2SmartFormsCli
             VerifyBatch(form, saveEvent, masterInstance, relationship.Definition.MasterCreateMethod, relationship.Details, new[] { "Added" }, relationship.MasterKey, formDefinition.Name);
             VerifyBatch(form, saveEvent, masterInstance, relationship.Definition.MasterUpdateMethod, relationship.Details, new[] { "Changed", "Added", "Removed" }, relationship.MasterKey, formDefinition.Name);
             VerifySuccessMessages(saveEvent, masterInstance, relationship, formDefinition.Name);
+            VerifyRequiredValidation(form, saveEvent, masterInstance, relationship, formDefinition.Name);
             VerifyReviewNavigation(form, saveEvent, masterInstance, relationship, formDefinition.Name);
             var create = FindMethodActions(saveEvent, masterInstance, relationship.Definition.MasterCreateMethod, null).First();
             if (!HasMasterKeyResult(create, masterInstance, relationship.MasterKey.Id))
@@ -261,14 +294,52 @@ namespace K2SmartFormsCli
             var reviewInstance = FindInstance(form, relationship.ReviewViewGuid, relationship.ReviewViewName, formName);
             var panel = form.Descendants().First(x => x.Name.LocalName == "Panel" && string.Equals(ChildValue(x, "Name"), relationship.Definition.Review.Tab, StringComparison.OrdinalIgnoreCase));
             var panelId = (string)panel.Attribute("ID");
+            var panelControl = form.Descendants().Single(x => x.Name.LocalName == "Control" &&
+                string.Equals((string)x.Attribute("Type"), "Panel", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("ID"), panelId, StringComparison.OrdinalIgnoreCase));
+            if (relationship.Definition.Review.HiddenUntilSaved &&
+                !string.Equals(ReadElementProperty(panelControl, "IsVisible"), "false", StringComparison.OrdinalIgnoreCase))
+                throw new CliException("K2 Form '" + formName + "' review tab '" + relationship.Definition.Review.Tab + "' must be hidden initially.");
             foreach (var method in new[] { relationship.Definition.MasterCreateMethod, relationship.Definition.MasterUpdateMethod })
             {
                 var masterAction = FindMethodActions(saveEvent, masterInstance, method, null).Single();
                 var actions = masterAction.Parent.Elements().Where(x => x.Name.LocalName == "Action").ToList();
                 var read = actions.SingleOrDefault(x => string.Equals((string)x.Attribute("InstanceID"), reviewInstance, StringComparison.OrdinalIgnoreCase) && string.Equals(ReadProperty(x, "Method"), relationship.Definition.Review.ReadMethod, StringComparison.OrdinalIgnoreCase));
                 if (read == null || !HasMasterKeyMapping(read, masterInstance, relationship.MasterKey.Id, relationship.Definition.Review.KeyProperty)) throw new CliException("K2 Form '" + formName + "' does not load review View '" + relationship.ReviewViewName + "' from the saved master key after " + method + ".");
+                var show = actions.SingleOrDefault(x => string.Equals((string)x.Attribute("Type"), "Transfer", StringComparison.OrdinalIgnoreCase) &&
+                    x.Descendants().Any(p => p.Name.LocalName == "Parameter" &&
+                        string.Equals((string)p.Attribute("TargetID"), "IsVisible", StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals((string)p.Attribute("TargetPath"), panelId, StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(p.Value, "true", StringComparison.OrdinalIgnoreCase)));
+                if (relationship.Definition.Review.HiddenUntilSaved && (show == null || actions.IndexOf(show) <= actions.IndexOf(read)))
+                    throw new CliException("K2 Form '" + formName + "' must show review tab '" + relationship.Definition.Review.Tab + "' only after loading the submitted record.");
                 var focus = actions.SingleOrDefault(x => string.Equals((string)x.Attribute("Type"), "Focus", StringComparison.OrdinalIgnoreCase) && string.Equals(ReadProperty(x, "PanelID"), panelId, StringComparison.OrdinalIgnoreCase));
-                if (focus == null || actions.IndexOf(focus) <= actions.IndexOf(read)) throw new CliException("K2 Form '" + formName + "' must load the review before focusing tab '" + relationship.Definition.Review.Tab + "'.");
+                var predecessor = relationship.Definition.Review.HiddenUntilSaved ? show : read;
+                if (focus == null || actions.IndexOf(focus) <= actions.IndexOf(predecessor)) throw new CliException("K2 Form '" + formName + "' must load and reveal the review before focusing tab '" + relationship.Definition.Review.Tab + "'.");
+            }
+        }
+
+        private static void VerifyRequiredValidation(XElement form, XElement saveEvent, string masterInstance, ResolvedMasterDetailRules relationship, string formName)
+        {
+            if (relationship.RequiredControls == null || relationship.RequiredControls.Count == 0) return;
+            var groups = form.Elements().FirstOrDefault(x => x.Name.LocalName == "ValidationGroups");
+            var group = groups == null ? null : groups.Elements().SingleOrDefault(x => x.Name.LocalName == "ValidationGroup" &&
+                string.Equals(ChildValue(x, "Name"), "Required fields for " + relationship.MasterViewName, StringComparison.Ordinal));
+            if (group == null) throw new CliException("K2 Form '" + formName + "' has no required-field validation group for the master View.");
+            var groupId = (string)group.Attribute("ID");
+            foreach (var required in relationship.RequiredControls)
+                if (!group.Descendants().Any(x => x.Name.LocalName == "ValidationGroupControl" &&
+                    string.Equals((string)x.Attribute("ControlID"), required.ControlId, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals((string)x.Attribute("IsRequired"), "True", StringComparison.OrdinalIgnoreCase)))
+                    throw new CliException("K2 Form '" + formName + "' validation group omits required property '" + required.Property + "'.");
+            foreach (var method in new[] { relationship.Definition.MasterCreateMethod, relationship.Definition.MasterUpdateMethod })
+            {
+                var master = FindMethodActions(saveEvent, masterInstance, method, null).Single();
+                var actions = master.Parent.Elements().Where(x => x.Name.LocalName == "Action").ToList();
+                var validate = actions.FirstOrDefault();
+                if (validate == null || !string.Equals((string)validate.Attribute("Type"), "Validate", StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals(ReadProperty(validate, "GroupID"), groupId, StringComparison.OrdinalIgnoreCase))
+                    throw new CliException("K2 Form '" + formName + "' must validate required fields before " + method + ".");
             }
         }
 
@@ -360,7 +431,41 @@ namespace K2SmartFormsCli
             return instance != null && detailInstances.TryGetValue(instance, out methods) && methods.Contains(ReadProperty(action, "Method"));
         }
 
-        private static void AddFormSaveButton(XElement form, FormDefinition formDefinition, ResolvedMasterDetailRules relationship, string masterInstance)
+        private static string AddRequiredValidationGroup(XElement form, ResolvedMasterDetailRules relationship, string masterInstance)
+        {
+            if (relationship.RequiredControls == null || relationship.RequiredControls.Count == 0) return null;
+            var ns = form.Name.Namespace;
+            var groups = form.Elements().FirstOrDefault(x => x.Name.LocalName == "ValidationGroups");
+            if (groups == null)
+            {
+                groups = new XElement(ns + "ValidationGroups");
+                var states = form.Elements().FirstOrDefault(x => x.Name.LocalName == "States");
+                if (states == null) form.Add(groups); else states.AddBeforeSelf(groups);
+            }
+            var groupId = NewId();
+            groups.Add(new XElement(ns + "ValidationGroup", new XAttribute("ID", groupId),
+                new XElement(ns + "Name", "Required fields for " + relationship.MasterViewName),
+                new XElement(ns + "ValidationGroupControls", relationship.RequiredControls.Select(x =>
+                    new XElement(ns + "ValidationGroupControl", new XAttribute("ID", NewId()),
+                        new XAttribute("ControlID", x.ControlId), new XAttribute("InstanceID", masterInstance),
+                        new XAttribute("IsRequired", "True"), new XAttribute("ControlName", x.ControlName),
+                        new XAttribute("ControlDisplayName", x.ControlDisplayName))))));
+            return groupId;
+        }
+
+        private static void HideReviewUntilSaved(XElement form, ResolvedMasterDetailRules relationship)
+        {
+            if (relationship.Definition.Review == null || !relationship.Definition.Review.HiddenUntilSaved) return;
+            var panel = form.Descendants().First(x => x.Name.LocalName == "Panel" &&
+                string.Equals(ChildValue(x, "Name"), relationship.Definition.Review.Tab, StringComparison.OrdinalIgnoreCase));
+            var panelId = (string)panel.Attribute("ID");
+            var panelControl = form.Descendants().Single(x => x.Name.LocalName == "Control" &&
+                string.Equals((string)x.Attribute("Type"), "Panel", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("ID"), panelId, StringComparison.OrdinalIgnoreCase));
+            SetElementProperty(panelControl, "IsVisible", "false");
+        }
+
+        private static void AddFormSaveButton(XElement form, FormDefinition formDefinition, ResolvedMasterDetailRules relationship, string masterInstance, string validationGroupId)
         {
             var ns = form.Name.Namespace;
             var controls = form.Elements().First(x => x.Name.LocalName == "Controls");
@@ -405,15 +510,16 @@ namespace K2SmartFormsCli
                     Property(ns, "Location", formDefinition.Name, null, null)),
                 new XElement(ns + "Handlers"));
             var handlers = saveEvent.Elements().First(x => x.Name.LocalName == "Handlers");
-            handlers.Add(BuildSaveHandler(form, relationship, masterInstance, true));
-            handlers.Add(BuildSaveHandler(form, relationship, masterInstance, false));
+            handlers.Add(BuildSaveHandler(form, relationship, masterInstance, true, validationGroupId));
+            handlers.Add(BuildSaveHandler(form, relationship, masterInstance, false, validationGroupId));
             events.Add(saveEvent);
         }
 
-        private static XElement BuildSaveHandler(XElement form, ResolvedMasterDetailRules relationship, string masterInstance, bool create)
+        private static XElement BuildSaveHandler(XElement form, ResolvedMasterDetailRules relationship, string masterInstance, bool create, string validationGroupId)
         {
             var ns = form.Name.Namespace;
             var actions = new XElement(ns + "Actions");
+            if (!string.IsNullOrWhiteSpace(validationGroupId)) actions.Add(BuildValidateAction(ns, validationGroupId));
             var master = BuildMasterAction(create ? relationship.MasterCreateAction : relationship.MasterUpdateAction, masterInstance, relationship.MasterKey);
             actions.Add(master);
             if (create)
@@ -435,12 +541,27 @@ namespace K2SmartFormsCli
             {
                 var reviewInstance = FindInstance(form, relationship.ReviewViewGuid, relationship.ReviewViewName, ChildValue(form, "Name"));
                 actions.Add(BuildReviewReadAction(ns, relationship, masterInstance, reviewInstance));
+                if (relationship.Definition.Review.HiddenUntilSaved)
+                    actions.Add(BuildReviewVisibilityAction(form, relationship.Definition.Review.Tab));
                 actions.Add(BuildReviewFocusAction(form, relationship.Definition.Review.Tab));
             }
             actions.Add(BuildSuccessMessage(ns, relationship.Definition.SuccessMessageTitle, relationship.Definition.SuccessMessageBody));
             return new XElement(ns + "Handler", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
                 new XElement(ns + "Properties", Property(ns, "HandlerName", "IfLogicalHandler", null, null), Property(ns, "Location", "form", null, null)),
                 new XElement(ns + "Conditions", BuildMasterKeyCondition(ns, masterInstance, relationship.MasterKey, !create)), actions);
+        }
+
+        private static XElement BuildValidateAction(XNamespace ns, string groupId)
+        {
+            return new XElement(ns + "Action", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                new XAttribute("Type", "Validate"), new XAttribute("ExecutionType", "Synchronous"),
+                new XElement(ns + "Properties",
+                    Property(ns, "Location", "Form", null, null),
+                    Property(ns, "MessageLocation", "Control", null, null),
+                    Property(ns, "GroupID", groupId, null, "ValidationGroupForEvent"),
+                    Property(ns, "IgnoreInvisibleControls", "true", null, null),
+                    Property(ns, "IgnoreDisabledControls", "true", null, null),
+                    Property(ns, "IgnoreReadOnlyControls", "true", null, null)));
         }
 
         private static XElement BuildReviewReadAction(XNamespace ns, ResolvedMasterDetailRules relationship, string masterInstance, string reviewInstance)
@@ -465,6 +586,26 @@ namespace K2SmartFormsCli
             var panelId = (string)panel.Attribute("ID");
             return new XElement(ns + "Action", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()), new XAttribute("Type", "Focus"), new XAttribute("ExecutionType", "Synchronous"),
                 new XElement(ns + "Properties", Property(ns, "Location", "Form", null, null), Property(ns, "PanelID", panelId, tabName, tabName)));
+        }
+
+        private static XElement BuildReviewVisibilityAction(XElement form, string tabName)
+        {
+            var ns = form.Name.Namespace;
+            var panel = form.Descendants().First(x => x.Name.LocalName == "Panel" &&
+                string.Equals(ChildValue(x, "Name"), tabName, StringComparison.OrdinalIgnoreCase));
+            var panelId = (string)panel.Attribute("ID");
+            return new XElement(ns + "Action", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                new XAttribute("Type", "Transfer"), new XAttribute("ExecutionType", "Synchronous"),
+                new XElement(ns + "Properties",
+                    Property(ns, "Location", "Form", null, null),
+                    Property(ns, "DesignTemplate", "SetControlProperties", null, null),
+                    Property(ns, "ControlID", panelId, tabName, tabName),
+                    Property(ns, "FormID", (string)form.Attribute("ID"), ChildValue(form, "Name"), ChildValue(form, "Name"))),
+                new XElement(ns + "Parameters",
+                    new XElement(ns + "Parameter", new XAttribute("SourceID", "Sources"), new XAttribute("SourceType", "Value"),
+                        new XAttribute("TargetID", "IsVisible"), new XAttribute("TargetType", "ControlProperty"),
+                        new XAttribute("TargetPath", panelId), new XAttribute("TargetPathType", "Panel"),
+                        new XElement(ns + "SourceValue", new XAttribute(XNamespace.Xml + "space", "preserve"), "true"))));
         }
 
         private static XElement BuildSuccessMessage(XNamespace ns, string title, string body)
@@ -663,6 +804,24 @@ namespace K2SmartFormsCli
             if (nameValue != null) result.Add(new XElement(ns + "NameValue", nameValue));
             result.Add(new XElement(ns + "Value", value));
             return result;
+        }
+
+        private static void SetElementProperty(XElement owner, string name, string value)
+        {
+            var ns = owner.Name.Namespace;
+            var properties = owner.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
+            if (properties == null) { properties = new XElement(ns + "Properties"); owner.Add(properties); }
+            foreach (var old in properties.Elements().Where(x => x.Name.LocalName == "Property" &&
+                string.Equals(ChildValue(x, "Name"), name, StringComparison.OrdinalIgnoreCase)).ToList()) old.Remove();
+            properties.Add(Property(ns, name, value, value, null));
+        }
+
+        private static string ReadElementProperty(XElement owner, string name)
+        {
+            var property = owner.Elements().Where(x => x.Name.LocalName == "Properties").SelectMany(x => x.Elements())
+                .FirstOrDefault(x => x.Name.LocalName == "Property" &&
+                    string.Equals(ChildValue(x, "Name"), name, StringComparison.OrdinalIgnoreCase));
+            return property == null ? null : ChildValue(property, "Value");
         }
 
         private static void VerifyBatch(XElement form, XElement scope, string masterInstance, string masterMethod, IList<ResolvedMasterDetailChild> children, IEnumerable<string> states, ResolvedViewField masterKey, string formName)

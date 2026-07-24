@@ -17,12 +17,13 @@ namespace K2SmartFormsCli
             TestMetricCardComposition();
             TestLifecycleComposition();
             TestHiddenPropertyComposition();
+            TestResponsiveGroupedItemView();
             TestEditableListHiddenPropertyComposition();
             TestMalformedEditableListRejected();
             TestViewIdentityRebase();
             TestFlatFormViewOrdering();
             TestMultiTableWorkflowStateReconciliation();
-            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, required/read-only gate, live lookup placement, defaults, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, multi-table workflow-state reconciliation");
+            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, required/read-only gate, live lookup placement, literal Create defaults, responsive four-column sections, semantic TextBox inputs, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, multi-table workflow-state reconciliation");
         }
 
         private static void TestIdentityNormalization()
@@ -216,6 +217,54 @@ namespace K2SmartFormsCli
             Assert(!document.Descendants("Row").Any(row => row.Descendants("Control").Any(control => (string)control.Attribute("ID") == "case-control")), "hidden property row removed");
             Assert(document.Descendants("Row").Any(row => row.Descendants("Control").Any(control => (string)control.Attribute("ID") == "title-control")), "visible property row retained");
             Assert(document.Descendants("Control").Any(control => (string)control.Attribute("ID") == "title-label" && control.Descendants("Property").Any(property => (string)property.Element("Name") == "Text" && (string)property.Element("Value") == "Case title")), "friendly property label applied");
+        }
+
+        private static void TestResponsiveGroupedItemView()
+        {
+            var view = NewView("Public Intake", "Submission", "capture", "EmailAddress", "PhoneNumber", "Narrative", "NDAAccepted");
+            Assert(view.LayoutColumns == 4 && view.Responsive, "four-column responsive Item View defaults");
+            view.RequiredProperties.Add("EmailAddress");
+            view.RequiredProperties.Add("NDAAccepted");
+            view.Sections.Add(new ViewSectionDefinition { Title = "Contact", Properties = new List<string> { "EmailAddress", "PhoneNumber" } });
+            view.Sections.Add(new ViewSectionDefinition { Title = "Report", Properties = new List<string> { "Narrative", "NDAAccepted" } });
+            view.Help.Add(new ViewHelpDefinition { Property = "NDAAccepted", LinkText = "Read the NDA", Title = "NDA", Body = "Approved terms." });
+
+            var fields = new XElement("Fields");
+            var controls = new XElement("Controls", ControlDefinition("body", "Table", null),
+                ControlDefinition("column-1", "Column", "40%"), ControlDefinition("column-2", "Column", "60%"));
+            var rows = new XElement("Rows");
+            var names = new[] { "EmailAddress", "PhoneNumber", "Narrative", "NDAAccepted" };
+            var types = new[] { "TextArea", "TextBox", "TextArea", "CheckBox" };
+            for (var i = 0; i < names.Length; i++)
+            {
+                var key = "p" + i;
+                fields.Add(new XElement("Field", new XAttribute("ID", "field-" + key), new XElement("FieldName", names[i])));
+                controls.Add(FieldControlDefinition("label-" + key, "Label", "field-" + key));
+                controls.Add(FieldControlDefinition("input-" + key, types[i], "field-" + key));
+                rows.Add(new XElement("Row", new XAttribute("ID", "row-" + key), new XElement("Cells",
+                    new XElement("Cell", new XElement("Control", new XAttribute("ID", "label-" + key))),
+                    new XElement("Cell", new XElement("Control", new XAttribute("ID", "input-" + key))))));
+            }
+            var xml = new XDocument(new XElement("View", new XAttribute("ID", "view-id"),
+                new XElement("Name", view.Name), fields, controls,
+                new XElement("Canvas", new XElement("Sections", new XElement("Section", new XAttribute("Type", "Body"),
+                    new XElement("Control", new XAttribute("ID", "body"), new XAttribute("LayoutType", "Grid"),
+                        new XElement("Columns",
+                            new XElement("Column", new XAttribute("ID", "column-1"), new XAttribute("Size", "40%")),
+                            new XElement("Column", new XAttribute("ID", "column-2"), new XAttribute("Size", "60%"))), rows)))),
+                new XElement("States", new XElement("State", new XElement("Events"))))).ToString(SaveOptions.DisableFormatting);
+
+            var transformed = ViewPresentationDefinition.Apply(xml, view, false, false);
+            ViewPresentationDefinition.Verify(transformed, view, false, false);
+            var document = XDocument.Parse(transformed);
+            Assert((string)document.Descendants("Control").Single(x => (string)x.Attribute("ID") == "input-p0" && x.Attribute("Type") != null).Attribute("Type") == "TextBox",
+                "email Memo input promoted to TextBox");
+            Assert(document.Descendants("Control").Single(x => (string)x.Attribute("ID") == "body" && x.Attribute("Type") != null).Descendants("Property")
+                .Any(x => (string)x.Element("Name") == "IsResponsive" && (string)x.Element("Value") == "true"), "body Table responsive");
+            Assert(document.Descendants("Control").Count(x => (string)x.Attribute("Type") == "Hyperlink") == 1, "NDA help link created");
+            Assert(document.Descendants("Action").Any(x => (string)x.Attribute("Type") == "ShowMessage"), "NDA help popup rule created");
+            Assert(document.Descendants("Control").Count(x => (string)x.Attribute("Type") == "Label" &&
+                (((string)x.Element("Name")) ?? string.Empty).EndsWith("Section Header", StringComparison.Ordinal)) == 2, "section headers created");
         }
 
         private static void TestEditableListHiddenPropertyComposition()
@@ -426,6 +475,7 @@ namespace K2SmartFormsCli
         private static ViewDefinition NewView(string name, string smartObject, string type, params string[] properties)
         {
             var view = new ViewDefinition { Name = name, SmartObject = smartObject, Type = type };
+            view.LayoutColumns = string.Equals(type, "capture", StringComparison.OrdinalIgnoreCase) ? 4 : 2;
             view.Properties.AddRange(properties);
             return view;
         }
@@ -438,7 +488,10 @@ namespace K2SmartFormsCli
                 "</Fields><Controls>" +
                 "<Control ID='categoryControl' Type='TextBox' FieldID='category'><Name>CategoryCode</Name><Properties /></Control>" +
                 "<Control ID='statusControl' Type='TextBox' FieldID='status'><Name>Status</Name><Properties /></Control>" +
-                "</Controls><Layout><Control ID='categoryControl' /><Control ID='statusControl' /></Layout></View>";
+                "</Controls><Layout><Control ID='categoryControl' /><Control ID='statusControl' /></Layout>" +
+                "<Events><Event><Handlers><Handler><Actions><Action Type='Execute'><Properties><Property><Name>Method</Name><Value>Create</Value></Property></Properties>" +
+                "<Parameters><Parameter SourceID='statusControl' SourceType='Control' TargetID='Status' TargetType='ObjectProperty' /></Parameters>" +
+                "</Action></Actions></Handler></Handlers></Event></Events></View>";
         }
 
         private static void AssertThrows(Action action, string messagePart)
