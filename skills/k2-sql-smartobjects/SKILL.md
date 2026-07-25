@@ -1,6 +1,6 @@
 ---
 name: k2-sql-smartobjects
-description: Build, update, inspect, verify, and clean up SQL Server-backed SmartObjects in self-hosted Nintex K2 Five using declarative JSON manifests and the bundled k2sql .NET CLI. Use for SQL data models including master-detail relationships, approval matrices, lookups, constraints, tables/views/procedures, SQL Service Instances, generated SmartObjects, troubleshooting, or repeatable deployments. Do not use for SmartBox, SharePoint, REST, Oracle, SmartForms, or workflow construction.
+description: Build, update, inspect, verify, and clean up SQL Server-backed SmartObjects in self-hosted Nintex K2 Five using declarative JSON manifests and the bundled k2sql .NET CLI. Use for SQL data models including master-detail relationships, approval matrices, governed lookups, reusable standard reference data, constraints, tables/views/procedures, SQL Service Instances, generated SmartObjects, troubleshooting, or repeatable deployments. Do not use for SmartBox, SharePoint, REST, Oracle, SmartForms, or workflow construction.
 ---
 
 # K2 SQL SmartObjects
@@ -10,7 +10,7 @@ Deploy a SQL model and its K2 SQL Server Service Instance as one repeatable unit
 ## Workflow
 
 1. Confirm self-hosted K2 Five and Microsoft SQL Server. If `$k2-builder` is installed, validate its selected environment profile before discovery.
-2. Read [sql-design.md](references/sql-design.md) and [manifest.md](references/manifest.md). Create a manifest plus ordered, rerunnable SQL scripts. Read [approval-matrices.md](references/approval-matrices.md) when routing depends on amount, dimensions, or stages.
+2. Read [sql-design.md](references/sql-design.md) and [manifest.md](references/manifest.md). Create a manifest plus ordered, rerunnable SQL scripts. Read [approval-matrices.md](references/approval-matrices.md) when routing depends on amount, dimensions, or stages. Read [reference-data.md](references/reference-data.md) when a solution uses country codes or another reusable standard vocabulary.
 3. For a complete solution, share its root category, use its three- or four-letter `<CODE>.` namespace for manifest/database/Service Instance and the code as SQL schema, and retain live K2-sanitized SmartObject names exactly.
 4. Run `scripts/k2sql.ps1 doctor --manifest <path>`, then `plan` and review database, scripts, matrices/seeds, grants, Service Instance, generation flags, target `Data` category, and assertions.
 5. Deploy with `deploy --manifest <path> --confirm`; it verifies in the same run. Use separate `verify`/`inspect` only for drift or evidence.
@@ -20,6 +20,7 @@ Deploy a SQL model and its K2 SQL Server Service Instance as one repeatable unit
 
 - Give mutable tables stable single primary keys; use views for read models and deterministic stored procedures for parameterized behavior. Keep scripts idempotent and result shapes K2-discoverable.
 - Use lookup tables plus foreign keys for user-selected controlled values. Default small applications to meaningful code/text keys and complex applications to surrogate keys unless requirements override. SQL checks are for row-local invariants, not table-backed vocabularies.
+- Reuse a governed enterprise reference SmartObject when one exists. Otherwise copy the bundled ISO 3166-1 country SQL asset with `scripts/copy-reference-data.ps1`; do not hand-author country rows per solution. Make every editable `*CountryCode`/`*CountryId` a foreign-key-backed SmartForms lookup, never a free-text code field.
 - Model repeated rows with a detail table, separate key, non-null type-compatible master foreign key, intentional delete behavior, and leading FK index. Declare every relationship in `masterDetails` and coordinate editable-list/Form behavior with `$k2-smartforms`.
 - Keep derived routing totals authoritative in saved data. Declare maintainable routing under `approvalMatrices`, not workflow branches, and coordinate its Admin UX/workflow resolver contract.
 - Use K2-friendly SQL types and inspect live required SmartObject inputs; SQL defaults do not necessarily make generated Create inputs optional.

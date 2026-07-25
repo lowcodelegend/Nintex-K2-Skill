@@ -29,4 +29,42 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $output = Join-Path $skillRoot "tool\K2SqlCli\bin\$Configuration\k2sql.exe"
+
+$copyReferenceData = Join-Path $skillRoot 'scripts\copy-reference-data.ps1'
+$parseTokens = $null
+$parseErrors = $null
+[Management.Automation.Language.Parser]::ParseFile($copyReferenceData, [ref]$parseTokens, [ref]$parseErrors) | Out-Null
+if ($parseErrors.Count -gt 0) {
+    throw "copy-reference-data.ps1 has PowerShell parse errors: $($parseErrors.Message -join '; ')"
+}
+
+$countryAsset = Join-Path $skillRoot 'assets\reference-data\iso-3166-1-country.sql'
+$countrySql = Get-Content -Raw -LiteralPath $countryAsset
+$countryRows = [regex]::Matches($countrySql, "(?m)^\s+\(N'(?<code>[A-Z]{2})',\s+N'.+',\s+\d+\),?$")
+if ($countryRows.Count -ne 249 -or
+    @($countryRows | ForEach-Object { $_.Groups['code'].Value } | Select-Object -Unique).Count -ne 249 -or
+    $countrySql -notmatch "\(N'AE', N'United Arab Emirates'," -or
+    $countrySql -notmatch 'CREATE OR ALTER VIEW ref\.CountryLookup') {
+    throw 'The bundled ISO 3166-1 country asset must contain 249 unique alpha-2 rows, AE, and ref.CountryLookup.'
+}
+
+$copyTestRoot = Join-Path ([IO.Path]::GetTempPath()) ('K2SqlReferenceData-' + [Guid]::NewGuid().ToString('N'))
+try {
+    $copied = Join-Path $copyTestRoot 'sql\country.sql'
+    & $copyReferenceData -Catalog iso-3166-1-country -Destination $copied | Out-Null
+    if ((Get-FileHash -LiteralPath $countryAsset -Algorithm SHA256).Hash -ne
+        (Get-FileHash -LiteralPath $copied -Algorithm SHA256).Hash) {
+        throw 'copy-reference-data.ps1 did not preserve the bundled country asset.'
+    }
+} finally {
+    if (Test-Path -LiteralPath $copyTestRoot) {
+        $tempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\')
+        $resolved = [IO.Path]::GetFullPath($copyTestRoot).TrimEnd('\')
+        if (-not $resolved.StartsWith($tempRoot + '\', [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Reference-data test cleanup escaped the temporary root: $resolved"
+        }
+        Remove-Item -LiteralPath $resolved -Recurse -Force
+    }
+}
+
 Write-Output $output

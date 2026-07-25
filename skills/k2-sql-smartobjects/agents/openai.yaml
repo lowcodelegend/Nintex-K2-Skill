@@ -1,4 +1,4 @@
 interface:
   display_name: "K2 SQL SmartObjects"
-  short_description: "Build SQL SmartObjects and relationship contracts"
-  default_prompt: "Use $k2-sql-smartobjects to deploy a SQL data model, declare every form-facing constraint for SmartForms validation, and generate its K2 SmartObjects, including master-detail relationships or approval matrices."
+  short_description: "Build SQL SmartObjects and reusable reference data"
+  default_prompt: "Use $k2-sql-smartobjects to deploy a SQL data model, reuse governed or bundled reference data for controlled values, declare every form-facing constraint, and generate its K2 SmartObjects."

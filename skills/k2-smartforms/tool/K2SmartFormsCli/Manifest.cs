@@ -344,6 +344,11 @@ namespace K2SmartFormsCli
                 var missingLookups = view.LookupRequiredProperties.Where(x => !lookupProperties.Contains(x)).ToList();
                 if (missingLookups.Count > 0)
                     throw new CliException("View '" + view.Name + "' requires declared lookupControls for controlled properties: " + string.Join(", ", missingLookups.ToArray()) + ".");
+                var ungovernedCountries = FindUngovernedCountryReferences(view);
+                if (ungovernedCountries.Count > 0)
+                    throw new CliException("View '" + view.Name +
+                        "' must declare lookupControls and lookupRequiredProperties for editable country references: " +
+                        string.Join(", ", ungovernedCountries.ToArray()) + ".");
                 var defaultedLookups = view.DefaultValues.Keys.Where(lookupProperties.Contains).ToList();
                 if (defaultedLookups.Count > 0)
                     throw new CliException("View '" + view.Name + "' defaultValues cannot initialize lookup controls: " + string.Join(", ", defaultedLookups.ToArray()) + ". Keep the lookup editable; declarative default selection is not supported.");
@@ -658,6 +663,31 @@ namespace K2SmartFormsCli
         private static void Require(string value, string field)
         {
             if (string.IsNullOrWhiteSpace(value)) throw new CliException("Manifest field '" + field + "' is required.");
+        }
+
+        internal static bool IsCountryReferenceProperty(string property)
+        {
+            return !string.IsNullOrWhiteSpace(property) &&
+                (property.EndsWith("CountryCode", StringComparison.OrdinalIgnoreCase) ||
+                 property.EndsWith("CountryId", StringComparison.OrdinalIgnoreCase));
+        }
+
+        internal static List<string> FindUngovernedCountryReferences(ViewDefinition view)
+        {
+            if (view == null || (view.Type != "capture" && view.Type != "capture-list"))
+                return new List<string>();
+            var lookupProperties = new HashSet<string>(
+                (view.LookupControls ?? new List<LookupControlDefinition>())
+                    .Where(x => x != null).Select(x => x.Property),
+                StringComparer.OrdinalIgnoreCase);
+            return (view.Properties ?? new List<string>()).Where(x =>
+                IsCountryReferenceProperty(x) &&
+                !(view.HiddenProperties ?? new List<string>()).Contains(x, StringComparer.OrdinalIgnoreCase) &&
+                !(view.ReadOnlyProperties ?? new List<string>()).Contains(x, StringComparer.OrdinalIgnoreCase) &&
+                !(view.DefaultValues ?? new Dictionary<string, string>()).Keys.Contains(x, StringComparer.OrdinalIgnoreCase) &&
+                (!lookupProperties.Contains(x) ||
+                 !(view.LookupRequiredProperties ?? new List<string>()).Contains(x, StringComparer.OrdinalIgnoreCase)))
+                .ToList();
         }
     }
 

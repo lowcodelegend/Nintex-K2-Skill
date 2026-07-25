@@ -17,7 +17,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if ($Command -eq 'version') {
-    Write-Output 'k2build 0.23.0'
+    Write-Output 'k2build 0.23.1'
     return
 }
 
@@ -304,21 +304,49 @@ if ($null -ne $formsManifest) {
     }
 
     foreach ($view in $declaredViews) {
-        Test-ShortCodePrefix ([string](Get-PropertyValue $view 'name')) 'View name'
+        $viewName = [string](Get-PropertyValue $view 'name')
+        Test-ShortCodePrefix $viewName 'View name'
         Test-SmartObjectPrefix ([string](Get-PropertyValue $view 'smartObject')) 'View SmartObject system name'
         $viewArea = [string](Get-PropertyValue $view 'area')
         if (-not [string]::IsNullOrWhiteSpace($viewArea) -and $viewArea -notin @('application', 'admin')) {
-            Add-Issue "View '$([string](Get-PropertyValue $view 'name'))' has unsupported area '$viewArea'."
+            Add-Issue "View '$viewName' has unsupported area '$viewArea'."
         }
-        foreach ($control in @(Get-PropertyValue $view 'lookupControls')) {
+        $lookupControls = @(Get-PropertyValue $view 'lookupControls')
+        $lookupControlProperties = @()
+        foreach ($control in $lookupControls) {
             if ($null -eq $control) { continue }
             $lookupName = [string](Get-PropertyValue $control 'lookup')
+            $lookupControlProperties += [string](Get-PropertyValue $control 'property')
             if ($lookupNames -notcontains $lookupName) {
-                Add-Issue "View '$([string](Get-PropertyValue $view 'name'))' references undeclared lookup '$lookupName'."
+                Add-Issue "View '$viewName' references undeclared lookup '$lookupName'."
+            }
+        }
+        if ([string](Get-PropertyValue $view 'type') -in @('capture', 'capture-list')) {
+            $excludedProperties = @(
+                @(Get-PropertyValue $view 'readOnlyProperties') +
+                @(Get-PropertyValue $view 'hiddenProperties')
+            )
+            $defaultValues = Get-PropertyValue $view 'defaultValues'
+            if ($null -ne $defaultValues) {
+                $excludedProperties += @($defaultValues.PSObject.Properties.Name)
+            }
+            $lookupRequiredProperties = @(Get-PropertyValue $view 'lookupRequiredProperties')
+            foreach ($property in @(Get-PropertyValue $view 'properties')) {
+                $propertyName = [string]$property
+                if ($propertyName -notmatch '(?i)Country(?:Code|Id)$' -or
+                    $excludedProperties -contains $propertyName) {
+                    continue
+                }
+                if ($lookupControlProperties -notcontains $propertyName) {
+                    Add-Issue "View '$viewName' editable country reference '$propertyName' must declare lookupControls."
+                }
+                if ($lookupRequiredProperties -notcontains $propertyName) {
+                    Add-Issue "View '$viewName' editable country reference '$propertyName' must declare lookupRequiredProperties."
+                }
             }
         }
         if ((Get-PropertyValue $policies 'versionFreeNames') -ne $false) {
-            Test-VersionFreeName ([string](Get-PropertyValue $view 'name')) 'View name'
+            Test-VersionFreeName $viewName 'View name'
         }
     }
 

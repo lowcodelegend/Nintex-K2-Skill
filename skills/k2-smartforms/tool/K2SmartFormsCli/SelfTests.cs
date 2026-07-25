@@ -1192,6 +1192,24 @@ namespace K2SmartFormsCli
                     Property = "Narrative", MinLength = 100, MaxLength = 120
                 }, out value) && value.Length >= 100 && value.Length <= 120,
                 "Pre-fill creates minimum-length narrative text");
+            Assert(ResolvedFormPreFill.TryBuildValue(TestInputControl("TextBox", "Text"), "ResidenceCountryCode",
+                new FieldValidationDefinition
+                {
+                    Property = "ResidenceCountryCode", MaxLength = 2
+                }, out value) && value == "AE",
+                "Pre-fill uses a deliberate bounded country code without truncation");
+            Assert(ResolvedFormPreFill.TryBuildValue(TestInputControl("TextBox", "Text"), "ShortReference",
+                new FieldValidationDefinition
+                {
+                    Property = "ShortReference", MaxLength = 2
+                }, out value) && value == "XX",
+                "Pre-fill synthesizes a bounded short value instead of clipping its label");
+            Assert(!ResolvedFormPreFill.TryBuildValue(TestInputControl("TextBox", "Text"), "EmailAddress",
+                new FieldValidationDefinition
+                {
+                    Property = "EmailAddress", Format = "email", MaxLength = 5
+                }, out value),
+                "Pre-fill leaves an impossible bounded format for manual input");
             Assert(ResolvedFormPreFill.TryBuildValue(TestInputControl("TextBox", "Number"), "Amount",
                 new FieldValidationDefinition
                 {
@@ -1206,6 +1224,20 @@ namespace K2SmartFormsCli
                 out value) && value == "ABC", "Pre-fill uses a valid custom-pattern example");
             Assert(!ResolvedFormPreFill.TryBuildValue(TestInputControl("FilePostBack", "File"),
                 "FileContent", null, out value), "Pre-fill leaves File upload manual");
+            Assert(SmartFormsManifest.IsCountryReferenceProperty("ResidenceCountryCode") &&
+                SmartFormsManifest.IsCountryReferenceProperty("CountryId") &&
+                !SmartFormsManifest.IsCountryReferenceProperty("CountryName"),
+                "editable country reference properties are recognized as governed lookups");
+            var countryView = new ViewDefinition { Name = "Country Probe", Type = "capture" };
+            countryView.Properties.Add("ResidenceCountryCode");
+            Assert(SmartFormsManifest.FindUngovernedCountryReferences(countryView)
+                .SequenceEqual(new[] { "ResidenceCountryCode" }),
+                "free-text country references are rejected");
+            countryView.LookupControls.Add(new LookupControlDefinition
+                { Property = "ResidenceCountryCode", Lookup = "Country" });
+            countryView.LookupRequiredProperties.Add("ResidenceCountryCode");
+            Assert(SmartFormsManifest.FindUngovernedCountryReferences(countryView).Count == 0,
+                "bound required country lookups satisfy the governed contract");
 
             var disabled = new FormDefinition { Name = "Pre-fill Probe" };
             disabled.Views.Add("Probe View");

@@ -52,6 +52,8 @@ Avoid heavy normalization by default:
 
 Give each business-managed lookup a stable value property, friendly display property, active flag when retirement is needed, and deterministic sort order. Seed required values idempotently before adding foreign keys. Coordinate the corresponding SmartForm dropdown and Admin CRUD page with `$k2-smartforms`.
 
+Treat countries as fixed external reference data. Reuse an existing governed Country SmartObject when available; otherwise use the bundled catalog described in [reference-data.md](reference-data.md). Store ISO 3166-1 alpha-2 values in a two-character FK column, display the country name, and omit solution Admin CRUD. Never leave an editable property ending in `CountryCode` or `CountryId` as a TextBox.
+
 ## Master-detail models
 
 Repeated business rows such as expense lines, order lines, allocations, or attachments require their own detail table. Use a generated integer/long/GUID key on the master, a separate primary key on the detail, and a non-null child foreign key with the exact same SQL type. Index the foreign key as the leading key so filtered K2 List calls do not scan the detail table. Choose `ON DELETE CASCADE` only when deleting the master must own deletion of every child; otherwise use restrict/no-action.

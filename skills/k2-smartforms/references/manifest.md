@@ -197,6 +197,8 @@ Declare each reusable lookup source once under `application.lookups`, then bind 
 
 The lookup method must be a parameterless SmartObject List method. The target property and lookup `valueProperty` must have compatible K2 types (`Number`/`Autonumber` and `Guid`/`AutoGuid` are compatible pairs). `displayProperty` supplies the dropdown label.
 
+An editable property ending in `CountryCode` or `CountryId` is always a governed lookup. Declare it in both `lookupControls` and `lookupRequiredProperties`; a free-text country reference is rejected. Reuse a governed enterprise Country SmartObject when available, or use the reusable ISO 3166-1 country catalog supplied by `$k2-sql-smartobjects`.
+
 For every binding the CLI writes `OriginalProperty`, rewrites any generated lookup population action, and requires exactly one View `Init` `List` action whose result targets the dropdown control. This applies when FormGenerator originally emitted either a TextBox or a foreign-key dropdown; control datasource properties without the matching action fail verification.
 
 For cascading dropdowns, declare both parent and child controls and add the join contract to the child:
@@ -224,7 +226,7 @@ Set `area` on each view/form to `application` (the default) or `admin`. Admin ar
 
 Each form's optional `useLegacyTheme` defaults to `false`. Always keep it `false`, including when `application.styleProfile` is omitted; the CLI writes the K2 `UseLegacyTheme` property explicitly and verifies it after deployment, enabling K2's plain modern default theme when no custom Style Profile is selected. Never set it to `true`.
 
-Each newly generated Form also gets a test-only bottom `Pre-fill` button by default. It derives dummy values from control types, lookup samples, and `validations`; use `validations[].example` when a custom pattern cannot be synthesized. The CLI emits an `ERRATA test-only Pre-fill` warning while it is enabled. Before production, explicitly disable and remove it through regeneration:
+Each newly generated Form also gets a test-only bottom `Pre-fill` button by default. It derives dummy values from control types, lookup samples, and `validations`; use `validations[].example` when a custom pattern cannot be synthesized. Values must satisfy declared length and format contracts before transfer. The helper never truncates generated text; an impossible format/length combination remains manual and is reported in the warning. The CLI emits an `ERRATA test-only Pre-fill` warning while it is enabled. Before production, explicitly disable and remove it through regeneration:
 
 ```json
 "preFill": {

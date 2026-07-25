@@ -51,6 +51,8 @@
 
 Paths in `database.scripts` are relative to the manifest. Scripts run in order; lines containing only `GO` or `GO n` separate batches. Each script runs in its own transaction.
 
+For standard country data, reuse an existing governed enterprise SmartObject or copy the bundled ISO 3166-1 catalog instead of recreating rows. See [reference-data.md](reference-data.md) for the copier, SQL/verification additions, FK contract, and matching SmartForms lookup snippet.
+
 ## Approval matrices
 
 Declare reusable routing rules in the root `approvalMatrices` array. Each entry creates its `schema.table` and `schema.resolverProcedure`, seeds rules idempotently by `(MatrixCode, RuleKey)`, automatically adds both SQL verification expectations, and includes both objects in SmartObject generation. See [approval-matrices.md](approval-matrices.md) for threshold, dimension, stage, priority, identity, and terminal-result semantics.

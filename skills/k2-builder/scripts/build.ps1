@@ -51,6 +51,30 @@ try {
         & (Join-Path $PSScriptRoot 'copy-example.ps1') -Name $exampleName -Destination $destination | Out-Null
         if ($LASTEXITCODE -ne 0) { throw "Example copy validation failed: $exampleName" }
     }
+
+    $countryProbeRoot = Join-Path $exampleTestRoot 'country-lookup-gate'
+    & (Join-Path $PSScriptRoot 'copy-example.ps1') -Name expense-claim -Destination $countryProbeRoot | Out-Null
+    $countryFormsPath = Join-Path $countryProbeRoot 'smartforms-manifest.json'
+    $countryForms = Get-Content -Raw -LiteralPath $countryFormsPath | ConvertFrom-Json
+    $countryView = $countryForms.application.views | Where-Object name -eq 'EXP.Claim Editor'
+    $countryView.properties += 'ResidenceCountryCode'
+    [IO.File]::WriteAllText($countryFormsPath, ($countryForms | ConvertTo-Json -Depth 20), [Text.UTF8Encoding]::new($false))
+    $countryGateBlocked = $false
+    try {
+        & $entryPoint validate -Manifest (Join-Path $countryProbeRoot 'solution-manifest.json') | Out-Null
+    } catch {
+        $countryGateBlocked = $true
+    }
+    if (-not $countryGateBlocked) {
+        throw 'The Builder must reject an editable ResidenceCountryCode without a required lookup.'
+    }
+
+    $countryView | Add-Member -NotePropertyName lookupControls -NotePropertyValue @(
+        [pscustomobject]@{ property = 'ResidenceCountryCode'; lookup = 'Expense Category' }
+    )
+    $countryView | Add-Member -NotePropertyName lookupRequiredProperties -NotePropertyValue @('ResidenceCountryCode')
+    [IO.File]::WriteAllText($countryFormsPath, ($countryForms | ConvertTo-Json -Depth 20), [Text.UTF8Encoding]::new($false))
+    & $entryPoint validate -Manifest (Join-Path $countryProbeRoot 'solution-manifest.json') | Out-Null
 } finally {
     if (Test-Path -LiteralPath $exampleTestRoot) {
         $tempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\')
@@ -93,7 +117,7 @@ if ($agentContent -notmatch '(?m)^\s*default_prompt:\s*"Use \$k2-builder .+"\s*$
 }
 
 $actualVersion = (& $entryPoint version | Out-String).Trim()
-if ($actualVersion -cne 'k2build 0.23.0') {
+if ($actualVersion -cne 'k2build 0.23.1') {
     throw "Unexpected k2build version output: $actualVersion"
 }
 $environmentExecutable = Join-Path $skillRoot "tool\K2EnvironmentCli\bin\$Configuration\k2env.exe"
@@ -102,4 +126,4 @@ if ($environmentVersion -cne 'k2env 0.8.0') {
     throw "Unexpected k2env version output: $environmentVersion"
 }
 
-Write-Output "k2-builder 0.23.0 validation passed ($Configuration); k2env 0.8.0 built at $environmentExecutable."
+Write-Output "k2-builder 0.23.1 validation passed ($Configuration); k2env 0.8.0 built at $environmentExecutable."

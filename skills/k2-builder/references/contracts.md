@@ -28,6 +28,7 @@ Names shared across manifests must resolve to the same K2 artifacts:
 - Use a lookup table and foreign key for user-selected controlled values. SQL Server checks cannot read lookup rows; keep checks for row-local invariants.
 - For a small application, prefer a meaningful code/text foreign key unless surrogate-key normalization is requested. For a complex application, prefer normalized surrogate lookup keys unless a stable code is the intentional domain key.
 - Every dropdown binds a target property to a generated lookup SmartObject, parameterless List method, value property, and friendly display property.
+- Every editable property ending in `CountryCode` or `CountryId` declares both `lookupControls` and `lookupRequiredProperties`. Prefer a governed enterprise Country SmartObject; otherwise use the reusable ISO 3166-1 catalog bundled with `$k2-sql-smartobjects`. Store the stable code/key, display the friendly name, and never substitute a two-character TextBox.
 - Every business-managed lookup declares an Admin form containing CRUD capture and List views under `<root>\Admin`; external masters and fixed workflow/system vocabularies omit Admin UX deliberately.
 - Verify the dropdown definition and execute the lookup List method. Browser-test that options load, the displayed label differs from an opaque key where appropriate, and create/update persists the selected value.
 

@@ -1,4 +1,4 @@
 interface:
   display_name: "K2 SmartForms Builder"
-  short_description: "Build CRUD, master-detail, and Admin SmartForms"
-  default_prompt: "Use $k2-smartforms to generate and verify polished CRUD, master-detail editable-list, and approval-matrix administration forms over existing K2 SmartObjects, mirroring all form-facing SQL constraints as native field and pre-save validation."
+  short_description: "Build validated SmartForms with governed lookups"
+  default_prompt: "Use $k2-smartforms to generate and verify polished CRUD and master-detail Forms with governed lookups, SQL-matched validation, and constraint-safe test-data Pre-fill."

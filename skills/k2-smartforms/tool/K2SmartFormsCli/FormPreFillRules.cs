@@ -163,27 +163,34 @@ namespace K2SmartFormsCli
 
             var format = validation == null ? string.Empty : validation.Format ?? string.Empty;
             var minimum = validation != null && validation.MinLength.HasValue ? validation.MinLength.Value : 0;
+            var maximum = validation != null ? validation.MaxLength : null;
             switch (format.ToLowerInvariant())
             {
                 case "email":
-                    var localLength = Math.Max(7, minimum - "@example.com".Length);
-                    value = new string('x', localLength) + "@example.com";
+                    const string emailSuffix = "@b.co";
+                    var localLength = Math.Max(1, minimum - emailSuffix.Length);
+                    if (maximum.HasValue && localLength + emailSuffix.Length > maximum.Value) return false;
+                    value = new string('x', localLength) + emailSuffix;
                     break;
                 case "phone":
-                    value = "+971500000000";
-                    while (value.Length < minimum && value.Length < 25) value += "0";
+                    var phoneLength = Math.Max(7, minimum);
+                    if (phoneLength > 25 || (maximum.HasValue && phoneLength > maximum.Value)) return false;
+                    value = "+" + new string('1', phoneLength - 1);
                     break;
                 case "url":
-                    value = "https://example.com/test";
-                    while (value.Length < minimum) value += "x";
+                    const string urlPrefix = "https://x.co";
+                    var urlLength = Math.Max(urlPrefix.Length, minimum);
+                    if (maximum.HasValue && urlLength > maximum.Value) return false;
+                    value = urlPrefix + new string('x', urlLength - urlPrefix.Length);
                     break;
                 case "guid":
+                    if (maximum.HasValue && maximum.Value < 36) return false;
                     value = Guid.NewGuid().ToString();
                     break;
                 default:
-                    value = HumanDummy(property);
-                    while (value.Length < minimum) value += " test data";
-                    if (value.Length < minimum) value = value.PadRight(minimum, 'x');
+                    var semantic = SemanticDummy(property);
+                    if (semantic != null && TryValidatedText(semantic, validation, out value)) return true;
+                    value = BuildBoundedText(property, minimum, maximum);
                     break;
             }
             return TryValidatedText(value, validation, out value);
@@ -194,16 +201,34 @@ namespace K2SmartFormsCli
             value = candidate ?? string.Empty;
             if (validation == null) return true;
             if (validation.MaxLength.HasValue && value.Length > validation.MaxLength.Value)
-            {
-                if (validation.MinLength.HasValue && validation.MinLength.Value > validation.MaxLength.Value) return false;
-                value = value.Substring(0, validation.MaxLength.Value);
-            }
+                return false;
             if (validation.MinLength.HasValue && value.Length < validation.MinLength.Value)
                 return false;
             if (FieldValidationDefinitionXml.RequiresValidationPattern(validation) &&
                 !Regex.IsMatch(value, FieldValidationDefinitionXml.BuildPattern(validation), RegexOptions.ECMAScript))
                 return false;
             return true;
+        }
+
+        private static string SemanticDummy(string property)
+        {
+            if (string.IsNullOrWhiteSpace(property)) return null;
+            if (property.EndsWith("CountryCode", StringComparison.OrdinalIgnoreCase)) return "AE";
+            if (property.EndsWith("CurrencyCode", StringComparison.OrdinalIgnoreCase)) return "AED";
+            if (property.EndsWith("LanguageCode", StringComparison.OrdinalIgnoreCase)) return "en";
+            return null;
+        }
+
+        private static string BuildBoundedText(string property, int minimum, int? maximum)
+        {
+            var candidate = HumanDummy(property);
+            if (candidate.Length < minimum) candidate = candidate.PadRight(minimum, 'x');
+            if (!maximum.HasValue || candidate.Length <= maximum.Value) return candidate;
+
+            // Generate a deliberate boundary value. Never clip a descriptive label into
+            // accidental data such as "Te" for a two-character code.
+            var length = minimum > 0 ? minimum : maximum.Value;
+            return new string('X', length);
         }
 
         private static string HumanDummy(string property)
