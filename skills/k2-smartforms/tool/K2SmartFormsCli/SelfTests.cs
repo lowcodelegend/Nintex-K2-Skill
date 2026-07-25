@@ -72,8 +72,8 @@ namespace K2SmartFormsCli
                 MasterKey = new ResolvedViewField { Id = "claim-key", Name = "ClaimId", DisplayName = "Claim ID", DataType = "Number" },
                 MasterCreateAction = TestViewAction(createDefinition, masterGuid, "Claim", "Create", null, true),
                 MasterUpdateAction = TestViewAction(updateDefinition, masterGuid, "Claim", "Update", null, false),
-                MasterCreateEvent = new ResolvedViewEvent { DefinitionId = createDefinition, DisplayName = "Create Button" },
-                MasterUpdateEvent = new ResolvedViewEvent { DefinitionId = updateDefinition, DisplayName = "Update Button" },
+                MasterCreateEvent = new ResolvedViewEvent { DefinitionId = createDefinition, DisplayName = "K2Skills.MasterDetail.Create.ClaimId" },
+                MasterUpdateEvent = new ResolvedViewEvent { DefinitionId = updateDefinition, DisplayName = "K2Skills.MasterDetail.Update.ClaimId" },
                 RequiredControls = new List<ResolvedRequiredControl>
                 {
                     new ResolvedRequiredControl { Property = "Title", ControlId = "title-control", ControlName = "Title Text Box", ControlDisplayName = "Title" }
@@ -133,13 +133,46 @@ namespace K2SmartFormsCli
                 TestViewAction("42000000-0000-0000-0000-000000000010", detailGuid, "Claim Lines", "List", null, false) +
                 "</Actions></Handler></Handlers></Event></Events></View>";
             var configured = MasterDetailRules.ConfigureViewRuleSeams(detailView, "Claim Lines",
-                new[] { childDefinition }, new MasterDetailReviewDefinition[0]);
+                new MasterDetailFormDefinition[0], new[] { childDefinition }, new MasterDetailReviewDefinition[0]);
             MasterDetailRules.VerifyDetailViewLoads(configured, "Claim Lines", new[] { childDefinition });
             var configuredDocument = XDocument.Parse(configured);
             Assert(configuredDocument.Descendants("Parameter").Any(x => (string)x.Attribute("DataType") == "Number" &&
                 (string)x.Element("Name") == "ClaimId"), "detail key View parameter emitted");
             Assert(configuredDocument.Descendants("Action").Count(x => ReadMethod(x) == "List") == 1,
                 "only the View-owned filtered List action remains");
+
+            var masterView = "<View ID='" + masterGuid + "'><Name>Claim</Name><Events>" +
+                "<Event ID='create-event' DefinitionID='43000000-0000-0000-0000-000000000010' SourceType='Control'><Handlers><Handler><Actions>" +
+                TestViewAction(createDefinition, masterGuid, "Claim", "Create", null, true) +
+                "</Actions></Handler></Handlers></Event>" +
+                "<Event ID='update-event' DefinitionID='43000000-0000-0000-0000-000000000020' SourceType='Control'><Handlers><Handler><Actions>" +
+                TestViewAction(updateDefinition, masterGuid, "Claim", "Update", null, false) +
+                "</Actions></Handler></Handlers></Event></Events></View>";
+            var configuredMaster = MasterDetailRules.ConfigureViewRuleSeams(masterView, "Claim",
+                new[] { contract }, new MasterDetailChildDefinition[0], new MasterDetailReviewDefinition[0]);
+            MasterDetailRules.VerifyMasterViewRules(configuredMaster, "Claim", new[] { contract });
+            var configuredMasterDocument = XDocument.Parse(configuredMaster);
+            var masterRuleNames = configuredMasterDocument.Descendants("Event")
+                .Where(x => (string)x.Attribute("SourceType") == "Rule")
+                .Select(x => ReadActionProperty(x, "RuleName")).ToList();
+            Assert(masterRuleNames.Contains("K2Skills.MasterDetail.Create.ClaimId"),
+                "master Create custom rule emitted");
+            Assert(masterRuleNames.Contains("K2Skills.MasterDetail.Update.ClaimId"),
+                "master Update custom rule emitted");
+            Assert(configuredMasterDocument.Descendants("Event")
+                .Where(x => (string)x.Attribute("SourceType") == "Rule")
+                .SelectMany(x => x.Descendants("Action"))
+                .All(x => string.IsNullOrWhiteSpace((string)x.Attribute("IsReference")) &&
+                    string.IsNullOrWhiteSpace((string)x.Attribute("IsInherited"))),
+                "master persistence wrappers contain no inheritance metadata");
+            var invalidMaster = XDocument.Parse(configuredMaster);
+            invalidMaster.Descendants("Event").First(x =>
+                ReadActionProperty(x, "RuleName") == "K2Skills.MasterDetail.Create.ClaimId")
+                .SetAttributeValue("SourceType", "Control");
+            AssertThrows(delegate
+            {
+                MasterDetailRules.VerifyMasterViewRules(invalidMaster.ToString(), "Claim", new[] { contract });
+            }, "must contain exactly one View-owned persistence rule");
         }
 
         private static string ReadActionProperty(XElement action, string name)

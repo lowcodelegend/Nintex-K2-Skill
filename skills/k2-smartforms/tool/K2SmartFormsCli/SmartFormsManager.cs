@@ -582,8 +582,10 @@ namespace K2SmartFormsCli
 
             var generated = renderer.Generate(viewGenerator, view.SmartObject, view.Name);
             var definition = ViewLookupDefinition.Apply(generated.ToXml(), view, lookupSources);
-            var isMaster = _manifest.Application.Forms.Any(f => f.MasterDetail != null &&
-                string.Equals(f.MasterDetail.MasterView, view.Name, StringComparison.OrdinalIgnoreCase));
+            var masterRelationships = _manifest.Application.Forms.Where(f => f.MasterDetail != null &&
+                    string.Equals(f.MasterDetail.MasterView, view.Name, StringComparison.OrdinalIgnoreCase))
+                .Select(f => f.MasterDetail).ToList();
+            var isMaster = masterRelationships.Count > 0;
             var detailRelationships = _manifest.Application.Forms.Where(f => f.MasterDetail != null)
                 .SelectMany(f => f.MasterDetail.Details)
                 .Where(d => string.Equals(d.View, view.Name, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -596,17 +598,19 @@ namespace K2SmartFormsCli
             definition = ViewChartLayoutDefinition.Apply(definition, view);
             definition = ViewMetricCardLayoutDefinition.Apply(definition, view);
             definition = ViewLifecycleLayoutDefinition.Apply(definition, view);
-            if (isDetail || reviewRelationships.Count > 0)
+            if (isMaster || isDetail || reviewRelationships.Count > 0)
                 definition = MasterDetailRules.ConfigureViewRuleSeams(definition, view.Name,
-                    detailRelationships, reviewRelationships);
+                    masterRelationships, detailRelationships, reviewRelationships);
             VerifyRenderedView(definition, view, lookupSources);
             return definition;
         }
 
         private void VerifyRenderedView(string definition, ViewDefinition view, IDictionary<string, LookupRuntimeSource> lookupSources)
         {
-            var isMaster = _manifest.Application.Forms.Any(f => f.MasterDetail != null &&
-                string.Equals(f.MasterDetail.MasterView, view.Name, StringComparison.OrdinalIgnoreCase));
+            var masterRelationships = _manifest.Application.Forms.Where(f => f.MasterDetail != null &&
+                    string.Equals(f.MasterDetail.MasterView, view.Name, StringComparison.OrdinalIgnoreCase))
+                .Select(f => f.MasterDetail).ToList();
+            var isMaster = masterRelationships.Count > 0;
             var isDetail = _manifest.Application.Forms.Where(f => f.MasterDetail != null)
                 .SelectMany(f => f.MasterDetail.Details)
                 .Any(d => string.Equals(d.View, view.Name, StringComparison.OrdinalIgnoreCase));
@@ -623,6 +627,8 @@ namespace K2SmartFormsCli
                 MasterDetailRules.VerifyDetailViewLoads(definition, view.Name, detailRelationships);
             if (reviewRelationships.Count > 0)
                 MasterDetailRules.VerifyReviewViewRules(definition, view.Name, reviewRelationships);
+            if (masterRelationships.Count > 0)
+                MasterDetailRules.VerifyMasterViewRules(definition, view.Name, masterRelationships);
         }
 
         internal static string RebaseViewIdentity(string definition, Guid expectedId, string viewName)
@@ -848,7 +854,10 @@ namespace K2SmartFormsCli
                         throw new CliException("K2 View is in category '" + info.CategoryPath + "', expected '" + expectedCategory + "': " + expected);
                     if (_manifest.Application.CheckIn && info.IsCheckedOut) throw new CliException("K2 View remains checked out: " + expected);
                     ViewLookupDefinition.Verify(definition, declaredView, lookupSources);
-                    var isMaster = _manifest.Application.Forms.Any(f => f.MasterDetail != null && string.Equals(f.MasterDetail.MasterView, declaredView.Name, StringComparison.OrdinalIgnoreCase));
+                    var masterRelationships = _manifest.Application.Forms.Where(f => f.MasterDetail != null &&
+                            string.Equals(f.MasterDetail.MasterView, declaredView.Name, StringComparison.OrdinalIgnoreCase))
+                        .Select(f => f.MasterDetail).ToList();
+                    var isMaster = masterRelationships.Count > 0;
                     var detailRelationships = _manifest.Application.Forms.Where(f => f.MasterDetail != null)
                         .SelectMany(f => f.MasterDetail.Details).Where(d => string.Equals(d.View, declaredView.Name, StringComparison.OrdinalIgnoreCase)).ToList();
                     var reviewRelationships = _manifest.Application.Forms.Where(f => f.MasterDetail != null &&
@@ -863,6 +872,8 @@ namespace K2SmartFormsCli
                     if (isDetail) MasterDetailRules.VerifyDetailViewLoads(definition, declaredView.Name, detailRelationships);
                     if (reviewRelationships.Count > 0)
                         MasterDetailRules.VerifyReviewViewRules(definition, declaredView.Name, reviewRelationships);
+                    if (masterRelationships.Count > 0)
+                        MasterDetailRules.VerifyMasterViewRules(definition, declaredView.Name, masterRelationships);
                     Console.WriteLine("View verification: OK (" + expected + ", " + info.Guid + ", v" + info.Version + ", " + info.Type + ")");
                 }
 

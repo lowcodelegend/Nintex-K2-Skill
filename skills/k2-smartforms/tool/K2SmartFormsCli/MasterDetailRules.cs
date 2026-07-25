@@ -39,8 +39,8 @@ namespace K2SmartFormsCli
                 MasterKey = ResolveField(masterDocument, form.MasterDetail.MasterKeyProperty, form.MasterDetail.MasterView),
                 MasterCreateAction = ResolveAction(masterDocument, form.MasterDetail.MasterCreateMethod, null, form.MasterDetail.MasterView),
                 MasterUpdateAction = ResolveAction(masterDocument, form.MasterDetail.MasterUpdateMethod, null, form.MasterDetail.MasterView),
-                MasterCreateEvent = ResolveOwningEvent(masterDocument, form.MasterDetail.MasterCreateMethod, null, form.MasterDetail.MasterView),
-                MasterUpdateEvent = ResolveOwningEvent(masterDocument, form.MasterDetail.MasterUpdateMethod, null, form.MasterDetail.MasterView),
+                MasterCreateEvent = ResolveNamedEvent(masterDocument, MasterCreateRuleName(form.MasterDetail.MasterKeyProperty), form.MasterDetail.MasterView),
+                MasterUpdateEvent = ResolveNamedEvent(masterDocument, MasterUpdateRuleName(form.MasterDetail.MasterKeyProperty), form.MasterDetail.MasterView),
                 Details = new List<ResolvedMasterDetailChild>(),
                 RequiredControls = masterDefinition.RequiredProperties.Select(x => ResolveRequiredControl(masterDocument, x, form.MasterDetail.MasterView)).ToList()
             };
@@ -108,6 +108,9 @@ namespace K2SmartFormsCli
             if (matches.Count != 1)
                 throw new CliException("View '" + viewName + "' must have exactly one generated rule '" + ruleName +
                     "'; found " + matches.Count + ".");
+            if (!string.Equals((string)matches[0].Attribute("SourceType"), "Rule", StringComparison.OrdinalIgnoreCase))
+                throw new CliException("View '" + viewName + "' generated event '" + ruleName +
+                    "' is not a callable View-owned custom rule.");
             return ResolveEvent(matches[0], viewName, ruleName);
         }
 
@@ -201,6 +204,8 @@ namespace K2SmartFormsCli
 
         internal static string LoadRuleName(string property) { return "K2Skills.MasterDetail.Load." + property; }
         internal static string ReviewRuleName(string property) { return "K2Skills.MasterDetail.Read." + property; }
+        internal static string MasterCreateRuleName(string property) { return "K2Skills.MasterDetail.Create." + property; }
+        internal static string MasterUpdateRuleName(string property) { return "K2Skills.MasterDetail.Update." + property; }
 
         private static string ReadProperty(XElement action, string name)
         {
@@ -262,19 +267,32 @@ namespace K2SmartFormsCli
     internal static class MasterDetailRules
     {
         public static string ConfigureViewRuleSeams(string xml, string viewName,
+            IEnumerable<MasterDetailFormDefinition> masterRelationships,
             IEnumerable<MasterDetailChildDefinition> detailRelationships,
             IEnumerable<MasterDetailReviewDefinition> reviewRelationships)
         {
+            var masters = (masterRelationships ?? Enumerable.Empty<MasterDetailFormDefinition>())
+                .GroupBy(x => string.Join("|", new[] { x.MasterKeyProperty, x.MasterCreateMethod, x.MasterUpdateMethod }),
+                    StringComparer.OrdinalIgnoreCase).Select(x => x.First()).ToList();
             var details = (detailRelationships ?? Enumerable.Empty<MasterDetailChildDefinition>())
                 .GroupBy(x => string.Join("|", new[] { x.ForeignKeyProperty, x.CreateMethod, x.UpdateMethod, x.DeleteMethod, x.ListMethod }),
                     StringComparer.OrdinalIgnoreCase).Select(x => x.First()).ToList();
             var reviews = (reviewRelationships ?? Enumerable.Empty<MasterDetailReviewDefinition>())
                 .GroupBy(x => string.Join("|", new[] { x.KeyProperty, x.ReadMethod }),
                     StringComparer.OrdinalIgnoreCase).Select(x => x.First()).ToList();
-            if (details.Count == 0 && reviews.Count == 0) return xml;
+            if (masters.Count == 0 && details.Count == 0 && reviews.Count == 0) return xml;
 
             var document = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
             var view = document.Descendants().Single(x => x.Name.LocalName == "View");
+            foreach (var master in masters)
+            {
+                var create = new XElement(FindOwnedMethodAction(view, master.MasterCreateMethod, null, viewName));
+                var update = new XElement(FindOwnedMethodAction(view, master.MasterUpdateMethod, null, viewName));
+                AddOwnedMethodRule(view, ResolvedMasterDetailRules.MasterCreateRuleName(master.MasterKeyProperty),
+                    PrepareOwnedAction(create));
+                AddOwnedMethodRule(view, ResolvedMasterDetailRules.MasterUpdateRuleName(master.MasterKeyProperty),
+                    PrepareOwnedAction(update));
+            }
             foreach (var detail in details)
             {
                 var list = new XElement(FindOwnedMethodAction(view, detail.ListMethod, null, viewName));
@@ -297,6 +315,20 @@ namespace K2SmartFormsCli
                     PrepareFilteredOwnedAction(read, review.KeyProperty));
             }
             return document.ToString(SaveOptions.DisableFormatting);
+        }
+
+        private static XElement PrepareOwnedAction(XElement prototype)
+        {
+            prototype.SetAttributeValue("ID", NewId());
+            prototype.SetAttributeValue("DefinitionID", NewId());
+            prototype.SetAttributeValue("ExecutionType", "Synchronous");
+            prototype.Attributes("InstanceID").Remove();
+            foreach (var element in prototype.DescendantsAndSelf())
+            {
+                element.Attributes("IsReference").Remove();
+                element.Attributes("IsInherited").Remove();
+            }
+            return prototype;
         }
 
         private static XElement FindOwnedMethodAction(XElement view, string method, string state, string viewName)
@@ -512,6 +544,44 @@ namespace K2SmartFormsCli
                     throw new CliException("Review View '" + viewName + "' rule '" + ruleName +
                         "' must contain one Read action supplied by View parameter '" + relationship.KeyProperty + "'.");
             }
+        }
+
+        public static void VerifyMasterViewRules(string xml, string viewName,
+            IEnumerable<MasterDetailFormDefinition> relationships)
+        {
+            var document = XDocument.Parse(xml);
+            foreach (var relationship in relationships.GroupBy(x =>
+                string.Join("|", new[] { x.MasterKeyProperty, x.MasterCreateMethod, x.MasterUpdateMethod }),
+                StringComparer.OrdinalIgnoreCase).Select(x => x.First()))
+            {
+                VerifyMasterOwnedMethodRule(document, viewName,
+                    ResolvedMasterDetailRules.MasterCreateRuleName(relationship.MasterKeyProperty),
+                    relationship.MasterCreateMethod);
+                VerifyMasterOwnedMethodRule(document, viewName,
+                    ResolvedMasterDetailRules.MasterUpdateRuleName(relationship.MasterKeyProperty),
+                    relationship.MasterUpdateMethod);
+            }
+        }
+
+        private static void VerifyMasterOwnedMethodRule(XDocument document, string viewName,
+            string ruleName, string method)
+        {
+            var events = document.Descendants().Where(x => x.Name.LocalName == "Event" &&
+                string.Equals((string)x.Attribute("SourceType"), "Rule", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(ReadRuleName(x), ruleName, StringComparison.Ordinal)).ToList();
+            if (events.Count != 1)
+                throw new CliException("Master View '" + viewName + "' must contain exactly one View-owned persistence rule '" +
+                    ruleName + "'.");
+            var actions = events[0].Descendants().Where(x => x.Name.LocalName == "Action" &&
+                string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(ReadProperty(x, "Method"), method, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (actions.Count != 1 || actions.Any(x =>
+                !string.Equals((string)x.Attribute("ExecutionType"), "Synchronous", StringComparison.OrdinalIgnoreCase) ||
+                x.DescendantsAndSelf().Any(y =>
+                    string.Equals((string)y.Attribute("IsReference"), "True", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals((string)y.Attribute("IsInherited"), "True", StringComparison.OrdinalIgnoreCase))))
+                throw new CliException("Master View '" + viewName + "' persistence rule '" + ruleName +
+                    "' must contain one local synchronous '" + method + "' method action.");
         }
 
         private static bool HasViewParameterInput(XElement action, string source, string target)
