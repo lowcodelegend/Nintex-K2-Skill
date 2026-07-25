@@ -165,6 +165,11 @@ namespace K2SmartFormsCli
                 .All(x => string.IsNullOrWhiteSpace((string)x.Attribute("IsReference")) &&
                     string.IsNullOrWhiteSpace((string)x.Attribute("IsInherited"))),
                 "master persistence wrappers contain no inheritance metadata");
+            Assert(configuredMasterDocument.Descendants("Event")
+                .Where(x => (string)x.Attribute("SourceType") == "Rule")
+                .SelectMany(x => x.Elements("Handlers").Elements("Handler"))
+                .All(x => ReadActionProperty(x, "Location") == "view"),
+                "custom View rule handlers use the canonical view context");
             var invalidMaster = XDocument.Parse(configuredMaster);
             invalidMaster.Descendants("Event").First(x =>
                 ReadActionProperty(x, "RuleName") == "K2Skills.MasterDetail.Create.ClaimId")
@@ -173,6 +178,16 @@ namespace K2SmartFormsCli
             {
                 MasterDetailRules.VerifyMasterViewRules(invalidMaster.ToString(), "Claim", new[] { contract });
             }, "must contain exactly one View-owned persistence rule");
+            invalidMaster = XDocument.Parse(configuredMaster);
+            var invalidHandler = invalidMaster.Descendants("Event").First(x =>
+                ReadActionProperty(x, "RuleName") == "K2Skills.MasterDetail.Create.ClaimId")
+                .Descendants("Handler").First();
+            invalidHandler.Descendants("Property").First(x =>
+                (string)x.Element("Name") == "Location").Element("Value").Value = "Claim";
+            AssertThrows(delegate
+            {
+                MasterDetailRules.VerifyMasterViewRules(invalidMaster.ToString(), "Claim", new[] { contract });
+            }, "canonical Handler Location 'view'");
         }
 
         private static string ReadActionProperty(XElement action, string name)

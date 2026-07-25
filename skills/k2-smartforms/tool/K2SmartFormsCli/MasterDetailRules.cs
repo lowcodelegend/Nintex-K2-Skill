@@ -455,7 +455,7 @@ namespace K2SmartFormsCli
                     new XElement(ns + "Handler", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
                         new XElement(ns + "Properties",
                             Property(ns, "HandlerName", "IfLogicalHandler", null, null),
-                            Property(ns, "Location", viewName, null, null)),
+                            Property(ns, "Location", "view", null, null)),
                         new XElement(ns + "Actions", action)))));
         }
 
@@ -494,6 +494,7 @@ namespace K2SmartFormsCli
                     string.Equals(ReadRuleName(x), ruleName, StringComparison.Ordinal)).ToList();
                 if (events.Count != 1)
                     throw new CliException("Master-detail View '" + viewName + "' must contain exactly one View-owned filtered load rule '" + ruleName + "'.");
+                VerifyCustomRuleHandlerContext(events[0], viewName, ruleName);
                 var actions = document.Descendants().Where(x => x.Name.LocalName == "Action" &&
                     string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
                     x.Attribute("ItemState") == null &&
@@ -536,6 +537,7 @@ namespace K2SmartFormsCli
                     string.Equals(ReadRuleName(x), ruleName, StringComparison.Ordinal)).ToList();
                 if (events.Count != 1)
                     throw new CliException("Review View '" + viewName + "' must contain exactly one View-owned Read rule '" + ruleName + "'.");
+                VerifyCustomRuleHandlerContext(events[0], viewName, ruleName);
                 var actions = events[0].Descendants().Where(x => x.Name.LocalName == "Action" &&
                     string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
                     string.Equals(ReadProperty(x, "Method"), relationship.ReadMethod, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -572,6 +574,7 @@ namespace K2SmartFormsCli
             if (events.Count != 1)
                 throw new CliException("Master View '" + viewName + "' must contain exactly one View-owned persistence rule '" +
                     ruleName + "'.");
+            VerifyCustomRuleHandlerContext(events[0], viewName, ruleName);
             var actions = events[0].Descendants().Where(x => x.Name.LocalName == "Action" &&
                 string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(ReadProperty(x, "Method"), method, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -582,6 +585,23 @@ namespace K2SmartFormsCli
                     string.Equals((string)y.Attribute("IsInherited"), "True", StringComparison.OrdinalIgnoreCase))))
                 throw new CliException("Master View '" + viewName + "' persistence rule '" + ruleName +
                     "' must contain one local synchronous '" + method + "' method action.");
+        }
+
+        private static void VerifyCustomRuleHandlerContext(XElement customEvent, string viewName, string ruleName)
+        {
+            var handlers = customEvent.Elements().Where(x => x.Name.LocalName == "Handlers")
+                .SelectMany(x => x.Elements()).Where(x => x.Name.LocalName == "Handler").ToList();
+            if (handlers.Count == 0 || handlers.Any(x =>
+            {
+                var properties = x.Elements().FirstOrDefault(y => y.Name.LocalName == "Properties");
+                var location = properties == null ? null : properties.Elements().FirstOrDefault(y =>
+                    y.Name.LocalName == "Property" &&
+                    string.Equals(ChildValue(y, "Name"), "Location", StringComparison.OrdinalIgnoreCase));
+                return location == null ||
+                    !string.Equals(ChildValue(location, "Value"), "view", StringComparison.OrdinalIgnoreCase);
+            }))
+                throw new CliException("View '" + viewName + "' custom rule '" + ruleName +
+                    "' must use canonical Handler Location 'view' so the Rule Designer can hydrate it.");
         }
 
         private static bool HasViewParameterInput(XElement action, string source, string target)
