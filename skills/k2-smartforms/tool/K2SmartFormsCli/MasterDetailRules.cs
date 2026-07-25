@@ -1260,10 +1260,9 @@ namespace K2SmartFormsCli
 
         private static XElement BuildMasterKeyCondition(XNamespace ns, string masterInstance, ResolvedViewField masterKey, bool notBlank)
         {
-            var conditionName = notBlank ? "SimpleNotBlankViewFieldCondition" : "SimpleBlankViewFieldCondition";
             var expression = notBlank ? "IsNotBlank" : "IsBlank";
-            return new XElement(ns + "Condition", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()), new XAttribute("InstanceID", masterInstance),
-                new XElement(ns + "Properties", Property(ns, "Location", "Form", null, null), Property(ns, "Name", conditionName, null, null)),
+            return new XElement(ns + "Condition", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                new XElement(ns + "Properties", Property(ns, "Location", "Form", null, null), Property(ns, "Name", "AdvancedCondition", null, null)),
                 new XElement(ns + "Expressions", new XElement(ns + expression,
                     new XElement(ns + "Item", new XAttribute("SourceType", "ViewField"), new XAttribute("SourceName", masterKey.Name),
                         new XAttribute("SourceDisplayName", masterKey.DisplayName), new XAttribute("SourceInstanceID", masterInstance),
@@ -1548,12 +1547,7 @@ namespace K2SmartFormsCli
 
         private static bool HasMasterKeyNotBlankCondition(XElement action, string masterInstance, string masterFieldId)
         {
-            var handler = action.Ancestors().FirstOrDefault(x => x.Name.LocalName == "Handler");
-            if (handler == null) return false;
-            return handler.Descendants().Any(x => x.Name.LocalName == "IsNotBlank" && x.Descendants().Any(y => y.Name.LocalName == "Item" &&
-                string.Equals((string)y.Attribute("SourceType"), "ViewField", StringComparison.OrdinalIgnoreCase) &&
-                string.Equals((string)y.Attribute("SourceInstanceID"), masterInstance, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals((string)y.Attribute("SourceID"), masterFieldId, StringComparison.OrdinalIgnoreCase)));
+            return HasMasterKeyCondition(action, "IsNotBlank", masterInstance, masterFieldId);
         }
 
         private static bool FollowsMasterRead(XElement action, string masterInstance, string masterReadMethod)
@@ -1575,13 +1569,25 @@ namespace K2SmartFormsCli
 
         private static bool HasMasterKeyBlankCondition(XElement action, string masterInstance, string masterFieldId)
         {
+            return HasMasterKeyCondition(action, "IsBlank", masterInstance, masterFieldId);
+        }
+
+        private static bool HasMasterKeyCondition(XElement action, string expressionName,
+            string masterInstance, string masterFieldId)
+        {
             var handler = action.Ancestors().FirstOrDefault(x => x.Name.LocalName == "Handler");
             if (handler == null) return false;
-            return handler.Descendants().Any(x => x.Name.LocalName == "IsBlank" && x.Descendants().Any(y =>
-                y.Name.LocalName == "Item" &&
-                string.Equals((string)y.Attribute("SourceType"), "ViewField", StringComparison.OrdinalIgnoreCase) &&
-                string.Equals((string)y.Attribute("SourceInstanceID"), masterInstance, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals((string)y.Attribute("SourceID"), masterFieldId, StringComparison.OrdinalIgnoreCase)));
+            return handler.Descendants().Where(x => x.Name.LocalName == "Condition").Any(condition =>
+                string.Equals(ReadProperty(condition, "Location"), "Form", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(ReadProperty(condition, "Name"), "AdvancedCondition", StringComparison.OrdinalIgnoreCase) &&
+                condition.Attribute("InstanceID") == null &&
+                !string.Equals((string)condition.Attribute("IsReference"), "True", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals((string)condition.Attribute("IsInherited"), "True", StringComparison.OrdinalIgnoreCase) &&
+                condition.Descendants().Any(x => x.Name.LocalName == expressionName &&
+                    x.Descendants().Any(y => y.Name.LocalName == "Item" &&
+                        string.Equals((string)y.Attribute("SourceType"), "ViewField", StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals((string)y.Attribute("SourceInstanceID"), masterInstance, StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals((string)y.Attribute("SourceID"), masterFieldId, StringComparison.OrdinalIgnoreCase))));
         }
 
         private static IEnumerable<XElement> FindEventCalls(XElement scope, string instanceId, ResolvedViewEvent target)

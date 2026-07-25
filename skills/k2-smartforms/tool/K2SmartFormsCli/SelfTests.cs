@@ -115,6 +115,11 @@ namespace K2SmartFormsCli
                 (string)x.Attribute("SourceID") == saveButtonId &&
                 (string)x.Element("Name") == "OnClick") == 1,
                 "Form Save button has the canonical K2 system OnClick declaration");
+            Assert(saveEvent.Descendants("Condition").All(x =>
+                ReadActionProperty(x, "Name") == "AdvancedCondition" &&
+                ReadActionProperty(x, "Location") == "Form" &&
+                x.Attribute("InstanceID") == null),
+                "Form Save branches use canonical local AdvancedCondition shapes");
             Assert(!saveEvent.Descendants("Action").Any(x => !string.IsNullOrWhiteSpace(ReadMethod(x))),
                 "Form Save rule contains no embedded View method actions");
             Assert(saveEvent.Descendants("Action").Count(x => ReadActionProperty(x, "EventID") == createDefinition) == 1,
@@ -141,6 +146,14 @@ namespace K2SmartFormsCli
                 .Descendants("Action").Single().SetAttributeValue("Type", "Transfer");
             AssertThrows(delegate { MasterDetailRules.Verify(malformedSystemEvent.ToString(), formDefinition, resolved); },
                 "has a malformed K2 system OnClick declaration");
+
+            var unsupportedCondition = XDocument.Parse(transformed);
+            var unsupportedName = unsupportedCondition.Descendants("Event").Single(x =>
+                (string)x.Attribute("SourceName") == "btnSave").Descendants("Condition").First()
+                .Descendants("Property").Single(x => (string)x.Element("Name") == "Name");
+            unsupportedName.Element("Value").Value = "SimpleBlankViewFieldCondition";
+            AssertThrows(delegate { MasterDetailRules.Verify(unsupportedCondition.ToString(), formDefinition, resolved); },
+                "has an invalid master-key condition");
 
             var corrupt = saveEvent.Descendants("Action").First(x => ReadActionProperty(x, "EventID") == detailCreateDefinition);
             corrupt.Element("Properties").Add(XElement.Parse("<Property><Name>Method</Name><Value>Create</Value></Property>"));
