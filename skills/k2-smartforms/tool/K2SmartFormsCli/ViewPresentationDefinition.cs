@@ -348,6 +348,17 @@ namespace K2SmartFormsCli
             var candidates = document.Descendants().Where(x => x.Name.LocalName == "Control" &&
                 string.Equals((string)x.Attribute("FieldID"), fieldId, StringComparison.OrdinalIgnoreCase) &&
                 !new[] { "Label", "DataLabel", "ListDisplay" }.Contains((string)x.Attribute("Type"), StringComparer.OrdinalIgnoreCase)).ToList();
+            if (candidates.Count > 1 &&
+                string.Equals(view.Type, "capture-list", StringComparison.OrdinalIgnoreCase))
+            {
+                var layout = GetEditableListLayout(document, view);
+                var editControlIds = new HashSet<string>(Cells(layout.Edit)
+                    .SelectMany(cell => cell.Elements().Where(x => x.Name.LocalName == "Control"))
+                    .Select(x => (string)x.Attribute("ID"))
+                    .Where(x => !string.IsNullOrWhiteSpace(x)), StringComparer.OrdinalIgnoreCase);
+                candidates = candidates.Where(x =>
+                    editControlIds.Contains((string)x.Attribute("ID"))).ToList();
+            }
             if (candidates.Count != 1) throw new CliException("View '" + view.Name + "' property '" + property + "' has " + candidates.Count + " editable controls; expected one.");
             return candidates[0];
         }

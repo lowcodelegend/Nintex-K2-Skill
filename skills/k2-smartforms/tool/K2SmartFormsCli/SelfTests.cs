@@ -11,6 +11,7 @@ namespace K2SmartFormsCli
         {
             TestIdentityNormalization();
             TestViewOwnedMasterDetailRules();
+            TestMasterDetailValidationComposition();
             TestMissingOptionalControlMappings();
             TestRequiredReadOnlyCreateInputGate();
             TestLookupAndDefaultValueRoundTrip();
@@ -22,11 +23,12 @@ namespace K2SmartFormsCli
             TestLabelAboveHiddenCellComposition();
             TestResponsiveGroupedItemView();
             TestEditableListHiddenPropertyComposition();
+            TestEditableListFileValidationControl();
             TestMalformedEditableListRejected();
             TestViewIdentityRebase();
             TestFlatFormViewOrdering();
             TestMultiTableWorkflowStateReconciliation();
-            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams and Form method-action rejection, orphan optional control mappings, lookup/detail List classification, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, native max-length/validation-pattern contracts, must-be-true checkbox validation groups, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, multi-table workflow-state reconciliation");
+            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams and Form method-action rejection, master-detail field-validation composition, orphan optional control mappings, lookup/detail List classification, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, native max-length/validation-pattern contracts, must-be-true checkbox validation groups, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, editable-list File edit-template validation, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, multi-table workflow-state reconciliation");
         }
 
         private static void TestIdentityNormalization()
@@ -76,7 +78,9 @@ namespace K2SmartFormsCli
                 MasterUpdateEvent = new ResolvedViewEvent { DefinitionId = updateDefinition, DisplayName = "K2Skills.MasterDetail.Update.ClaimId" },
                 RequiredControls = new List<ResolvedRequiredControl>
                 {
-                    new ResolvedRequiredControl { Property = "Title", ControlId = "title-control", ControlName = "Title Text Box", ControlDisplayName = "Title", IsRequired = true }
+                    new ResolvedRequiredControl { Property = "Title", ControlId = "title-control", ControlName = "Title Text Box", ControlDisplayName = "Title", IsRequired = true },
+                    new ResolvedRequiredControl { Property = "Accepted", ControlId = "accepted-control", ControlName = "Accepted Check Box", ControlDisplayName = "Accepted", IsRequired = true, MustBeTrue = true },
+                    new ResolvedRequiredControl { Property = "Amount", ControlId = "amount-control", ControlName = "Amount Text Box", ControlDisplayName = "Amount", Minimum = 0 }
                 },
                 Details = new List<ResolvedMasterDetailChild>
                 {
@@ -124,6 +128,28 @@ namespace K2SmartFormsCli
                 "Form Save rule contains no embedded View method actions");
             Assert(saveEvent.Descendants("Action").Count(x => ReadActionProperty(x, "EventID") == createDefinition) == 1,
                 "master Create is a View-event call");
+            foreach (var seamCall in saveEvent.Descendants("Action").Where(x =>
+                ReadActionProperty(x, "EventID") == createDefinition ||
+                ReadActionProperty(x, "EventID") == updateDefinition))
+            {
+                var previous = seamCall.ElementsBeforeSelf("Action").LastOrDefault();
+                Assert(previous != null && (string)previous.Attribute("Type") == "Validate" &&
+                    ReadActionProperty(previous, "GroupID") == (string)group.Attribute("ID"),
+                    "Form validation runs immediately before each master persistence seam");
+            }
+            Assert(group.Descendants("ValidationGroupControl").Any(x =>
+                (string)x.Attribute("ControlID") == "accepted-control" &&
+                x.Element("Conditions") != null &&
+                x.Descendants("Equals").Any(e => e.Elements("Item").All(i =>
+                    (string)i.Attribute("DataType") == "Boolean"))),
+                "Form validation retains must-be-true condition");
+            Assert(group.Descendants("ValidationGroupControl").Any(x =>
+                (string)x.Attribute("ControlID") == "amount-control" &&
+                x.Element("Conditions") != null &&
+                x.Descendants("GreaterThanEquals").Any() &&
+                x.Descendants("Item").Where(i => (string)i.Attribute("SourceID") == "amount-control")
+                    .All(i => (string)i.Attribute("DataType") == "Number")),
+                "Form validation retains inclusive numeric minimum condition");
             Assert(saveEvent.Descendants("Action").Count(x => ReadActionProperty(x, "EventID") == detailCreateDefinition) == 2,
                 "detail Save View event is called once in each branch");
             Assert(saveEvent.Descendants("Parameter").Count(x => (string)x.Attribute("TargetType") == "ViewParameter" &&
@@ -225,6 +251,166 @@ namespace K2SmartFormsCli
             {
                 MasterDetailRules.VerifyMasterViewRules(invalidMaster.ToString(), "Claim", new[] { contract });
             }, "canonical Handler Location 'view'");
+        }
+
+        private static void TestMasterDetailValidationComposition()
+        {
+            var masterGuid = Guid.Parse("11000000-0000-0000-0000-000000000010");
+            var detailGuid = Guid.Parse("21000000-0000-0000-0000-000000000010");
+            var contract = new MasterDetailFormDefinition
+            {
+                MasterView = "Submission",
+                MasterKeyProperty = "ClaimId",
+                MasterCreateMethod = "Create",
+                MasterUpdateMethod = "Update",
+                MasterReadMethod = "Read"
+            };
+            var child = new MasterDetailChildDefinition
+            {
+                View = "Evidence",
+                ForeignKeyProperty = "ClaimId",
+                CreateMethod = "Create",
+                UpdateMethod = "Update",
+                DeleteMethod = "Delete",
+                ListMethod = "List"
+            };
+            contract.Details.Add(child);
+
+            var masterDefinition = NewView("Submission", "Submission", "capture",
+                "ClaimId", "EmailAddress", "Narrative", "Amount", "Accepted");
+            masterDefinition.Methods.AddRange(new[] { "Create", "Update" });
+            masterDefinition.RequiredProperties.AddRange(new[] { "EmailAddress", "Narrative", "Accepted" });
+            masterDefinition.Validations.Add(new FieldValidationDefinition
+            {
+                Property = "EmailAddress", Required = true, MaxLength = 320, Format = "email",
+                Message = "Enter a valid email address.",
+                ValidationPatternGuid = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"),
+                ValidationPatternName = "K2Skills.Submission.EmailAddress"
+            });
+            masterDefinition.Validations.Add(new FieldValidationDefinition
+            {
+                Property = "Narrative", Required = true, MinLength = 100, MaxLength = 2000,
+                Message = "Enter at least 100 characters.",
+                ValidationPatternGuid = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2"),
+                ValidationPatternName = "K2Skills.Submission.Narrative"
+            });
+            masterDefinition.Validations.Add(new FieldValidationDefinition
+            {
+                Property = "Amount", Minimum = 0, Message = "Amount cannot be negative."
+            });
+            masterDefinition.Validations.Add(new FieldValidationDefinition
+            {
+                Property = "Accepted", Required = true, MustBeTrue = true,
+                Message = "Accept before continuing."
+            });
+
+            var masterDocument = new XDocument(new XElement("View", new XAttribute("ID", masterGuid),
+                new XElement("Name", "Submission"),
+                new XElement("Fields",
+                    TestField("submission-field", "ClaimId", "Number"),
+                    TestField("email-field", "EmailAddress", "Text"),
+                    TestField("narrative-field", "Narrative", "Memo"),
+                    TestField("amount-field", "Amount", "Decimal"),
+                    TestField("accepted-field", "Accepted", "YesNo")),
+                new XElement("Controls",
+                    FieldControlDefinition("submission-control", "TextBox", "submission-field"),
+                    FieldControlDefinition("email-control", "TextBox", "email-field"),
+                    FieldControlDefinition("narrative-control", "TextArea", "narrative-field"),
+                    FieldControlDefinition("amount-control", "TextBox", "amount-field"),
+                    FieldControlDefinition("accepted-control", "CheckBox", "accepted-field")),
+                new XElement("Events",
+                    TestMethodEvent("master-create-event",
+                        TestViewAction("31000000-0000-0000-0000-000000000010", masterGuid,
+                            "Submission", "Create", null, true)),
+                    TestMethodEvent("master-update-event",
+                        TestViewAction("31000000-0000-0000-0000-000000000020", masterGuid,
+                            "Submission", "Update", null, false)))));
+            FieldValidationDefinitionXml.Apply(masterDocument, masterDefinition);
+            var configuredMaster = MasterDetailRules.ConfigureViewRuleSeams(
+                masterDocument.ToString(SaveOptions.DisableFormatting), "Submission",
+                new[] { contract }, new MasterDetailChildDefinition[0], new MasterDetailReviewDefinition[0]);
+            var configuredMasterDocument = XDocument.Parse(configuredMaster);
+            FieldValidationDefinitionXml.Verify(configuredMasterDocument, masterDefinition);
+            MasterDetailRules.VerifyMasterViewRules(configuredMaster, "Submission", new[] { contract });
+            Assert(configuredMasterDocument.Descendants("Action").Count(
+                MasterDetailRules.IsMasterPersistenceSeamAction) == 2,
+                "master Create and Update seam actions are recognized as Form-validated internal paths");
+            Assert(configuredMasterDocument.Descendants("Control").Single(x =>
+                (string)x.Attribute("ID") == "email-control").Descendants("Property").Any(x =>
+                    (string)x.Element("Name") == "MaxLength" && (string)x.Element("Value") == "320"),
+                "master seam composition preserves native MaxLength");
+            var masterGroup = configuredMasterDocument.Descendants("ValidationGroup").Single(x =>
+                (string)x.Element("Name") == FieldValidationDefinitionXml.GroupName);
+            Assert(masterGroup.Descendants("ValidationGroupControl").Any(x =>
+                (string)x.Attribute("ControlID") == "accepted-control" &&
+                x.Element("Conditions") != null &&
+                x.Descendants("Equals").Any(e => e.Elements("Item").All(i =>
+                    (string)i.Attribute("DataType") == "Boolean"))),
+                "master seam composition preserves must-be-true condition");
+            Assert(masterGroup.Descendants("ValidationGroupControl").Any(x =>
+                (string)x.Attribute("ControlID") == "amount-control" &&
+                x.Element("Conditions") != null &&
+                x.Descendants("GreaterThanEquals").Any()),
+                "master seam composition preserves numeric minimum condition");
+
+            var detailDefinition = NewView("Evidence", "Evidence", "capture-list",
+                "EvidenceId", "ClaimId", "Title", "FileContent");
+            detailDefinition.Methods.AddRange(new[] { "Create", "Update", "Delete", "List" });
+            detailDefinition.RequiredProperties.AddRange(new[] { "Title", "FileContent" });
+            detailDefinition.Validations.Add(new FieldValidationDefinition
+                { Property = "Title", Required = true, MaxLength = 300 });
+            detailDefinition.Validations.Add(new FieldValidationDefinition
+                { Property = "FileContent", Required = true });
+            var detailDocument = new XDocument(new XElement("View", new XAttribute("ID", detailGuid),
+                new XElement("Name", "Evidence"),
+                new XElement("Fields",
+                    TestField("evidence-field", "EvidenceId", "Number"),
+                    TestField("detail-submission-field", "ClaimId", "Number"),
+                    TestField("title-field", "Title", "Text"),
+                    TestField("file-field", "FileContent", "File")),
+                new XElement("Controls",
+                    FieldControlDefinition("evidence-control", "TextBox", "evidence-field"),
+                    FieldControlDefinition("detail-submission-control", "TextBox", "detail-submission-field"),
+                    FieldControlDefinition("title-control", "TextBox", "title-field"),
+                    FieldControlDefinition("file-control", "File", "file-field")),
+                new XElement("Events",
+                    TestMethodEvent("detail-save-event",
+                        TestViewAction("41000000-0000-0000-0000-000000000010", detailGuid,
+                            "Evidence", "Create", "Added", false),
+                        TestViewAction("41000000-0000-0000-0000-000000000020", detailGuid,
+                            "Evidence", "Update", "Changed", false),
+                        TestViewAction("41000000-0000-0000-0000-000000000030", detailGuid,
+                            "Evidence", "Delete", "Removed", false)),
+                    TestMethodEvent("detail-list-event",
+                        TestViewAction("41000000-0000-0000-0000-000000000040", detailGuid,
+                            "Evidence", "List", null, false)))));
+            FieldValidationDefinitionXml.Apply(detailDocument, detailDefinition);
+            var configuredDetail = MasterDetailRules.ConfigureViewRuleSeams(
+                detailDocument.ToString(SaveOptions.DisableFormatting), "Evidence",
+                new MasterDetailFormDefinition[0], new[] { child }, new MasterDetailReviewDefinition[0]);
+            var configuredDetailDocument = XDocument.Parse(configuredDetail);
+            FieldValidationDefinitionXml.Verify(configuredDetailDocument, detailDefinition);
+            MasterDetailRules.VerifyDetailViewLoads(configuredDetail, "Evidence", new[] { child });
+            var detailGroup = configuredDetailDocument.Descendants("ValidationGroup").Single(x =>
+                (string)x.Element("Name") == FieldValidationDefinitionXml.GroupName);
+            Assert(detailGroup.Descendants("ValidationGroupControl").Any(x =>
+                (string)x.Attribute("ControlID") == "file-control" &&
+                (string)x.Attribute("IsRequired") == "True"),
+                "capture-list detail keeps required native File validation");
+        }
+
+        private static XElement TestField(string id, string name, string dataType)
+        {
+            return new XElement("Field", new XAttribute("ID", id), new XAttribute("DataType", dataType),
+                new XElement("Name", name), new XElement("FieldName", name),
+                new XElement("FieldDisplayName", name));
+        }
+
+        private static XElement TestMethodEvent(string id, params string[] actions)
+        {
+            return new XElement("Event", new XAttribute("ID", id),
+                new XElement("Handlers", new XElement("Handler",
+                    new XElement("Actions", actions.Select(XElement.Parse)))));
         }
 
         private static string ReadActionProperty(XElement action, string name)
@@ -619,7 +805,10 @@ namespace K2SmartFormsCli
                 (string)x.Element("Name") == FieldValidationDefinitionXml.GroupName);
             Assert(validationGroup.Descendants("ValidationGroupControl").Any(x =>
                 (string)x.Attribute("ControlID") == "input-p3" &&
-                x.Descendants("Equals").Any()), "must-be-true checkbox condition applied");
+                x.Element("Conditions") != null &&
+                x.Descendants("Equals").Any(e => e.Elements("Item").All(i =>
+                    (string)i.Attribute("DataType") == "Boolean"))),
+                "must-be-true checkbox condition applied with native Boolean expression");
             var createAction = document.Descendants("Action").Single(x =>
                 (string)x.Attribute("ID") == "create-action");
             var preceding = createAction.ElementsBeforeSelf("Action").Last();
@@ -724,6 +913,41 @@ namespace K2SmartFormsCli
 
             var addRowEnabled = EditableListXml(false);
             AssertThrows(delegate { ViewPresentationDefinition.Verify(addRowEnabled, view, false, false); }, "omitting the ShowAddRow property");
+        }
+
+        private static void TestEditableListFileValidationControl()
+        {
+            var view = NewView("Evidence", "Evidence", "capture-list", "First", "FileContent", "Last");
+            view.Methods.Add("Create");
+            view.RequiredProperties.Add("FileContent");
+            view.Validations.Add(new FieldValidationDefinition
+                { Property = "FileContent", Required = true });
+            var document = XDocument.Parse(EditableListXml(false));
+            document.Descendants("Field").Single(x =>
+                (string)x.Element("FieldName") == "Middle").Element("FieldName").Value = "FileContent";
+            document.Descendants("Control").Single(x =>
+                (string)x.Attribute("ID") == "middle-display" &&
+                x.Attribute("Type") != null).SetAttributeValue("Type", "FilePostBack");
+            document.Descendants("Control").Single(x =>
+                (string)x.Attribute("ID") == "middle-edit" &&
+                x.Attribute("Type") != null).SetAttributeValue("Type", "FilePostBack");
+            document.Root.Element("Events").ReplaceWith(new XElement("Events",
+                TestMethodEvent("file-create-event",
+                    TestViewAction("51000000-0000-0000-0000-000000000010",
+                        Guid.Parse("51000000-0000-0000-0000-000000000001"),
+                        "Evidence", "Create", "Added", false))));
+
+            var selected = ViewPresentationDefinition.FindEditableFieldControl(document, view, "FileContent");
+            Assert((string)selected.Attribute("ID") == "middle-edit",
+                "editable-list File validation targets the Edit template instead of the display File control");
+            FieldValidationDefinitionXml.Apply(document, view);
+            FieldValidationDefinitionXml.Verify(document, view);
+            var group = document.Descendants("ValidationGroup").Single(x =>
+                (string)x.Element("Name") == FieldValidationDefinitionXml.GroupName);
+            Assert(group.Descendants("ValidationGroupControl").Any(x =>
+                (string)x.Attribute("ControlID") == "middle-edit" &&
+                (string)x.Attribute("IsRequired") == "True"),
+                "required File validation group uses the editable-list Edit control");
         }
 
         private static string EditableListXml(bool malformed)

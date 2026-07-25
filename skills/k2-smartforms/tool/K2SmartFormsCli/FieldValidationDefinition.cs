@@ -129,7 +129,8 @@ namespace K2SmartFormsCli
             foreach (var action in document.Descendants().Where(x => x.Name.LocalName == "Action" &&
                 string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
                 methods.Contains(ReadProperty(x, "Method"), StringComparer.OrdinalIgnoreCase) &&
-                string.IsNullOrWhiteSpace(ReadProperty(x, "ControlID"))).ToList())
+                string.IsNullOrWhiteSpace(ReadProperty(x, "ControlID")) &&
+                !MasterDetailRules.IsMasterPersistenceSeamAction(x)).ToList())
             {
                 var validate = BuildValidateAction(ns, root, groupId);
                 var itemState = (string)action.Attribute("ItemState");
@@ -177,13 +178,15 @@ namespace K2SmartFormsCli
                 if (validation != null && validation.MustBeTrue && !HasMustBeTrueCondition(member, control))
                     throw new CliException("View '" + view.Name + "' mustBeTrue condition is missing for property '" + property + "'.");
                 if (validation != null && (validation.Minimum.HasValue || validation.Maximum.HasValue) &&
-                    !HasNumericCondition(member, control, validation))
+                    !HasNumericCondition(member, control, validation,
+                        view.RequiredProperties.Contains(property, StringComparer.OrdinalIgnoreCase)))
                     throw new CliException("View '" + view.Name + "' numeric range condition is missing for property '" + property + "'.");
             }
             foreach (var action in document.Descendants().Where(x => x.Name.LocalName == "Action" &&
                 string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
                 methods.Contains(ReadProperty(x, "Method"), StringComparer.OrdinalIgnoreCase) &&
-                string.IsNullOrWhiteSpace(ReadProperty(x, "ControlID"))))
+                string.IsNullOrWhiteSpace(ReadProperty(x, "ControlID")) &&
+                !MasterDetailRules.IsMasterPersistenceSeamAction(x)))
             {
                 var previous = action.ElementsBeforeSelf().LastOrDefault(x => x.Name.LocalName == "Action");
                 if (previous == null || !string.Equals((string)previous.Attribute("Type"), "Validate", StringComparison.OrdinalIgnoreCase) ||
@@ -199,21 +202,21 @@ namespace K2SmartFormsCli
             var name = ChildValue(control, "Name") ?? string.Empty;
             var displayName = ChildValue(control, "DisplayName") ?? name;
             if (validation.MustBeTrue)
-                return new XElement(ns + "Condition",
+                return new XElement(ns + "Conditions",
                 new XElement(ns + "Equals",
                     new XElement(ns + "Item", new XAttribute("SourceType", "Control"),
                         new XAttribute("SourceName", name), new XAttribute("SourceDisplayName", displayName),
-                        new XAttribute("SourceID", (string)control.Attribute("ID")), new XAttribute("DataType", "Text")),
+                        new XAttribute("SourceID", (string)control.Attribute("ID")), new XAttribute("DataType", "Boolean")),
                     new XElement(ns + "Item", new XAttribute("SourceType", "Value"),
-                        new XAttribute("DataType", "Text"), "true")));
+                        new XAttribute("DataType", "Boolean"), "True")));
 
             var comparisons = new List<XElement>();
             if (validation.Minimum.HasValue)
                 comparisons.Add(BuildNumericComparison(ns, control, validation.Minimum.Value,
-                    validation.ExclusiveMinimum ? "GreaterThan" : "LessThan", !validation.ExclusiveMinimum));
+                    validation.ExclusiveMinimum ? "GreaterThan" : "GreaterThanEquals"));
             if (validation.Maximum.HasValue)
                 comparisons.Add(BuildNumericComparison(ns, control, validation.Maximum.Value,
-                    validation.ExclusiveMaximum ? "LessThan" : "GreaterThan", !validation.ExclusiveMaximum));
+                    validation.ExclusiveMaximum ? "LessThan" : "LessThanEquals"));
             XElement expression = comparisons[0];
             if (comparisons.Count == 2) expression = new XElement(ns + "And", comparisons[0], comparisons[1]);
             if (!required)
@@ -221,55 +224,66 @@ namespace K2SmartFormsCli
                     new XElement(ns + "IsBlank",
                         new XElement(ns + "Item", new XAttribute("SourceType", "Control"),
                             new XAttribute("SourceName", name), new XAttribute("SourceDisplayName", displayName),
-                            new XAttribute("SourceID", (string)control.Attribute("ID")), new XAttribute("DataType", "Decimal"))),
+                            new XAttribute("SourceID", (string)control.Attribute("ID")), new XAttribute("DataType", "Number"))),
                     expression);
-            return new XElement(ns + "Condition", expression);
+            return new XElement(ns + "Conditions", expression);
         }
 
         private static XElement BuildNumericComparison(XNamespace ns, XElement control, decimal value,
-            string operatorName, bool negate)
+            string operatorName)
         {
             var name = ChildValue(control, "Name") ?? string.Empty;
             var displayName = ChildValue(control, "DisplayName") ?? name;
-            var comparison = new XElement(ns + operatorName,
+            return new XElement(ns + operatorName,
                 new XElement(ns + "Item", new XAttribute("SourceType", "Control"),
                     new XAttribute("SourceName", name), new XAttribute("SourceDisplayName", displayName),
-                    new XAttribute("SourceID", (string)control.Attribute("ID")), new XAttribute("DataType", "Decimal")),
+                    new XAttribute("SourceID", (string)control.Attribute("ID")), new XAttribute("DataType", "Number")),
                 new XElement(ns + "Item", new XAttribute("SourceType", "Value"),
-                    new XAttribute("DataType", "Decimal"), value.ToString(CultureInfo.InvariantCulture)));
-            return negate ? new XElement(ns + "Not", comparison) : comparison;
+                    new XAttribute("DataType", "Number"), value.ToString(CultureInfo.InvariantCulture)));
         }
 
         private static bool HasMustBeTrueCondition(XElement member, XElement control)
         {
-            return member.Descendants().Any(x => x.Name.LocalName == "Equals" &&
+            var conditions = member.Elements().SingleOrDefault(x => x.Name.LocalName == "Conditions");
+            return conditions != null && conditions.Descendants().Any(x => x.Name.LocalName == "Equals" &&
                 x.Elements().Any(i => i.Name.LocalName == "Item" &&
                     string.Equals((string)i.Attribute("SourceType"), "Control", StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals((string)i.Attribute("SourceID"), (string)control.Attribute("ID"), StringComparison.OrdinalIgnoreCase)) &&
+                    string.Equals((string)i.Attribute("SourceID"), (string)control.Attribute("ID"), StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals((string)i.Attribute("DataType"), "Boolean", StringComparison.OrdinalIgnoreCase)) &&
                 x.Elements().Any(i => i.Name.LocalName == "Item" &&
                     string.Equals((string)i.Attribute("SourceType"), "Value", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals((string)i.Attribute("DataType"), "Boolean", StringComparison.OrdinalIgnoreCase) &&
                     string.Equals(i.Value, "true", StringComparison.OrdinalIgnoreCase)));
         }
 
         private static bool HasNumericCondition(XElement member, XElement control,
-            FieldValidationDefinition validation)
+            FieldValidationDefinition validation, bool required)
         {
-            var condition = member.Elements().SingleOrDefault(x => x.Name.LocalName == "Condition");
+            var condition = member.Elements().SingleOrDefault(x => x.Name.LocalName == "Conditions");
             if (condition == null) return false;
             if (!condition.Descendants().Any(x => x.Name.LocalName == "Item" &&
                 string.Equals((string)x.Attribute("SourceType"), "Control", StringComparison.OrdinalIgnoreCase) &&
-                string.Equals((string)x.Attribute("SourceID"), (string)control.Attribute("ID"), StringComparison.OrdinalIgnoreCase)))
+                string.Equals((string)x.Attribute("SourceID"), (string)control.Attribute("ID"), StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("DataType"), "Number", StringComparison.OrdinalIgnoreCase)))
+                return false;
+            if (!required && !condition.Elements().Any(x => x.Name.LocalName == "Or" &&
+                x.Descendants().Any(e => e.Name.LocalName == "IsBlank" &&
+                    e.Elements().Any(i => i.Name.LocalName == "Item" &&
+                        string.Equals((string)i.Attribute("SourceID"), (string)control.Attribute("ID"), StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals((string)i.Attribute("DataType"), "Number", StringComparison.OrdinalIgnoreCase)))))
                 return false;
             if (validation.Minimum.HasValue && !condition.Descendants().Any(x =>
-                x.Name.LocalName == (validation.ExclusiveMinimum ? "GreaterThan" : "LessThan") &&
+                x.Name.LocalName == (validation.ExclusiveMinimum ? "GreaterThan" : "GreaterThanEquals") &&
                 x.Elements().Any(i => i.Name.LocalName == "Item" &&
                     string.Equals((string)i.Attribute("SourceType"), "Value", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals((string)i.Attribute("DataType"), "Number", StringComparison.OrdinalIgnoreCase) &&
                     string.Equals(i.Value, validation.Minimum.Value.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal))))
                 return false;
             if (validation.Maximum.HasValue && !condition.Descendants().Any(x =>
-                x.Name.LocalName == (validation.ExclusiveMaximum ? "LessThan" : "GreaterThan") &&
+                x.Name.LocalName == (validation.ExclusiveMaximum ? "LessThan" : "LessThanEquals") &&
                 x.Elements().Any(i => i.Name.LocalName == "Item" &&
                     string.Equals((string)i.Attribute("SourceType"), "Value", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals((string)i.Attribute("DataType"), "Number", StringComparison.OrdinalIgnoreCase) &&
                     string.Equals(i.Value, validation.Maximum.Value.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal))))
                 return false;
             return true;
