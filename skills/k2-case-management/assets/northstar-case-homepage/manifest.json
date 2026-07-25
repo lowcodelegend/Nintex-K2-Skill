@@ -1,0 +1,121 @@
+{
+  "displayName": "Northstar Case Homepage",
+  "tagName": "northstar-case-homepage",
+  "description": "Role-aware Northstar case-management command centre with governed K2 data binding and rule events.",
+  "icon": "northstar-icon.svg",
+  "designtimeScriptFileNames": ["northstar-designtime.js"],
+  "runtimeScriptFileNames": ["northstar-runtime.js"],
+  "designtimeStyleFileNames": ["northstar-designtime.css"],
+  "runtimeStyleFileNames": ["northstar-fonts.css", "northstar-prototype.css", "northstar-host.css"],
+  "datatypes": ["Text"],
+  "valuePropertyID": "Value",
+  "supports": [
+    "Value",
+    "Width",
+    "Height",
+    "IsVisible",
+    "IsEnabled",
+    "IsReadOnly",
+    "TabIndex",
+    "ControlExpression",
+    "DataBinding"
+  ],
+  "events": [
+    {"id": "Navigate", "displayname": "Navigate"},
+    {"id": "CreateCase", "displayname": "Create Case"},
+    {"id": "Search", "displayname": "Search"},
+    {"id": "RefreshRequested", "displayname": "Refresh Requested"}
+  ],
+  "properties": [
+    {
+      "id": "Data",
+      "friendlyname": "Dashboard data",
+      "type": "listdata",
+      "category": "Data",
+      "initialvalue": "[{\"kind\":\"metric\",\"id\":\"open-cases\",\"label\":\"Open cases\",\"value\":\"128\",\"delta\":\"Down 8.6% vs last month\",\"icon\":\"▤\",\"tone\":\"positive\"}]"
+    },
+    {
+      "id": "Value",
+      "friendlyname": "Command value",
+      "type": "string",
+      "inputlength": "255",
+      "initialvalue": "",
+      "changesdisplay": true
+    },
+    {
+      "id": "ApplicationName",
+      "friendlyname": "Application name",
+      "type": "string",
+      "inputlength": "80",
+      "initialvalue": "Northstar",
+      "changesdisplay": true
+    },
+    {
+      "id": "ApplicationSubtitle",
+      "friendlyname": "Application subtitle",
+      "type": "string",
+      "inputlength": "120",
+      "initialvalue": "Quality operations",
+      "changesdisplay": true
+    },
+    {
+      "id": "UserName",
+      "friendlyname": "User name",
+      "type": "string",
+      "inputlength": "120",
+      "initialvalue": "Alex Morgan",
+      "changesdisplay": true
+    },
+    {
+      "id": "UserRole",
+      "friendlyname": "User role",
+      "type": "string",
+      "inputlength": "120",
+      "initialvalue": "Quality manager",
+      "changesdisplay": true
+    },
+    {
+      "id": "Greeting",
+      "friendlyname": "Greeting",
+      "type": "string",
+      "inputlength": "160",
+      "initialvalue": "Good morning, Alex",
+      "changesdisplay": true
+    },
+    {
+      "id": "UseFullViewport",
+      "friendlyname": "Use full viewport",
+      "type": "bool",
+      "initialvalue": true,
+      "changesdisplay": true
+    },
+    {
+      "id": "Width",
+      "friendlyname": "Width",
+      "type": "string",
+      "inputlength": "50",
+      "initialvalue": "100%",
+      "changesdisplay": true
+    },
+    {
+      "id": "Height",
+      "friendlyname": "Height",
+      "type": "string",
+      "inputlength": "50",
+      "initialvalue": "1000px",
+      "changesdisplay": true
+    },
+    {
+      "id": "IsReadOnly",
+      "friendlyname": "Read only",
+      "type": "bool",
+      "initialvalue": false,
+      "changesdisplay": true
+    }
+  ],
+  "methods": [
+    {"id": "refresh", "displayname": "Refresh", "returntype": "None", "parameters": []},
+    {"id": "openSearch", "displayname": "Open Search", "returntype": "None", "parameters": []},
+    {"id": "focusMain", "displayname": "Focus Main Content", "returntype": "None", "parameters": []}
+  ]
+}

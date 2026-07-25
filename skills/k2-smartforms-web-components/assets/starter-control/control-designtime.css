@@ -1,0 +1,10 @@
+:host {
+  display: block;
+  min-height: 64px;
+  padding: 16px;
+  border: 1px dashed #98a2b3;
+  border-radius: 8px;
+  color: #344054;
+  background: #f9fafb;
+  box-sizing: border-box;
+}

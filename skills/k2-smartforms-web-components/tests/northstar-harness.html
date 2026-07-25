@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Northstar K2 Web Component Harness</title>
+  <style>
+    html, body { margin: 0; min-width: 320px; min-height: 100%; }
+  </style>
+</head>
+<body>
+  <script>
+    class K2BaseControl extends HTMLElement {
+      constructor() {
+        super();
+        this._shadow = null;
+        this._isConnected = false;
+        this._hasRendered = false;
+      }
+      ensureShadow() {
+        if (!this._shadow) this._shadow = this.attachShadow({mode: "open"});
+        return this._shadow;
+      }
+      connectedCallback() {
+        this._isConnected = true;
+        if (!this._hasRendered) this.render();
+      }
+      disconnectedCallback() { this._isConnected = false; }
+      attributeChangedCallback(name, oldValue, newValue) {
+        if (name === "controlstyle") this.ControlStyle = newValue;
+        if (name === "name") this.Name = newValue;
+        if (name === "controltype") this.ControlType = newValue;
+      }
+    }
+
+    window.K2BaseControl = K2BaseControl;
+    window.K2 = {
+      RaisePropertyChanged() {}
+    };
+    window.SourceCode = {Forms: {ControlStyles: {
+      loadStyleResources(control, shadowRoot) {
+        const files = [
+          "../../k2-case-management/assets/northstar-case-homepage/northstar-fonts.css",
+          "../../k2-case-management/assets/northstar-case-homepage/northstar-prototype.css",
+          "../../k2-case-management/assets/northstar-case-homepage/northstar-host.css"
+        ];
+        for (const [index, file] of files.entries()) {
+          const style = document.createElement("style");
+          style.dataset.id = `northstar-style-${index}`;
+          style.textContent = `@import url("${file}");`;
+          shadowRoot.append(style);
+        }
+        return Promise.resolve();
+      }
+    }}};
+  </script>
+  <script src="../../k2-case-management/assets/northstar-case-homepage/northstar-runtime.js"></script>
+  <script>
+    const control = document.createElement("northstar-case-homepage");
+    control.setAttribute("name", "NorthstarHomepage");
+    control.setAttribute("controltype", "northstar-case-homepage");
+    document.body.append(control);
+  </script>
+</body>
+</html>

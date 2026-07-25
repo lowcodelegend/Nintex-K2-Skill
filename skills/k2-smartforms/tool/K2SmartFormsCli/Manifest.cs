@@ -126,6 +126,7 @@ namespace K2SmartFormsCli
                 if (view.Charts == null) view.Charts = new List<ViewChartDefinition>();
                 if (view.MetricCards == null) view.MetricCards = new List<ViewMetricCardDefinition>();
                 if (view.LifecycleTrackers == null) view.LifecycleTrackers = new List<ViewLifecycleDefinition>();
+                if (view.WebComponents == null) view.WebComponents = new List<ViewWebComponentDefinition>();
                 RequireArtifactName(view.Name, "view.name");
                 RejectVersionToken(view.Name, "view.name");
                 Require(view.SmartObject, "view.smartObject");
@@ -240,6 +241,41 @@ namespace K2SmartFormsCli
                     if (tracker.Stages == null || tracker.Stages.Count < 2) throw new CliException("View '" + view.Name + "' lifecycle tracker requires at least two stages.");
                     EnsureUniqueValues(tracker.Stages.Select(x => x == null ? null : x.Code), "lifecycle stage code", view.Name);
                     foreach (var stage in tracker.Stages) { if (stage == null) throw new CliException("View '" + view.Name + "' lifecycle tracker stages cannot contain null entries."); Require(stage.Code, "view.lifecycleTrackers.stages.code"); Require(stage.Label, "view.lifecycleTrackers.stages.label"); }
+                }
+                EnsureUniqueValues(view.WebComponents.Select(x => x == null ? null : x.Name), "Web Component control", view.Name);
+                foreach (var control in view.WebComponents)
+                {
+                    if (control == null) throw new CliException("View '" + view.Name + "' webComponents cannot contain null entries.");
+                    Require(control.Name, "view.webComponents.name");
+                    Require(control.ControlType, "view.webComponents.controlType");
+                    if (!Regex.IsMatch(control.ControlType, "^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$"))
+                        throw new CliException("View '" + view.Name + "' Web Component controlType must be a modern custom-element tag name: " + control.ControlType);
+                    if (!control.ReplaceBody)
+                        throw new CliException("View '" + view.Name + "' Web Component currently requires replaceBody: true.");
+                    if (control.Properties == null) control.Properties = new Dictionary<string, string>();
+                    if (control.Properties.Keys.Any(string.IsNullOrWhiteSpace))
+                        throw new CliException("View '" + view.Name + "' Web Component properties contains an empty name.");
+                }
+                if (view.WebComponents.Count > 1)
+                    throw new CliException("View '" + view.Name + "' currently supports one full-body Web Component.");
+                if (view.WebComponents.Count > 0 && view.Type != "capture")
+                    throw new CliException("View '" + view.Name + "' Web Component placement requires type 'capture'.");
+                if (view.WebComponents.Count > 0 &&
+                    (view.Charts.Count > 0 || view.MetricCards.Count > 0 || view.LifecycleTrackers.Count > 0 ||
+                     view.Sections.Count > 0 || view.Help.Count > 0))
+                    throw new CliException("View '" + view.Name + "' full-body Web Component cannot be combined with native presentation transformers.");
+                foreach (var control in view.WebComponents)
+                {
+                    string tagName;
+                    if (!control.Properties.TryGetValue("TagName", out tagName) ||
+                        !string.Equals(tagName, control.ControlType, StringComparison.OrdinalIgnoreCase))
+                        throw new CliException("View '" + view.Name + "' Web Component properties.TagName must match controlType.");
+                    foreach (var resourceProperty in new[] { "RuntimeScriptFileNames", "DesigntimeScriptFileNames" })
+                    {
+                        string resources;
+                        if (!control.Properties.TryGetValue(resourceProperty, out resources) || string.IsNullOrWhiteSpace(resources))
+                            throw new CliException("View '" + view.Name + "' Web Component requires properties." + resourceProperty + ".");
+                    }
                 }
                 if (view.LayoutColumns != 2 && view.LayoutColumns != 4)
                     throw new CliException("View '" + view.Name + "' layoutColumns must be 2 or 4.");
@@ -810,6 +846,7 @@ namespace K2SmartFormsCli
         public List<ViewChartDefinition> Charts { get; set; }
         public List<ViewMetricCardDefinition> MetricCards { get; set; }
         public List<ViewLifecycleDefinition> LifecycleTrackers { get; set; }
+        public List<ViewWebComponentDefinition> WebComponents { get; set; }
 
         public ViewDefinition()
         {
@@ -836,6 +873,7 @@ namespace K2SmartFormsCli
             Charts = new List<ViewChartDefinition>();
             MetricCards = new List<ViewMetricCardDefinition>();
             LifecycleTrackers = new List<ViewLifecycleDefinition>();
+            WebComponents = new List<ViewWebComponentDefinition>();
         }
 
     }
@@ -962,6 +1000,19 @@ namespace K2SmartFormsCli
             if (UntitledViews.Keys.Contains(viewName, StringComparer.OrdinalIgnoreCase)) return string.Empty;
             var custom = ViewTitles.FirstOrDefault(x => string.Equals(x.Key, viewName, StringComparison.OrdinalIgnoreCase));
             return string.IsNullOrWhiteSpace(custom.Key) ? viewName : custom.Value;
+        }
+    }
+
+    public sealed class ViewWebComponentDefinition
+    {
+        public string Name { get; set; }
+        public string ControlType { get; set; }
+        public bool ReplaceBody { get; set; }
+        public Dictionary<string, string> Properties { get; set; }
+        public ViewWebComponentDefinition()
+        {
+            ReplaceBody = true;
+            Properties = new Dictionary<string, string>();
         }
     }
 

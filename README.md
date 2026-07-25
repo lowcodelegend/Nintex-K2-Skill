@@ -1,6 +1,6 @@
 # Nintex K2 Skills
 
-Build self-hosted K2 Five applications from manifests, not clicks. Six portable Agent Skills and six CLI tools design governed case-management solutions and create SQL-backed SmartObjects, custom Style Profiles, modern SmartForms, HTML5 workflows, and complete verified solutions through K2 management and Designer services.
+Build self-hosted K2 Five applications from manifests, not clicks. Seven portable Agent Skills and six CLI tools design governed case-management solutions and create SQL-backed SmartObjects, modern Web Component controls, custom Style Profiles, modern SmartForms, HTML5 workflows, and complete verified solutions through K2 management and Designer services.
 
 Windows x64 only. Requires K2 Five installed locally, PowerShell 5.1+, .NET Framework, SQL Server access, and normally integrated AD authentication. It does not target Nintex Automation Cloud or legacy K2 Studio workflows.
 
@@ -41,7 +41,7 @@ Install the same package for Claude Code:
 
 The installer verifies the package SHA-256 and backs up replaced skills. Codex discovers personal skills under `~/.codex/skills`; Claude Code discovers them under `~/.claude/skills` as documented in [Anthropic's skill guide](https://code.claude.com/docs/en/slash-commands#where-skills-live).
 
-Verify the installed inventory and the new Style Profile CLI:
+Verify the installed inventory and representative CLIs:
 
 ```powershell
 $release = Get-Content '.\release\skills.json' -Raw | ConvertFrom-Json
@@ -52,7 +52,7 @@ $missing = @($release.skills.name | Where-Object {
 if ($missing) { throw "Missing installed skills: $($missing -join ', ')" }
 
 & "$installed\k2-style-profiles\scripts\k2style.ps1" version
-# Expected for this release: k2style 0.4.0
+& "$installed\k2-smartforms-web-components\scripts\k2controls.ps1" version
 ```
 
 Restart or reload the agent session after installing so its skill inventory is rediscovered. A source checkout is not a substitute for the installed operational package.

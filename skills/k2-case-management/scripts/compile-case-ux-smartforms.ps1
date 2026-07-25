@@ -22,13 +22,47 @@ $mappingDocument=Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $Mappi
 $components=@{};foreach($c in @($uxDocument.components)){$components[[string]$c.id]=$c}
 $dashboardPageId=[string]$mappingDocument.dashboard.page;$page=$uxDocument.pages|Where-Object {[string]$_.id -eq $dashboardPageId}|Select-Object -First 1;if($null -eq $page){throw "Dashboard page '$dashboardPageId' was not found."}
 $views=[Collections.Generic.List[object]]::new();$formViews=[Collections.Generic.List[string]]::new();$titles=[ordered]@{}
+$generatedForms=[Collections.Generic.List[object]]::new()
+if($null -eq $mappingDocument.homepage){throw 'The K2 mapping must declare the required Northstar homepage.'}
+$homepage=$mappingDocument.homepage
+$homepagePage=@($uxDocument.pages|Where-Object {[string]$_.id -eq [string]$homepage.page})|Select-Object -First 1
+if($null -eq $homepagePage){throw "Homepage page '$($homepage.page)' was not found."}
+if([string]$homepagePage.renderer -ne 'modern-web-component'){throw "Homepage page '$($homepage.page)' must use renderer modern-web-component."}
+if([string]$homepage.controlType -ne 'northstar-case-homepage'){throw 'homepage.controlType must be northstar-case-homepage.'}
+if($null -eq $homepage.propertiesMap){throw 'homepage.propertiesMap is required.'}
+$homepageView=[ordered]@{
+    name=[string]$homepage.viewName
+    smartObject=[string]$homepage.smartObject
+    type='capture'
+    properties=@($homepage.properties)
+    readOnlyProperties=@($homepage.properties)
+    methods=@()
+    defaultListMethod='List'
+    options=@()
+    webComponents=@([ordered]@{
+        name=(Get-ValueOrDefault $homepage.controlName 'Northstar Homepage')
+        controlType=[string]$homepage.controlType
+        replaceBody=$true
+        properties=$homepage.propertiesMap
+    })
+}
+$homepageForm=[ordered]@{
+    name=[string]$homepage.formName
+    useLegacyTheme=$false
+    views=@([string]$homepage.viewName)
+    options=@('no-tabs')
+    viewTitles=[ordered]@{([string]$homepage.viewName)='Northstar'}
+    preFill=[ordered]@{enabled=$false;disabledReason='The Northstar homepage has no user-entry controls; test data is supplied by its governed projection.'}
+}
+$views.Add($homepageView)
+$generatedForms.Add($homepageForm)
 $summary=$mappingDocument.dashboard.summary;$cards=[Collections.Generic.List[object]]::new();$props=[Collections.Generic.List[string]]::new()
 foreach($binding in @($summary.components)){if(-not $components.ContainsKey([string]$binding.id)){throw "Unknown UX component mapping: $($binding.id)"};$c=$components[[string]$binding.id];$props.Add([string]$binding.property);$cards.Add([ordered]@{property=$binding.property;label=(Get-ValueOrDefault $binding.label $c.id);tone=(Get-ValueOrDefault $binding.tone 'neutral');explanation=(Get-ValueOrDefault $c.explanation '')})}
 $views.Add([ordered]@{name=$summary.viewName;smartObject=$summary.smartObject;type='capture';properties=@($props);methods=@();defaultListMethod='List';options=@();metricCards=@($cards)});$formViews.Add($summary.viewName);$titles[$summary.viewName]='Operational position'
 foreach($binding in @($mappingDocument.dashboard.charts)){if(-not $components.ContainsKey([string]$binding.component)){throw "Unknown UX chart mapping: $($binding.component)"};$c=$components[[string]$binding.component];$chartType=if($binding.type){$binding.type}elseif($c.chart_type -eq 'horizontal-bar'){'bar'}else{$c.chart_type};$chart=[ordered]@{name=(ConvertTo-ControlName 'cht' ([string]$binding.component));title=(Get-ValueOrDefault $binding.title $binding.component);type=$chartType;categoryProperty=$binding.categoryProperty;valueProperty=$binding.valueProperty;height=(Get-ValueOrDefault $binding.height 260);showLegend=[bool](Get-ValueOrDefault $binding.showLegend $false);showLabels=[bool](Get-ValueOrDefault $binding.showLabels $true);emptyState=(Get-ValueOrDefault $c.empty_state 'No data to display.')};$dataViewName=Get-ValueOrDefault $binding.tableViewName ([string]$binding.viewName+' Data');$views.Add([ordered]@{name=$binding.viewName;smartObject=$binding.smartObject;type='capture';properties=@($binding.categoryProperty,$binding.valueProperty);methods=@();defaultListMethod='List';options=@();charts=@($chart)});$views.Add([ordered]@{name=$dataViewName;smartObject=$binding.smartObject;type='list';properties=@($binding.categoryProperty,$binding.valueProperty);methods=@();defaultListMethod='List';options=@('toolbar')});$formViews.Add($binding.viewName);$formViews.Add($dataViewName);$titles[$binding.viewName]=$chart.title;$titles[$dataViewName]=($chart.title+' data')}
 foreach($binding in @($mappingDocument.dashboard.queues)){if(-not $components.ContainsKey([string]$binding.component)){throw "Unknown UX queue mapping: $($binding.component)"};$views.Add([ordered]@{name=$binding.viewName;smartObject=$binding.smartObject;type='list';properties=@($binding.properties);methods=@();defaultListMethod='List';options=@('toolbar')});$formViews.Add($binding.viewName);$titles[$binding.viewName]=(Get-ValueOrDefault $binding.title $binding.component)}
 $dashboardForm=[ordered]@{name=$mappingDocument.dashboard.formName;useLegacyTheme=$false;views=@($formViews);options=@('no-tabs');viewTitles=$titles}
-$generatedForms=[Collections.Generic.List[object]]::new();$generatedForms.Add($dashboardForm);$reportViewNames=@()
+$generatedForms.Add($dashboardForm);$reportViewNames=@()
 if($null -ne $mappingDocument.reports){
     $reports=$mappingDocument.reports;$reportTitles=[ordered]@{};$reportViewsByGroup=[ordered]@{}
     foreach($binding in @($reports.views)){

@@ -5,6 +5,15 @@
     "extends": "canonical-case-ux",
     "description": "Supplier-quality overlay on the reusable case experience."
   },
+  "homepage": {
+    "page": "case-homepage",
+    "template": "northstar-case-homepage",
+    "implementation": "modern-web-component",
+    "controlTagName": "northstar-case-homepage",
+    "source": "skills/k2-case-management/assets/northstar-case-homepage",
+    "required": true,
+    "nativeFallback": "errata-only"
+  },
   "design_system": {
     "density": "comfortable",
     "breakpoints": {
@@ -47,7 +56,7 @@
     },
     {
       "code": "QUALITY_MANAGER",
-      "home": "operations-dashboard"
+      "home": "case-homepage"
     },
     {
       "code": "AUDITOR",
@@ -116,6 +125,21 @@
     ]
   },
   "pages": [
+    {
+      "id": "case-homepage",
+      "type": "homepage",
+      "title": "Northstar",
+      "renderer": "modern-web-component",
+      "template": "northstar-case-homepage",
+      "components": [
+        "open-cases",
+        "sla-at-risk",
+        "overdue-actions",
+        "cases-by-stage",
+        "intake-trend",
+        "urgent-work"
+      ]
+    },
     {
       "id": "my-work",
       "type": "dashboard",

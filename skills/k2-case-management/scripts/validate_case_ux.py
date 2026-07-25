@@ -31,6 +31,7 @@ def validate(doc: dict[str, Any]) -> list[str]:
     components = doc.get("components")
     journeys = doc.get("journeys")
     shell = doc.get("shell")
+    homepage = doc.get("homepage")
     visual = doc.get("visual_acceptance")
     if not isinstance(shell, dict): errors.append("shell must be a mapping")
     if not isinstance(pages, list) or not pages: errors.append("pages must be a non-empty list"); pages = []
@@ -51,6 +52,27 @@ def validate(doc: dict[str, Any]) -> list[str]:
     component_by_id = index(components, "components")
     journey_by_id = index(journeys, "journeys")
     role_codes = {r.get("code") for r in doc.get("roles", []) if isinstance(r, dict)}
+
+    if not isinstance(homepage, dict):
+        errors.append("homepage must be a mapping")
+    else:
+        if homepage.get("implementation") != "modern-web-component":
+            errors.append("homepage.implementation must be modern-web-component")
+        if homepage.get("controlTagName") != "northstar-case-homepage":
+            errors.append("homepage.controlTagName must be northstar-case-homepage")
+        if homepage.get("required") is not True:
+            errors.append("homepage.required must be true")
+        if homepage.get("nativeFallback") != "errata-only":
+            errors.append("homepage.nativeFallback must be errata-only")
+        homepage_page = homepage.get("page")
+        if homepage_page not in page_by_id:
+            errors.append(f"homepage page does not exist: {homepage_page}")
+        elif page_by_id[homepage_page].get("renderer") != "modern-web-component":
+            errors.append(f"homepage page {homepage_page} must use renderer modern-web-component")
+
+    for role in doc.get("roles", []):
+        if isinstance(role, dict) and role.get("home") not in page_by_id:
+            errors.append(f"role {role.get('code')} home does not exist: {role.get('home')}")
 
     if isinstance(shell, dict):
         for item in shell.get("navigation", []):

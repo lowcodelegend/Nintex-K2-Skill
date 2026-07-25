@@ -19,6 +19,7 @@ namespace K2SmartFormsCli
             TestNativeChartComposition();
             TestMetricCardComposition();
             TestLifecycleComposition();
+            TestModernWebComponentComposition();
             TestHiddenPropertyComposition();
             TestLabelAboveHiddenCellComposition();
             TestResponsiveGroupedItemView();
@@ -29,7 +30,37 @@ namespace K2SmartFormsCli
             TestFlatFormViewOrdering();
             TestFormPreFillRules();
             TestMultiTableWorkflowStateReconciliation();
-            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams, mutually exclusive native If/Else Save branching, post-Create master hydration and Form method-action rejection, master-detail field-validation composition, orphan optional control mappings, lookup/detail List classification, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, native max-length/validation-pattern contracts, must-be-true checkbox validation groups, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, editable-list File edit-template validation, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, constraint-aware test-data Pre-fill, multi-table workflow-state reconciliation");
+            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams, mutually exclusive native If/Else Save branching, post-Create master hydration and Form method-action rejection, master-detail field-validation composition, orphan optional control mappings, lookup/detail List classification, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, native max-length/validation-pattern contracts, must-be-true checkbox validation groups, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, modern Web Component full-body placement, capture and editable-list hidden-property composition, editable-list File edit-template validation, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, constraint-aware test-data Pre-fill, multi-table workflow-state reconciliation");
+        }
+
+        private static void TestModernWebComponentComposition()
+        {
+            var view = new ViewDefinition { Name = "Northstar Home", Type = "capture" };
+            view.WebComponents.Add(new ViewWebComponentDefinition
+            {
+                Name = "Northstar Homepage",
+                ControlType = "northstar-case-homepage",
+                ReplaceBody = true,
+                Properties = new Dictionary<string, string>
+                {
+                    { "ApplicationName", "Northstar" },
+                    { "UseFullViewport", "true" }
+                }
+            });
+            var xml = "<Views><View ID='" + Guid.NewGuid() + "'><Name>Northstar Home</Name><DisplayName>Northstar Home</DisplayName>" +
+                "<Controls><Control ID='view-control' Type='View'/><Control ID='table-control' Type='Table'/></Controls>" +
+                "<Canvas><Sections><Section ID='toolbar' Type='ToolBar'><Control ID='toolbar-table'/></Section>" +
+                "<Section ID='body' Type='Body'><Control ID='table-control'><Rows/></Control></Section></Sections></Canvas>" +
+                "<Sources/><Events/></View></Views>";
+            var transformed = ViewWebComponentLayoutDefinition.Apply(xml, view);
+            ViewWebComponentLayoutDefinition.Verify(transformed, view);
+            var document = XDocument.Parse(transformed);
+            Assert(document.Descendants("Section").Count() == 1 &&
+                (string)document.Descendants("Section").Single().Attribute("Type") == "Body",
+                "Web Component removes generated toolbar placement");
+            Assert(document.Descendants("Control").Count(control =>
+                (string)control.Attribute("Type") == "northstar-case-homepage") == 1,
+                "Web Component is represented by its registered custom-element type");
         }
 
         private static void TestIdentityNormalization()

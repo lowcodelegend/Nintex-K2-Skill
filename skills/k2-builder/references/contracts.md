@@ -86,6 +86,7 @@ End-to-end scenarios must cover exact threshold boundaries, each dimension-speci
 - Resolve Style Profile precedence before generating forms: explicit solution/SmartForms manifest value, then the durable environment default, then deliberate none.
 - When environment selection is still `unselected`, present the discovered profiles and ask the user; do not infer a default from an unrelated existing application.
 - Put the selected profile's stable system name in `application.styleProfile` and keep `useLegacyTheme=false` explicit. Named themes such as Lithium are legacy; `application.theme` remains required generator compatibility metadata, not the modern presentation choice.
+- Treat a modern Web Component as a separately promoted dependency: package and register it through `$k2-smartforms-web-components` before `$k2-smartforms` places it, retain its ZIP/hash/control ID in the ledger, and remove dependent Views/Forms before deletion. Legacy DLL/SDK/controlutil controls are prohibited.
 - Verify the deployed form definition contains the selected Style Profile GUID and system name.
 
 ## SQL-to-form validation contract

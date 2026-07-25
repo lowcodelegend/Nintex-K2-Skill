@@ -1,0 +1,80 @@
+:host {
+  --ink: #101828;
+  --muted: #667085;
+  --line: #e7eaf0;
+  --paper: #fff;
+  --wash: #f5f7fa;
+  --nav: #0b1220;
+  --nav2: #141e32;
+  --violet: #6257d9;
+  --violet2: #ecebff;
+  --teal: #087e78;
+  --teal2: #e2f5f2;
+  --amber: #b54708;
+  --amber2: #fff1df;
+  --red: #b42318;
+  --red2: #feeceb;
+  --green: #067647;
+  --shadow: 0 12px 32px rgba(16, 24, 40, .08);
+  --radius: 16px;
+  --font: "DM Sans", sans-serif;
+  --display: "Manrope", sans-serif;
+  display: block;
+  width: 100%;
+  min-width: 320px;
+  min-height: 100vh;
+  color: var(--ink);
+  background: var(--wash);
+  font-family: var(--font);
+  box-sizing: border-box;
+}
+
+.northstar-surface {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  color: var(--ink);
+  background: var(--wash);
+  font-family: var(--font);
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+:host([data-full-viewport="true"]) .northstar-surface {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  overflow: auto;
+}
+
+:host([data-hidden="true"]) {
+  display: none;
+}
+
+:host([data-disabled="true"]) .northstar-surface {
+  filter: saturate(.75);
+}
+
+:host([data-disabled="true"]) button,
+:host([data-readonly="true"]) button {
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

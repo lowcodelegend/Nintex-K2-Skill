@@ -3,7 +3,16 @@
   "template": {
     "id": "canonical-case-ux",
     "extends": null,
-    "description": "Reusable role-aware case application experience; extend sections and measures rather than replacing the shell."
+    "description": "Reusable role-aware Northstar case application experience; extend sections and measures rather than replacing the shell."
+  },
+  "homepage": {
+    "page": "case-homepage",
+    "template": "northstar-case-homepage",
+    "implementation": "modern-web-component",
+    "controlTagName": "northstar-case-homepage",
+    "source": "assets/northstar-case-homepage",
+    "required": true,
+    "nativeFallback": "errata-only"
   },
   "design_system": {
     "density": "comfortable",
@@ -18,7 +27,7 @@
   "roles": [
     {"code": "REPORTER", "home": "my-work"},
     {"code": "CASE_OWNER", "home": "my-work"},
-    {"code": "QUALITY_MANAGER", "home": "operations-dashboard"},
+    {"code": "QUALITY_MANAGER", "home": "case-homepage"},
     {"code": "AUDITOR", "home": "case-search"},
     {"code": "ADMINISTRATOR", "home": "administration"}
   ],
@@ -36,6 +45,11 @@
     ]
   },
   "pages": [
+    {
+      "id": "case-homepage", "type": "homepage", "title": "Northstar",
+      "renderer": "modern-web-component", "template": "northstar-case-homepage",
+      "components": ["open-cases", "sla-at-risk", "overdue-actions", "cases-by-stage", "intake-trend", "urgent-work"]
+    },
     {
       "id": "my-work", "type": "dashboard", "title": "My Work",
       "components": ["my-open-tasks", "due-soon", "cases-i-own", "recent-activity"]

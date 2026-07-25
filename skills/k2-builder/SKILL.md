@@ -8,8 +8,9 @@ description: Orchestrate, verify, and clean up complete self-hosted Nintex K2 Fi
 Coordinate the installed specialists in dependency order:
 
 1. `$k2-sql-smartobjects` for SQL, Service Instances, and generated SmartObjects.
-2. `$k2-smartforms` for Views, Forms, rules, and runtime CRUD.
-3. `$k2-workflows` for HTML5 workflows and SmartForms integration.
+2. `$k2-smartforms-web-components` for any declared modern K2 5.9+ Web Component package and registration.
+3. `$k2-smartforms` for Views, Forms, rules, runtime CRUD, and placement of registered modern controls.
+4. `$k2-workflows` for HTML5 workflows and SmartForms integration.
 
 For persistent case-management applications, use `$k2-case-management` first to define the canonical/extended case model, lifecycle, parent and stage workflows, transitions, SLAs, decisions, evidence, and audit contract. This skill remains authoritative for turning that design into supported K2 artifacts and verifying the implementation.
 
@@ -72,6 +73,7 @@ Use [contracts.md](references/contracts.md) as the detailed source. In particula
 - Treat SQL-to-form validation as a cross-artifact contract. Inventory every user-editable SQL nullability, length, named check, numeric bound, format, and must-be-true bit in SQL `formConstraints`; require an exact matching SmartForms `view.validations` entry on every editable occurrence. Do not proceed when the database would reject or truncate a value the form accepts.
 - Treat every repeated child collection as master-detail across SQL, SmartObjects, editable-list UX, Form-level persistence/load rules, and solution policy. Support every declared child table on the Form; one visible Form action owns the transaction, every master Read path reloads every child by parent key, and no unfiltered child List or bypass save control may remain after workflow integration.
 - Generate modern Forms with `useLegacyTheme=false`, the selected Style Profile, and the selected environment framework unless a reasoned opt-out is recorded. Follow the exact discovered header/footer lifecycle, mappings, and order; PSF conventions apply only after discovery and user selection.
+- Register every declared modern Web Component before generating dependent Views. Use only the Web Component ZIP/manifest/JavaScript/CSS model; reject legacy DLL/SDK/controlutil controls. Remove dependent Forms/Views before control cleanup.
 - Keep the workflow reference/status on the master unless child processing is required. Direct human tasks use the manifest's explicit assignees; matrix tasks use resolver output.
 - A dedicated request-entry Start state is the sole default; Task is never default. Shared Forms require an explicit entry-state decision. Verify ordinary-URL Create both saves and starts exactly one workflow.
 - Prefer list/details/My Tasks tabs for ordinary workflow UX and native K2 Worklist for tasks.

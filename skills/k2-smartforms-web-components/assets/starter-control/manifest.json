@@ -1,0 +1,22 @@
+{
+  "displayName": "{{DISPLAY_NAME}}",
+  "tagName": "{{TAG_NAME}}",
+  "description": "Modern K2 Web Component control.",
+  "icon": "control-icon.svg",
+  "designtimeScriptFileNames": ["control-designtime.js"],
+  "runtimeScriptFileNames": ["control-runtime.js"],
+  "designtimeStyleFileNames": ["control-designtime.css"],
+  "runtimeStyleFileNames": ["control-runtime.css"],
+  "datatypes": ["Text"],
+  "valuePropertyID": "Value",
+  "supports": ["Value", "Width", "Height", "IsVisible", "IsEnabled", "IsReadOnly", "TabIndex", "ControlExpression"],
+  "events": [
+    {"id": "Changed", "displayname": "Changed"}
+  ],
+  "properties": [
+    {"id": "Value", "friendlyname": "Value", "type": "string", "initialvalue": "", "changesdisplay": true},
+    {"id": "Width", "friendlyname": "Width", "type": "string", "initialvalue": "100%", "changesdisplay": true},
+    {"id": "Height", "friendlyname": "Height", "type": "string", "initialvalue": "64px", "changesdisplay": true},
+    {"id": "IsReadOnly", "friendlyname": "Read only", "type": "bool", "initialvalue": false, "changesdisplay": true}
+  ]
+}

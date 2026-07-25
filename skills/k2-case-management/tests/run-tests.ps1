@@ -54,7 +54,11 @@ try {
     & $compiler -Ux $validUx -Mapping $compilerMapping -Output $compiled
     if ($LASTEXITCODE -ne 0) { throw 'Expected canonical UX compilation to pass.' }
     $manifest = Get-Content -Raw -LiteralPath $compiled | ConvertFrom-Json
-    if (@($manifest.application.views).Count -ne 4) { throw 'Compiled UX did not emit summary, chart, queue, and accessible chart-data Views.' }
+    if (@($manifest.application.views).Count -ne 5) { throw 'Compiled UX did not emit the Northstar homepage plus summary, chart, queue, and accessible chart-data Views.' }
+    $homepageView = @($manifest.application.views | Where-Object { $_.name -eq 'TST.Northstar Home' })[0]
+    if ($homepageView.webComponents[0].controlType -ne 'northstar-case-homepage' -or $homepageView.webComponents[0].replaceBody -ne $true) { throw 'Compiled UX did not emit the required full-body Northstar Web Component.' }
+    $homepageForm = @($manifest.application.forms | Where-Object { $_.name -eq 'TST.Northstar Home' })[0]
+    if ($homepageForm.useLegacyTheme -ne $false -or $homepageForm.preFill.enabled -ne $false) { throw 'Northstar homepage Form must use the modern theme and an explicit Pre-fill opt-out.' }
     $summaryView = @($manifest.application.views | Where-Object { $_.name -eq 'TST.Operations KPIs' })[0]
     if ($summaryView.type -ne 'capture') { throw 'Compiled UX metric cards must use a native capture layout.' }
     if (@($summaryView.metricCards).Count -ne 2) { throw 'Compiled UX did not emit both metric cards.' }
@@ -63,7 +67,8 @@ try {
     if ($chartView.charts[0].name -ne 'chtCasesByStage') { throw 'Compiled UX control naming is not deterministic PascalCase.' }
     if ($chartView.charts[0].type -ne 'bar') { throw 'Compiled UX did not translate horizontal-bar to native bar.' }
     if ($chartView.charts[0].showLabels -ne $true) { throw 'Compiled UX did not apply the chart label default.' }
-    if ($manifest.application.forms[0].views.Count -ne 4) { throw 'Compiled Form did not compose every emitted View and accessible chart-data alternative.' }
+    $dashboardForm = @($manifest.application.forms | Where-Object { $_.name -eq 'TST.Quality Operations' })[0]
+    if ($dashboardForm.views.Count -ne 4) { throw 'Compiled dashboard Form did not compose every emitted View and accessible chart-data alternative.' }
 } finally {
     if (Test-Path -LiteralPath $compiled) { Remove-Item -LiteralPath $compiled -Force }
 }
@@ -76,7 +81,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Expected base-manifest UX embellishment to pass.' }
     $manifest = Get-Content -Raw -LiteralPath $combined | ConvertFrom-Json
     if ($manifest.name -ne 'TST.Case Workspace') { throw 'UX embellishment did not preserve the base application identity.' }
-    if (@($manifest.application.views).Count -ne 5 -or @($manifest.application.forms).Count -ne 2) { throw 'UX embellishment did not preserve base artifacts and append dashboard artifacts.' }
+    if (@($manifest.application.views).Count -ne 6 -or @($manifest.application.forms).Count -ne 3) { throw 'UX embellishment did not preserve base artifacts and append homepage/dashboard artifacts.' }
     $workspace = @($manifest.application.views | Where-Object { $_.name -eq 'TST.Case Workspace' })[0]
     if ($workspace.lifecycleTrackers[0].property -ne 'CurrentStageCode' -or @($workspace.lifecycleTrackers[0].stages).Count -ne 3) { throw 'UX embellishment did not apply the reusable lifecycle tracker.' }
     $shell = @($manifest.application.forms | Where-Object { $_.name -eq 'TST.Case Management' })[0]

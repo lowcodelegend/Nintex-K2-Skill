@@ -1,6 +1,21 @@
 {
   "schema_version":1,
   "application":{"name":"SNC.Reusable Case Operations Dashboard","rootCategoryPath":"K2 Skills\\SNC.Supplier Nonconformance","solutionCode":"SNC","theme":"Lithium","styleProfile":"PSF UX v1"},
+  "homepage":{
+    "page":"case-homepage","formName":"SNC.Northstar Home","viewName":"SNC.Northstar Home",
+    "smartObject":"SNC_SupplierNonconformance_SNC_DashboardSummary","properties":["OpenCaseCount"],
+    "controlName":"Northstar Homepage","controlType":"northstar-case-homepage",
+    "controlPackage":"skills/k2-case-management/assets/northstar-case-homepage",
+    "propertiesMap":{
+      "ApplicationName":"Northstar","ApplicationSubtitle":"Quality operations",
+      "UserName":"Alex Morgan","UserRole":"Quality manager","Greeting":"Good morning, Alex","Value":"{}",
+      "UseFullViewport":"true","Width":"100%","Height":"1000px",
+      "TagName":"northstar-case-homepage","RuntimeScriptFileNames":"northstar-runtime.js",
+      "DesigntimeScriptFileNames":"northstar-designtime.js",
+      "RuntimeStyleFileNames":"northstar-fonts.css,northstar-prototype.css,northstar-host.css",
+      "DesigntimeStyleFileNames":"northstar-designtime.css","Icon":"northstar-icon.svg"
+    }
+  },
   "dashboard":{
     "page":"operations-dashboard","formName":"SNC.Quality Operations",
     "summary":{"viewName":"SNC.Operations KPIs","smartObject":"SNC_SupplierNonconformance_SNC_DashboardSummary","components":[

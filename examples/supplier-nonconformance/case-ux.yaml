@@ -1,6 +1,15 @@
 {
   "schema_version": 1,
   "template": {"id": "supplier-nonconformance-ux", "extends": "canonical-case-ux", "description": "Supplier-quality overlay on the reusable case experience."},
+  "homepage": {
+    "page": "case-homepage",
+    "template": "northstar-case-homepage",
+    "implementation": "modern-web-component",
+    "controlTagName": "northstar-case-homepage",
+    "source": "skills/k2-case-management/assets/northstar-case-homepage",
+    "required": true,
+    "nativeFallback": "errata-only"
+  },
   "shell": {
     "navigation": [
       {"id": "new-case", "label": "New Nonconformance", "target": "case-initiation"},
@@ -8,6 +17,7 @@
     ]
   },
   "pages": [
+    {"id": "case-homepage", "type": "homepage", "title": "Northstar", "renderer": "modern-web-component", "template": "northstar-case-homepage"},
     {"id": "case-initiation", "title": "Report a Supplier Nonconformance"},
     {"id": "case-workspace", "title": "Nonconformance Workspace", "sections": ["overview", "tasks", "nonconformance", "containment", "investigation", "root-cause", "decisions", "corrective-actions", "effectiveness", "evidence", "communications", "parties", "related-cases", "history"]},
     {"id": "supplier-performance", "type": "dashboard", "title": "Supplier Performance", "components": ["supplier-open-cases", "supplier-repeat-rate", "supplier-response-time", "supplier-defect-trend"]}

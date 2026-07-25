@@ -1,6 +1,33 @@
 {
   "schema_version": 1,
   "application": {"name":"{{CODE}}.Case Experience","rootCategoryPath":"K2 Skills\\{{CODE}}.Case","solutionCode":"{{CODE}}","theme":"Lithium","styleProfile":"{{STYLE_PROFILE}}"},
+  "homepage": {
+    "page":"case-homepage",
+    "formName":"{{CODE}}.Northstar Home",
+    "viewName":"{{CODE}}.Northstar Home",
+    "smartObject":"{{SUMMARY_SMARTOBJECT}}",
+    "properties":["OpenCaseCount"],
+    "controlName":"Northstar Homepage",
+    "controlType":"northstar-case-homepage",
+    "controlPackage":"assets/northstar-case-homepage",
+    "propertiesMap":{
+      "ApplicationName":"Northstar",
+      "ApplicationSubtitle":"Case operations",
+      "UserName":"Alex Morgan",
+      "UserRole":"Case manager",
+      "Greeting":"Good morning, Alex",
+      "Value":"{}",
+      "UseFullViewport":"true",
+      "Width":"100%",
+      "Height":"1000px",
+      "TagName":"northstar-case-homepage",
+      "RuntimeScriptFileNames":"northstar-runtime.js",
+      "DesigntimeScriptFileNames":"northstar-designtime.js",
+      "RuntimeStyleFileNames":"northstar-fonts.css,northstar-prototype.css,northstar-host.css",
+      "DesigntimeStyleFileNames":"northstar-designtime.css",
+      "Icon":"northstar-icon.svg"
+    }
+  },
   "dashboard": {
     "page":"operations-dashboard","formName":"{{CODE}}.Quality Operations",
     "summary":{"viewName":"{{CODE}}.Operations KPIs","smartObject":"{{SUMMARY_SMARTOBJECT}}","components":[{"id":"open-cases","property":"OpenCaseCount"}]},

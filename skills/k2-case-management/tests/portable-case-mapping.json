@@ -1,6 +1,7 @@
 {
   "schema_version":1,
   "application":{"name":"RQT.Request Experience","rootCategoryPath":"K2 Skills\\RQT.Request Case","solutionCode":"RQT","theme":"Lithium","styleProfile":"Test Style"},
+  "homepage":{"page":"case-homepage","formName":"RQT.Northstar Home","viewName":"RQT.Northstar Home","smartObject":"RQT_DashboardSummary","properties":["OpenCaseCount"],"controlName":"Northstar Homepage","controlType":"northstar-case-homepage","propertiesMap":{"ApplicationName":"Northstar","ApplicationSubtitle":"Request operations","Value":"{}","UseFullViewport":"true","Width":"100%","Height":"1000px","TagName":"northstar-case-homepage","RuntimeScriptFileNames":"northstar-runtime.js","DesigntimeScriptFileNames":"northstar-designtime.js","RuntimeStyleFileNames":"northstar-fonts.css,northstar-prototype.css,northstar-host.css","DesigntimeStyleFileNames":"northstar-designtime.css","Icon":"northstar-icon.svg"}},
   "dashboard":{"page":"operations-dashboard","formName":"RQT.Operations",
     "summary":{"viewName":"RQT.KPIs","smartObject":"RQT_DashboardSummary","components":[{"id":"open-cases","property":"OpenCaseCount"}]},
     "charts":[{"component":"cases-by-stage","viewName":"RQT.Cases by Stage","smartObject":"RQT_CasesByStage","categoryProperty":"StageLabel","valueProperty":"CaseCount"}],

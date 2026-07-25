@@ -1,0 +1,4 @@
+interface:
+  display_name: "Modern K2 Web Component Controls"
+  short_description: "Build modern K2 Web Component controls"
+  default_prompt: "Use $k2-smartforms-web-components to build, package, deploy, and verify a modern K2 SmartForms Web Component control."

@@ -1,0 +1,9 @@
+:host {
+  display: block;
+  box-sizing: border-box;
+}
+
+:host button {
+  width: 100%;
+  min-height: 40px;
+}

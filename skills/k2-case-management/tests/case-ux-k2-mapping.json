@@ -7,6 +7,29 @@
     "theme": "Lithium",
     "styleProfile": "Test Style"
   },
+  "homepage": {
+    "page": "case-homepage",
+    "formName": "TST.Northstar Home",
+    "viewName": "TST.Northstar Home",
+    "smartObject": "TST_DashboardSummary",
+    "properties": ["OpenCaseCount"],
+    "controlName": "Northstar Homepage",
+    "controlType": "northstar-case-homepage",
+    "propertiesMap": {
+      "ApplicationName": "Northstar",
+      "ApplicationSubtitle": "Case operations",
+      "Value": "{}",
+      "UseFullViewport": "true",
+      "Width": "100%",
+      "Height": "1000px",
+      "TagName": "northstar-case-homepage",
+      "RuntimeScriptFileNames": "northstar-runtime.js",
+      "DesigntimeScriptFileNames": "northstar-designtime.js",
+      "RuntimeStyleFileNames": "northstar-fonts.css,northstar-prototype.css,northstar-host.css",
+      "DesigntimeStyleFileNames": "northstar-designtime.css",
+      "Icon": "northstar-icon.svg"
+    }
+  },
   "dashboard": {
     "page": "operations-dashboard",
     "formName": "TST.Quality Operations",

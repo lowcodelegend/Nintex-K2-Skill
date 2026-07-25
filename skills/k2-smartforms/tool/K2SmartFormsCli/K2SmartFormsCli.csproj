@@ -83,6 +83,7 @@
     <Compile Include="ViewMetricCardDefinition.cs" />
     <Compile Include="ViewLifecycleDefinition.cs" />
     <Compile Include="ViewPresentationDefinition.cs" />
+    <Compile Include="ViewWebComponentDefinition.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

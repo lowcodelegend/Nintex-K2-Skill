@@ -97,6 +97,32 @@ Add `metricCards` to a dedicated `capture` View whose parameterless List method 
 
 Supported tones are `neutral`, `positive`, `warning`, `critical`, and `info`. Tone is semantic metadata for consistent Style Profile treatment; never rely on colour alone to convey status. Keep KPI definitions in a governed SQL view or procedure and document the population, time basis, and threshold behind each value.
 
+## Modern Web Component placement
+
+Add one `webComponents` entry to a `capture` View only after its control package has been registered through `$k2-smartforms-web-components`. The component replaces the entire visible View body; it cannot be combined with charts, metric cards, lifecycle trackers, sections, or help controls. Selected SmartObject properties remain hidden bindings, and the View remains the owner of methods and rules.
+
+```json
+"webComponents": [{
+  "name": "Northstar Homepage",
+  "controlType": "northstar-case-homepage",
+  "replaceBody": true,
+  "properties": {
+    "ApplicationName": "Northstar",
+    "UseFullViewport": "true",
+    "Width": "100%",
+    "Height": "1000px",
+    "TagName": "northstar-case-homepage",
+    "RuntimeScriptFileNames": "northstar-runtime.js",
+    "DesigntimeScriptFileNames": "northstar-designtime.js",
+    "RuntimeStyleFileNames": "northstar-fonts.css,northstar-prototype.css,northstar-host.css",
+    "DesigntimeStyleFileNames": "northstar-designtime.css",
+    "Icon": "northstar-icon.svg"
+  }
+}]
+```
+
+`controlType` is the registered lower-case kebab-case custom element tag. `replaceBody` must be true. Use `new-smartforms-placement.ps1` from the Web Component skill to derive the resource metadata from its source manifest, and keep array fallbacks in the component itself. Verification checks the control type, name, properties, sole-body placement, stored definition, and Designer authoring-model hydration.
+
 ## Hidden bound properties
 
 Use `hiddenProperties` on a `capture` or `capture-list` View when a generated method still requires technical/defaulted fields but the user should not see them. Every name must remain selected in `properties`; the CLI preserves its SmartObject field, bound controls, defaults, and method/rule mappings. A capture View removes the property's dedicated layout row. A `capture-list` removes only the property's aligned Header, data Display, Footer, and Edit cells plus its column placement, then redistributes the remaining column widths to 100 percent. The editable-list structural verifier requires exactly one of each template row, equal cell/column counts, aligned visible field placements, and no hidden field placement. Use this for a dedicated initiation View, never to conceal workflow state on a general workspace where operators need context, and never to bypass required user input.

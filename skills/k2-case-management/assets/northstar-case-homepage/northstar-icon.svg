@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="Northstar">
+  <defs>
+    <linearGradient id="n" x1="8" y1="6" x2="42" y2="42" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8c80ff"/>
+      <stop offset="1" stop-color="#4cddb8"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="40" height="40" rx="13" fill="url(#n)"/>
+  <path d="M15 34V14h4l10 13V14h5v20h-4L20 21v13z" fill="#fff"/>
+</svg>

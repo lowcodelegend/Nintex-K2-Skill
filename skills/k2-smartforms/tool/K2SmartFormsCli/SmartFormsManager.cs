@@ -607,6 +607,7 @@ namespace K2SmartFormsCli
             definition = ViewChartLayoutDefinition.Apply(definition, view);
             definition = ViewMetricCardLayoutDefinition.Apply(definition, view);
             definition = ViewLifecycleLayoutDefinition.Apply(definition, view);
+            definition = ViewWebComponentLayoutDefinition.Apply(definition, view);
             if (isMaster || isDetail || reviewRelationships.Count > 0)
                 definition = MasterDetailRules.ConfigureViewRuleSeams(definition, view.Name,
                     masterRelationships, detailRelationships, reviewRelationships);
@@ -624,7 +625,9 @@ namespace K2SmartFormsCli
                 .SelectMany(f => f.MasterDetail.Details)
                 .Any(d => string.Equals(d.View, view.Name, StringComparison.OrdinalIgnoreCase));
             ViewLookupDefinition.Verify(definition, view, lookupSources);
-            ViewPresentationDefinition.Verify(definition, view, isMaster, isDetail);
+            if (view.WebComponents == null || view.WebComponents.Count == 0)
+                ViewPresentationDefinition.Verify(definition, view, isMaster, isDetail);
+            ViewWebComponentLayoutDefinition.Verify(definition, view);
             var detailRelationships = _manifest.Application.Forms.Where(f => f.MasterDetail != null)
                 .SelectMany(f => f.MasterDetail.Details)
                 .Where(d => string.Equals(d.View, view.Name, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -886,10 +889,12 @@ namespace K2SmartFormsCli
                             string.Equals(f.MasterDetail.Review.View, declaredView.Name, StringComparison.OrdinalIgnoreCase))
                         .Select(f => f.MasterDetail.Review).ToList();
                     var isDetail = detailRelationships.Count > 0;
-                    ViewPresentationDefinition.Verify(definition, declaredView, isMaster, isDetail);
+                    if (declaredView.WebComponents == null || declaredView.WebComponents.Count == 0)
+                        ViewPresentationDefinition.Verify(definition, declaredView, isMaster, isDetail);
                     ViewChartLayoutDefinition.Verify(definition, declaredView);
                     ViewMetricCardLayoutDefinition.Verify(definition, declaredView);
                     ViewLifecycleLayoutDefinition.Verify(definition, declaredView);
+                    ViewWebComponentLayoutDefinition.Verify(definition, declaredView);
                     if (isDetail) MasterDetailRules.VerifyDetailViewLoads(definition, declaredView.Name, detailRelationships);
                     if (reviewRelationships.Count > 0)
                         MasterDetailRules.VerifyReviewViewRules(definition, declaredView.Name, reviewRelationships);
