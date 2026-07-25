@@ -1,0 +1,88 @@
+{
+  "name": "NTH.Northstar Palette Verification",
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "application": {
+    "rootCategoryPath": "K2 Skills\\NTH.Northstar Native Verification",
+    "theme": "Lithium",
+    "styleProfile": "Northstar Native Homepage",
+    "solutionCode": "NTH",
+    "replaceExisting": true,
+    "checkIn": true,
+    "views": [
+      {
+        "name": "NTH.Command Palette",
+        "smartObject": "SNC_SupplierNonconformance_SNC_CommandSuggestion",
+        "type": "capture",
+        "properties": [
+          "SuggestionCode", "Kind", "Title", "Subtitle", "IconToken",
+          "TargetUrl", "SortOrder", "IsActive", "ConfigurationVersion"
+        ],
+        "readOnlyProperties": [
+          "SuggestionCode", "Kind", "Title", "Subtitle", "IconToken",
+          "TargetUrl", "SortOrder", "IsActive", "ConfigurationVersion"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
+        "webComponents": [
+          {
+            "name": "Northstar Command Palette",
+            "controlType": "northstar-command-palette",
+            "replaceBody": true,
+            "properties": {
+              "Value": "",
+              "Suggestions": "[]",
+              "SearchUrlTemplate": "/Runtime/Runtime/Form/SNC.Supplier%20Nonconformance?q={query}",
+              "Placeholder": "Search cases, work and reports",
+              "Width": "100%",
+              "Height": "48px",
+              "TagName": "northstar-command-palette",
+              "RuntimeScriptFileNames": "northstar-command-runtime.js",
+              "DesigntimeScriptFileNames": "northstar-command-designtime.js",
+              "RuntimeStyleFileNames": "northstar-command-runtime.css",
+              "DesigntimeStyleFileNames": "northstar-command-designtime.css",
+              "Icon": "northstar-command-icon.svg"
+            },
+            "dataBinding": {
+              "property": "Suggestions",
+              "method": "List",
+              "serverUserScoped": true
+            },
+            "events": [
+              {
+                "name": "Navigate",
+                "action": "navigate",
+                "sourceProperty": "Value",
+                "target": "_self"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "forms": [
+      {
+        "name": "NTH.Command Palette Verification",
+        "useLegacyTheme": false,
+        "preFill": {
+          "enabled": false,
+          "disabledReason": "Read-only governed command-palette verification surface."
+        },
+        "views": [ "NTH.Command Palette" ],
+        "viewTitles": {
+          "NTH.Command Palette": "Command palette"
+        },
+        "options": [ "no-tabs" ]
+      }
+    ]
+  },
+  "verification": {
+    "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime",
+    "validateRuntimeRoutes": true
+  }
+}

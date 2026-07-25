@@ -23,45 +23,60 @@ $components=@{};foreach($c in @($uxDocument.components)){$components[[string]$c.
 $dashboardPageId=[string]$mappingDocument.dashboard.page;$page=$uxDocument.pages|Where-Object {[string]$_.id -eq $dashboardPageId}|Select-Object -First 1;if($null -eq $page){throw "Dashboard page '$dashboardPageId' was not found."}
 $views=[Collections.Generic.List[object]]::new();$formViews=[Collections.Generic.List[string]]::new();$titles=[ordered]@{}
 $generatedForms=[Collections.Generic.List[object]]::new()
-if($null -eq $mappingDocument.homepage){throw 'The K2 mapping must declare the required Northstar homepage.'}
+if($null -eq $mappingDocument.homepage){throw 'The K2 mapping must declare the required native Northstar homepage.'}
 $homepage=$mappingDocument.homepage
 $homepagePage=@($uxDocument.pages|Where-Object {[string]$_.id -eq [string]$homepage.page})|Select-Object -First 1
 if($null -eq $homepagePage){throw "Homepage page '$($homepage.page)' was not found."}
-if([string]$homepagePage.renderer -ne 'modern-web-component'){throw "Homepage page '$($homepage.page)' must use renderer modern-web-component."}
-if([string]$homepage.controlType -ne 'northstar-case-homepage'){throw 'homepage.controlType must be northstar-case-homepage.'}
-if($null -eq $homepage.propertiesMap){throw 'homepage.propertiesMap is required.'}
-$homepageView=[ordered]@{
-    name=[string]$homepage.viewName
-    smartObject=[string]$homepage.smartObject
-    type='capture'
-    properties=@($homepage.properties)
-    readOnlyProperties=@($homepage.properties)
+if([string]$homepagePage.renderer -ne 'native-smartforms'){throw "Homepage page '$($homepage.page)' must use renderer native-smartforms."}
+if([string]$homepage.implementation -ne 'native-smartforms'){throw 'homepage.implementation must be native-smartforms.'}
+if([string]$homepage.page -ne [string]$mappingDocument.dashboard.page){throw 'The canonical native homepage and dashboard must identify the same page.'}
+if($null -eq $homepage.navigation){throw 'homepage.navigation is required for the native SmartObject-backed shell.'}
+if($null -eq $homepage.commandPalette){throw 'homepage.commandPalette is required as the bounded modern-control enhancement.'}
+$navigation=$homepage.navigation
+$requiredNavigationProperties=@('NavigationCode','SectionLabel','Label','IconToken','TargetFormName','SortOrder','IsActive','ConfigurationVersion')
+if(@($navigation.properties).Count -ne $requiredNavigationProperties.Count -or (@($navigation.properties) -join '|') -cne ($requiredNavigationProperties -join '|')){throw 'homepage.navigation.properties must use the canonical eight-column navigation contract in order.'}
+$navigationView=[ordered]@{
+    name=[string]$navigation.viewName
+    smartObject=[string]$navigation.smartObject
+    type='list'
+    properties=@($navigation.properties)
     methods=@()
     defaultListMethod='List'
     options=@()
+}
+$views.Add($navigationView);$formViews.Add([string]$navigation.viewName);$titles[[string]$navigation.viewName]='Application navigation'
+$palette=$homepage.commandPalette
+if([string]$palette.controlType -ne 'northstar-command-palette'){throw 'homepage.commandPalette.controlType must be northstar-command-palette.'}
+if($null -eq $palette.propertiesMap){throw 'homepage.commandPalette.propertiesMap is required.'}
+$requiredSuggestionProperties=@('SuggestionCode','Kind','Title','Subtitle','IconToken','TargetUrl','SortOrder','IsActive','ConfigurationVersion')
+if(@($palette.properties).Count -ne $requiredSuggestionProperties.Count -or (@($palette.properties) -join '|') -cne ($requiredSuggestionProperties -join '|')){throw 'homepage.commandPalette.properties must use the canonical governed suggestion contract in order.'}
+$listMethod=Get-ValueOrDefault $palette.listMethod 'List'
+$listDataProperty=Get-ValueOrDefault $palette.listDataProperty 'Suggestions'
+$paletteView=[ordered]@{
+    name=[string]$palette.viewName
+    smartObject=[string]$palette.smartObject
+    type='capture'
+    properties=@($palette.properties)
+    readOnlyProperties=@($palette.properties)
+    methods=@()
+    defaultListMethod=$listMethod
+    options=@()
     webComponents=@([ordered]@{
-        name=(Get-ValueOrDefault $homepage.controlName 'Northstar Homepage')
-        controlType=[string]$homepage.controlType
+        name=(Get-ValueOrDefault $palette.controlName 'Northstar Command Palette')
+        controlType=[string]$palette.controlType
         replaceBody=$true
-        properties=$homepage.propertiesMap
+        properties=$palette.propertiesMap
+        dataBinding=[ordered]@{property=$listDataProperty;method=$listMethod;serverUserScoped=$true}
+        events=@([ordered]@{name='Navigate';action='navigate';sourceProperty='Value';target='_self'})
     })
 }
-$homepageForm=[ordered]@{
-    name=[string]$homepage.formName
-    useLegacyTheme=$false
-    views=@([string]$homepage.viewName)
-    options=@('no-tabs')
-    viewTitles=[ordered]@{([string]$homepage.viewName)='Northstar'}
-    preFill=[ordered]@{enabled=$false;disabledReason='The Northstar homepage has no user-entry controls; test data is supplied by its governed projection.'}
-}
-$views.Add($homepageView)
-$generatedForms.Add($homepageForm)
+$views.Add($paletteView);$formViews.Add([string]$palette.viewName);$titles[[string]$palette.viewName]='Command palette'
 $summary=$mappingDocument.dashboard.summary;$cards=[Collections.Generic.List[object]]::new();$props=[Collections.Generic.List[string]]::new()
 foreach($binding in @($summary.components)){if(-not $components.ContainsKey([string]$binding.id)){throw "Unknown UX component mapping: $($binding.id)"};$c=$components[[string]$binding.id];$props.Add([string]$binding.property);$cards.Add([ordered]@{property=$binding.property;label=(Get-ValueOrDefault $binding.label $c.id);tone=(Get-ValueOrDefault $binding.tone 'neutral');explanation=(Get-ValueOrDefault $c.explanation '')})}
 $views.Add([ordered]@{name=$summary.viewName;smartObject=$summary.smartObject;type='capture';properties=@($props);methods=@();defaultListMethod='List';options=@();metricCards=@($cards)});$formViews.Add($summary.viewName);$titles[$summary.viewName]='Operational position'
 foreach($binding in @($mappingDocument.dashboard.charts)){if(-not $components.ContainsKey([string]$binding.component)){throw "Unknown UX chart mapping: $($binding.component)"};$c=$components[[string]$binding.component];$chartType=if($binding.type){$binding.type}elseif($c.chart_type -eq 'horizontal-bar'){'bar'}else{$c.chart_type};$chart=[ordered]@{name=(ConvertTo-ControlName 'cht' ([string]$binding.component));title=(Get-ValueOrDefault $binding.title $binding.component);type=$chartType;categoryProperty=$binding.categoryProperty;valueProperty=$binding.valueProperty;height=(Get-ValueOrDefault $binding.height 260);showLegend=[bool](Get-ValueOrDefault $binding.showLegend $false);showLabels=[bool](Get-ValueOrDefault $binding.showLabels $true);emptyState=(Get-ValueOrDefault $c.empty_state 'No data to display.')};$dataViewName=Get-ValueOrDefault $binding.tableViewName ([string]$binding.viewName+' Data');$views.Add([ordered]@{name=$binding.viewName;smartObject=$binding.smartObject;type='capture';properties=@($binding.categoryProperty,$binding.valueProperty);methods=@();defaultListMethod='List';options=@();charts=@($chart)});$views.Add([ordered]@{name=$dataViewName;smartObject=$binding.smartObject;type='list';properties=@($binding.categoryProperty,$binding.valueProperty);methods=@();defaultListMethod='List';options=@('toolbar')});$formViews.Add($binding.viewName);$formViews.Add($dataViewName);$titles[$binding.viewName]=$chart.title;$titles[$dataViewName]=($chart.title+' data')}
 foreach($binding in @($mappingDocument.dashboard.queues)){if(-not $components.ContainsKey([string]$binding.component)){throw "Unknown UX queue mapping: $($binding.component)"};$views.Add([ordered]@{name=$binding.viewName;smartObject=$binding.smartObject;type='list';properties=@($binding.properties);methods=@();defaultListMethod='List';options=@('toolbar')});$formViews.Add($binding.viewName);$titles[$binding.viewName]=(Get-ValueOrDefault $binding.title $binding.component)}
-$dashboardForm=[ordered]@{name=$mappingDocument.dashboard.formName;useLegacyTheme=$false;views=@($formViews);options=@('no-tabs');viewTitles=$titles}
+$dashboardForm=[ordered]@{name=$mappingDocument.dashboard.formName;useLegacyTheme=$false;views=@($formViews);options=@('no-tabs');viewTitles=$titles;preFill=[ordered]@{enabled=$false;disabledReason='The native Northstar homepage is read-only; test data is supplied by governed SmartObject projections.'}}
 $generatedForms.Add($dashboardForm);$reportViewNames=@()
 if($null -ne $mappingDocument.reports){
     $reports=$mappingDocument.reports;$reportTitles=[ordered]@{};$reportViewsByGroup=[ordered]@{}

@@ -9,15 +9,97 @@
   "application": {
     "rootCategoryPath": "K2 Skills\\SNC.Supplier Nonconformance",
     "theme": "Lithium",
-    "styleProfile": "PSF UX v1",
+    "styleProfile": "Northstar Native Homepage",
     "solutionCode": "SNC",
     "replaceExisting": true,
     "checkIn": true,
     "views": [
       {
+        "name": "SNC.Application Navigation",
+        "smartObject": "SNC_SupplierNonconformance_SNC_ApplicationNavigation",
+        "type": "list",
+        "properties": [
+          "NavigationCode",
+          "SectionLabel",
+          "Label",
+          "IconToken",
+          "TargetFormName",
+          "SortOrder",
+          "IsActive",
+          "ConfigurationVersion"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": []
+      },
+      {
+        "name": "SNC.Command Palette",
+        "smartObject": "SNC_SupplierNonconformance_SNC_CommandSuggestion",
+        "type": "capture",
+        "properties": [
+          "SuggestionCode",
+          "Kind",
+          "Title",
+          "Subtitle",
+          "IconToken",
+          "TargetUrl",
+          "SortOrder",
+          "IsActive",
+          "ConfigurationVersion"
+        ],
+        "readOnlyProperties": [
+          "SuggestionCode",
+          "Kind",
+          "Title",
+          "Subtitle",
+          "IconToken",
+          "TargetUrl",
+          "SortOrder",
+          "IsActive",
+          "ConfigurationVersion"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
+        "webComponents": [
+          {
+            "name": "Northstar Command Palette",
+            "controlType": "northstar-command-palette",
+            "replaceBody": true,
+            "properties": {
+              "Value": "",
+              "Suggestions": "[]",
+              "SearchUrlTemplate": "/Runtime/Runtime/Form/SNC.Case%20Management?q={query}",
+              "Placeholder": "Search cases, work and reports",
+              "Width": "100%",
+              "Height": "48px",
+              "TagName": "northstar-command-palette",
+              "RuntimeScriptFileNames": "northstar-command-runtime.js",
+              "DesigntimeScriptFileNames": "northstar-command-designtime.js",
+              "RuntimeStyleFileNames": "northstar-command-runtime.css",
+              "DesigntimeStyleFileNames": "northstar-command-designtime.css",
+              "Icon": "northstar-command-icon.svg"
+            },
+            "dataBinding": {
+              "property": "Suggestions",
+              "method": "List",
+              "serverUserScoped": true
+            },
+            "events": [
+              {
+                "name": "Navigate",
+                "action": "navigate",
+                "sourceProperty": "Value",
+                "target": "_self"
+              }
+            ]
+          }
+        ]
+      },
+      {
         "name": "SNC.Operations KPIs",
         "smartObject": "SNC_SupplierNonconformance_SNC_DashboardSummary",
-        "type": "list",
+        "type": "capture",
         "properties": [
           "OpenCaseCount",
           "SLAAtRiskCount",
@@ -26,9 +108,7 @@
         ],
         "methods": [],
         "defaultListMethod": "List",
-        "options": [
-          "toolbar"
-        ],
+        "options": [],
         "metricCards": [
           {
             "property": "OpenCaseCount",
@@ -59,16 +139,14 @@
       {
         "name": "SNC.Open Cases by Stage",
         "smartObject": "SNC_SupplierNonconformance_SNC_DashboardCasesByStage",
-        "type": "list",
+        "type": "capture",
         "properties": [
           "StageLabel",
           "CaseCount"
         ],
         "methods": [],
         "defaultListMethod": "List",
-        "options": [
-          "toolbar"
-        ],
+        "options": [],
         "charts": [
           {
             "name": "chtCasesByStage",
@@ -84,18 +162,30 @@
         ]
       },
       {
-        "name": "SNC.Case Intake Trend",
-        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardIntakeTrend",
+        "name": "SNC.Open Cases by Stage Data",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardCasesByStage",
         "type": "list",
         "properties": [
-          "PeriodLabel",
+          "StageLabel",
           "CaseCount"
         ],
         "methods": [],
         "defaultListMethod": "List",
         "options": [
           "toolbar"
+        ]
+      },
+      {
+        "name": "SNC.Case Intake Trend",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardIntakeTrend",
+        "type": "capture",
+        "properties": [
+          "PeriodLabel",
+          "CaseCount"
         ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
         "charts": [
           {
             "name": "chtIntakeTrend",
@@ -111,19 +201,266 @@
         ]
       },
       {
+        "name": "SNC.Case Intake Trend Data",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardIntakeTrend",
+        "type": "list",
+        "properties": [
+          "PeriodLabel",
+          "CaseCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [
+          "toolbar"
+        ]
+      },
+      {
         "name": "SNC.Urgent Work",
         "smartObject": "SNC_SupplierNonconformance_SNC_DashboardUrgentWork",
         "type": "list",
         "properties": [
-          "CaseId",
           "CaseNumber",
           "Title",
           "SupplierName",
           "CurrentStageCode",
           "RiskCode",
           "OwnerFQN",
+          "TargetDate",
+          "SLAStatus"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [
+          "toolbar"
+        ]
+      },
+      {
+        "name": "SNC.Backlog Aging",
+        "smartObject": "SNC_SupplierNonconformance_SNC_ReportBacklogAging",
+        "type": "capture",
+        "properties": [
+          "AgingBucket",
+          "CaseCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
+        "charts": [
+          {
+            "name": "chtSNCBacklogAging",
+            "title": "Backlog and aging",
+            "type": "column",
+            "categoryProperty": "AgingBucket",
+            "valueProperty": "CaseCount",
+            "height": 250,
+            "showLegend": false,
+            "showLabels": true,
+            "emptyState": "No report data to display."
+          }
+        ]
+      },
+      {
+        "name": "SNC.Backlog Aging Data",
+        "smartObject": "SNC_SupplierNonconformance_SNC_ReportBacklogAging",
+        "type": "list",
+        "properties": [
+          "AgingBucket",
+          "CaseCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [
+          "toolbar"
+        ]
+      },
+      {
+        "name": "SNC.SLA Performance",
+        "smartObject": "SNC_SupplierNonconformance_SNC_ReportSLAStatus",
+        "type": "capture",
+        "properties": [
           "SLAStatus",
-          "TargetDate"
+          "CaseCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
+        "charts": [
+          {
+            "name": "chtSNCSLAPerformance",
+            "title": "SLA performance",
+            "type": "bar",
+            "categoryProperty": "SLAStatus",
+            "valueProperty": "CaseCount",
+            "height": 250,
+            "showLegend": false,
+            "showLabels": true,
+            "emptyState": "No report data to display."
+          }
+        ]
+      },
+      {
+        "name": "SNC.SLA Performance Data",
+        "smartObject": "SNC_SupplierNonconformance_SNC_ReportSLAStatus",
+        "type": "list",
+        "properties": [
+          "SLAStatus",
+          "CaseCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [
+          "toolbar"
+        ]
+      },
+      {
+        "name": "SNC.Closure Throughput",
+        "smartObject": "SNC_SupplierNonconformance_SNC_ReportClosureThroughput",
+        "type": "capture",
+        "properties": [
+          "PeriodLabel",
+          "ClosedCaseCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
+        "charts": [
+          {
+            "name": "chtSNCClosureThroughput",
+            "title": "Closure throughput",
+            "type": "line",
+            "categoryProperty": "PeriodLabel",
+            "valueProperty": "ClosedCaseCount",
+            "height": 250,
+            "showLegend": false,
+            "showLabels": true,
+            "emptyState": "No report data to display."
+          }
+        ]
+      },
+      {
+        "name": "SNC.Closure Throughput Data",
+        "smartObject": "SNC_SupplierNonconformance_SNC_ReportClosureThroughput",
+        "type": "list",
+        "properties": [
+          "PeriodLabel",
+          "ClosedCaseCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [
+          "toolbar"
+        ]
+      },
+      {
+        "name": "SNC.CAPA Effectiveness",
+        "smartObject": "SNC_SupplierNonconformance_SNC_ReportCorrectiveActionStatus",
+        "type": "capture",
+        "properties": [
+          "ActionStatus",
+          "ActionCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
+        "charts": [
+          {
+            "name": "chtSNCCAPAEffectiveness",
+            "title": "Corrective action status",
+            "type": "bar",
+            "categoryProperty": "ActionStatus",
+            "valueProperty": "ActionCount",
+            "height": 250,
+            "showLegend": false,
+            "showLabels": true,
+            "emptyState": "No report data to display."
+          }
+        ]
+      },
+      {
+        "name": "SNC.CAPA Effectiveness Data",
+        "smartObject": "SNC_SupplierNonconformance_SNC_ReportCorrectiveActionStatus",
+        "type": "list",
+        "properties": [
+          "ActionStatus",
+          "ActionCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [
+          "toolbar"
+        ]
+      },
+      {
+        "name": "SNC.Case Outcomes",
+        "smartObject": "SNC_SupplierNonconformance_SNC_ReportCaseOutcomes",
+        "type": "capture",
+        "properties": [
+          "OutcomeLabel",
+          "CaseCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
+        "charts": [
+          {
+            "name": "chtSNCCaseOutcomes",
+            "title": "Case outcomes",
+            "type": "bar",
+            "categoryProperty": "OutcomeLabel",
+            "valueProperty": "CaseCount",
+            "height": 250,
+            "showLegend": false,
+            "showLabels": true,
+            "emptyState": "No report data to display."
+          }
+        ]
+      },
+      {
+        "name": "SNC.Case Outcomes Data",
+        "smartObject": "SNC_SupplierNonconformance_SNC_ReportCaseOutcomes",
+        "type": "list",
+        "properties": [
+          "OutcomeLabel",
+          "CaseCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [
+          "toolbar"
+        ]
+      },
+      {
+        "name": "SNC.Supplier Recurrence",
+        "smartObject": "SNC_SupplierNonconformance_SNC_ReportSupplierRecurrence",
+        "type": "capture",
+        "properties": [
+          "SupplierName",
+          "CaseCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
+        "charts": [
+          {
+            "name": "chtSNCSupplierRecurrence",
+            "title": "Supplier recurrence",
+            "type": "bar",
+            "categoryProperty": "SupplierName",
+            "valueProperty": "CaseCount",
+            "height": 250,
+            "showLegend": false,
+            "showLabels": true,
+            "emptyState": "No report data to display."
+          }
+        ]
+      },
+      {
+        "name": "SNC.Supplier Recurrence Data",
+        "smartObject": "SNC_SupplierNonconformance_SNC_ReportSupplierRecurrence",
+        "type": "list",
+        "properties": [
+          "SupplierName",
+          "CaseCount"
         ],
         "methods": [],
         "defaultListMethod": "List",
@@ -137,32 +474,161 @@
         "name": "SNC.Quality Operations",
         "useLegacyTheme": false,
         "views": [
+          "SNC.Application Navigation",
+          "SNC.Command Palette",
           "SNC.Operations KPIs",
           "SNC.Open Cases by Stage",
+          "SNC.Open Cases by Stage Data",
           "SNC.Case Intake Trend",
+          "SNC.Case Intake Trend Data",
           "SNC.Urgent Work"
         ],
         "options": [
           "no-tabs"
         ],
         "viewTitles": {
+          "SNC.Application Navigation": "Application navigation",
+          "SNC.Command Palette": "Command palette",
           "SNC.Operations KPIs": "Operational position",
           "SNC.Open Cases by Stage": "Open cases by stage",
+          "SNC.Open Cases by Stage Data": "Open cases by stage data",
           "SNC.Case Intake Trend": "Case intake trend",
+          "SNC.Case Intake Trend Data": "Case intake trend data",
           "SNC.Urgent Work": "Urgent work"
+        },
+        "preFill": {
+          "enabled": false,
+          "disabledReason": "The native Northstar homepage is read-only; test data is supplied by governed SmartObject projections."
         }
+      },
+      {
+        "name": "SNC.Reports",
+        "useLegacyTheme": false,
+        "views": [
+          "SNC.Backlog Aging",
+          "SNC.Backlog Aging Data",
+          "SNC.SLA Performance",
+          "SNC.SLA Performance Data",
+          "SNC.Closure Throughput",
+          "SNC.Closure Throughput Data",
+          "SNC.CAPA Effectiveness",
+          "SNC.CAPA Effectiveness Data",
+          "SNC.Case Outcomes",
+          "SNC.Case Outcomes Data",
+          "SNC.Supplier Recurrence",
+          "SNC.Supplier Recurrence Data"
+        ],
+        "viewTitles": {
+          "SNC.Backlog Aging": "Backlog and aging",
+          "SNC.Backlog Aging Data": "Backlog and aging data",
+          "SNC.SLA Performance": "SLA performance",
+          "SNC.SLA Performance Data": "SLA performance data",
+          "SNC.Closure Throughput": "Closure throughput",
+          "SNC.Closure Throughput Data": "Closure throughput data",
+          "SNC.CAPA Effectiveness": "Corrective action status",
+          "SNC.CAPA Effectiveness Data": "Corrective action status data",
+          "SNC.Case Outcomes": "Case outcomes",
+          "SNC.Case Outcomes Data": "Case outcomes data",
+          "SNC.Supplier Recurrence": "Supplier recurrence",
+          "SNC.Supplier Recurrence Data": "Supplier recurrence data"
+        },
+        "tabs": [
+          {
+            "name": "Operations",
+            "views": [
+              "SNC.Backlog Aging",
+              "SNC.Backlog Aging Data",
+              "SNC.SLA Performance",
+              "SNC.SLA Performance Data"
+            ]
+          },
+          {
+            "name": "Performance",
+            "views": [
+              "SNC.Closure Throughput",
+              "SNC.Closure Throughput Data",
+              "SNC.CAPA Effectiveness",
+              "SNC.CAPA Effectiveness Data"
+            ]
+          },
+          {
+            "name": "Quality",
+            "views": [
+              "SNC.Case Outcomes",
+              "SNC.Case Outcomes Data",
+              "SNC.Supplier Recurrence",
+              "SNC.Supplier Recurrence Data"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "SNC.My Work",
+        "useLegacyTheme": false,
+        "views": [
+          "SNC.Urgent Work"
+        ],
+        "viewTitles": {
+          "SNC.Urgent Work": "Urgent cases needing attention"
+        },
+        "tabs": [
+          {
+            "name": "My Tasks",
+            "worklist": {
+              "rows": 20,
+              "refreshIntervalSeconds": 120,
+              "showToolbar": true,
+              "showFilter": true,
+              "showSearch": false,
+              "enableSearch": true,
+              "height": "445px",
+              "openTaskInNewWindow": true,
+              "actions": [
+                "viewWorkflow",
+                "sleep",
+                "redirect",
+                "release",
+                "share"
+              ]
+            }
+          },
+          {
+            "name": "Urgent Team Work",
+            "views": [
+              "SNC.Urgent Work"
+            ]
+          }
+        ]
       }
     ]
   },
   "verification": {
     "expectedViews": [
+      "SNC.Application Navigation",
+      "SNC.Command Palette",
       "SNC.Operations KPIs",
       "SNC.Open Cases by Stage",
+      "SNC.Open Cases by Stage Data",
       "SNC.Case Intake Trend",
-      "SNC.Urgent Work"
+      "SNC.Case Intake Trend Data",
+      "SNC.Urgent Work",
+      "SNC.Backlog Aging",
+      "SNC.Backlog Aging Data",
+      "SNC.SLA Performance",
+      "SNC.SLA Performance Data",
+      "SNC.Closure Throughput",
+      "SNC.Closure Throughput Data",
+      "SNC.CAPA Effectiveness",
+      "SNC.CAPA Effectiveness Data",
+      "SNC.Case Outcomes",
+      "SNC.Case Outcomes Data",
+      "SNC.Supplier Recurrence",
+      "SNC.Supplier Recurrence Data"
     ],
     "expectedForms": [
-      "SNC.Quality Operations"
+      "SNC.Quality Operations",
+      "SNC.Reports",
+      "SNC.My Work"
     ],
     "smokeTestRuntime": true,
     "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime"

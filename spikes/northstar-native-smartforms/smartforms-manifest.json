@@ -1,0 +1,289 @@
+{
+  "name": "NTH.Northstar Native Verification",
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "application": {
+    "rootCategoryPath": "K2 Skills\\NTH.Northstar Native Verification",
+    "theme": "Lithium",
+    "styleProfile": "Northstar Native Homepage",
+    "solutionCode": "NTH",
+    "replaceExisting": true,
+    "checkIn": true,
+    "views": [
+      {
+        "name": "NTH.Application Navigation",
+        "smartObject": "SNC_SupplierNonconformance_SNC_ApplicationNavigation",
+        "type": "list",
+        "properties": [
+          "NavigationCode",
+          "SectionLabel",
+          "Label",
+          "IconToken",
+          "TargetFormName",
+          "SortOrder",
+          "IsActive",
+          "ConfigurationVersion"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": []
+      },
+      {
+        "name": "NTH.Command Palette",
+        "smartObject": "SNC_SupplierNonconformance_SNC_CommandSuggestion",
+        "type": "capture",
+        "properties": [
+          "SuggestionCode",
+          "Kind",
+          "Title",
+          "Subtitle",
+          "IconToken",
+          "TargetUrl",
+          "SortOrder",
+          "IsActive",
+          "ConfigurationVersion"
+        ],
+        "readOnlyProperties": [
+          "SuggestionCode",
+          "Kind",
+          "Title",
+          "Subtitle",
+          "IconToken",
+          "TargetUrl",
+          "SortOrder",
+          "IsActive",
+          "ConfigurationVersion"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
+        "webComponents": [
+          {
+            "name": "Northstar Command Palette",
+            "controlType": "northstar-command-palette",
+            "replaceBody": true,
+            "properties": {
+              "Value": "",
+              "Suggestions": "[]",
+              "SearchUrlTemplate": "/Runtime/Runtime/Form/SNC.Supplier%20Nonconformance?q={query}",
+              "Placeholder": "Search cases, work and reports",
+              "Width": "100%",
+              "Height": "48px",
+              "TagName": "northstar-command-palette",
+              "RuntimeScriptFileNames": "northstar-command-runtime.js",
+              "DesigntimeScriptFileNames": "northstar-command-designtime.js",
+              "RuntimeStyleFileNames": "northstar-command-runtime.css",
+              "DesigntimeStyleFileNames": "northstar-command-designtime.css",
+              "Icon": "northstar-command-icon.svg"
+            },
+            "dataBinding": {
+              "property": "Suggestions",
+              "method": "List",
+              "serverUserScoped": true
+            },
+            "events": [
+              {
+                "name": "Navigate",
+                "action": "navigate",
+                "sourceProperty": "Value",
+                "target": "_self"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "NTH.Operations KPIs",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardSummary",
+        "type": "capture",
+        "properties": [
+          "OpenCaseCount",
+          "SLAAtRiskCount",
+          "OverdueActionCount",
+          "HighRiskCaseCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
+        "metricCards": [
+          {
+            "property": "OpenCaseCount",
+            "label": "Open cases",
+            "tone": "neutral",
+            "explanation": "Cases not in a terminal state."
+          },
+          {
+            "property": "SLAAtRiskCount",
+            "label": "SLA at risk",
+            "tone": "warning",
+            "explanation": "Open cases approaching or beyond their SLA threshold."
+          },
+          {
+            "property": "OverdueActionCount",
+            "label": "Overdue actions",
+            "tone": "critical",
+            "explanation": "Incomplete corrective actions beyond their due date."
+          },
+          {
+            "property": "HighRiskCaseCount",
+            "label": "High-risk cases",
+            "tone": "critical",
+            "explanation": "Open cases at or above the configured high-risk threshold."
+          }
+        ]
+      },
+      {
+        "name": "NTH.Open Cases by Stage",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardCasesByStage",
+        "type": "capture",
+        "properties": [
+          "StageLabel",
+          "CaseCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
+        "charts": [
+          {
+            "name": "chtCasesByStage",
+            "title": "Open cases by stage",
+            "type": "bar",
+            "categoryProperty": "StageLabel",
+            "valueProperty": "CaseCount",
+            "height": 260,
+            "showLegend": false,
+            "showLabels": true,
+            "emptyState": "No open cases."
+          }
+        ]
+      },
+      {
+        "name": "NTH.Open Cases by Stage Data",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardCasesByStage",
+        "type": "list",
+        "properties": [
+          "StageLabel",
+          "CaseCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [
+          "toolbar"
+        ]
+      },
+      {
+        "name": "NTH.Case Intake Trend",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardIntakeTrend",
+        "type": "capture",
+        "properties": [
+          "PeriodLabel",
+          "CaseCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
+        "charts": [
+          {
+            "name": "chtIntakeTrend",
+            "title": "Case intake trend",
+            "type": "line",
+            "categoryProperty": "PeriodLabel",
+            "valueProperty": "CaseCount",
+            "height": 260,
+            "showLegend": false,
+            "showLabels": true,
+            "emptyState": "No cases in this period."
+          }
+        ]
+      },
+      {
+        "name": "NTH.Case Intake Trend Data",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardIntakeTrend",
+        "type": "list",
+        "properties": [
+          "PeriodLabel",
+          "CaseCount"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [
+          "toolbar"
+        ]
+      },
+      {
+        "name": "NTH.Urgent Work",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardUrgentWork",
+        "type": "list",
+        "properties": [
+          "CaseNumber",
+          "Title",
+          "SupplierName",
+          "CurrentStageCode",
+          "RiskCode",
+          "OwnerFQN",
+          "TargetDate",
+          "SLAStatus"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [
+          "toolbar"
+        ]
+      }
+    ],
+    "forms": [
+      {
+        "name": "NTH.Quality Operations",
+        "useLegacyTheme": false,
+        "views": [
+          "NTH.Application Navigation",
+          "NTH.Command Palette",
+          "NTH.Operations KPIs",
+          "NTH.Open Cases by Stage",
+          "NTH.Open Cases by Stage Data",
+          "NTH.Case Intake Trend",
+          "NTH.Case Intake Trend Data",
+          "NTH.Urgent Work"
+        ],
+        "options": [
+          "no-tabs"
+        ],
+        "viewTitles": {
+          "NTH.Application Navigation": "Application navigation",
+          "NTH.Command Palette": "Command palette",
+          "NTH.Operations KPIs": "Operational position",
+          "NTH.Open Cases by Stage": "Open cases by stage",
+          "NTH.Open Cases by Stage Data": "Open cases by stage data",
+          "NTH.Case Intake Trend": "Case intake trend",
+          "NTH.Case Intake Trend Data": "Case intake trend data",
+          "NTH.Urgent Work": "Urgent work"
+        },
+        "preFill": {
+          "enabled": false,
+          "disabledReason": "The native Northstar homepage is read-only; test data is supplied by governed SmartObject projections."
+        }
+      }
+    ]
+  },
+  "verification": {
+    "expectedViews": [
+      "NTH.Application Navigation",
+      "NTH.Command Palette",
+      "NTH.Operations KPIs",
+      "NTH.Open Cases by Stage",
+      "NTH.Open Cases by Stage Data",
+      "NTH.Case Intake Trend",
+      "NTH.Case Intake Trend Data",
+      "NTH.Urgent Work"
+    ],
+    "expectedForms": [
+      "NTH.Quality Operations"
+    ],
+    "smokeTestRuntime": true,
+    "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime"
+  }
+}

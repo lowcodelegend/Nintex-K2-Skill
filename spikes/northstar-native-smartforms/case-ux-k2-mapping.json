@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "application": {
+    "name": "NTH.Northstar Native Verification",
+    "rootCategoryPath": "K2 Skills\\NTH.Northstar Native Verification",
+    "solutionCode": "NTH",
+    "theme": "Lithium",
+    "styleProfile": "Northstar Native Homepage"
+  },
+  "homepage": {
+    "page": "operations-dashboard",
+    "implementation": "native-smartforms",
+    "navigation": {
+      "viewName": "NTH.Application Navigation",
+      "smartObject": "SNC_SupplierNonconformance_SNC_ApplicationNavigation",
+      "properties": [
+        "NavigationCode", "SectionLabel", "Label", "IconToken",
+        "TargetFormName", "SortOrder", "IsActive", "ConfigurationVersion"
+      ]
+    },
+    "commandPalette": {
+      "viewName": "NTH.Command Palette",
+      "smartObject": "SNC_SupplierNonconformance_SNC_CommandSuggestion",
+      "properties": [
+        "SuggestionCode", "Kind", "Title", "Subtitle", "IconToken",
+        "TargetUrl", "SortOrder", "IsActive", "ConfigurationVersion"
+      ],
+      "controlName": "Northstar Command Palette",
+      "controlType": "northstar-command-palette",
+      "listMethod": "List",
+      "listDataProperty": "Suggestions",
+      "propertiesMap": {
+        "Value": "",
+        "Suggestions": "[]",
+        "SearchUrlTemplate": "/Runtime/Runtime/Form/SNC.Supplier%20Nonconformance?q={query}",
+        "Placeholder": "Search cases, work and reports",
+        "Width": "100%",
+        "Height": "48px",
+        "TagName": "northstar-command-palette",
+        "RuntimeScriptFileNames": "northstar-command-runtime.js",
+        "DesigntimeScriptFileNames": "northstar-command-designtime.js",
+        "RuntimeStyleFileNames": "northstar-command-runtime.css",
+        "DesigntimeStyleFileNames": "northstar-command-designtime.css",
+        "Icon": "northstar-command-icon.svg"
+      }
+    }
+  },
+  "dashboard": {
+    "page": "operations-dashboard",
+    "formName": "NTH.Quality Operations",
+    "summary": {
+      "viewName": "NTH.Operations KPIs",
+      "smartObject": "SNC_SupplierNonconformance_SNC_DashboardSummary",
+      "components": [
+        { "id": "open-cases", "property": "OpenCaseCount", "label": "Open cases", "tone": "neutral" },
+        { "id": "sla-at-risk", "property": "SLAAtRiskCount", "label": "SLA at risk", "tone": "warning" },
+        { "id": "overdue-actions", "property": "OverdueActionCount", "label": "Overdue actions", "tone": "critical" },
+        { "id": "high-risk-cases", "property": "HighRiskCaseCount", "label": "High-risk cases", "tone": "critical" }
+      ]
+    },
+    "charts": [
+      {
+        "component": "cases-by-stage",
+        "viewName": "NTH.Open Cases by Stage",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardCasesByStage",
+        "categoryProperty": "StageLabel",
+        "valueProperty": "CaseCount",
+        "title": "Open cases by stage",
+        "type": "bar"
+      },
+      {
+        "component": "intake-trend",
+        "viewName": "NTH.Case Intake Trend",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardIntakeTrend",
+        "categoryProperty": "PeriodLabel",
+        "valueProperty": "CaseCount",
+        "title": "Case intake trend",
+        "type": "line"
+      }
+    ],
+    "queues": [
+      {
+        "component": "urgent-work",
+        "viewName": "NTH.Urgent Work",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardUrgentWork",
+        "title": "Urgent work",
+        "properties": [
+          "CaseNumber", "Title", "SupplierName", "CurrentStageCode",
+          "RiskCode", "OwnerFQN", "TargetDate", "SLAStatus"
+        ]
+      }
+    ]
+  },
+  "runtimeBaseUrl": "https://spk2.trials.demome.tech/Runtime"
+}

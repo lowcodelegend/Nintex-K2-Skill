@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Northstar command palette harness</title>
+  <style>html,body{margin:0;min-width:320px;min-height:100%;background:#f5f7fa}main{max-width:900px;margin:48px auto;padding:24px}</style>
+</head>
+<body>
+  <main aria-label="Command palette test surface"></main>
+  <script>
+    class K2BaseControl extends HTMLElement {
+      constructor() { super(); this._shadow=null; this._hasRendered=false; }
+      ensureShadow() { if (!this._shadow) this._shadow=this.attachShadow({mode:"open"}); return this._shadow; }
+      connectedCallback() { if (!this._hasRendered) this.render(); }
+      disconnectedCallback() {}
+      attributeChangedCallback(name,oldValue,newValue) {
+        if (name==="controlstyle") this.ControlStyle=newValue;
+        if (name==="name") this.Name=newValue;
+        if (name==="controltype") this.ControlType=newValue;
+      }
+    }
+    window.K2BaseControl=K2BaseControl;
+    window.K2={RaisePropertyChanged(){}};
+    window.SourceCode={Forms:{ControlStyles:{loadStyleResources(control,shadowRoot){
+      const style=document.createElement("style");
+      style.dataset.id="northstar-command-style";
+      style.textContent='@import url("../../k2-case-management/assets/northstar-command-palette/northstar-command-runtime.css");';
+      shadowRoot.append(style);
+      return Promise.resolve();
+    }}}};
+  </script>
+  <script src="../../k2-case-management/assets/northstar-command-palette/northstar-command-runtime.js"></script>
+  <script>
+    const control=document.createElement("northstar-command-palette");
+    control.setAttribute("name","NorthstarCommandPalette");
+    control.setAttribute("controltype","northstar-command-palette");
+    control.Suggestions=[
+      {SuggestionCode:"NAV_CASES",Kind:"Navigation",Title:"All cases",Subtitle:"Cases",IconToken:"folder",TargetUrl:"/Runtime/Runtime/Form/APP.All%20Cases",SortOrder:10,IsActive:true},
+      {SuggestionCode:"CASE_42",Kind:"Case",Title:"NC-0042 — Coating defect",Subtitle:"Apex Components · Investigate",IconToken:"case",TargetUrl:"/Runtime/Runtime/Form/APP.Case%20Workspace?CaseId=42",SortOrder:20,IsActive:true},
+      {SuggestionCode:"TASK_17",Kind:"Task",Title:"Review evidence · NC-0042",Subtitle:"Due today",IconToken:"inbox",TargetUrl:"/Runtime/Runtime/Form/APP.My%20Work",SortOrder:30,IsActive:true}
+    ];
+    control.addEventListener("Navigate",()=>{document.body.dataset.navigateTarget=control.Value;});
+    document.querySelector("main").append(control);
+  </script>
+</body>
+</html>

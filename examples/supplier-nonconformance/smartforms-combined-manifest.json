@@ -660,6 +660,88 @@
         ]
       },
       {
+        "name": "SNC.Application Navigation",
+        "smartObject": "SNC_SupplierNonconformance_SNC_ApplicationNavigation",
+        "type": "list",
+        "properties": [
+          "NavigationCode",
+          "SectionLabel",
+          "Label",
+          "IconToken",
+          "TargetFormName",
+          "SortOrder",
+          "IsActive",
+          "ConfigurationVersion"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": []
+      },
+      {
+        "name": "SNC.Command Palette",
+        "smartObject": "SNC_SupplierNonconformance_SNC_CommandSuggestion",
+        "type": "capture",
+        "properties": [
+          "SuggestionCode",
+          "Kind",
+          "Title",
+          "Subtitle",
+          "IconToken",
+          "TargetUrl",
+          "SortOrder",
+          "IsActive",
+          "ConfigurationVersion"
+        ],
+        "readOnlyProperties": [
+          "SuggestionCode",
+          "Kind",
+          "Title",
+          "Subtitle",
+          "IconToken",
+          "TargetUrl",
+          "SortOrder",
+          "IsActive",
+          "ConfigurationVersion"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
+        "webComponents": [
+          {
+            "name": "Northstar Command Palette",
+            "controlType": "northstar-command-palette",
+            "replaceBody": true,
+            "properties": {
+              "Value": "",
+              "Suggestions": "[]",
+              "SearchUrlTemplate": "/Runtime/Runtime/Form/SNC.Case%20Management?q={query}",
+              "Placeholder": "Search cases, work and reports",
+              "Width": "100%",
+              "Height": "48px",
+              "TagName": "northstar-command-palette",
+              "RuntimeScriptFileNames": "northstar-command-runtime.js",
+              "DesigntimeScriptFileNames": "northstar-command-designtime.js",
+              "RuntimeStyleFileNames": "northstar-command-runtime.css",
+              "DesigntimeStyleFileNames": "northstar-command-designtime.css",
+              "Icon": "northstar-command-icon.svg"
+            },
+            "dataBinding": {
+              "property": "Suggestions",
+              "method": "List",
+              "serverUserScoped": true
+            },
+            "events": [
+              {
+                "name": "Navigate",
+                "action": "navigate",
+                "sourceProperty": "Value",
+                "target": "_self"
+              }
+            ]
+          }
+        ]
+      },
+      {
         "name": "SNC.Operations KPIs",
         "smartObject": "SNC_SupplierNonconformance_SNC_DashboardSummary",
         "type": "capture",
@@ -1195,6 +1277,8 @@
           "SNC.Comments",
           "SNC.Commands",
           "SNC.Corrective Actions",
+          "SNC.Application Navigation",
+          "SNC.Command Palette",
           "SNC.Operations KPIs",
           "SNC.Open Cases by Stage",
           "SNC.Open Cases by Stage Data",
@@ -1233,6 +1317,8 @@
           "SNC.Comments": "Comments",
           "SNC.Commands": "Governed Commands",
           "SNC.Corrective Actions": "Corrective and Preventive Actions",
+          "SNC.Application Navigation": "Application navigation",
+          "SNC.Command Palette": "Command palette",
           "SNC.Operations KPIs": "Operational position",
           "SNC.Open Cases by Stage": "Open cases by stage",
           "SNC.Open Cases by Stage Data": "Open cases by stage data",
@@ -1299,6 +1385,8 @@
           {
             "name": "Analytics",
             "views": [
+              "SNC.Application Navigation",
+              "SNC.Command Palette",
               "SNC.Operations KPIs",
               "SNC.Open Cases by Stage",
               "SNC.Open Cases by Stage Data",
@@ -1469,6 +1557,8 @@
         "name": "SNC.Quality Operations",
         "useLegacyTheme": false,
         "views": [
+          "SNC.Application Navigation",
+          "SNC.Command Palette",
           "SNC.Operations KPIs",
           "SNC.Open Cases by Stage",
           "SNC.Open Cases by Stage Data",
@@ -1480,12 +1570,18 @@
           "no-tabs"
         ],
         "viewTitles": {
+          "SNC.Application Navigation": "Application navigation",
+          "SNC.Command Palette": "Command palette",
           "SNC.Operations KPIs": "Operational position",
           "SNC.Open Cases by Stage": "Open cases by stage",
           "SNC.Open Cases by Stage Data": "Open cases by stage data",
           "SNC.Case Intake Trend": "Case intake trend",
           "SNC.Case Intake Trend Data": "Case intake trend data",
           "SNC.Urgent Work": "Urgent work"
+        },
+        "preFill": {
+          "enabled": false,
+          "disabledReason": "The native Northstar homepage is read-only; test data is supplied by governed SmartObject projections."
         }
       },
       {
@@ -1686,6 +1782,8 @@
       "SNC.Communications",
       "SNC.Commands",
       "SNC.Stage Task",
+      "SNC.Application Navigation",
+      "SNC.Command Palette",
       "SNC.Operations KPIs",
       "SNC.Open Cases by Stage",
       "SNC.Open Cases by Stage Data",

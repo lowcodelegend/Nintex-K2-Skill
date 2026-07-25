@@ -1,0 +1,49 @@
+{
+  "application": {
+    "styleProfile": "Northstar Native Homepage",
+    "views": [
+      {
+        "name": "APP.Application Navigation",
+        "smartObject": "APP_ApplicationNavigation",
+        "type": "list",
+        "properties": [
+          "NavigationCode",
+          "SectionLabel",
+          "Label",
+          "IconToken",
+          "TargetFormName",
+          "SortOrder",
+          "IsActive",
+          "ConfigurationVersion"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": []
+      }
+    ],
+    "forms": [
+      {
+        "name": "APP.Quality Operations",
+        "useLegacyTheme": false,
+        "preFill": { "enabled": false },
+        "views": [
+          "APP.Application Navigation",
+          "APP.Command Palette",
+          "APP.Operations KPIs",
+          "APP.Cases by Stage",
+          "APP.Cases by Stage Data",
+          "APP.Urgent Work"
+        ],
+        "options": [ "no-tabs" ],
+        "viewTitles": {
+          "APP.Application Navigation": "Application navigation",
+          "APP.Command Palette": "Command palette",
+          "APP.Operations KPIs": "Operations overview",
+          "APP.Cases by Stage": "Open cases by stage",
+          "APP.Cases by Stage Data": "Open cases by stage data",
+          "APP.Urgent Work": "Urgent work"
+        }
+      }
+    ]
+  }
+}

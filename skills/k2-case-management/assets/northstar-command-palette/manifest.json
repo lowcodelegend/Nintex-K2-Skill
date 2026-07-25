@@ -1,0 +1,25 @@
+{
+  "displayName": "Northstar Command Palette",
+  "tagName": "northstar-command-palette",
+  "description": "Accessible Northstar Ctrl/Cmd+K command palette over one governed K2 SmartObject projection.",
+  "icon": "northstar-command-icon.svg",
+  "designtimeScriptFileNames": ["northstar-command-designtime.js"],
+  "runtimeScriptFileNames": ["northstar-command-runtime.js"],
+  "designtimeStyleFileNames": ["northstar-command-designtime.css"],
+  "runtimeStyleFileNames": ["northstar-command-runtime.css"],
+  "datatypes": ["Text"],
+  "valuePropertyID": "Value",
+  "supports": ["Value", "Width", "Height", "IsVisible", "IsEnabled", "IsReadOnly", "TabIndex", "ControlExpression", "DataBinding"],
+  "events": [
+    {"id": "Navigate", "displayname": "Navigate"}
+  ],
+  "properties": [
+    {"id": "Value", "friendlyname": "Selected target URL", "type": "string", "initialvalue": "", "changesdisplay": false},
+    {"id": "Suggestions", "friendlyname": "Governed suggestions", "type": "listdata", "initialvalue": "[]", "changesdisplay": true},
+    {"id": "SearchUrlTemplate", "friendlyname": "All Cases search URL template", "type": "string", "initialvalue": "/Runtime/Runtime/Form/All%20Cases?q={query}", "changesdisplay": false},
+    {"id": "Placeholder", "friendlyname": "Search placeholder", "type": "string", "initialvalue": "Search cases, work and reports", "changesdisplay": true},
+    {"id": "Width", "friendlyname": "Width", "type": "string", "initialvalue": "100%", "changesdisplay": true},
+    {"id": "Height", "friendlyname": "Height", "type": "string", "initialvalue": "48px", "changesdisplay": true},
+    {"id": "IsReadOnly", "friendlyname": "Read only", "type": "bool", "initialvalue": false, "changesdisplay": true}
+  ]
+}

@@ -116,6 +116,20 @@ namespace K2SqlCli
                 if (!overrideKeys.Add(item.SmartObject + "\n" + item.Property))
                     throw new CliException("Duplicate SmartObject property type override: " + item.SmartObject + "." + item.Property);
             }
+            var systemMappingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in K2.SmartObjects.SystemValueMappings)
+            {
+                if (item == null) throw new CliException("k2.smartObjects.systemValueMappings cannot contain null entries.");
+                Require(item.SmartObject, "k2.smartObjects.systemValueMappings.smartObject");
+                Require(item.Method, "k2.smartObjects.systemValueMappings.method");
+                Require(item.Target, "k2.smartObjects.systemValueMappings.target");
+                Require(item.Value, "k2.smartObjects.systemValueMappings.value");
+                if (!string.Equals(item.Value, "ConnectedUserFQN", StringComparison.OrdinalIgnoreCase))
+                    throw new CliException("k2.smartObjects.systemValueMappings currently supports only ConnectedUserFQN.");
+                if (!systemMappingKeys.Add(item.SmartObject + "\n" + item.Method + "\n" + item.Target))
+                    throw new CliException("Duplicate SmartObject system-value mapping: " +
+                        item.SmartObject + "." + item.Method + "." + item.Target);
+            }
 
             if (!Regex.IsMatch(K2.ServiceInstance.SystemName, @"^[A-Za-z0-9_.-]+$"))
             {
@@ -518,6 +532,7 @@ namespace K2SqlCli
         public bool UpdateExisting { get; set; }
         public bool DeleteRemoved { get; set; }
         public List<SmartObjectPropertyTypeOverride> PropertyTypeOverrides { get; set; }
+        public List<SmartObjectSystemValueMapping> SystemValueMappings { get; set; }
 
         public SmartObjectGenerationOptions()
         {
@@ -525,6 +540,7 @@ namespace K2SqlCli
             UpdateExisting = true;
             DeleteRemoved = false;
             PropertyTypeOverrides = new List<SmartObjectPropertyTypeOverride>();
+            SystemValueMappings = new List<SmartObjectSystemValueMapping>();
         }
     }
 
@@ -537,6 +553,19 @@ namespace K2SqlCli
         public SmartObjectPropertyTypeOverride()
         {
             Type = "File";
+        }
+    }
+
+    public sealed class SmartObjectSystemValueMapping
+    {
+        public string SmartObject { get; set; }
+        public string Method { get; set; }
+        public string Target { get; set; }
+        public string Value { get; set; }
+
+        public SmartObjectSystemValueMapping()
+        {
+            Value = "ConnectedUserFQN";
         }
     }
 

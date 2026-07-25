@@ -103,25 +103,39 @@ Add one `webComponents` entry to a `capture` View only after its control package
 
 ```json
 "webComponents": [{
-  "name": "Northstar Homepage",
-  "controlType": "northstar-case-homepage",
+  "name": "Northstar Command Palette",
+  "controlType": "northstar-command-palette",
   "replaceBody": true,
   "properties": {
-    "ApplicationName": "Northstar",
-    "UseFullViewport": "true",
+    "Value": "",
+    "Suggestions": "[]",
+    "SearchUrlTemplate": "/Runtime/Runtime/Form/APP.All%20Cases?q={query}",
     "Width": "100%",
-    "Height": "1000px",
-    "TagName": "northstar-case-homepage",
-    "RuntimeScriptFileNames": "northstar-runtime.js",
-    "DesigntimeScriptFileNames": "northstar-designtime.js",
-    "RuntimeStyleFileNames": "northstar-fonts.css,northstar-prototype.css,northstar-host.css",
-    "DesigntimeStyleFileNames": "northstar-designtime.css",
-    "Icon": "northstar-icon.svg"
-  }
+    "Height": "48px",
+    "TagName": "northstar-command-palette",
+    "RuntimeScriptFileNames": "northstar-command-runtime.js",
+    "DesigntimeScriptFileNames": "northstar-command-designtime.js",
+    "RuntimeStyleFileNames": "northstar-command-runtime.css",
+    "DesigntimeStyleFileNames": "northstar-command-designtime.css",
+    "Icon": "northstar-command-icon.svg"
+  },
+  "dataBinding": {
+    "property": "Suggestions",
+    "method": "List",
+    "serverUserScoped": true
+  },
+  "events": [{
+    "name": "Navigate",
+    "action": "navigate",
+    "sourceProperty": "Value",
+    "target": "_self"
+  }]
 }]
 ```
 
-`controlType` is the registered lower-case kebab-case custom element tag. `replaceBody` must be true. Use `new-smartforms-placement.ps1` from the Web Component skill to derive the resource metadata from its source manifest, and keep array fallbacks in the component itself. Verification checks the control type, name, properties, sole-body placement, stored definition, and Designer authoring-model hydration.
+`controlType` is the registered lower-case kebab-case custom element tag. `replaceBody` must be true for the bounded component-host View, not for the whole Form. `dataBinding.property` must be a declared component property, `dataBinding.method` must equal the View's `defaultListMethod`, and `serverUserScoped` must be true. The SmartObject method must receive K2's current-user FQN through a server-side system-value mapping; generated component bindings never send caller identity as a method input. Each event creates a View-owned custom event whose supported `navigate` action reads `sourceProperty`; persistence and workflow actions remain native and outside the control.
+
+Use `new-smartforms-placement.ps1` from the Web Component skill to derive resource metadata from its source manifest, and keep array fallbacks in the component itself. Verification checks the control type, name, properties, sole-body View placement, list association and initialization rule, event action, stored definition, and Designer authoring-model hydration. Full-page Web Components are not the case-management homepage default.
 
 ## Hidden bound properties
 

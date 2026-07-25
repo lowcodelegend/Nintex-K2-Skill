@@ -625,7 +625,7 @@ namespace K2SmartFormsCli
                 .SelectMany(f => f.MasterDetail.Details)
                 .Any(d => string.Equals(d.View, view.Name, StringComparison.OrdinalIgnoreCase));
             ViewLookupDefinition.Verify(definition, view, lookupSources);
-            if (view.WebComponents == null || view.WebComponents.Count == 0)
+            if (!HasSpecializedBodyLayout(view))
                 ViewPresentationDefinition.Verify(definition, view, isMaster, isDetail);
             ViewWebComponentLayoutDefinition.Verify(definition, view);
             var detailRelationships = _manifest.Application.Forms.Where(f => f.MasterDetail != null)
@@ -889,7 +889,7 @@ namespace K2SmartFormsCli
                             string.Equals(f.MasterDetail.Review.View, declaredView.Name, StringComparison.OrdinalIgnoreCase))
                         .Select(f => f.MasterDetail.Review).ToList();
                     var isDetail = detailRelationships.Count > 0;
-                    if (declaredView.WebComponents == null || declaredView.WebComponents.Count == 0)
+                    if (!HasSpecializedBodyLayout(declaredView))
                         ViewPresentationDefinition.Verify(definition, declaredView, isMaster, isDetail);
                     ViewChartLayoutDefinition.Verify(definition, declaredView);
                     ViewMetricCardLayoutDefinition.Verify(definition, declaredView);
@@ -1024,6 +1024,14 @@ namespace K2SmartFormsCli
                 DeleteOwnedValidationPatterns(manager);
                 return 0;
             });
+        }
+
+        private static bool HasSpecializedBodyLayout(ViewDefinition view)
+        {
+            return (view.WebComponents != null && view.WebComponents.Count > 0) ||
+                (view.Charts != null && view.Charts.Count > 0) ||
+                (view.MetricCards != null && view.MetricCards.Count > 0) ||
+                (view.LifecycleTrackers != null && view.LifecycleTrackers.Count > 0);
         }
 
         private static void VerifyDesignerAuthoringHydration(string definition, string name, bool isForm)

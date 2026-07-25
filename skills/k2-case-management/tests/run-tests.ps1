@@ -54,11 +54,15 @@ try {
     & $compiler -Ux $validUx -Mapping $compilerMapping -Output $compiled
     if ($LASTEXITCODE -ne 0) { throw 'Expected canonical UX compilation to pass.' }
     $manifest = Get-Content -Raw -LiteralPath $compiled | ConvertFrom-Json
-    if (@($manifest.application.views).Count -ne 5) { throw 'Compiled UX did not emit the Northstar homepage plus summary, chart, queue, and accessible chart-data Views.' }
-    $homepageView = @($manifest.application.views | Where-Object { $_.name -eq 'TST.Northstar Home' })[0]
-    if ($homepageView.webComponents[0].controlType -ne 'northstar-case-homepage' -or $homepageView.webComponents[0].replaceBody -ne $true) { throw 'Compiled UX did not emit the required full-body Northstar Web Component.' }
-    $homepageForm = @($manifest.application.forms | Where-Object { $_.name -eq 'TST.Northstar Home' })[0]
-    if ($homepageForm.useLegacyTheme -ne $false -or $homepageForm.preFill.enabled -ne $false) { throw 'Northstar homepage Form must use the modern theme and an explicit Pre-fill opt-out.' }
+    if (@($manifest.application.views).Count -ne 6) { throw 'Compiled UX did not emit navigation, command palette, summary, chart, queue, and accessible chart-data Views.' }
+    if (@($manifest.application.views | Where-Object { $null -ne $_.webComponents -and @($_.webComponents | Where-Object controlType -eq 'northstar-case-homepage').Count -gt 0 }).Count -ne 0) { throw 'Compiled UX retained the retired full-page Northstar Web Component.' }
+    $navigationView = @($manifest.application.views | Where-Object { $_.name -eq 'TST.Application Navigation' })[0]
+    if (($navigationView.properties -join '|') -ne 'NavigationCode|SectionLabel|Label|IconToken|TargetFormName|SortOrder|IsActive|ConfigurationVersion') { throw 'Compiled UX did not preserve the canonical navigation projection.' }
+    $paletteView = @($manifest.application.views | Where-Object { $_.name -eq 'TST.Command Palette' })[0]
+    $palette = $paletteView.webComponents[0]
+    if ($palette.controlType -ne 'northstar-command-palette' -or $palette.replaceBody -ne $true) { throw 'Compiled UX did not emit the bounded command-palette Web Component.' }
+    if ($palette.dataBinding.property -ne 'Suggestions' -or $palette.dataBinding.method -ne 'List' -or $palette.dataBinding.serverUserScoped -ne $true) { throw 'Compiled command palette lacks the governed server-user-scoped list binding.' }
+    if ($palette.events[0].name -ne 'Navigate' -or $palette.events[0].sourceProperty -ne 'Value') { throw 'Compiled command palette lacks the native Navigate event contract.' }
     $summaryView = @($manifest.application.views | Where-Object { $_.name -eq 'TST.Operations KPIs' })[0]
     if ($summaryView.type -ne 'capture') { throw 'Compiled UX metric cards must use a native capture layout.' }
     if (@($summaryView.metricCards).Count -ne 2) { throw 'Compiled UX did not emit both metric cards.' }
@@ -68,7 +72,8 @@ try {
     if ($chartView.charts[0].type -ne 'bar') { throw 'Compiled UX did not translate horizontal-bar to native bar.' }
     if ($chartView.charts[0].showLabels -ne $true) { throw 'Compiled UX did not apply the chart label default.' }
     $dashboardForm = @($manifest.application.forms | Where-Object { $_.name -eq 'TST.Quality Operations' })[0]
-    if ($dashboardForm.views.Count -ne 4) { throw 'Compiled dashboard Form did not compose every emitted View and accessible chart-data alternative.' }
+    if ($dashboardForm.views.Count -ne 6 -or $dashboardForm.views[0] -ne 'TST.Application Navigation' -or $dashboardForm.views[1] -ne 'TST.Command Palette') { throw 'Compiled native homepage did not compose navigation first, palette second, and every native dashboard View.' }
+    if ($dashboardForm.useLegacyTheme -ne $false -or $dashboardForm.preFill.enabled -ne $false) { throw 'Native homepage Form must use the modern theme and an explicit Pre-fill opt-out.' }
 } finally {
     if (Test-Path -LiteralPath $compiled) { Remove-Item -LiteralPath $compiled -Force }
 }
@@ -81,12 +86,12 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Expected base-manifest UX embellishment to pass.' }
     $manifest = Get-Content -Raw -LiteralPath $combined | ConvertFrom-Json
     if ($manifest.name -ne 'TST.Case Workspace') { throw 'UX embellishment did not preserve the base application identity.' }
-    if (@($manifest.application.views).Count -ne 6 -or @($manifest.application.forms).Count -ne 3) { throw 'UX embellishment did not preserve base artifacts and append homepage/dashboard artifacts.' }
+    if (@($manifest.application.views).Count -ne 7 -or @($manifest.application.forms).Count -ne 2) { throw 'UX embellishment did not preserve base artifacts and append the native homepage/dashboard artifacts.' }
     $workspace = @($manifest.application.views | Where-Object { $_.name -eq 'TST.Case Workspace' })[0]
     if ($workspace.lifecycleTrackers[0].property -ne 'CurrentStageCode' -or @($workspace.lifecycleTrackers[0].stages).Count -ne 3) { throw 'UX embellishment did not apply the reusable lifecycle tracker.' }
     $shell = @($manifest.application.forms | Where-Object { $_.name -eq 'TST.Case Management' })[0]
-    if (@($shell.tabs).Count -ne 3 -or $shell.tabs[1].name -ne 'Analytics' -or @($shell.tabs[1].views).Count -ne 4) { throw 'UX embellishment did not insert Analytics before My Tasks.' }
-    if (@($shell.views).Count -ne 5) { throw 'UX embellishment did not compose generated dashboard Views into the shell Form.' }
+    if (@($shell.tabs).Count -ne 3 -or $shell.tabs[1].name -ne 'Analytics' -or @($shell.tabs[1].views).Count -ne 6) { throw 'UX embellishment did not insert the complete native homepage/dashboard before My Tasks.' }
+    if (@($shell.views).Count -ne 7) { throw 'UX embellishment did not compose generated native homepage Views into the shell Form.' }
 } finally {
     if (Test-Path -LiteralPath $combined) { Remove-Item -LiteralPath $combined -Force }
 }

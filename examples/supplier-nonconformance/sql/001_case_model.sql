@@ -30,6 +30,33 @@ WHEN MATCHED THEN UPDATE SET ValueName=s.ValueName,SortOrder=s.SortOrder,IsActiv
 WHEN NOT MATCHED THEN INSERT(LookupType,ValueCode,ValueName,SortOrder) VALUES(s.LookupType,s.ValueCode,s.ValueName,s.SortOrder);
 GO
 
+IF OBJECT_ID(N'SNC.ApplicationNavigation', N'U') IS NULL CREATE TABLE SNC.ApplicationNavigation
+(
+ NavigationCode nvarchar(50) NOT NULL CONSTRAINT PK_SNC_ApplicationNavigation PRIMARY KEY,
+ SectionLabel nvarchar(100) NOT NULL,
+ Label nvarchar(100) NOT NULL,
+ IconToken nvarchar(50) NOT NULL,
+ TargetFormName nvarchar(200) NOT NULL,
+ SortOrder int NOT NULL,
+ IsActive bit NOT NULL CONSTRAINT DF_SNC_ApplicationNavigation_Active DEFAULT(1),
+ ConfigurationVersion nvarchar(30) NOT NULL
+);
+GO
+MERGE SNC.ApplicationNavigation AS target
+USING (VALUES
+ (N'OPERATIONS',N'Workspace',N'Operations',N'home',N'SNC.Quality Operations',10,CONVERT(bit,1),N'1'),
+ (N'MY_WORK',N'Workspace',N'My work',N'inbox',N'SNC.My Work',20,CONVERT(bit,1),N'1'),
+ (N'CASES',N'Cases',N'All cases',N'folder',N'SNC.Supplier Nonconformance',30,CONVERT(bit,1),N'1'),
+ (N'NEW_CASE',N'Cases',N'New nonconformance',N'plus',N'SNC.New Nonconformance',40,CONVERT(bit,1),N'1'),
+ (N'REPORTS',N'Insights',N'Reports',N'chart',N'SNC.Reports',50,CONVERT(bit,1),N'1')
+) AS source(NavigationCode,SectionLabel,Label,IconToken,TargetFormName,SortOrder,IsActive,ConfigurationVersion)
+ON target.NavigationCode=source.NavigationCode
+WHEN MATCHED THEN UPDATE SET SectionLabel=source.SectionLabel,Label=source.Label,IconToken=source.IconToken,
+ TargetFormName=source.TargetFormName,SortOrder=source.SortOrder,IsActive=source.IsActive,ConfigurationVersion=source.ConfigurationVersion
+WHEN NOT MATCHED THEN INSERT(NavigationCode,SectionLabel,Label,IconToken,TargetFormName,SortOrder,IsActive,ConfigurationVersion)
+ VALUES(source.NavigationCode,source.SectionLabel,source.Label,source.IconToken,source.TargetFormName,source.SortOrder,source.IsActive,source.ConfigurationVersion);
+GO
+
 IF OBJECT_ID(N'SNC.SLAProfile', N'U') IS NULL CREATE TABLE SNC.SLAProfile
 (
  SLAProfileId int IDENTITY(1,1) NOT NULL CONSTRAINT PK_SNC_SLAProfile PRIMARY KEY,
@@ -221,6 +248,67 @@ CREATE OR ALTER VIEW SNC.DashboardUrgentWork AS
 SELECT c.CaseId,c.CaseNumber,c.Title,c.CurrentStageCode,c.RiskCode,c.OwnerFQN,c.SLAStatus,c.TargetDate,n.SupplierName
 FROM SNC.[Case] c LEFT JOIN SNC.NonconformanceDetail n ON n.CaseId=c.CaseId
 WHERE c.Status NOT IN (N'Closed',N'Cancelled') AND (c.RiskCode=N'High' OR c.SLAStatus IN (N'AtRisk',N'Breached') OR c.TargetDate<SYSUTCDATETIME());
+GO
+
+CREATE OR ALTER PROCEDURE SNC.CommandSuggestion
+    @UserFQN nvarchar(300)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    ;WITH Suggestions AS
+    (
+        SELECT
+            CONCAT(N'NAV_', NavigationCode) SuggestionCode,
+            N'Navigation' Kind,
+            Label Title,
+            SectionLabel Subtitle,
+            IconToken,
+            CONCAT(N'/Runtime/Runtime/Form/', REPLACE(TargetFormName,N' ',N'%20')) TargetUrl,
+            SortOrder,
+            IsActive,
+            ConfigurationVersion
+        FROM SNC.ApplicationNavigation
+        WHERE IsActive=1
+
+        UNION ALL
+
+        SELECT
+            CONCAT(N'CASE_', CONVERT(nvarchar(20),c.CaseId)),
+            N'Case',
+            CONCAT(c.CaseNumber,N' — ',c.Title),
+            CONCAT(COALESCE(n.SupplierName,N'Unknown supplier'),N' · ',c.CurrentStageCode),
+            N'folder',
+            CONCAT(N'/Runtime/Runtime/Form/SNC.Supplier%20Nonconformance?CaseId=',CONVERT(nvarchar(20),c.CaseId)),
+            1000+ROW_NUMBER() OVER(ORDER BY c.LastUpdatedDate DESC,c.CaseId DESC),
+            CONVERT(bit,1),
+            c.ConfigurationVersion
+        FROM SNC.[Case] c
+        LEFT JOIN SNC.NonconformanceDetail n ON n.CaseId=c.CaseId
+        WHERE c.OwnerFQN=@UserFQN
+
+        UNION ALL
+
+        SELECT
+            CONCAT(N'TASK_',CONVERT(nvarchar(20),t.CaseTaskId)),
+            N'Task',
+            CONCAT(t.TaskTypeCode,N' · ',c.CaseNumber),
+            CONCAT(c.Title,N' · due ',COALESCE(CONVERT(nvarchar(10),t.DueDate,23),N'not set')),
+            N'inbox',
+            N'/Runtime/Runtime/Form/SNC.My%20Work',
+            2000+ROW_NUMBER() OVER(ORDER BY CASE WHEN t.DueDate IS NULL THEN 1 ELSE 0 END,t.DueDate,t.CaseTaskId),
+            CONVERT(bit,1),
+            c.ConfigurationVersion
+        FROM SNC.CaseTask t
+        JOIN SNC.[Case] c ON c.CaseId=t.CaseId
+        WHERE t.AssignedUserFQN=@UserFQN AND t.Status NOT IN (N'Completed',N'Cancelled')
+    )
+    SELECT TOP(50)
+        SuggestionCode,Kind,Title,Subtitle,IconToken,TargetUrl,
+        CONVERT(int,SortOrder) SortOrder,IsActive,ConfigurationVersion
+    FROM Suggestions
+    ORDER BY SortOrder,SuggestionCode;
+END
 GO
 
 CREATE OR ALTER VIEW SNC.ReportBacklogAging AS

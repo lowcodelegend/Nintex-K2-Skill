@@ -28,6 +28,8 @@ Copy `assets/examples/smartobject-sidebar` into the solution workspace. It conta
 
 Treat these as templates. Rename the `APP` prefix, K2 category, physical directory, virtual path, URLs, Forms, SmartObjects, and visual tokens. Keep the runtime/Designer guards, boot state machine, native-source fallback, and test assertions intact unless equivalent protection replaces them.
 
+For the case-management landing page, start from `assets/examples/northstar-native-homepage`. It reuses this governed navigation loader, adds the Northstar native-control visual system, and expects the semantic `Application navigation` View followed by `Command palette` and native dashboard Views. The profile owns presentation only: native K2 controls and View-owned rules continue to own actions, navigation, data, focus, validation, and accessibility. The full-page Northstar Web Component is a comparison oracle, not a production fallback.
+
 ## Navigation contract
 
 Expose a parameterless `List` method with properties in this exact order:

@@ -28,6 +28,8 @@ Do not assume a SQL `DEFAULT` constraint makes a generated SmartObject Create in
 
 After defining the tables, classify every column/check invariant as form-facing or server-only. A form-facing invariant is any rule on a property a user can edit in SmartForms. Declare it in manifest `formConstraints` with the generated SmartObject system name, property, SQL source column, and the same required/length/range/format semantics. Include named checks in `sourceConstraints`. This contract is mandatory even though SQL remains authoritative: the builder uses it to reject a form that would permit invalid input or truncate a bounded string. Hidden identities, workflow status, audit values, derived totals, and procedure-only invariants stay server-only and must be identified as such in the handoff.
 
+For a current-user projection, filter in SQL before returning any rows. Give the stored procedure a bounded `nvarchar` user parameter, map that exact method target to `ConnectedUserFQN` through `k2.smartObjects.systemValueMappings`, and return a deterministic bounded result. Never accept the authoritative user identity from a Form control, URL, Web Component property, or other browser input.
+
 ## SQL-backed K2 File properties
 
 K2's File value is an XML structure containing the file name, MIME/content metadata, and Base64 payload. To persist that native value in the application SQL database:

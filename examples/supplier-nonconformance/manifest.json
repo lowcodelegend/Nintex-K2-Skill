@@ -14,7 +14,17 @@
       "authenticationMode": "service-account", "commandTimeoutSeconds": 30,
       "useNativeSqlExecution": true, "useSqlPaging": false, "encryptConnection": false, "onDifferentSqlServer": false
     },
-    "smartObjects": { "createNew": true, "updateExisting": true, "deleteRemoved": false }
+    "smartObjects": {
+      "createNew": true, "updateExisting": true, "deleteRemoved": false,
+      "systemValueMappings": [
+        {
+          "smartObject": "SNC_SupplierNonconformance_SNC_CommandSuggestion",
+          "method": "List",
+          "target": "UserFQN",
+          "value": "ConnectedUserFQN"
+        }
+      ]
+    }
   },
   "masterDetails": [
     {"name":"SNC.Nonconformance Detail","masterSchema":"SNC","masterTable":"Case","masterKey":"CaseId","detailSchema":"SNC","detailTable":"NonconformanceDetail","detailKey":"NonconformanceDetailId","detailForeignKey":"CaseId","deleteBehavior":"cascade","requireIdentityMasterKey":true,"requireForeignKeyIndex":true},
@@ -31,7 +41,7 @@
   ],
   "verification": {
     "sqlObjects": [
-      {"type":"table","schema":"SNC","name":"LookupValue"},{"type":"table","schema":"SNC","name":"SLAProfile"},{"type":"table","schema":"SNC","name":"CaseType"},{"type":"table","schema":"SNC","name":"StageDefinition"},{"type":"table","schema":"SNC","name":"AllowedTransition"},{"type":"table","schema":"SNC","name":"BusinessRule"},{"type":"table","schema":"SNC","name":"Case"},{"type":"table","schema":"SNC","name":"NonconformanceDetail"},{"type":"table","schema":"SNC","name":"CaseStageInstance"},{"type":"table","schema":"SNC","name":"CaseParty"},{"type":"table","schema":"SNC","name":"EvidenceItem"},{"type":"table","schema":"SNC","name":"CaseTask"},{"type":"table","schema":"SNC","name":"Decision"},{"type":"table","schema":"SNC","name":"Communication"},{"type":"table","schema":"SNC","name":"CaseComment"},{"type":"table","schema":"SNC","name":"CaseRelationship"},{"type":"table","schema":"SNC","name":"CaseCommand"},{"type":"table","schema":"SNC","name":"AIInteraction"},{"type":"table","schema":"SNC","name":"CorrectiveAction"},{"type":"table","schema":"SNC","name":"AuditEvent"},{"type":"view","schema":"SNC","name":"CaseSummary"},{"type":"view","schema":"SNC","name":"DashboardSummary"},{"type":"view","schema":"SNC","name":"DashboardCasesByStage"},{"type":"view","schema":"SNC","name":"DashboardIntakeTrend"},{"type":"view","schema":"SNC","name":"DashboardUrgentWork"},{"type":"view","schema":"SNC","name":"ReportBacklogAging"},{"type":"view","schema":"SNC","name":"ReportSLAStatus"},{"type":"view","schema":"SNC","name":"ReportClosureThroughput"},{"type":"view","schema":"SNC","name":"ReportCorrectiveActionStatus"},{"type":"view","schema":"SNC","name":"ReportCaseOutcomes"},{"type":"view","schema":"SNC","name":"ReportSupplierRecurrence"},{"type":"procedure","schema":"SNC","name":"ResolveCaseLifecycleStage"}
+      {"type":"table","schema":"SNC","name":"LookupValue"},{"type":"table","schema":"SNC","name":"ApplicationNavigation"},{"type":"table","schema":"SNC","name":"SLAProfile"},{"type":"table","schema":"SNC","name":"CaseType"},{"type":"table","schema":"SNC","name":"StageDefinition"},{"type":"table","schema":"SNC","name":"AllowedTransition"},{"type":"table","schema":"SNC","name":"BusinessRule"},{"type":"table","schema":"SNC","name":"Case"},{"type":"table","schema":"SNC","name":"NonconformanceDetail"},{"type":"table","schema":"SNC","name":"CaseStageInstance"},{"type":"table","schema":"SNC","name":"CaseParty"},{"type":"table","schema":"SNC","name":"EvidenceItem"},{"type":"table","schema":"SNC","name":"CaseTask"},{"type":"table","schema":"SNC","name":"Decision"},{"type":"table","schema":"SNC","name":"Communication"},{"type":"table","schema":"SNC","name":"CaseComment"},{"type":"table","schema":"SNC","name":"CaseRelationship"},{"type":"table","schema":"SNC","name":"CaseCommand"},{"type":"table","schema":"SNC","name":"AIInteraction"},{"type":"table","schema":"SNC","name":"CorrectiveAction"},{"type":"table","schema":"SNC","name":"AuditEvent"},{"type":"view","schema":"SNC","name":"CaseSummary"},{"type":"view","schema":"SNC","name":"DashboardSummary"},{"type":"view","schema":"SNC","name":"DashboardCasesByStage"},{"type":"view","schema":"SNC","name":"DashboardIntakeTrend"},{"type":"view","schema":"SNC","name":"DashboardUrgentWork"},{"type":"view","schema":"SNC","name":"ReportBacklogAging"},{"type":"view","schema":"SNC","name":"ReportSLAStatus"},{"type":"view","schema":"SNC","name":"ReportClosureThroughput"},{"type":"view","schema":"SNC","name":"ReportCorrectiveActionStatus"},{"type":"view","schema":"SNC","name":"ReportCaseOutcomes"},{"type":"view","schema":"SNC","name":"ReportSupplierRecurrence"},{"type":"procedure","schema":"SNC","name":"CommandSuggestion"},{"type":"procedure","schema":"SNC","name":"ResolveCaseLifecycleStage"}
     ],
     "queries": [
       {"name":"canonical runtime entities","sql":"SELECT COUNT(*) FROM sys.tables WHERE schema_id=SCHEMA_ID(N'SNC') AND name IN (N'Case',N'CaseStageInstance',N'CaseParty',N'EvidenceItem',N'CaseTask',N'Decision',N'Communication',N'CaseComment',N'CaseRelationship',N'CaseCommand',N'AIInteraction',N'AuditEvent')","expectedScalar":"12"},
@@ -40,8 +50,8 @@
       {"name":"one current stage per case constraint","sql":"SELECT COUNT(*) FROM sys.indexes WHERE object_id=OBJECT_ID(N'SNC.CaseStageInstance') AND name=N'UX_SNC_Stage_Current' AND is_unique=1 AND has_filter=1","expectedScalar":"1"},
       {"name":"verification case exists","sql":"SELECT COUNT(*) FROM SNC.[Case] WHERE CaseNumber=N'SNC-TEST-0001'","expectedScalar":"1"}
     ],
-    "smartObjectServiceObjects": ["SNC-LookupValue","SNC-SLAProfile","SNC-CaseType","SNC-StageDefinition","SNC-AllowedTransition","SNC-BusinessRule","SNC-Case","SNC-NonconformanceDetail","SNC-CaseStageInstance","SNC-CaseParty","SNC-EvidenceItem","SNC-CaseTask","SNC-AIInteraction","SNC-Decision","SNC-Communication","SNC-CaseComment","SNC-CaseRelationship","SNC-CaseCommand","SNC-CorrectiveAction","SNC-AuditEvent","SNC-CaseSummary","SNC-DashboardSummary","SNC-DashboardCasesByStage","SNC-DashboardIntakeTrend","SNC-DashboardUrgentWork","SNC-ReportBacklogAging","SNC-ReportSLAStatus","SNC-ReportClosureThroughput","SNC-ReportCorrectiveActionStatus","SNC-ReportCaseOutcomes","SNC-ReportSupplierRecurrence","SNC-ResolveCaseLifecycleStage"],
-    "minimumGeneratedSmartObjects": 32,
+    "smartObjectServiceObjects": ["SNC-LookupValue","SNC-ApplicationNavigation","SNC-SLAProfile","SNC-CaseType","SNC-StageDefinition","SNC-AllowedTransition","SNC-BusinessRule","SNC-Case","SNC-NonconformanceDetail","SNC-CaseStageInstance","SNC-CaseParty","SNC-EvidenceItem","SNC-CaseTask","SNC-AIInteraction","SNC-Decision","SNC-Communication","SNC-CaseComment","SNC-CaseRelationship","SNC-CaseCommand","SNC-CorrectiveAction","SNC-AuditEvent","SNC-CaseSummary","SNC-DashboardSummary","SNC-DashboardCasesByStage","SNC-DashboardIntakeTrend","SNC-DashboardUrgentWork","SNC-ReportBacklogAging","SNC-ReportSLAStatus","SNC-ReportClosureThroughput","SNC-ReportCorrectiveActionStatus","SNC-ReportCaseOutcomes","SNC-ReportSupplierRecurrence","SNC-CommandSuggestion","SNC-ResolveCaseLifecycleStage"],
+    "minimumGeneratedSmartObjects": 34,
     "smokeTestListMethods": true
   }
 }

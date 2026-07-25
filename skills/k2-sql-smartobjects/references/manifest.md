@@ -174,6 +174,23 @@ Use `k2.smartObjects.propertyTypeOverrides` to publish a SQL `varchar(max)` payl
 }
 ```
 
+Use `k2.smartObjects.systemValueMappings` to make a generated method input server-owned:
+
+```json
+"smartObjects": {
+  "createNew": true,
+  "updateExisting": true,
+  "systemValueMappings": [{
+    "smartObject": "APP_CommandSuggestion",
+    "method": "List",
+    "target": "UserFQN",
+    "value": "ConnectedUserFQN"
+  }]
+}
+```
+
+The target must be a Text service parameter or property on the exact generated method. The CLI replaces its caller mapping with K2's `ConnectedUserFQN`, removes any top-level caller-visible input/required property, republishes the SmartObject, and verifies the live definition. Currently `ConnectedUserFQN` is the only supported system value.
+
 Only `File` is supported. Deployment fails unless the exact SmartObject belongs to the managed SQL Service Instance and every underlying service mapping for the property is `System.String` over SQL `varchar(max)`. The override is reapplied after every Service Instance refresh/generation and runtime verification proves the exposed property type. Use one attachment row per file when multiple files are required.
 
 ## Verification fields

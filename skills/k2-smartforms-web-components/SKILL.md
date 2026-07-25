@@ -41,15 +41,17 @@ Require Nintex Automation K2 5.9 or later. Confirm the target server exposes Man
 - Runtime failures must render an accessible bounded error state and preserve a native recovery path.
 - Web Component packages are separate deployment dependencies. Do not assume ordinary K2 Package and Deployment owns their promotion.
 
-## Northstar case homepage
+## Northstar command palette
 
-The canonical case-management homepage is [the Northstar Web Component source](../k2-case-management/assets/northstar-case-homepage). It is a full-viewport product shell used only when the native SmartForms surface cannot meet the accepted Northstar contract. Its default data is demonstrative; production builds bind a governed dashboard projection and K2 navigation rules.
+The canonical case-management homepage is native SmartForms styled by the Northstar Style Profile. Its only required Web Component is [the bounded command palette](../k2-case-management/assets/northstar-command-palette), used for the keyboard-first search/command interaction that native controls cannot reproduce cleanly. The older [full-page source](../k2-case-management/assets/northstar-case-homepage) is a temporary visual oracle and must not be placed in new production Forms.
 
-Keep its stable event contract:
+Keep the palette contract:
 
-- `Navigate`: `Value` is a compact JSON command containing a route and optional record key.
-- `CreateCase`: starts the native case-initiation navigation rule.
-- `Search`: opens the native search/command path.
-- `RefreshRequested`: reloads the bound projection through a View-owned rule.
+- one `Suggestions` `listdata` property bound to a deterministic, maximum-50-row governed projection;
+- server-side `ConnectedUserFQN` mapping so authorization does not depend on browser input;
+- `Navigate` emits the safe same-origin target stored in `Value`;
+- a View-owned K2 rule performs the actual navigation;
+- Ctrl/Cmd+K, arrow keys, Enter, Escape, focus restoration, live result count, and an accessible empty state;
+- an unmatched query opens the native All Cases search while preserving the encoded query.
 
-The component may present charts, ranked work, navigation, search, and shell chrome, but native Views/Forms remain the owner of SmartObject methods, workflow actions, security, validation, and persistence.
+Native Views/Forms remain the owner of SmartObject calls, navigation actions, workflow actions, security, validation, and persistence. Do not add charts, navigation chrome, KPIs, queues, or page layout to the palette.

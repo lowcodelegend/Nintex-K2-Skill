@@ -71,6 +71,7 @@
     <Compile Include="Manifest.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="RuntimeAssemblyResolver.cs" />
+    <Compile Include="SelfTests.cs" />
     <Compile Include="SqlDeployer.cs" />
   </ItemGroup>
   <ItemGroup>

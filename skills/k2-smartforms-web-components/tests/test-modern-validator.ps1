@@ -6,8 +6,10 @@ $skillRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $validator = Join-Path $skillRoot 'scripts\validate-control.ps1'
 $scaffolder = Join-Path $skillRoot 'scripts\scaffold-control.ps1'
 $northstar = [IO.Path]::GetFullPath((Join-Path $skillRoot '..\k2-case-management\assets\northstar-case-homepage'))
+$palette = [IO.Path]::GetFullPath((Join-Path $skillRoot '..\k2-case-management\assets\northstar-command-palette'))
 
 & $validator -Source $northstar
+& $validator -Source $palette
 $prototypeCss = [IO.Path]::GetFullPath((Join-Path $skillRoot '..\..\examples\supplier-nonconformance\gold-standard-prototype\styles.css'))
 $componentCss = Join-Path $northstar 'northstar-prototype.css'
 $prototypeHash = (Get-FileHash -LiteralPath $prototypeCss -Algorithm SHA256).Hash
@@ -18,6 +20,24 @@ if ($prototypeHash -cne $componentHash) {
 $runtimeSource = Get-Content -Raw -LiteralPath (Join-Path $northstar 'northstar-runtime.js')
 if ($runtimeSource -match 'K2\.RaiseEvent' -or $runtimeSource -notmatch 'SourceCode\.Forms\.ControlStyles') {
   throw 'Northstar runtime does not use the verified modern K2 event/style APIs.'
+}
+
+$paletteSource = Get-Content -Raw -LiteralPath (Join-Path $palette 'northstar-command-runtime.js')
+foreach ($required in @(
+  'slice(0, 50)',
+  'dispatchEvent(new Event("Navigate"))',
+  'String(event.key).toLowerCase() === "k"',
+  'parsed.origin !== window.location.origin',
+  'textContent =',
+  'role", "dialog"',
+  'aria-live'
+)) {
+  if ($paletteSource -notmatch [regex]::Escape($required)) {
+    throw "Northstar command palette is missing required runtime contract: $required"
+  }
+}
+if ($paletteSource -match '\.innerHTML\s*=') {
+  throw 'Northstar command palette writes live content through innerHTML.'
 }
 
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('k2-modern-control-test-' + [guid]::NewGuid())
@@ -42,4 +62,4 @@ try {
   }
 }
 
-Write-Output "Modern-only validator and byte-exact Northstar CSS fidelity tests: PASS ($prototypeHash)"
+Write-Output "Modern-only validator, bounded command-palette, and byte-exact Northstar oracle CSS tests: PASS ($prototypeHash)"

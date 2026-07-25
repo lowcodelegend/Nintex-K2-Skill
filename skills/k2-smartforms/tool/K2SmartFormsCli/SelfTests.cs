@@ -38,20 +38,41 @@ namespace K2SmartFormsCli
             var view = new ViewDefinition { Name = "Northstar Home", Type = "capture" };
             view.WebComponents.Add(new ViewWebComponentDefinition
             {
-                Name = "Northstar Homepage",
-                ControlType = "northstar-case-homepage",
+                Name = "Northstar Command Palette",
+                ControlType = "northstar-command-palette",
                 ReplaceBody = true,
                 Properties = new Dictionary<string, string>
                 {
-                    { "ApplicationName", "Northstar" },
-                    { "UseFullViewport", "true" }
+                    { "Suggestions", "[]" },
+                    { "Value", "" },
+                    { "TagName", "northstar-command-palette" },
+                    { "RuntimeScriptFileNames", "northstar-command-runtime.js" },
+                    { "DesigntimeScriptFileNames", "northstar-command-designtime.js" }
+                },
+                DataBinding = new ViewWebComponentDataBindingDefinition
+                {
+                    Property = "Suggestions",
+                    Method = "List",
+                    ServerUserScoped = true
+                },
+                Events = new List<ViewWebComponentEventDefinition>
+                {
+                    new ViewWebComponentEventDefinition
+                    {
+                        Name = "Navigate",
+                        Action = "navigate",
+                        SourceProperty = "Value",
+                        Target = "_self"
+                    }
                 }
             });
             var xml = "<Views><View ID='" + Guid.NewGuid() + "'><Name>Northstar Home</Name><DisplayName>Northstar Home</DisplayName>" +
                 "<Controls><Control ID='view-control' Type='View'/><Control ID='table-control' Type='Table'/></Controls>" +
                 "<Canvas><Sections><Section ID='toolbar' Type='ToolBar'><Control ID='toolbar-table'/></Section>" +
                 "<Section ID='body' Type='Body'><Control ID='table-control'><Rows/></Control></Section></Sections></Canvas>" +
-                "<Sources/><Events/></View></Views>";
+                "<Sources><Source ID='source' SourceID='11111111-1111-1111-1111-111111111111' SourceName='NorthstarSuggestions' SourceDisplayName='Northstar Suggestions' SourceType='Object' ContextType='Primary'><Fields>" +
+                "<Field ID='suggestion-code' Type='ObjectProperty' DataType='Text'><Name>NorthstarSuggestions.SuggestionCode</Name><FieldName>SuggestionCode</FieldName><FieldDisplayName>Suggestion code</FieldDisplayName></Field>" +
+                "</Fields></Source></Sources><Events/></View></Views>";
             var transformed = ViewWebComponentLayoutDefinition.Apply(xml, view);
             ViewWebComponentLayoutDefinition.Verify(transformed, view);
             var document = XDocument.Parse(transformed);
@@ -59,8 +80,28 @@ namespace K2SmartFormsCli
                 (string)document.Descendants("Section").Single().Attribute("Type") == "Body",
                 "Web Component removes generated toolbar placement");
             Assert(document.Descendants("Control").Count(control =>
-                (string)control.Attribute("Type") == "northstar-case-homepage") == 1,
+                (string)control.Attribute("Type") == "northstar-command-palette") == 1,
                 "Web Component is represented by its registered custom-element type");
+            var custom = document.Descendants("Control").Single(control =>
+                (string)control.Attribute("Type") == "northstar-command-palette");
+            var customId = (string)custom.Attribute("ID");
+            Assert(document.Descendants("Source").Count(source =>
+                (string)source.Attribute("ContextType") == "Association" &&
+                (string)source.Attribute("ContextID") == customId) == 1,
+                "Web Component has one Designer-hydratable SmartObject association");
+            var fieldIds = document.Descendants("Field").Where(field => field.Attribute("ID") != null)
+                .Select(field => ((string)field.Attribute("ID")).ToLowerInvariant()).ToList();
+            Assert(fieldIds.Count == fieldIds.Distinct().Count(),
+                "Web Component SmartObject association has unique View Field IDs");
+            Assert(document.Descendants("Event").Count(rule =>
+                (string)rule.Attribute("SourceID") == customId &&
+                (string)rule.Element("Name") == "Initializing") == 1,
+                "Web Component has one list-data initialization rule");
+            Assert(document.Descendants("Event").Count(rule =>
+                (string)rule.Attribute("SourceID") == customId &&
+                (string)rule.Element("Name") == "Navigate" &&
+                rule.Descendants("Action").Any(action => (string)action.Attribute("Type") == "Navigate")) == 1,
+                "Web Component event drives one native Navigate action");
         }
 
         private static void TestIdentityNormalization()

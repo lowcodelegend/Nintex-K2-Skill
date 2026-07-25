@@ -255,6 +255,33 @@ namespace K2SmartFormsCli
                     if (control.Properties == null) control.Properties = new Dictionary<string, string>();
                     if (control.Properties.Keys.Any(string.IsNullOrWhiteSpace))
                         throw new CliException("View '" + view.Name + "' Web Component properties contains an empty name.");
+                    if (control.DataBinding != null)
+                    {
+                        Require(control.DataBinding.Property, "view.webComponents.dataBinding.property");
+                        Require(control.DataBinding.Method, "view.webComponents.dataBinding.method");
+                        if (!control.DataBinding.ServerUserScoped)
+                            throw new CliException("View '" + view.Name + "' Web Component data binding must declare serverUserScoped: true. Browser-supplied identities and unfiltered command projections are not supported.");
+                        if (!string.Equals(control.DataBinding.Method, view.DefaultListMethod, StringComparison.OrdinalIgnoreCase))
+                            throw new CliException("View '" + view.Name + "' Web Component dataBinding.method must match view.defaultListMethod.");
+                        if (!control.Properties.ContainsKey(control.DataBinding.Property))
+                            throw new CliException("View '" + view.Name + "' Web Component dataBinding.property must also be declared in properties: " + control.DataBinding.Property);
+                    }
+                    if (control.Events == null) control.Events = new List<ViewWebComponentEventDefinition>();
+                    EnsureUniqueValues(control.Events.Select(x => x == null ? null : x.Name), "Web Component event", view.Name);
+                    foreach (var ruleEvent in control.Events)
+                    {
+                        if (ruleEvent == null) throw new CliException("View '" + view.Name + "' Web Component events cannot contain null entries.");
+                        Require(ruleEvent.Name, "view.webComponents.events.name");
+                        Require(ruleEvent.Action, "view.webComponents.events.action");
+                        Require(ruleEvent.SourceProperty, "view.webComponents.events.sourceProperty");
+                        if (!string.Equals(ruleEvent.Action, "navigate", StringComparison.OrdinalIgnoreCase))
+                            throw new CliException("View '" + view.Name + "' Web Component event action must be 'navigate'.");
+                        if (!control.Properties.ContainsKey(ruleEvent.SourceProperty))
+                            throw new CliException("View '" + view.Name + "' Web Component event sourceProperty must also be declared in properties: " + ruleEvent.SourceProperty);
+                        if (!string.Equals(ruleEvent.Target, "_self", StringComparison.OrdinalIgnoreCase) &&
+                            !string.Equals(ruleEvent.Target, "_blank", StringComparison.OrdinalIgnoreCase))
+                            throw new CliException("View '" + view.Name + "' Web Component navigate target must be _self or _blank.");
+                    }
                 }
                 if (view.WebComponents.Count > 1)
                     throw new CliException("View '" + view.Name + "' currently supports one full-body Web Component.");
@@ -1009,10 +1036,33 @@ namespace K2SmartFormsCli
         public string ControlType { get; set; }
         public bool ReplaceBody { get; set; }
         public Dictionary<string, string> Properties { get; set; }
+        public ViewWebComponentDataBindingDefinition DataBinding { get; set; }
+        public List<ViewWebComponentEventDefinition> Events { get; set; }
         public ViewWebComponentDefinition()
         {
             ReplaceBody = true;
             Properties = new Dictionary<string, string>();
+            Events = new List<ViewWebComponentEventDefinition>();
+        }
+    }
+
+    public sealed class ViewWebComponentDataBindingDefinition
+    {
+        public string Property { get; set; }
+        public string Method { get; set; }
+        public bool ServerUserScoped { get; set; }
+    }
+
+    public sealed class ViewWebComponentEventDefinition
+    {
+        public string Name { get; set; }
+        public string Action { get; set; }
+        public string SourceProperty { get; set; }
+        public string Target { get; set; }
+
+        public ViewWebComponentEventDefinition()
+        {
+            Target = "_self";
         }
     }
 

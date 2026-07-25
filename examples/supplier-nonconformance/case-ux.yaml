@@ -2,13 +2,21 @@
   "schema_version": 1,
   "template": {"id": "supplier-nonconformance-ux", "extends": "canonical-case-ux", "description": "Supplier-quality overlay on the reusable case experience."},
   "homepage": {
-    "page": "case-homepage",
-    "template": "northstar-case-homepage",
-    "implementation": "modern-web-component",
-    "controlTagName": "northstar-case-homepage",
-    "source": "skills/k2-case-management/assets/northstar-case-homepage",
+    "page": "operations-dashboard",
+    "template": "northstar-native-homepage",
+    "implementation": "native-smartforms",
     "required": true,
-    "nativeFallback": "errata-only"
+    "styleProfile": "northstar-native-shell",
+    "strictFidelity": true,
+    "enhancements": [
+      {
+        "region": "command-palette",
+        "implementation": "modern-web-component",
+        "controlTagName": "northstar-command-palette",
+        "source": "skills/k2-case-management/assets/northstar-command-palette",
+        "required": true
+      }
+    ]
   },
   "shell": {
     "navigation": [
@@ -17,7 +25,7 @@
     ]
   },
   "pages": [
-    {"id": "case-homepage", "type": "homepage", "title": "Northstar", "renderer": "modern-web-component", "template": "northstar-case-homepage"},
+    {"id": "operations-dashboard", "type": "homepage", "title": "Quality Operations", "renderer": "native-smartforms", "template": "northstar-native-homepage"},
     {"id": "case-initiation", "title": "Report a Supplier Nonconformance"},
     {"id": "case-workspace", "title": "Nonconformance Workspace", "sections": ["overview", "tasks", "nonconformance", "containment", "investigation", "root-cause", "decisions", "corrective-actions", "effectiveness", "evidence", "communications", "parties", "related-cases", "history"]},
     {"id": "supplier-performance", "type": "dashboard", "title": "Supplier Performance", "components": ["supplier-open-cases", "supplier-repeat-rate", "supplier-response-time", "supplier-defect-trend"]}

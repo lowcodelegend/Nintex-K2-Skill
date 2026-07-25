@@ -87,6 +87,7 @@ End-to-end scenarios must cover exact threshold boundaries, each dimension-speci
 - When environment selection is still `unselected`, present the discovered profiles and ask the user; do not infer a default from an unrelated existing application.
 - Put the selected profile's stable system name in `application.styleProfile` and keep `useLegacyTheme=false` explicit. Named themes such as Lithium are legacy; `application.theme` remains required generator compatibility metadata, not the modern presentation choice.
 - Treat a modern Web Component as a separately promoted dependency: package and register it through `$k2-smartforms-web-components` before `$k2-smartforms` places it, retain its ZIP/hash/control ID in the ledger, and remove dependent Views/Forms before deletion. Legacy DLL/SDK/controlutil controls are prohibited.
+- A case-management homepage is native SmartForms: governed navigation List View, bounded command-palette View, then native KPI/chart/data-alternative/queue Views under the reusable Northstar Style Profile. Reject `northstar-case-homepage` as the production renderer. The palette suggestion method must inject `ConnectedUserFQN` in its SmartObject mapping, expose no caller identity input, cap results at 50, and route `Navigate` through a View-owned native action.
 - Verify the deployed form definition contains the selected Style Profile GUID and system name.
 
 ## SQL-to-form validation contract

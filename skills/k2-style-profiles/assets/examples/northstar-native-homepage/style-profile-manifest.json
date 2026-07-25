@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "name": "Northstar native homepage Style Profile",
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "styleProfile": {
+    "systemName": "Northstar Native Homepage",
+    "displayName": "Northstar Native Homepage",
+    "description": "Runtime-only Northstar shell for native K2 navigation, command palette, KPI, chart, data-alternative, and queue Views.",
+    "categoryPath": "K2 Skills\\UX",
+    "previewFormId": null,
+    "replaceExisting": false,
+    "files": [
+      {
+        "type": "css",
+        "source": "../smartobject-sidebar/sidebar-critical.css",
+        "target": "northstar-critical.css"
+      },
+      {
+        "type": "js",
+        "source": "northstar-config.js",
+        "target": "northstar-config.js"
+      },
+      {
+        "type": "js",
+        "source": "../smartobject-sidebar/sidebar-shell.js",
+        "target": "northstar-shell.js"
+      }
+    ]
+  },
+  "hosting": {
+    "enabled": true,
+    "configureIis": true,
+    "siteName": "K2",
+    "applicationPath": "K2/",
+    "virtualPath": "/NorthstarAssets",
+    "physicalPath": "C:\\inetpub\\northstar-assets",
+    "baseUrl": "https://spk2.trials.demome.tech/NorthstarAssets",
+    "additionalFiles": [
+      {
+        "type": "css",
+        "source": "northstar-homepage.css",
+        "target": "northstar-homepage.css"
+      }
+    ]
+  },
+  "verification": {
+    "requireHttps": true,
+    "requireDesignerIsolation": true,
+    "verifyHttp": true,
+    "httpTimeoutSeconds": 20
+  }
+}

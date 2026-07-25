@@ -8,26 +8,35 @@
     "styleProfile": "Test Style"
   },
   "homepage": {
-    "page": "case-homepage",
-    "formName": "TST.Northstar Home",
-    "viewName": "TST.Northstar Home",
-    "smartObject": "TST_DashboardSummary",
-    "properties": ["OpenCaseCount"],
-    "controlName": "Northstar Homepage",
-    "controlType": "northstar-case-homepage",
-    "propertiesMap": {
-      "ApplicationName": "Northstar",
-      "ApplicationSubtitle": "Case operations",
-      "Value": "{}",
-      "UseFullViewport": "true",
-      "Width": "100%",
-      "Height": "1000px",
-      "TagName": "northstar-case-homepage",
-      "RuntimeScriptFileNames": "northstar-runtime.js",
-      "DesigntimeScriptFileNames": "northstar-designtime.js",
-      "RuntimeStyleFileNames": "northstar-fonts.css,northstar-prototype.css,northstar-host.css",
-      "DesigntimeStyleFileNames": "northstar-designtime.css",
-      "Icon": "northstar-icon.svg"
+    "page": "operations-dashboard",
+    "implementation": "native-smartforms",
+    "navigation": {
+      "viewName": "TST.Application Navigation",
+      "smartObject": "TST_ApplicationNavigation",
+      "properties": ["NavigationCode","SectionLabel","Label","IconToken","TargetFormName","SortOrder","IsActive","ConfigurationVersion"]
+    },
+    "commandPalette": {
+      "viewName": "TST.Command Palette",
+      "smartObject": "TST_CommandSuggestion",
+      "properties": ["SuggestionCode","Kind","Title","Subtitle","IconToken","TargetUrl","SortOrder","IsActive","ConfigurationVersion"],
+      "controlName": "Northstar Command Palette",
+      "controlType": "northstar-command-palette",
+      "listMethod": "List",
+      "listDataProperty": "Suggestions",
+      "propertiesMap": {
+        "Value": "",
+        "Suggestions": "[]",
+        "SearchUrlTemplate": "/Runtime/Runtime/Form/TST.All%20Cases?q={query}",
+        "Placeholder": "Search cases, work and reports",
+        "Width": "100%",
+        "Height": "48px",
+        "TagName": "northstar-command-palette",
+        "RuntimeScriptFileNames": "northstar-command-runtime.js",
+        "DesigntimeScriptFileNames": "northstar-command-designtime.js",
+        "RuntimeStyleFileNames": "northstar-command-runtime.css",
+        "DesigntimeStyleFileNames": "northstar-command-designtime.css",
+        "Icon": "northstar-command-icon.svg"
+      }
     }
   },
   "dashboard": {

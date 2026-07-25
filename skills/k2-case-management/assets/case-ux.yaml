@@ -6,13 +6,21 @@
     "description": "Reusable role-aware Northstar case application experience; extend sections and measures rather than replacing the shell."
   },
   "homepage": {
-    "page": "case-homepage",
-    "template": "northstar-case-homepage",
-    "implementation": "modern-web-component",
-    "controlTagName": "northstar-case-homepage",
-    "source": "assets/northstar-case-homepage",
+    "page": "operations-dashboard",
+    "template": "northstar-native-homepage",
+    "implementation": "native-smartforms",
     "required": true,
-    "nativeFallback": "errata-only"
+    "styleProfile": "northstar-native-shell",
+    "strictFidelity": true,
+    "enhancements": [
+      {
+        "region": "command-palette",
+        "implementation": "modern-web-component",
+        "controlTagName": "northstar-command-palette",
+        "source": "assets/northstar-command-palette",
+        "required": true
+      }
+    ]
   },
   "design_system": {
     "density": "comfortable",
@@ -27,7 +35,7 @@
   "roles": [
     {"code": "REPORTER", "home": "my-work"},
     {"code": "CASE_OWNER", "home": "my-work"},
-    {"code": "QUALITY_MANAGER", "home": "case-homepage"},
+    {"code": "QUALITY_MANAGER", "home": "operations-dashboard"},
     {"code": "AUDITOR", "home": "case-search"},
     {"code": "ADMINISTRATOR", "home": "administration"}
   ],
@@ -46,16 +54,12 @@
   },
   "pages": [
     {
-      "id": "case-homepage", "type": "homepage", "title": "Northstar",
-      "renderer": "modern-web-component", "template": "northstar-case-homepage",
-      "components": ["open-cases", "sla-at-risk", "overdue-actions", "cases-by-stage", "intake-trend", "urgent-work"]
-    },
-    {
       "id": "my-work", "type": "dashboard", "title": "My Work",
       "components": ["my-open-tasks", "due-soon", "cases-i-own", "recent-activity"]
     },
     {
-      "id": "operations-dashboard", "type": "dashboard", "title": "Quality Operations",
+      "id": "operations-dashboard", "type": "homepage", "title": "Quality Operations",
+      "renderer": "native-smartforms", "template": "northstar-native-homepage",
       "roles": ["QUALITY_MANAGER"],
       "components": ["open-cases", "sla-at-risk", "overdue-actions", "high-risk-cases", "cases-by-stage", "intake-trend", "aging-distribution", "urgent-work"]
     },

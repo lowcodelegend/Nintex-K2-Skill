@@ -22,6 +22,11 @@ namespace K2SqlCli
                 PrintVersion();
                 return 0;
             }
+            if (command == "selftest")
+            {
+                SelfTests.Run();
+                return 0;
+            }
 
             var manifestPath = GetOption(options, "manifest", true);
             var manifest = DeploymentManifest.Load(manifestPath);
@@ -184,7 +189,7 @@ namespace K2SqlCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2sql 0.6.1");
+            Console.WriteLine("k2sql 0.7.0");
         }
 
         private static void PrintHelp()

@@ -1,0 +1,274 @@
+/* Native K2 Northstar presentation; data, actions, focus, and rules stay native. */
+html:not(.designer).k2sp-runtime {
+  --k2sp-sidebar-width: 248px;
+  --k2sp-accent: #6257d9;
+  --k2sp-nav-background: #0b1220;
+  --k2sp-nav-foreground: #aeb7c7;
+  --k2sp-nav-active: #fff;
+  --k2sp-page-background: #f5f7fa;
+  --k2sp-border: #e4e8ef;
+  --northstar-ink: #101828;
+  --northstar-muted: #667085;
+  --northstar-violet-soft: #ecebff;
+  --northstar-radius: 16px;
+  --northstar-shadow: 0 1px 2px rgba(16,24,40,.03), 0 12px 32px rgba(16,24,40,.045);
+  --k2sp-font: "Segoe UI Variable Text", "Segoe UI", Arial, sans-serif;
+  background: var(--k2sp-page-background) !important;
+}
+
+html:not(.designer).k2sp-runtime body.k2sp-enhanced {
+  min-height: 100vh;
+  margin: 0 !important;
+  padding: 0 0 48px var(--k2sp-sidebar-width) !important;
+  overflow-x: hidden;
+  color: var(--northstar-ink);
+  background: var(--k2sp-page-background) !important;
+  font-family: var(--k2sp-font) !important;
+}
+
+html:not(.designer).k2sp-runtime .k2sp-shell { display: contents; }
+
+html:not(.designer).k2sp-runtime .k2sp-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 9999;
+  width: 220px;
+  padding: 22px 14px;
+  overflow-y: auto;
+  color: var(--k2sp-nav-foreground);
+  background: radial-gradient(circle at 22% 2%,rgba(98,87,217,.22),transparent 18rem),linear-gradient(165deg,#0b1220,#141e32);
+  box-shadow: 10px 0 32px rgba(16,24,40,.08);
+}
+
+html:not(.designer).k2sp-runtime .k2sp-brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 0 10px 26px;
+  color: #fff;
+  font: 700 15px var(--k2sp-font);
+}
+
+html:not(.designer).k2sp-runtime .k2sp-brand-mark,
+html:not(.designer).k2sp-runtime .k2sp-transition-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  color: #fff;
+  background: linear-gradient(135deg,#8c80ff,#4cddb8);
+  box-shadow: 0 8px 24px rgba(98,87,217,.25);
+  font-weight: 800;
+}
+
+html:not(.designer).k2sp-runtime .k2sp-nav-label {
+  padding: 18px 12px 8px;
+  color: #6f7d94;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+html:not(.designer).k2sp-runtime .k2sp-nav-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-height: 22px;
+  margin: 3px 0;
+  padding: 11px 12px;
+  border-radius: 10px;
+  color: var(--k2sp-nav-foreground) !important;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none !important;
+  transition: color .16s ease, background .16s ease, transform .16s ease;
+}
+
+html:not(.designer).k2sp-runtime .k2sp-nav-item:hover,
+html:not(.designer).k2sp-runtime .k2sp-nav-item:focus-visible {
+  color: #fff !important;
+  background: rgba(255,255,255,.07);
+  outline: 2px solid #8c80ff;
+  outline-offset: 1px;
+  transform: translateX(2px);
+}
+
+html:not(.designer).k2sp-runtime .k2sp-nav-item.active {
+  color: #fff !important;
+  background: rgba(255,255,255,.075);
+  box-shadow: inset 3px 0 #8c80ff;
+}
+
+html:not(.designer).k2sp-runtime .k2sp-nav-icon {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  color: #8994a8;
+}
+
+html:not(.designer).k2sp-runtime .k2sp-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483500;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  color: #fff;
+  background: radial-gradient(circle at 50% 45%,rgba(140,128,255,.2),transparent 28rem),rgba(10,16,32,.96);
+  transition: opacity .14s ease, visibility .14s ease;
+}
+
+html:not(.designer).k2sp-runtime body.k2sp-leaving .k2sp-transition {
+  opacity: 1;
+  visibility: visible;
+}
+
+html:not(.designer).k2sp-runtime body.k2sp-enhanced > .runtime-content,
+html:not(.designer).k2sp-runtime body.k2sp-enhanced > #form1,
+html:not(.designer).k2sp-runtime body.k2sp-enhanced > .form {
+  max-width: 1500px;
+  margin-right: auto !important;
+  margin-left: auto !important;
+}
+
+html:not(.designer).k2sp-runtime body.k2sp-enhanced .runtime-form {
+  position: relative !important;
+  inset: auto !important;
+  min-height: 0 !important;
+  height: auto !important;
+  overflow: visible !important;
+  background: transparent !important;
+}
+
+html:not(.designer).k2sp-runtime body.k2sp-enhanced .form {
+  max-width: 1500px !important;
+  margin: 0 auto !important;
+  padding: 24px 25px !important;
+  background: transparent !important;
+}
+
+html:not(.designer).k2sp-runtime body.k2sp-enhanced .view {
+  margin: 7px !important;
+  overflow: hidden !important;
+  border: 1px solid var(--k2sp-border) !important;
+  border-radius: var(--northstar-radius) !important;
+  background: #fff !important;
+  box-shadow: var(--northstar-shadow) !important;
+}
+
+html:not(.designer).k2sp-runtime body.k2sp-enhanced .view .panel-header,
+html:not(.designer).k2sp-runtime body.k2sp-enhanced .view .header {
+  min-height: 48px !important;
+  border-bottom: 1px solid var(--k2sp-border) !important;
+  background: #fff !important;
+}
+
+html:not(.designer).k2sp-runtime body.k2sp-enhanced .view .panel-header-text,
+html:not(.designer).k2sp-runtime body.k2sp-enhanced .view .panel-header-text span,
+html:not(.designer).k2sp-runtime body.k2sp-enhanced .view .header .title {
+  color: var(--northstar-ink) !important;
+  font: 700 15px var(--k2sp-font) !important;
+}
+
+html:not(.designer).k2sp-runtime body.k2sp-enhanced .view .panel-body {
+  padding: 16px !important;
+  background: #fff !important;
+}
+
+html:not(.designer).k2sp-runtime body.k2sp-enhanced .metric-card {
+  position: relative;
+  min-height: 112px !important;
+  overflow: hidden;
+  border: 1px solid var(--k2sp-border) !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+html:not(.designer).k2sp-runtime body.k2sp-enhanced .metric-card::after {
+  content: "";
+  position: absolute;
+  right: -25px;
+  bottom: -38px;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: var(--northstar-violet-soft);
+}
+
+html:not(.designer).k2sp-runtime body.k2sp-enhanced .metric-card-value {
+  color: var(--northstar-ink) !important;
+  font: 800 30px var(--k2sp-font) !important;
+}
+
+html:not(.designer).k2sp-runtime body.k2sp-enhanced .metric-card-label {
+  color: var(--northstar-muted) !important;
+  font-weight: 600 !important;
+}
+
+html:not(.designer).k2sp-runtime body.k2sp-enhanced table.grid-content-table {
+  border-collapse: separate !important;
+  border-spacing: 0 7px !important;
+}
+
+html:not(.designer).k2sp-runtime body.k2sp-enhanced table.grid-content-table td {
+  padding: 12px !important;
+  border-top: 1px solid var(--k2sp-border) !important;
+  border-bottom: 1px solid var(--k2sp-border) !important;
+}
+
+html:not(.designer).k2sp-runtime body.k2sp-enhanced table.grid-content-table td:first-child {
+  border-left: 3px solid var(--k2sp-accent) !important;
+  border-radius: 10px 0 0 10px;
+}
+
+html:not(.designer).k2sp-runtime body.k2sp-enhanced table.grid-content-table td:last-child {
+  border-right: 1px solid var(--k2sp-border) !important;
+  border-radius: 0 10px 10px 0;
+}
+
+@media (max-width: 800px) {
+  html:not(.designer).k2sp-runtime { --k2sp-sidebar-width: 0px; }
+  html:not(.designer).k2sp-runtime body.k2sp-enhanced { padding: 0 0 82px !important; }
+  html:not(.designer).k2sp-runtime .k2sp-sidebar {
+    inset: auto 10px 10px;
+    width: auto;
+    height: 58px;
+    padding: 6px;
+    overflow: hidden;
+    border-radius: 16px;
+  }
+  html:not(.designer).k2sp-runtime .k2sp-brand,
+  html:not(.designer).k2sp-runtime .k2sp-nav-label { display: none; }
+  html:not(.designer).k2sp-runtime .k2sp-nav { display: flex; height: 100%; }
+  html:not(.designer).k2sp-runtime .k2sp-nav-item {
+    flex: 1 1 0;
+    flex-direction: column;
+    gap: 1px;
+    justify-content: center;
+    min-width: 0;
+    margin: 0;
+    padding: 4px 8px;
+    overflow: hidden;
+    font-size: 10px;
+    text-align: center;
+    transform: none;
+  }
+  html:not(.designer).k2sp-runtime body.k2sp-enhanced .form { padding: 8px 16px !important; }
+  html:not(.designer).k2sp-runtime body.k2sp-enhanced .view { margin: 6px 0 !important; border-radius: 13px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not(.designer).k2sp-runtime *,
+  html:not(.designer).k2sp-runtime *::before,
+  html:not(.designer).k2sp-runtime *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

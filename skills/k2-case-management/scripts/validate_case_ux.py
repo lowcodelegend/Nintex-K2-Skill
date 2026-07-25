@@ -56,19 +56,44 @@ def validate(doc: dict[str, Any]) -> list[str]:
     if not isinstance(homepage, dict):
         errors.append("homepage must be a mapping")
     else:
-        if homepage.get("implementation") != "modern-web-component":
-            errors.append("homepage.implementation must be modern-web-component")
-        if homepage.get("controlTagName") != "northstar-case-homepage":
-            errors.append("homepage.controlTagName must be northstar-case-homepage")
+        if homepage.get("implementation") != "native-smartforms":
+            errors.append("homepage.implementation must be native-smartforms")
         if homepage.get("required") is not True:
             errors.append("homepage.required must be true")
-        if homepage.get("nativeFallback") != "errata-only":
-            errors.append("homepage.nativeFallback must be errata-only")
+        if not homepage.get("styleProfile"):
+            errors.append("homepage.styleProfile is required")
+        if homepage.get("strictFidelity") is not True:
+            errors.append("homepage.strictFidelity must be true")
         homepage_page = homepage.get("page")
         if homepage_page not in page_by_id:
             errors.append(f"homepage page does not exist: {homepage_page}")
-        elif page_by_id[homepage_page].get("renderer") != "modern-web-component":
-            errors.append(f"homepage page {homepage_page} must use renderer modern-web-component")
+        elif page_by_id[homepage_page].get("renderer") != "native-smartforms":
+            errors.append(f"homepage page {homepage_page} must use renderer native-smartforms")
+        enhancements = homepage.get("enhancements")
+        if not isinstance(enhancements, list) or not enhancements:
+            errors.append("homepage.enhancements must contain the bounded command palette")
+        else:
+            seen_regions: set[str] = set()
+            for enhancement in enhancements:
+                if not isinstance(enhancement, dict):
+                    errors.append("homepage.enhancements entries must be mappings")
+                    continue
+                region = enhancement.get("region")
+                if not region:
+                    errors.append("homepage enhancement region is required")
+                elif region in seen_regions:
+                    errors.append(f"duplicate homepage enhancement region: {region}")
+                else:
+                    seen_regions.add(region)
+                if region in {"homepage", "page", "shell", "body"}:
+                    errors.append(f"homepage enhancement cannot replace the full native surface: {region}")
+                if enhancement.get("implementation") != "modern-web-component":
+                    errors.append(f"homepage enhancement {region} must use modern-web-component")
+                if enhancement.get("controlTagName") == "northstar-case-homepage":
+                    errors.append("northstar-case-homepage is retired as a production homepage renderer")
+            command = next((item for item in enhancements if isinstance(item, dict) and item.get("region") == "command-palette"), None)
+            if not command or command.get("controlTagName") != "northstar-command-palette" or command.get("required") is not True:
+                errors.append("homepage command-palette enhancement must require northstar-command-palette")
 
     for role in doc.get("roles", []):
         if isinstance(role, dict) and role.get("home") not in page_by_id:

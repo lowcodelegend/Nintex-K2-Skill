@@ -1,6 +1,6 @@
 # Reusable case UX contract
 
-Use `assets/case-ux.yaml` as the canonical experience baseline. Its default landing surface is the `northstar-case-homepage` modern Web Component in `assets/northstar-case-homepage`; the supplier-nonconformance gold-standard prototype is its visual source of truth. Copy `assets/case-ux-overlay.yaml` into a solution, keep `template.extends` set to `canonical-case-ux`, and add or override only solution-specific roles, fields, sections, measures, and journeys. Compose it with `scripts/compose-case-ux.ps1`, then validate the composed result. Do not recreate the shell, homepage, dashboard grammar, case header, lifecycle, action panel, queues, initiation mechanics, visual states, or accessibility rules unless the solution explicitly departs from the standard.
+Use `assets/case-ux.yaml` as the canonical experience baseline. Its default landing surface is a native SmartForms `operations-dashboard` styled by the reusable `northstar-native-homepage` Style Profile. The supplier-nonconformance gold-standard prototype remains the visual source of truth. Copy `assets/case-ux-overlay.yaml` into a solution, keep `template.extends` set to `canonical-case-ux`, and add or override only solution-specific roles, fields, sections, measures, and journeys. Compose it with `scripts/compose-case-ux.ps1`, then validate the composed result. Do not recreate the shell, homepage, dashboard grammar, case header, lifecycle, action panel, queues, initiation mechanics, visual states, or accessibility rules unless the solution explicitly departs from the standard.
 
 ## Composition model
 
@@ -14,7 +14,9 @@ The contract describes product intent rather than K2 control coordinates:
 
 Transform the contract through `$k2-builder`; use `$k2-smartforms` only for supported platform construction. Record an explicit capability gap rather than silently flattening a requested component into a generic CRUD view.
 
-Register the modern control package through `$k2-smartforms-web-components` before deploying the generated View/Form. The compiler emits exactly one full-body control in the homepage View, disables legacy themes, and explicitly disables the test-only Pre-fill helper because the homepage has no user-entry controls. Keep SmartObject methods, workflow actions, navigation rules, authorization, validation, and persistence native and View-owned. Legacy DLL/SDK controls are outside this contract.
+Build the homepage from native K2 Forms, Views, controls, rules, SmartObject methods, and a modern Style Profile. Register only the bounded `northstar-command-palette` package through `$k2-smartforms-web-components` before deploying the generated View/Form. The compiler emits native application navigation first, the palette second, then KPI/chart/queue Views; it disables legacy themes and explicitly disables the test-only Pre-fill helper because the homepage has no user-entry controls. Bind palette suggestions from one server-user-scoped SmartObject List method and route its `Navigate` event through a View-owned native navigation action. Never accept the current user as a browser-supplied method input: map K2's `ConnectedUserFQN` system value into the SmartObject method and filter the SQL projection before rows reach the browser.
+
+The legacy full-page `northstar-case-homepage` Web Component is retained only as a temporary visual oracle. Do not compile it into a production homepage. Remove it only after the native Form passes strict reference-image comparison at every required viewport and no deployed View/Form depends on it. Legacy DLL/SDK controls are outside this contract.
 
 ## Extension rules
 
@@ -27,6 +29,8 @@ Register the modern control package through `$k2-smartforms-web-components` befo
 7. Require a reason and confirmation for lifecycle-changing, destructive, or authority-override actions.
 8. Provide a table alternative for every chart and text/icon status semantics in addition to color.
 9. Produce populated, empty, validation, long-content, breached-SLA, and read-only evidence at every applicable viewport.
+10. Keep command suggestions bounded to 50 authorized rows with deterministic ordering; preserve unmatched search text when navigating to the native All Cases search.
+11. Require native-to-oracle image comparison with zero unexplained structural, typography, spacing, colour, focus, overflow, or responsive differences before claiming Northstar parity.
 
 ## Reference vertical slice
 
