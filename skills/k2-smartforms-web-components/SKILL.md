@@ -36,7 +36,7 @@ Require Nintex Automation K2 5.9 or later. Confirm the target server exposes Man
 - Implement the manifest `supports` behavior in JavaScript; declaring `IsVisible`, `IsEnabled`, `IsReadOnly`, `Width`, `Height`, or `TabIndex` is not sufficient.
 - Call `K2.RaisePropertyChanged` after meaningful property changes. Raise declared rule events with `dispatchEvent(new Event("<EventID>"))`; `K2.RaiseEvent` is not a supported modern client API.
 - Load packaged CSS into the shadow root with `SourceCode.Forms.ControlStyles.loadStyleResources`. Supply array-valued resource metadata fallbacks in the class because generated placements may serialize metadata properties as strings.
-- One control may declare at most one `listdata` property. Use one governed projection with a discriminator for composite dashboards.
+- One control may declare at most one `listdata` property. `listItemsChangedCallback(itemsChangedEventArgs)` must consume `itemsChangedEventArgs.NewItems`; K2 does not pass the row array directly. Use one governed projection with a discriminator for composite dashboards.
 - Provide a useful design-time representation that never performs live SmartObject or external calls.
 - Runtime failures must render an accessible bounded error state and preserve a native recovery path.
 - Web Component packages are separate deployment dependencies. Do not assume ordinary K2 Package and Deployment owns their promotion.

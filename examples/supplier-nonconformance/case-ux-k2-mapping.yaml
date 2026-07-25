@@ -29,19 +29,46 @@
       {"id":"open-cases","property":"OpenCaseCount","label":"Open cases","tone":"neutral"},
       {"id":"sla-at-risk","property":"SLAAtRiskCount","label":"SLA at risk","tone":"warning"},
       {"id":"overdue-actions","property":"OverdueActionCount","label":"Overdue actions","tone":"critical"},
-      {"id":"high-risk-cases","property":"HighRiskCaseCount","label":"High-risk cases","tone":"critical"}
+      {"id":"first-pass-yield","property":"FirstPassYieldPercent","label":"First-pass yield","tone":"positive"}
     ]},
-    "charts":[
-      {"component":"cases-by-stage","viewName":"SNC.Open Cases by Stage","smartObject":"SNC_SupplierNonconformance_SNC_DashboardCasesByStage","categoryProperty":"StageLabel","valueProperty":"CaseCount","title":"Open cases by stage","type":"bar"},
-      {"component":"intake-trend","viewName":"SNC.Case Intake Trend","smartObject":"SNC_SupplierNonconformance_SNC_DashboardIntakeTrend","categoryProperty":"PeriodLabel","valueProperty":"CaseCount","title":"Case intake trend","type":"line"}
-    ],
-    "queues":[{"component":"urgent-work","viewName":"SNC.Urgent Work","smartObject":"SNC_SupplierNonconformance_SNC_DashboardUrgentWork","title":"Urgent work","properties":["CaseNumber","Title","SupplierName","CurrentStageCode","RiskCode","OwnerFQN","TargetDate","SLAStatus"]}]
+    "widgets":[
+      {
+        "component":"intake-trend","variant":"trend","viewName":"SNC.Case Intake Trend","tableViewName":"SNC.Case Intake Trend Data",
+        "smartObject":"SNC_SupplierNonconformance_SNC_DashboardIntakeTrend",
+        "properties":["SortOrder","PeriodLabel","OpenedCount","ResolvedCount"],
+        "heading":"Nonconformance trend","title":"Nonconformance trend","subtitle":"Opened and resolved cases · 30 days",
+        "actionLabel":"View accessible data table →","emptyMessage":"No cases in this period.","height":"356px"
+      },
+      {
+        "component":"attention-now","variant":"attention","viewName":"SNC.Attention Now","tableViewName":"SNC.Attention Now Data",
+        "smartObject":"SNC_SupplierNonconformance_SNC_DashboardAttentionNow",
+        "properties":["CaseId","CaseNumber","Title","SLAStatus","TargetDate","SupplierName","DueLabel","Tone","TargetUrl","SortOrder"],
+        "heading":"Attention now","title":"Attention now","subtitle":"Ranked by risk, impact and SLA",
+        "actionLabel":"View all","actionTarget":"/Runtime/Runtime/Form/SNC.Supplier%20Nonconformance",
+        "emptyMessage":"No urgent work.","height":"356px"
+      },
+      {
+        "component":"cases-by-stage","variant":"stage","viewName":"SNC.Work Accumulation","tableViewName":"SNC.Work Accumulation Data",
+        "smartObject":"SNC_SupplierNonconformance_SNC_DashboardCasesByStage",
+        "properties":["StageLabel","CaseCount","SortOrder"],
+        "heading":"Where work is accumulating","title":"Where work is accumulating","subtitle":"Active cases by lifecycle stage",
+        "emptyMessage":"No open cases.","height":"270px"
+      },
+      {
+        "component":"supplier-signal","variant":"supplier","viewName":"SNC.Supplier Signal","tableViewName":"SNC.Supplier Signal Data",
+        "smartObject":"SNC_SupplierNonconformance_SNC_DashboardSupplierSignal",
+        "properties":["SupplierId","SupplierName","SupplierInitials","SignalLabel","Score","Tone","TargetUrl","SortOrder"],
+        "heading":"Supplier signal","title":"Supplier signal","subtitle":"Risk-adjusted rolling 90 days",
+        "actionLabel":"Open scorecards","actionTarget":"/Runtime/Runtime/Form/SNC.Cases",
+        "emptyMessage":"No supplier signals.","height":"270px"
+      }
+    ]
   },
   "myWork": {
     "formName":"SNC.My Work",
     "worklistTab":"My Tasks",
     "worklist":{"rows":20,"refreshIntervalSeconds":120,"showToolbar":true,"showFilter":true,"showSearch":false,"enableSearch":true,"height":"445px","openTaskInNewWindow":true,"actions":["viewWorkflow","sleep","redirect","release","share"]},
-    "queues":[{"tab":"Urgent Team Work","viewName":"SNC.Urgent Work","title":"Urgent cases needing attention"}]
+    "queues":[{"tab":"Urgent Team Work","viewName":"SNC.Attention Now Data","title":"Urgent cases needing attention"}]
   },
   "workspace": {
     "viewName": "SNC.Case Workspace",

@@ -102,7 +102,11 @@
       get Value() { return this._value; }
       set Value(value) { this._value = text(value); changed(this, "Value"); }
       get Suggestions() { return this._suggestions; }
-      set Suggestions(value) { this._suggestions = normalize(value); this.render(); changed(this, "Suggestions"); }
+      set Suggestions(value) {
+        this._suggestions = normalize(value);
+        this.render();
+        changed(this, "Suggestions");
+      }
       get SearchUrlTemplate() { return this._searchUrlTemplate; }
       set SearchUrlTemplate(value) { this._searchUrlTemplate = text(value) || this._searchUrlTemplate; changed(this, "SearchUrlTemplate"); }
       get Placeholder() { return this._placeholder; }
@@ -140,7 +144,10 @@
         if (properties[name]) this[properties[name]] = newValue;
       }
 
-      listItemsChangedCallback(items) {
+      listItemsChangedCallback(itemsChangedEventArgs) {
+        const items = itemsChangedEventArgs && Array.isArray(itemsChangedEventArgs.NewItems)
+          ? itemsChangedEventArgs.NewItems
+          : itemsChangedEventArgs;
         this.Suggestions = items;
       }
 

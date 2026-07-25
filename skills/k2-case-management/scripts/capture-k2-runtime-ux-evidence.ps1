@@ -41,6 +41,7 @@ foreach($formName in $FormNames){
             $arguments+=@('--trusted-auth-host',$TrustedAuthHost)
         }
         $raw=@(& $node @arguments)
+        if($LASTEXITCODE-ne 0){throw "Browser capture failed for '$formName' at $($viewport.name) with exit code $LASTEXITCODE."}
         $port++
         $result=($raw|Select-Object -Last 1)|ConvertFrom-Json
         if($result.layout.horizontalOverflow){throw "Horizontal overflow at $formName/$($viewport.name): $($result.layout.scrollWidth) > $($result.layout.clientWidth)."}

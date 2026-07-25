@@ -1,0 +1,29 @@
+{
+  "displayName": "Northstar Dashboard Widget",
+  "tagName": "northstar-dashboard-widget",
+  "description": "Bounded Northstar visualizer for governed K2 dashboard projections. K2 retains data, rules, actions, navigation and accessible list alternatives.",
+  "icon": "control-icon.svg",
+  "designtimeScriptFileNames": ["control-designtime.js"],
+  "runtimeScriptFileNames": ["control-runtime.js"],
+  "designtimeStyleFileNames": ["control-designtime.css"],
+  "runtimeStyleFileNames": ["control-runtime.css"],
+  "datatypes": ["Text"],
+  "valuePropertyID": "Value",
+  "supports": ["Value", "Width", "Height", "IsVisible", "IsEnabled", "IsReadOnly", "TabIndex", "ControlExpression", "DataBinding"],
+  "events": [
+    {"id": "Navigate", "displayname": "Navigate"}
+  ],
+  "properties": [
+    {"id": "Value", "friendlyname": "Selected target URL", "type": "string", "initialvalue": "", "changesdisplay": false},
+    {"id": "Data", "friendlyname": "Governed dashboard data", "type": "listdata", "initialvalue": "[]", "refreshdisplay": true, "changesdisplay": true},
+    {"id": "Variant", "friendlyname": "Widget variant", "type": "string", "initialvalue": "trend", "validationPattern": "^(trend|attention|stage|supplier)$", "validationMessage": "Use trend, attention, stage, or supplier.", "changesdisplay": true},
+    {"id": "Heading", "friendlyname": "Heading", "type": "string", "initialvalue": "Dashboard insight", "changesdisplay": true},
+    {"id": "Subtitle", "friendlyname": "Subtitle", "type": "string", "initialvalue": "", "changesdisplay": true},
+    {"id": "ActionLabel", "friendlyname": "Action label", "type": "string", "initialvalue": "", "changesdisplay": true},
+    {"id": "ActionTarget", "friendlyname": "Action target", "type": "string", "initialvalue": "", "changesdisplay": false},
+    {"id": "EmptyMessage", "friendlyname": "Empty message", "type": "string", "initialvalue": "No data in this period.", "changesdisplay": true},
+    {"id": "Width", "friendlyname": "Width", "type": "string", "initialvalue": "100%", "changesdisplay": true},
+    {"id": "Height", "friendlyname": "Height", "type": "string", "initialvalue": "260px", "changesdisplay": true},
+    {"id": "IsReadOnly", "friendlyname": "Read only", "type": "bool", "initialvalue": false, "changesdisplay": true}
+  ]
+}

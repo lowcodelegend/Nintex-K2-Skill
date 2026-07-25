@@ -251,13 +251,47 @@
 
     var intro = create('section', 'k2sp-page-intro');
     intro.setAttribute('aria-labelledby', 'k2sp-page-title');
+    var introCopy = create('div', 'k2sp-page-intro-copy');
     var eyebrow = create('div', 'k2sp-eyebrow', page.eyebrow);
     var h1 = create('h1', '', page.title);
     h1.id = 'k2sp-page-title';
     var subtitle = create('p', '', page.subtitle);
-    intro.appendChild(eyebrow);
-    intro.appendChild(h1);
-    intro.appendChild(subtitle);
+    introCopy.appendChild(eyebrow);
+    introCopy.appendChild(h1);
+    introCopy.appendChild(subtitle);
+    intro.appendChild(introCopy);
+    if (page.key === 'command') {
+      var dashboardActions = create('div', 'k2sp-dashboard-actions');
+      var period = create('div', 'k2sp-segmented');
+      period.setAttribute('role', 'group');
+      period.setAttribute('aria-label', 'Dashboard period');
+      [
+        { label: '7d', active: false },
+        { label: '30d', active: true },
+        { label: '90d', active: false }
+      ].forEach(function (definition) {
+        var periodButton = create('button', definition.active ? 'active' : '', definition.label);
+        periodButton.type = 'button';
+        periodButton.setAttribute('aria-pressed', definition.active ? 'true' : 'false');
+        periodButton.addEventListener('click', function () {
+          Array.prototype.forEach.call(period.querySelectorAll('button'), function (button) {
+            var selected = button === periodButton;
+            button.classList.toggle('active', selected);
+            button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+          });
+          showToast('Dashboard period set to ' + definition.label + '.');
+        });
+        period.appendChild(periodButton);
+      });
+      var exportButton = create('button', 'k2sp-button k2sp-export-brief', 'Export brief');
+      exportButton.type = 'button';
+      exportButton.addEventListener('click', function () {
+        window.print();
+      });
+      dashboardActions.appendChild(period);
+      dashboardActions.appendChild(exportButton);
+      intro.appendChild(dashboardActions);
+    }
 
     var insight = create('section', 'k2sp-insight');
     var insightIcon = create('div', 'k2sp-insight-icon', '✦');
@@ -311,6 +345,10 @@
       return item.TargetFormName === formName;
     });
     ordered.forEach(function (item, index) {
+      if (String(item.NavigationCode || '').toUpperCase() ===
+          String(config.newCaseNavigationCode || 'NEW_CASE').toUpperCase()) {
+        return;
+      }
       var nextSection = item.SectionLabel || '';
       if (nextSection && nextSection !== section) {
         nav.appendChild(create('div', 'k2sp-nav-label', nextSection));
@@ -334,6 +372,10 @@
       var label = create('span', 'k2sp-nav-text', item.Label || item.TargetFormName);
       link.appendChild(icon);
       link.appendChild(label);
+      var count = config.navigationCounts && config.navigationCounts[item.NavigationCode];
+      if (count !== undefined && count !== null && count !== '') {
+        link.appendChild(create('span', 'k2sp-nav-count', String(count)));
+      }
       nav.appendChild(link);
     });
     configureShellActions(ordered);
@@ -497,7 +539,9 @@
         [config.stagesViewTitle || 'Open cases by stage', 'k2sp-stages'],
         [config.supplierSignalViewTitle || 'Supplier signal', 'k2sp-supplier-signal'],
         [config.trendDataViewTitle || 'Case intake trend data', 'k2sp-data-alternative'],
-        [config.stagesDataViewTitle || 'Open cases by stage data', 'k2sp-data-alternative']
+        [config.attentionDataViewTitle || 'Urgent work data', 'k2sp-data-alternative'],
+        [config.stagesDataViewTitle || 'Open cases by stage data', 'k2sp-data-alternative'],
+        [config.supplierSignalDataViewTitle || 'Supplier signal data', 'k2sp-data-alternative']
       ].forEach(function (definition) {
         var view = findViewByTitle(definition[0]);
         var row = view && (view.closest('.row') || view);
@@ -569,7 +613,7 @@
   }
 
   function layoutKpiCells() {
-    var keys = ['OpenCaseCount', 'SLAAtRiskCount', 'OverdueActionCount', 'HighRiskCaseCount'];
+    var keys = ['OpenCaseCount', 'SLAAtRiskCount', 'OverdueActionCount', 'FirstPassYieldPercent'];
     keys.forEach(function (key, index) {
       var label = document.querySelector('[name="lbl' + key + '"]');
       var value = document.querySelector('[name="dlb' + key + '"]');
@@ -600,11 +644,7 @@
   }
 
   function transformKpis() {
-    if (document.querySelector('.k2sp-kpi-native-grid')) {
-      layoutKpiCells();
-      return true;
-    }
-    var keys = ['OpenCaseCount', 'SLAAtRiskCount', 'OverdueActionCount', 'HighRiskCaseCount'];
+    var keys = ['OpenCaseCount', 'SLAAtRiskCount', 'OverdueActionCount', 'FirstPassYieldPercent'];
     var first = document.querySelector('[name="lblOpenCaseCount"]');
     if (!first) return false;
     var source = first.closest('.root-table');
@@ -711,9 +751,11 @@
           classifyNativeContent(page);
           document.body.classList.add('k2sp-ready');
           mark('k2sp:content-ready');
-          window.setTimeout(function () {
-            classifyNativeContent(page);
-          }, 100);
+          [100, 300, 700, 1500].forEach(function (delay) {
+            window.setTimeout(function () {
+              classifyNativeContent(page);
+            }, delay);
+          });
         });
       });
     }

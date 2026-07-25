@@ -4,12 +4,22 @@ $ErrorActionPreference='Stop'
 try { $path=(Resolve-Path -LiteralPath $Manifest).Path; $doc=Get-Content -Raw -LiteralPath $path | ConvertFrom-Json } catch { Write-Error "Unable to load JSON-compatible YAML UX manifest '$Manifest': $($_.Exception.Message)"; exit 2 }
 $errors=[Collections.Generic.List[string]]::new()
 function Add-Error([string]$Message){$errors.Add($Message)}
-foreach($name in @('shell','pages','components','journeys','visual_acceptance')){if(-not ($doc.PSObject.Properties.Name -contains $name)){Add-Error "$name is required"}}
+foreach($name in @('homepage','shell','pages','components','journeys','visual_acceptance')){if(-not ($doc.PSObject.Properties.Name -contains $name)){Add-Error "$name is required"}}
 if($errors.Count){$errors|ForEach-Object{"ERROR: $_"}; exit 1}
 $pages=@($doc.pages); $components=@($doc.components); $journeys=@($doc.journeys)
 if(-not $pages.Count){Add-Error 'pages must be a non-empty list'}; if(-not $components.Count){Add-Error 'components must be a non-empty list'}; if(-not $journeys.Count){Add-Error 'journeys must be a non-empty list'}
 function Index-ById($items,[string]$label){$map=@{};$n=0;foreach($item in $items){if(-not ($item.PSObject.Properties.Name -contains 'id') -or [string]::IsNullOrWhiteSpace([string]$item.id)){Add-Error "$label[$n].id is required"}elseif($map.ContainsKey([string]$item.id)){Add-Error "duplicate $label id: $($item.id)"}else{$map[[string]$item.id]=$item};$n++};return $map}
 $pageById=Index-ById $pages 'pages'; $componentById=Index-ById $components 'components'; $journeyById=Index-ById $journeys 'journeys'
+$homepage=$doc.homepage
+if([string]$homepage.implementation -ne 'native-smartforms'){Add-Error 'homepage.implementation must be native-smartforms'}
+if($homepage.required -ne $true){Add-Error 'homepage.required must be true'}
+if(-not $pageById.ContainsKey([string]$homepage.page)){Add-Error "homepage page does not exist: $($homepage.page)"}
+$enhancements=@{};foreach($enhancement in @($homepage.enhancements)){if($enhancement.controlTagName){$enhancements[[string]$enhancement.controlTagName]=$enhancement}}
+foreach($requiredControl in @('northstar-command-palette','northstar-dashboard-widget')){
+    if(-not $enhancements.ContainsKey($requiredControl)){Add-Error "homepage requires bounded modern control enhancement: $requiredControl"}
+    elseif([string]$enhancements[$requiredControl].implementation -ne 'modern-web-component'){Add-Error "homepage enhancement $requiredControl must use modern-web-component"}
+}
+if($enhancements.ContainsKey('northstar-case-homepage')){Add-Error 'homepage must not use the retired full-page northstar-case-homepage control'}
 $roles=@{}; foreach($role in @($doc.roles)){if($role.code){$roles[[string]$role.code]=$true}}
 $navIds=@{}; foreach($nav in @($doc.shell.navigation)){$navIds[[string]$nav.id]=$true;if(-not $pageById.ContainsKey([string]$nav.target)){Add-Error "navigation target does not exist: $($nav.target)"}}
 if(-not $navIds.ContainsKey([string]$doc.shell.primary_create_action)){Add-Error 'shell.primary_create_action must name a navigation item'}

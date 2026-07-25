@@ -848,6 +848,7 @@ namespace K2SmartFormsCli
     public sealed class ViewDefinition
     {
         public string Name { get; set; }
+        public bool ReuseExisting { get; set; }
         public string SmartObject { get; set; }
         public string Type { get; set; }
         public List<string> Properties { get; set; }

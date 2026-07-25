@@ -205,6 +205,12 @@ def validate(source: Path) -> list[str]:
         errors.append("JavaScript does not contain the manifest tagName.")
     if "DataBinding" in supports and "listItemsChangedCallback" not in script_text:
         errors.append("DataBinding support requires listItemsChangedCallback().")
+    if "DataBinding" in supports and not re.search(
+        r"listItemsChangedCallback\s*\([^)]*\)\s*\{[\s\S]*?\.NewItems\b", script_text
+    ):
+        errors.append(
+            "DataBinding listItemsChangedCallback() must consume the K2 event argument's NewItems array."
+        )
     for support in ("Value", "Width", "Height", "IsVisible", "IsEnabled", "IsReadOnly", "TabIndex"):
         if support in supports and not re.search(rf"\b(?:get|set)\s+{re.escape(support)}\b", script_text):
             errors.append(f"{support} support requires a JavaScript getter/setter implementation.")

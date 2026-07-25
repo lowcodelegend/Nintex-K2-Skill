@@ -16,6 +16,7 @@
     "views": [
       {
         "name": "NTH.Application Navigation",
+        "reuseExisting": true,
         "smartObject": "SNC_SupplierNonconformance_SNC_ApplicationNavigation",
         "type": "list",
         "properties": [
@@ -34,6 +35,7 @@
       },
       {
         "name": "NTH.Command Palette",
+        "reuseExisting": true,
         "smartObject": "SNC_SupplierNonconformance_SNC_CommandSuggestion",
         "type": "capture",
         "properties": [
@@ -70,7 +72,7 @@
               "Value": "",
               "Suggestions": "[]",
               "SearchUrlTemplate": "/Runtime/Runtime/Form/SNC.Supplier%20Nonconformance?q={query}",
-              "Placeholder": "Search cases, work and reports",
+              "Placeholder": "Search cases, suppliers, lots…",
               "Width": "100%",
               "Height": "48px",
               "TagName": "northstar-command-palette",
@@ -104,7 +106,8 @@
           "OpenCaseCount",
           "SLAAtRiskCount",
           "OverdueActionCount",
-          "HighRiskCaseCount"
+          "HighRiskCaseCount",
+          "FirstPassYieldPercent"
         ],
         "methods": [],
         "defaultListMethod": "List",
@@ -129,50 +132,11 @@
             "explanation": "Incomplete corrective actions beyond their due date."
           },
           {
-            "property": "HighRiskCaseCount",
-            "label": "High-risk cases",
-            "tone": "critical",
-            "explanation": "Open cases at or above the configured high-risk threshold."
+            "property": "FirstPassYieldPercent",
+            "label": "First-pass yield",
+            "tone": "positive",
+            "explanation": "Current governed supplier first-pass yield."
           }
-        ]
-      },
-      {
-        "name": "NTH.Open Cases by Stage",
-        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardCasesByStage",
-        "type": "capture",
-        "properties": [
-          "StageLabel",
-          "CaseCount"
-        ],
-        "methods": [],
-        "defaultListMethod": "List",
-        "options": [],
-        "charts": [
-          {
-            "name": "chtCasesByStage",
-            "title": "Open cases by stage",
-            "type": "bar",
-            "categoryProperty": "StageLabel",
-            "valueProperty": "CaseCount",
-            "height": 260,
-            "showLegend": false,
-            "showLabels": true,
-            "emptyState": "No open cases."
-          }
-        ]
-      },
-      {
-        "name": "NTH.Open Cases by Stage Data",
-        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardCasesByStage",
-        "type": "list",
-        "properties": [
-          "StageLabel",
-          "CaseCount"
-        ],
-        "methods": [],
-        "defaultListMethod": "List",
-        "options": [
-          "toolbar"
         ]
       },
       {
@@ -180,23 +144,50 @@
         "smartObject": "SNC_SupplierNonconformance_SNC_DashboardIntakeTrend",
         "type": "capture",
         "properties": [
+          "SortOrder",
           "PeriodLabel",
-          "CaseCount"
+          "OpenedCount",
+          "ResolvedCount"
         ],
         "methods": [],
         "defaultListMethod": "List",
         "options": [],
-        "charts": [
+        "webComponents": [
           {
-            "name": "chtIntakeTrend",
-            "title": "Case intake trend",
-            "type": "line",
-            "categoryProperty": "PeriodLabel",
-            "valueProperty": "CaseCount",
-            "height": 260,
-            "showLegend": false,
-            "showLabels": true,
-            "emptyState": "No cases in this period."
+            "name": "Northstar Nonconformance Trend",
+            "controlType": "northstar-dashboard-widget",
+            "replaceBody": true,
+            "properties": {
+              "Value": "",
+              "Data": "[]",
+              "Variant": "trend",
+              "Heading": "Nonconformance trend",
+              "Subtitle": "Opened and resolved cases · 30 days",
+              "ActionLabel": "View accessible data table →",
+              "ActionTarget": "",
+              "EmptyMessage": "No cases in this period.",
+              "Width": "100%",
+              "Height": "356px",
+              "TagName": "northstar-dashboard-widget",
+              "RuntimeScriptFileNames": "control-runtime.js",
+              "DesigntimeScriptFileNames": "control-designtime.js",
+              "RuntimeStyleFileNames": "control-runtime.css",
+              "DesigntimeStyleFileNames": "control-designtime.css",
+              "Icon": "control-icon.svg"
+            },
+            "dataBinding": {
+              "property": "Data",
+              "method": "List",
+              "serverUserScoped": true
+            },
+            "events": [
+              {
+                "name": "Navigate",
+                "action": "navigate",
+                "sourceProperty": "Value",
+                "target": "_self"
+              }
+            ]
           }
         ]
       },
@@ -206,7 +197,8 @@
         "type": "list",
         "properties": [
           "PeriodLabel",
-          "CaseCount"
+          "OpenedCount",
+          "ResolvedCount"
         ],
         "methods": [],
         "defaultListMethod": "List",
@@ -215,18 +207,212 @@
         ]
       },
       {
-        "name": "NTH.Urgent Work",
-        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardUrgentWork",
+        "name": "NTH.Attention Now",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardAttentionNow",
+        "type": "capture",
+        "properties": [
+          "CaseId",
+          "CaseNumber",
+          "Title",
+          "SLAStatus",
+          "TargetDate",
+          "SupplierName",
+          "DueLabel",
+          "Tone",
+          "TargetUrl",
+          "SortOrder"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
+        "webComponents": [
+          {
+            "name": "Northstar Attention Now",
+            "controlType": "northstar-dashboard-widget",
+            "replaceBody": true,
+            "properties": {
+              "Value": "",
+              "Data": "[]",
+              "Variant": "attention",
+              "Heading": "Attention now",
+              "Subtitle": "Ranked by risk, impact and SLA",
+              "ActionLabel": "View all",
+              "ActionTarget": "/Runtime/Runtime/Form/SNC.Supplier%20Nonconformance",
+              "EmptyMessage": "No urgent work.",
+              "Width": "100%",
+              "Height": "356px",
+              "TagName": "northstar-dashboard-widget",
+              "RuntimeScriptFileNames": "control-runtime.js",
+              "DesigntimeScriptFileNames": "control-designtime.js",
+              "RuntimeStyleFileNames": "control-runtime.css",
+              "DesigntimeStyleFileNames": "control-designtime.css",
+              "Icon": "control-icon.svg"
+            },
+            "dataBinding": {
+              "property": "Data",
+              "method": "List",
+              "serverUserScoped": true
+            },
+            "events": [
+              {
+                "name": "Navigate",
+                "action": "navigate",
+                "sourceProperty": "Value",
+                "target": "_self"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "NTH.Attention Now Data",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardAttentionNow",
         "type": "list",
         "properties": [
           "CaseNumber",
           "Title",
           "SupplierName",
-          "CurrentStageCode",
-          "RiskCode",
-          "OwnerFQN",
-          "TargetDate",
-          "SLAStatus"
+          "DueLabel",
+          "SLAStatus",
+          "TargetDate"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [
+          "toolbar"
+        ]
+      },
+      {
+        "name": "NTH.Work Accumulation",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardCasesByStage",
+        "type": "capture",
+        "properties": [
+          "StageLabel",
+          "CaseCount",
+          "SortOrder"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
+        "webComponents": [
+          {
+            "name": "Northstar Work Accumulation",
+            "controlType": "northstar-dashboard-widget",
+            "replaceBody": true,
+            "properties": {
+              "Value": "",
+              "Data": "[]",
+              "Variant": "stage",
+              "Heading": "Where work is accumulating",
+              "Subtitle": "Active cases by lifecycle stage",
+              "ActionLabel": "",
+              "ActionTarget": "",
+              "EmptyMessage": "No open cases.",
+              "Width": "100%",
+              "Height": "270px",
+              "TagName": "northstar-dashboard-widget",
+              "RuntimeScriptFileNames": "control-runtime.js",
+              "DesigntimeScriptFileNames": "control-designtime.js",
+              "RuntimeStyleFileNames": "control-runtime.css",
+              "DesigntimeStyleFileNames": "control-designtime.css",
+              "Icon": "control-icon.svg"
+            },
+            "dataBinding": {
+              "property": "Data",
+              "method": "List",
+              "serverUserScoped": true
+            },
+            "events": [
+              {
+                "name": "Navigate",
+                "action": "navigate",
+                "sourceProperty": "Value",
+                "target": "_self"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "NTH.Work Accumulation Data",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardCasesByStage",
+        "type": "list",
+        "properties": [
+          "StageLabel",
+          "CaseCount",
+          "SortOrder"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [
+          "toolbar"
+        ]
+      },
+      {
+        "name": "NTH.Supplier Signal",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardSupplierSignal",
+        "type": "capture",
+        "properties": [
+          "SupplierId",
+          "SupplierName",
+          "SupplierInitials",
+          "SignalLabel",
+          "Score",
+          "Tone",
+          "TargetUrl",
+          "SortOrder"
+        ],
+        "methods": [],
+        "defaultListMethod": "List",
+        "options": [],
+        "webComponents": [
+          {
+            "name": "Northstar Supplier Signal",
+            "controlType": "northstar-dashboard-widget",
+            "replaceBody": true,
+            "properties": {
+              "Value": "",
+              "Data": "[]",
+              "Variant": "supplier",
+              "Heading": "Supplier signal",
+              "Subtitle": "Risk-adjusted rolling 90 days",
+              "ActionLabel": "Open scorecards",
+              "ActionTarget": "/Runtime/Runtime/Form/SNC.Cases",
+              "EmptyMessage": "No supplier signals.",
+              "Width": "100%",
+              "Height": "270px",
+              "TagName": "northstar-dashboard-widget",
+              "RuntimeScriptFileNames": "control-runtime.js",
+              "DesigntimeScriptFileNames": "control-designtime.js",
+              "RuntimeStyleFileNames": "control-runtime.css",
+              "DesigntimeStyleFileNames": "control-designtime.css",
+              "Icon": "control-icon.svg"
+            },
+            "dataBinding": {
+              "property": "Data",
+              "method": "List",
+              "serverUserScoped": true
+            },
+            "events": [
+              {
+                "name": "Navigate",
+                "action": "navigate",
+                "sourceProperty": "Value",
+                "target": "_self"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "NTH.Supplier Signal Data",
+        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardSupplierSignal",
+        "type": "list",
+        "properties": [
+          "SupplierName",
+          "SignalLabel",
+          "Score",
+          "Tone"
         ],
         "methods": [],
         "defaultListMethod": "List",
@@ -243,11 +429,14 @@
           "NTH.Application Navigation",
           "NTH.Command Palette",
           "NTH.Operations KPIs",
-          "NTH.Open Cases by Stage",
-          "NTH.Open Cases by Stage Data",
           "NTH.Case Intake Trend",
           "NTH.Case Intake Trend Data",
-          "NTH.Urgent Work"
+          "NTH.Attention Now",
+          "NTH.Attention Now Data",
+          "NTH.Work Accumulation",
+          "NTH.Work Accumulation Data",
+          "NTH.Supplier Signal",
+          "NTH.Supplier Signal Data"
         ],
         "options": [
           "no-tabs"
@@ -256,11 +445,14 @@
           "NTH.Application Navigation": "Application navigation",
           "NTH.Command Palette": "Command palette",
           "NTH.Operations KPIs": "Operational position",
-          "NTH.Open Cases by Stage": "Open cases by stage",
-          "NTH.Open Cases by Stage Data": "Open cases by stage data",
-          "NTH.Case Intake Trend": "Case intake trend",
-          "NTH.Case Intake Trend Data": "Case intake trend data",
-          "NTH.Urgent Work": "Urgent work"
+          "NTH.Case Intake Trend": "Nonconformance trend",
+          "NTH.Case Intake Trend Data": "Nonconformance trend data",
+          "NTH.Attention Now": "Attention now",
+          "NTH.Attention Now Data": "Attention now data",
+          "NTH.Work Accumulation": "Where work is accumulating",
+          "NTH.Work Accumulation Data": "Where work is accumulating data",
+          "NTH.Supplier Signal": "Supplier signal",
+          "NTH.Supplier Signal Data": "Supplier signal data"
         },
         "preFill": {
           "enabled": false,
@@ -274,11 +466,14 @@
       "NTH.Application Navigation",
       "NTH.Command Palette",
       "NTH.Operations KPIs",
-      "NTH.Open Cases by Stage",
-      "NTH.Open Cases by Stage Data",
       "NTH.Case Intake Trend",
       "NTH.Case Intake Trend Data",
-      "NTH.Urgent Work"
+      "NTH.Attention Now",
+      "NTH.Attention Now Data",
+      "NTH.Work Accumulation",
+      "NTH.Work Accumulation Data",
+      "NTH.Supplier Signal",
+      "NTH.Supplier Signal Data"
     ],
     "expectedForms": [
       "NTH.Quality Operations"

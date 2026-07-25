@@ -10,8 +10,8 @@
   }
 
   window.K2SP_NORTHSTAR_CONFIG = {
-    version: "3",
-    applicationCssUrl: window.location.origin + "/NorthstarAssets/northstar-homepage.v3.css",
+    version: "11",
+    applicationCssUrl: window.location.origin + "/NorthstarAssets/northstar-homepage.v11.css",
     navigationViewTitle: "Application navigation",
     commandPaletteViewTitle: "Command palette",
     formNamePrefix: "",
@@ -23,13 +23,19 @@
     userRole: "Quality manager",
     newCaseNavigationCode: "NEW_CASE",
     insightNavigationCode: "CASES",
+    navigationCounts: {
+      MY_WORK: 8,
+      ACTIONS: 5
+    },
     kpiViewTitle: "Operational position",
-    trendViewTitle: "Case intake trend",
-    trendDataViewTitle: "Case intake trend data",
-    attentionViewTitle: "Urgent work",
-    stagesViewTitle: "Open cases by stage",
-    stagesDataViewTitle: "Open cases by stage data",
+    trendViewTitle: "Nonconformance trend",
+    trendDataViewTitle: "Nonconformance trend data",
+    attentionViewTitle: "Attention now",
+    attentionDataViewTitle: "Attention now data",
+    stagesViewTitle: "Where work is accumulating",
+    stagesDataViewTitle: "Where work is accumulating data",
     supplierSignalViewTitle: "Supplier signal",
+    supplierSignalDataViewTitle: "Supplier signal data",
     suppressedFrameworkViews: [],
     suppressedFrameworkPanelNames: ["Header", "Footer"],
     enableDashboardComposition: true,
@@ -37,7 +43,7 @@
       OpenCaseCount: { text: "↓ 8.6% vs last month", tone: "positive" },
       SLAAtRiskCount: { text: "↑ 3 need intervention", tone: "critical" },
       OverdueActionCount: { text: "2 supplier-owned", tone: "critical" },
-      HighRiskCaseCount: { text: "↑ 2 this week", tone: "critical" }
+      FirstPassYieldPercent: { text: "↑ 1.7 pts", tone: "positive" }
     },
     pages: {
       "NTH.Quality Operations": {

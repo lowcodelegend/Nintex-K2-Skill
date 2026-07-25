@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "template": {"id": "solution-case-ux", "extends": "canonical-case-ux", "description": "Add only solution-specific roles, sections, measures, fields, and labels."},
+  "template": {"id": "solution-case-ux", "extends": "canonical-case-ux", "description": "Add only solution-specific roles, sections, measures, fields, and labels. Preserve the canonical homepage enhancements unless an approved capability decision replaces one."},
   "pages": [],
   "components": [],
   "journeys": []

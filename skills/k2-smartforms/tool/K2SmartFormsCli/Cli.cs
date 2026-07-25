@@ -143,7 +143,12 @@ namespace K2SmartFormsCli
             foreach (var state in states)
             {
                 string action;
-                if (!state.Exists) action = "create";
+                var declaredView = string.Equals(state.Kind, "View", StringComparison.OrdinalIgnoreCase)
+                    ? manifest.Application.Views.FirstOrDefault(x => string.Equals(x.Name, state.Name, StringComparison.OrdinalIgnoreCase))
+                    : null;
+                if (declaredView != null && declaredView.ReuseExisting)
+                    action = state.Exists ? "reuse existing (" + state.Guid + ", v" + state.Version + ")" : "blocked: reusable dependency is missing";
+                else if (!state.Exists) action = "create";
                 else if (manifest.Application.ReplaceExisting) action = "replace (" + state.Guid + ", v" + state.Version + ")";
                 else action = "conflict: exists and replacement is disabled (" + state.Guid + ", v" + state.Version + ")";
                 Console.WriteLine("  " + state.Kind + ": " + action + " " + state.Name);
@@ -229,7 +234,7 @@ namespace K2SmartFormsCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2forms 0.38.0");
+            Console.WriteLine("k2forms 0.39.0");
         }
 
         private static void PrintHelp()

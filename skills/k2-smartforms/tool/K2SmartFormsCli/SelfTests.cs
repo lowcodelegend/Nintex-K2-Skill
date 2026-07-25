@@ -94,9 +94,17 @@ namespace K2SmartFormsCli
             Assert(fieldIds.Count == fieldIds.Distinct().Count(),
                 "Web Component SmartObject association has unique View Field IDs");
             Assert(document.Descendants("Event").Count(rule =>
-                (string)rule.Attribute("SourceID") == customId &&
-                (string)rule.Element("Name") == "Initializing") == 1,
-                "Web Component has one list-data initialization rule");
+                (string)rule.Attribute("SourceType") == "View" &&
+                (string)rule.Element("Name") == "Init" &&
+                rule.Descendants("Action").Count(action =>
+                    (string)action.Attribute("Type") == "Execute" &&
+                    ReadActionProperty(action, "ControlID") == customId &&
+                    ReadActionProperty(action, "Method") == "List") == 1) == 1,
+                "Web Component has one View Init list-data action");
+            Assert(document.Descendants("Event").All(rule =>
+                (string)rule.Attribute("SourceID") != customId ||
+                (string)rule.Element("Name") != "Initializing"),
+                "Web Component does not depend on a synthetic Initializing control event");
             Assert(document.Descendants("Event").Count(rule =>
                 (string)rule.Attribute("SourceID") == customId &&
                 (string)rule.Element("Name") == "Navigate" &&

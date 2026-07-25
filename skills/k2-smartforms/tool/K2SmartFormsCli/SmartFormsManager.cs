@@ -386,6 +386,7 @@ namespace K2SmartFormsCli
                 var result = new Dictionary<string, IList<string>>(StringComparer.OrdinalIgnoreCase);
                 foreach (var view in _manifest.Application.Views)
                 {
+                    if (view.ReuseExisting) continue;
                     if (!manager.CheckViewExists(view.Name)) continue;
                     var info = manager.GetView(view.Name);
                     var external = manager.GetFormsForView(info.Guid).Forms.Cast<FormInfo>()
@@ -735,7 +736,15 @@ namespace K2SmartFormsCli
             var lookupSources = LoadLookupRuntimeSources();
             var states = GetArtifactStates();
             var selectedStates = formsOnly ? states.Where(x => string.Equals(x.Kind, "Form", StringComparison.OrdinalIgnoreCase)).ToList() : states;
-            var existing = selectedStates.Where(x => x.Exists).ToList();
+            var reusedViews = new HashSet<string>(_manifest.Application.Views.Where(x => x.ReuseExisting).Select(x => x.Name), StringComparer.OrdinalIgnoreCase);
+            var existing = selectedStates.Where(x => x.Exists &&
+                !(string.Equals(x.Kind, "View", StringComparison.OrdinalIgnoreCase) && reusedViews.Contains(x.Name))).ToList();
+            var missingReusedViews = _manifest.Application.Views.Where(x => x.ReuseExisting &&
+                !states.Any(s => s.Exists && string.Equals(s.Kind, "View", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(s.Name, x.Name, StringComparison.OrdinalIgnoreCase))).Select(x => x.Name).ToList();
+            if (missingReusedViews.Count > 0)
+                throw new CliException("Reusable View(s) must already exist before deployment: " +
+                    string.Join(", ", missingReusedViews.ToArray()) + ".");
             if (existing.Count > 0 && !_manifest.Application.ReplaceExisting && !resume)
                 throw new CliException("Artifact(s) already exist and application.replaceExisting is false: " + string.Join(", ", existing.Select(x => x.Kind + " " + x.Name).ToArray()));
 
@@ -767,6 +776,7 @@ namespace K2SmartFormsCli
                     {
                         foreach (var view in _manifest.Application.Views)
                         {
+                            if (view.ReuseExisting) continue;
                             if (resume && manager.CheckViewExists(view.Name)) continue;
                             renderedViews[view.Name] = RenderView(renderer, view, lookupSources);
                         }
@@ -795,6 +805,7 @@ namespace K2SmartFormsCli
                     }
                     foreach (var view in formsOnly ? new List<ViewDefinition>() : _manifest.Application.Views)
                     {
+                        if (view.ReuseExisting) continue;
                         if (!manager.CheckViewExists(view.Name)) continue;
                         var info = manager.GetView(view.Name);
                         manager.DeleteView(info.Guid);
@@ -814,6 +825,12 @@ namespace K2SmartFormsCli
                     foreach (var view in _manifest.Application.Views)
                     {
                         if (formsOnly) break;
+                        if (view.ReuseExisting)
+                        {
+                            var existingView = manager.GetView(view.Name);
+                            Console.WriteLine("View: reused existing (" + view.Name + ", " + existingView.Guid + ", v" + existingView.Version + ")");
+                            continue;
+                        }
                         if (resume && manager.CheckViewExists(view.Name))
                         {
                             var existingView = manager.GetView(view.Name);
@@ -998,6 +1015,11 @@ namespace K2SmartFormsCli
                 }
                 foreach (var view in _manifest.Application.Views)
                 {
+                    if (view.ReuseExisting)
+                    {
+                        Console.WriteLine("View: preserved reusable dependency (" + view.Name + ")");
+                        continue;
+                    }
                     if (!manager.CheckViewExists(view.Name))
                     {
                         Console.WriteLine("View: already absent (" + view.Name + ")");

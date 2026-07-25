@@ -12,13 +12,28 @@
     "required": true,
     "styleProfile": "northstar-native-shell",
     "strictFidelity": true,
-    "enhancements": {
-      "region": "command-palette",
-      "implementation": "modern-web-component",
-      "controlTagName": "northstar-command-palette",
-      "source": "skills/k2-case-management/assets/northstar-command-palette",
-      "required": true
-    }
+    "enhancements": [
+      {
+        "region": "command-palette",
+        "implementation": "modern-web-component",
+        "controlTagName": "northstar-command-palette",
+        "source": "skills/k2-case-management/assets/northstar-command-palette",
+        "required": true
+      },
+      {
+        "region": "dashboard-visuals",
+        "implementation": "modern-web-component",
+        "controlTagName": "northstar-dashboard-widget",
+        "source": "skills/k2-case-management/assets/northstar-dashboard-widget",
+        "variants": [
+          "trend",
+          "attention",
+          "stage",
+          "supplier"
+        ],
+        "required": true
+      }
+    ]
   },
   "design_system": {
     "density": "comfortable",
@@ -155,11 +170,11 @@
         "open-cases",
         "sla-at-risk",
         "overdue-actions",
-        "high-risk-cases",
-        "cases-by-stage",
+        "first-pass-yield",
         "intake-trend",
-        "aging-distribution",
-        "urgent-work"
+        "attention-now",
+        "cases-by-stage",
+        "supplier-signal"
       ]
     },
     {
@@ -283,6 +298,13 @@
       "explanation": "Open cases at or above the configured high-risk threshold."
     },
     {
+      "id": "first-pass-yield",
+      "kind": "kpi",
+      "measure": "first_pass_yield_percent",
+      "drilldown": "reports",
+      "explanation": "Cases resolved without rework or recurrence in the governed reporting period."
+    },
+    {
       "id": "cases-by-stage",
       "kind": "chart",
       "chart_type": "horizontal-bar",
@@ -317,6 +339,18 @@
       "kind": "queue",
       "empty_state": "No urgent work.",
       "drilldown": "case-workspace"
+    },
+    {
+      "id": "attention-now",
+      "kind": "queue",
+      "empty_state": "No urgent work.",
+      "drilldown": "case-workspace"
+    },
+    {
+      "id": "supplier-signal",
+      "kind": "signal-list",
+      "empty_state": "No supplier or party signals.",
+      "drilldown": "all-cases"
     },
     {
       "id": "all-cases",

@@ -8,29 +8,31 @@
   }
 
   function loadStyles(control, parent) {
-    if (!control.ControlType) control.ControlType = "northstar-command-palette";
+    if (!control.ControlType) control.ControlType = "northstar-dashboard-widget";
     if (!Array.isArray(control.DesigntimeStyleFileNames) || control.DesigntimeStyleFileNames.length === 0) {
-      control.DesigntimeStyleFileNames = ["northstar-command-designtime.css"];
+      control.DesigntimeStyleFileNames = ["control-designtime.css"];
     }
-    if (!Array.isArray(control.RuntimeStyleFileNames)) {
-      control.RuntimeStyleFileNames = ["northstar-command-runtime.css"];
-    }
+    if (!Array.isArray(control.RuntimeStyleFileNames)) control.RuntimeStyleFileNames = [];
     const styles = window.SourceCode && window.SourceCode.Forms && window.SourceCode.Forms.ControlStyles;
     return styles && typeof styles.loadStyleResources === "function"
       ? Promise.resolve(styles.loadStyleResources(control, parent))
       : Promise.resolve();
   }
 
-  if (!window.customElements.get("northstar-command-palette")) {
-    window.customElements.define("northstar-command-palette", class NorthstarCommandPaletteDesign extends K2BaseControl {
+  if (!window.customElements.get("northstar-dashboard-widget")) {
+    window.customElements.define("northstar-dashboard-widget", class NorthstarDashboardWidgetDesign extends K2BaseControl {
       constructor() {
         super();
         this._value = "";
-        this._suggestions = [];
-        this._searchUrlTemplate = "";
-        this._placeholder = "Search cases, work and reports";
+        this._data = [];
+        this._variant = "trend";
+        this._heading = "Dashboard insight";
+        this._subtitle = "";
+        this._actionLabel = "";
+        this._actionTarget = "";
+        this._emptyMessage = "No data in this period.";
         this._width = "100%";
-        this._height = "48px";
+        this._height = "260px";
         this._isVisible = true;
         this._isEnabled = true;
         this._isReadOnly = false;
@@ -42,16 +44,24 @@
       }
       get Value() { return this._value; }
       set Value(value) { this._value = value == null ? "" : String(value); changed(this, "Value"); }
-      get Suggestions() { return this._suggestions; }
-      set Suggestions(value) { this._suggestions = value || []; changed(this, "Suggestions"); }
-      get SearchUrlTemplate() { return this._searchUrlTemplate; }
-      set SearchUrlTemplate(value) { this._searchUrlTemplate = value == null ? "" : String(value); changed(this, "SearchUrlTemplate"); }
-      get Placeholder() { return this._placeholder; }
-      set Placeholder(value) { this._placeholder = value || "Search cases, work and reports"; this.render(); changed(this, "Placeholder"); }
+      get Data() { return this._data; }
+      set Data(value) { this._data = value; changed(this, "Data"); }
+      get Variant() { return this._variant; }
+      set Variant(value) { this._variant = value || "trend"; this.render(); changed(this, "Variant"); }
+      get Heading() { return this._heading; }
+      set Heading(value) { this._heading = value || "Dashboard insight"; this.render(); changed(this, "Heading"); }
+      get Subtitle() { return this._subtitle; }
+      set Subtitle(value) { this._subtitle = value || ""; this.render(); changed(this, "Subtitle"); }
+      get ActionLabel() { return this._actionLabel; }
+      set ActionLabel(value) { this._actionLabel = value || ""; this.render(); changed(this, "ActionLabel"); }
+      get ActionTarget() { return this._actionTarget; }
+      set ActionTarget(value) { this._actionTarget = value || ""; changed(this, "ActionTarget"); }
+      get EmptyMessage() { return this._emptyMessage; }
+      set EmptyMessage(value) { this._emptyMessage = value || "No data in this period."; changed(this, "EmptyMessage"); }
       get Width() { return this._width; }
       set Width(value) { this._width = value || "100%"; this.style.width = this._width; changed(this, "Width"); }
       get Height() { return this._height; }
-      set Height(value) { this._height = value || "48px"; this.style.minHeight = this._height; changed(this, "Height"); }
+      set Height(value) { this._height = value || "260px"; this.style.minHeight = this._height; changed(this, "Height"); }
       get IsVisible() { return this._isVisible; }
       set IsVisible(value) { this._isVisible = value === true || value === "true"; this.style.display = this._isVisible ? "" : "none"; changed(this, "IsVisible"); }
       get IsEnabled() { return this._isEnabled; }
@@ -68,7 +78,7 @@
         if (properties[name]) this[properties[name]] = newValue;
       }
       listItemsChangedCallback(itemsChangedEventArgs) {
-        this.Suggestions = itemsChangedEventArgs && Array.isArray(itemsChangedEventArgs.NewItems)
+        this.Data = itemsChangedEventArgs && Array.isArray(itemsChangedEventArgs.NewItems)
           ? itemsChangedEventArgs.NewItems
           : itemsChangedEventArgs;
       }
@@ -80,13 +90,20 @@
           for (const child of Array.from(this._shadow.children)) {
             if (!(child.tagName === "STYLE" && child.hasAttribute("data-id"))) child.remove();
           }
-          const preview = document.createElement("div");
-          preview.className = "northstar-command-design";
-          const label = document.createElement("span");
-          label.textContent = this._placeholder;
-          const shortcut = document.createElement("kbd");
-          shortcut.textContent = "Ctrl K";
-          preview.append(label, shortcut);
+          const preview = document.createElement("section");
+          preview.setAttribute("aria-label", "Northstar Dashboard Widget design preview");
+          const heading = document.createElement("strong");
+          heading.textContent = this._heading;
+          const kind = document.createElement("span");
+          kind.textContent = (this._subtitle ? this._subtitle + " · " : "") + this._variant + " · governed list binding";
+          const bars = document.createElement("div");
+          bars.className = "northstar-dashboard-preview";
+          for (const width of ["78%", "52%", "67%"]) {
+            const bar = document.createElement("i");
+            bar.style.width = width;
+            bars.append(bar);
+          }
+          preview.append(heading, kind, bars);
           this._shadow.append(preview);
           this._hasRendered = true;
           this._rendering = false;

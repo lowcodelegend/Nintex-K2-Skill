@@ -15,6 +15,14 @@
         "controlTagName": "northstar-command-palette",
         "source": "skills/k2-case-management/assets/northstar-command-palette",
         "required": true
+      },
+      {
+        "region": "dashboard-visuals",
+        "implementation": "modern-web-component",
+        "controlTagName": "northstar-dashboard-widget",
+        "source": "skills/k2-case-management/assets/northstar-dashboard-widget",
+        "variants": ["trend", "attention", "stage", "supplier"],
+        "required": true
       }
     ]
   },

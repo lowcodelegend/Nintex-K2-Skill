@@ -147,8 +147,17 @@ try {
     if (@($shell.tabs | Where-Object name -eq 'Overview')[0].views[1] -ne 'SNC.Commands') { throw 'Workspace compiler did not keep governed next actions in the primary case context.' }
     $reports = @($manifest.application.forms | Where-Object { $_.name -eq 'SNC.Reports' })[0]
     if (@($reports.tabs.name) -join '|' -ne 'Operations|Performance|Quality' -or @($reports.views).Count -ne 12) { throw 'Reports compiler did not emit the reusable governed report collection with accessible data alternatives.' }
+    $dashboard = @($manifest.application.forms | Where-Object { $_.name -eq 'SNC.Quality Operations' })[0]
+    if ($dashboard.useLegacyTheme -ne $false -or $dashboard.preFill.enabled -ne $false -or @($dashboard.views).Count -ne 11) { throw 'Northstar dashboard compiler did not emit the modern native shell and complete bounded-widget composition.' }
+    $widgetViews = @($manifest.application.views | Where-Object { @($_.webComponents | Where-Object controlType -eq 'northstar-dashboard-widget').Count -eq 1 })
+    if ($widgetViews.Count -ne 4 -or (@($widgetViews.webComponents.properties.Variant | Sort-Object) -join '|') -ne 'attention|stage|supplier|trend') { throw 'Northstar dashboard compiler did not emit the four bounded widget variants.' }
+    foreach ($widgetView in $widgetViews) {
+        $widget = $widgetView.webComponents[0]
+        if ($widget.dataBinding.property -ne 'Data' -or $widget.dataBinding.method -ne 'List' -or $widget.dataBinding.serverUserScoped -ne $true) { throw "Dashboard widget '$($widgetView.name)' lacks the governed View-init list binding." }
+        if (@($manifest.application.views | Where-Object name -eq ($widgetView.name + ' Data')).Count -ne 1) { throw "Dashboard widget '$($widgetView.name)' lacks its native accessible data alternative." }
+    }
     $myWork = @($manifest.application.forms | Where-Object { $_.name -eq 'SNC.My Work' })[0]
-    if (@($myWork.tabs.name) -join '|' -ne 'My Tasks|Urgent Team Work' -or $myWork.tabs[0].worklist.rows -ne 20 -or @($myWork.views) -notcontains 'SNC.Urgent Work') { throw 'My Work compiler did not reuse the native Worklist and mapped operational queue.' }
+    if (@($myWork.tabs.name) -join '|' -ne 'My Tasks|Urgent Team Work' -or $myWork.tabs[0].worklist.rows -ne 20 -or @($myWork.views) -notcontains 'SNC.Attention Now Data') { throw 'My Work compiler did not reuse the native Worklist and mapped operational queue.' }
 } finally {
     if (Test-Path -LiteralPath $initiationCompiled) { Remove-Item -LiteralPath $initiationCompiled -Force }
 }

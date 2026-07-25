@@ -7,9 +7,11 @@ $validator = Join-Path $skillRoot 'scripts\validate-control.ps1'
 $scaffolder = Join-Path $skillRoot 'scripts\scaffold-control.ps1'
 $northstar = [IO.Path]::GetFullPath((Join-Path $skillRoot '..\k2-case-management\assets\northstar-case-homepage'))
 $palette = [IO.Path]::GetFullPath((Join-Path $skillRoot '..\k2-case-management\assets\northstar-command-palette'))
+$dashboardWidget = [IO.Path]::GetFullPath((Join-Path $skillRoot '..\k2-case-management\assets\northstar-dashboard-widget'))
 
 & $validator -Source $northstar
 & $validator -Source $palette
+& $validator -Source $dashboardWidget
 $prototypeCss = [IO.Path]::GetFullPath((Join-Path $skillRoot '..\..\examples\supplier-nonconformance\gold-standard-prototype\styles.css'))
 $componentCss = Join-Path $northstar 'northstar-prototype.css'
 $prototypeHash = (Get-FileHash -LiteralPath $prototypeCss -Algorithm SHA256).Hash
@@ -38,6 +40,24 @@ foreach ($required in @(
 }
 if ($paletteSource -match '\.innerHTML\s*=') {
   throw 'Northstar command palette writes live content through innerHTML.'
+}
+
+$dashboardSource = Get-Content -Raw -LiteralPath (Join-Path $dashboardWidget 'control-runtime.js')
+foreach ($required in @(
+  'listItemsChangedCallback(itemsChangedEventArgs)',
+  'itemsChangedEventArgs.NewItems',
+  'dispatchEvent(new Event("Navigate"))',
+  'parsed.origin !== window.location.origin',
+  'slice(0, 100)',
+  'role", "img"',
+  'textContent ='
+)) {
+  if ($dashboardSource -notmatch [regex]::Escape($required)) {
+    throw "Northstar dashboard widget is missing required runtime contract: $required"
+  }
+}
+if ($dashboardSource -match '\.innerHTML\s*=') {
+  throw 'Northstar dashboard widget writes live content through innerHTML.'
 }
 
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('k2-modern-control-test-' + [guid]::NewGuid())

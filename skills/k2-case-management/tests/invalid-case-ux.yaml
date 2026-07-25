@@ -1,4 +1,11 @@
 {
+  "homepage": {
+    "page":"home","implementation":"native-smartforms","required":true,
+    "enhancements":[
+      {"implementation":"modern-web-component","controlTagName":"northstar-command-palette"},
+      {"implementation":"modern-web-component","controlTagName":"northstar-dashboard-widget"}
+    ]
+  },
   "roles": [{"code":"USER"}],
   "shell": {"primary_create_action":"missing", "navigation":[{"id":"home","target":"missing-page"}]},
   "pages": [{"id":"home","type":"dashboard","components":["missing-component"]}],

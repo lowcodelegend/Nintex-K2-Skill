@@ -8,7 +8,7 @@ Deployed layers:
 - Parent `SNC.Case Lifecycle` plus Capture, Validate, Classify, Assign, Investigate, Decide, Resolve, and Close child workflows.
 - `SNC.Supplier Nonconformance` workspace with Cases, Overview, Investigation, Collaboration, Decisions & Actions, Activity & History, Analytics, Reports, and native My Tasks navigation. Governed commands stay beside the case context; all eleven child collections remain filtered and transactionally coordinated.
 - `SNC.New Nonconformance` guided initiation with Case Details, Evidence, saved-key Review & Submit, a dedicated final Submit case action, and native start-only integration to the parent lifecycle.
-- `SNC.Quality Operations` with native KPI cards, charts and urgent-work queue; `SNC.Reports` with six accessible chart/table reports; and `SNC.My Work` combining the user's native K2 Worklist with the reused urgent team queue.
+- `SNC.Quality Operations` with native KPI cards plus bounded Northstar trend, attention, stage, and supplier-signal Web Components over governed SmartObject projections. Every visual has an adjacent native List View as its accessible data alternative. `SNC.Reports` has six accessible chart/table reports, and `SNC.My Work` combines the user's native K2 Worklist with the reused attention queue.
 - `SNC.Stage Task` with eight native SmartForms Start/Task integrations.
 - Administration Forms for lookup values, SLAs, case types, stage definitions, allowed transitions, and business rules.
 
@@ -30,6 +30,9 @@ Repeatable deployment order:
 ```powershell
 & '<k2-sql-smartobjects>\scripts\k2sql.ps1' deploy --manifest '.\manifest.json' --confirm
 & '<k2-case-management>\scripts\compose-case-ux.ps1' -Overlay '.\case-ux.yaml' -Output '.\case-ux.composed.json'
+& '<k2-smartforms-web-components>\scripts\package-control.ps1' -Source '<k2-case-management>\assets\northstar-command-palette' -Output '.\northstar-command-palette.zip'
+& '<k2-smartforms-web-components>\scripts\package-control.ps1' -Source '<k2-case-management>\assets\northstar-dashboard-widget' -Output '.\northstar-dashboard-widget.zip'
+# Register/verify both modern controls, then deploy/verify the Northstar Native Homepage Style Profile.
 & '<k2-case-management>\scripts\compile-case-ux-smartforms.ps1' -Ux '.\case-ux.composed.json' -Mapping '.\case-ux-k2-mapping.yaml' -BaseManifest '.\smartforms-manifest.json' -Output '.\smartforms-combined-manifest.json'
 & '<k2-smartforms>\scripts\k2forms.ps1' deploy --manifest '.\smartforms-combined-manifest.json' --confirm
 & '<k2-smartforms>\scripts\k2forms.ps1' deploy --manifest '.\smartforms-admin-manifest.json' --confirm

@@ -147,29 +147,13 @@ namespace K2SmartFormsCli
                     new XAttribute("TargetDisplayName", component.Name),
                     new XAttribute("TargetType", "Control"))));
 
-            var viewId = (string)root.Attribute("ID");
-            events.Add(new XElement(ns + "Event",
-                new XAttribute("ID", NewId()),
-                new XAttribute("DefinitionID", NewId()),
-                new XAttribute("Type", "User"),
-                new XAttribute("SourceID", controlId),
-                new XAttribute("SourceType", "Control"),
-                new XAttribute("SourceName", component.Name),
-                new XAttribute("SourceDisplayName", component.Name),
-                new XElement(ns + "Name", "Initializing"),
-                new XElement(ns + "DisplayName", "Initializing"),
-                new XElement(ns + "Properties",
-                    Property(ns, "ViewID", viewId),
-                    Property(ns, "RuleFriendlyName", "When " + component.Name + " is Initializing"),
-                    Property(ns, "Location", viewId)),
-                new XElement(ns + "Handlers",
-                    new XElement(ns + "Handler",
-                        new XAttribute("ID", NewId()),
-                        new XAttribute("DefinitionID", NewId()),
-                        new XElement(ns + "Properties",
-                            Property(ns, "HandlerName", "IfLogicalHandler"),
-                            Property(ns, "Location", "control")),
-                        new XElement(ns + "Actions", action)))));
+            var init = EnsureViewInitEvent(root, view);
+            foreach (var existing in init.Descendants().Where(x => x.Name.LocalName == "Action" &&
+                string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(ActionProperty(x, "ControlID"), controlId, StringComparison.OrdinalIgnoreCase)).ToList())
+                existing.Remove();
+            var initActions = EnsureUnconditionalActions(init);
+            initActions.AddFirst(action);
         }
 
         private static void ConfigureRuleEvent(XElement root, XElement control,
@@ -255,16 +239,68 @@ namespace K2SmartFormsCli
                 x.Name.LocalName == "Event" &&
                 string.Equals((string)x.Attribute("SourceID"), controlId, StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(Child(x, "Name"), "Initializing", StringComparison.OrdinalIgnoreCase)).ToList();
-            if (initializing.Count != 1)
-                throw new CliException("View '" + view.Name + "' Web Component must have exactly one Initializing data rule.");
-            var actions = initializing[0].Descendants().Where(x => x.Name.LocalName == "Action" &&
+            if (initializing.Count != 0)
+                throw new CliException("View '" + view.Name + "' Web Component must not depend on a synthetic control Initializing event.");
+            var init = events == null ? null : events.Elements().FirstOrDefault(x =>
+                x.Name.LocalName == "Event" &&
+                string.Equals((string)x.Attribute("SourceType"), "View", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(Child(x, "Name"), "Init", StringComparison.OrdinalIgnoreCase));
+            var actions = init == null ? new List<XElement>() : init.Descendants().Where(x => x.Name.LocalName == "Action" &&
                 string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(ActionProperty(x, "Method"), component.DataBinding.Method, StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(ActionProperty(x, "ControlID"), controlId, StringComparison.OrdinalIgnoreCase)).ToList();
             if (actions.Count != 1 || actions[0].Descendants().Count(x => x.Name.LocalName == "Result" &&
                 string.Equals((string)x.Attribute("TargetID"), controlId, StringComparison.OrdinalIgnoreCase) &&
                 string.Equals((string)x.Attribute("TargetType"), "Control", StringComparison.OrdinalIgnoreCase)) != 1)
-                throw new CliException("View '" + view.Name + "' Web Component data rule does not map one SmartObject result to the control.");
+                throw new CliException("View '" + view.Name + "' Web Component View Init data rule does not map one SmartObject result to the control.");
+        }
+
+        private static XElement EnsureViewInitEvent(XElement root, ViewDefinition view)
+        {
+            var events = EnsureChild(root, "Events");
+            var existing = events.Elements().FirstOrDefault(x =>
+                x.Name.LocalName == "Event" &&
+                string.Equals(Child(x, "Name"), "Init", StringComparison.OrdinalIgnoreCase) &&
+                (string.IsNullOrWhiteSpace((string)x.Attribute("SourceType")) ||
+                 string.Equals((string)x.Attribute("SourceType"), "View", StringComparison.OrdinalIgnoreCase)));
+            if (existing != null) return existing;
+            var ns = root.Name.Namespace;
+            var viewId = (string)root.Attribute("ID");
+            if (string.IsNullOrWhiteSpace(viewId))
+                throw new CliException("Generated View '" + view.Name + "' has no View ID for Web Component data initialization.");
+            var result = new XElement(ns + "Event",
+                new XAttribute("ID", NewId()),
+                new XAttribute("DefinitionID", NewId()),
+                new XAttribute("Type", "User"),
+                new XAttribute("SourceID", viewId),
+                new XAttribute("SourceType", "View"),
+                new XAttribute("SourceName", view.Name),
+                new XAttribute("SourceDisplayName", view.Name),
+                new XElement(ns + "Name", "Init"),
+                new XElement(ns + "DisplayName", "Init"),
+                new XElement(ns + "Handlers"));
+            events.AddFirst(result);
+            return result;
+        }
+
+        private static XElement EnsureUnconditionalActions(XElement init)
+        {
+            var ns = init.Name.Namespace;
+            var handlers = EnsureChild(init, "Handlers");
+            var handler = handlers.Elements().FirstOrDefault(x =>
+                x.Name.LocalName == "Handler" &&
+                !x.Elements().Any(child => child.Name.LocalName == "Conditions" && child.Elements().Any()));
+            if (handler == null)
+            {
+                handler = new XElement(ns + "Handler",
+                    new XAttribute("ID", NewId()),
+                    new XAttribute("DefinitionID", NewId()),
+                    new XElement(ns + "Properties",
+                        Property(ns, "HandlerName", "IfLogicalHandler"),
+                        Property(ns, "Location", "view")));
+                handlers.AddFirst(handler);
+            }
+            return EnsureChild(handler, "Actions");
         }
 
         private static void VerifyRuleEvent(XElement root, XElement control,

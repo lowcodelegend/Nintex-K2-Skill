@@ -39,7 +39,7 @@ Declare only behavior implemented by both design-time and runtime classes:
 ]
 ```
 
-`ControlExpression` uses the `Value` getter/setter and requires `Value`. `DataBinding` requires one and only one `listdata` property plus `listItemsChangedCallback`. Never put reserved `TabIndex` or `ControlExpression` entries in `properties`.
+`ControlExpression` uses the `Value` getter/setter and requires `Value`. `DataBinding` requires one and only one `listdata` property plus `listItemsChangedCallback(itemsChangedEventArgs)`. K2 passes an event object, not the rows directly; consume `itemsChangedEventArgs.NewItems` and normalize that array. Never put reserved `TabIndex` or `ControlExpression` entries in `properties`.
 
 Valid initial widths are a whole number, a percentage no greater than 100%, or a whole pixel value no greater than 32767px. `auto`, viewport units, negative sizes, and decimal pixel sizes are invalid K2 width defaults.
 
@@ -60,6 +60,18 @@ Composite dashboards use one list source:
 ```
 
 The bound projection uses a `kind` discriminator and stable IDs. Keep display text, values, routes, and record keys in explicit columns. Do not parse presentation meaning from localized labels.
+
+The required runtime seam is:
+
+```javascript
+listItemsChangedCallback(itemsChangedEventArgs) {
+  this.Data = Array.isArray(itemsChangedEventArgs?.NewItems)
+    ? itemsChangedEventArgs.NewItems
+    : [];
+}
+```
+
+When `$k2-smartforms` places the control, the owning View's real Init lifecycle executes the declared List method and sends its rows to this property. A custom element does not raise K2's legacy control `Initializing` event; never build data loading around a synthetic control-scoped Initializing rule.
 
 ## Events and methods
 

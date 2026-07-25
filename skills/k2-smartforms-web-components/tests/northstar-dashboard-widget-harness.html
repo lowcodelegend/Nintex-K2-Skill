@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Northstar dashboard widget harness</title>
+  <style>
+    html,body{margin:0;min-width:320px;min-height:100%;background:#f3f6f9;color:#172337;font-family:Inter,"Segoe UI",Arial,sans-serif}
+    main{max-width:1160px;margin:0 auto;padding:32px}
+    h1{margin:0 0 24px;font-size:26px}
+    .grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr);gap:18px;align-items:start}
+    .wide{grid-column:1}
+    @media(max-width:760px){main{padding:18px}.grid{grid-template-columns:1fr}.wide{grid-column:auto}}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Quality Operations</h1>
+    <div class="grid" aria-label="Dashboard component test surface"></div>
+  </main>
+  <script>
+    class K2BaseControl extends HTMLElement {
+      constructor(){super();this._shadow=null;this._hasRendered=false;}
+      ensureShadow(){if(!this._shadow)this._shadow=this.attachShadow({mode:"open"});return this._shadow;}
+      connectedCallback(){if(!this._hasRendered)this.render();}
+      disconnectedCallback(){}
+      attributeChangedCallback(name,oldValue,newValue){
+        if(name==="controlstyle")this.ControlStyle=newValue;
+        if(name==="name")this.Name=newValue;
+        if(name==="controltype")this.ControlType=newValue;
+      }
+    }
+    window.K2BaseControl=K2BaseControl;
+    window.K2={RaisePropertyChanged(){}};
+    window.SourceCode={Forms:{ControlStyles:{loadStyleResources(control,shadowRoot){
+      const style=document.createElement("style");
+      style.dataset.id="northstar-dashboard-style";
+      style.textContent='@import url("../../k2-case-management/assets/northstar-dashboard-widget/control-runtime.css");';
+      shadowRoot.append(style);
+      return Promise.resolve();
+    }}}};
+  </script>
+  <script src="../../k2-case-management/assets/northstar-dashboard-widget/control-runtime.js"></script>
+  <script>
+    const fixtures={
+      trend:[
+        {PeriodLabel:"Jul 1",OpenedCount:18,ResolvedCount:12},
+        {PeriodLabel:"Jul 7",OpenedCount:29,ResolvedCount:19},
+        {PeriodLabel:"Jul 13",OpenedCount:23,ResolvedCount:22},
+        {PeriodLabel:"Jul 19",OpenedCount:37,ResolvedCount:28},
+        {PeriodLabel:"Jul 25",OpenedCount:31,ResolvedCount:34}
+      ],
+      attention:[
+        {CaseNumber:"SNC-2026-0148",Title:"Dimensional variance · Apex Components",DueLabel:"Breached 2d",Tone:"critical",TargetUrl:"/Runtime/Runtime/Form/SNC.Case%20Workspace?CaseId=148"},
+        {CaseNumber:"SNC-2026-0146",Title:"Coating adhesion · Orion Metals",DueLabel:"Due today",Tone:"warning",TargetUrl:"/Runtime/Runtime/Form/SNC.Case%20Workspace?CaseId=146"},
+        {CaseNumber:"SNC-2026-0141",Title:"Packaging contamination · Nexus Supply",DueLabel:"At risk",Tone:"warning",TargetUrl:"/Runtime/Runtime/Form/SNC.Case%20Workspace?CaseId=141"}
+      ],
+      stage:[
+        {StageLabel:"Validate",CaseCount:34},
+        {StageLabel:"Investigate",CaseCount:29},
+        {StageLabel:"Corrective action",CaseCount:24},
+        {StageLabel:"Review & decide",CaseCount:19},
+        {StageLabel:"Close & learn",CaseCount:11}
+      ],
+      supplier:[
+        {SupplierName:"Apex Components",SupplierInitials:"AC",SignalLabel:"4 active · 2 recurring",Score:68,Tone:"critical",TargetUrl:"/Runtime/Runtime/Form/SNC.Cases?Supplier=Apex"},
+        {SupplierName:"Orion Metals",SupplierInitials:"OM",SignalLabel:"3 active · improving",Score:81,Tone:"warning",TargetUrl:"/Runtime/Runtime/Form/SNC.Cases?Supplier=Orion"},
+        {SupplierName:"Nexus Supply",SupplierInitials:"NS",SignalLabel:"2 active · stable",Score:94,Tone:"positive",TargetUrl:"/Runtime/Runtime/Form/SNC.Cases?Supplier=Nexus"}
+      ]
+    };
+    const definitions=[
+      ["trend","Nonconformance trend","290px","wide"],
+      ["attention","Attention now","290px",""],
+      ["stage","Where work is accumulating","270px","wide"],
+      ["supplier","Supplier signal","270px",""]
+    ];
+    const grid=document.querySelector(".grid");
+    definitions.forEach(function(definition,index){
+      const control=document.createElement("northstar-dashboard-widget");
+      control.Name="NorthstarDashboardWidget"+index;
+      control.Variant=definition[0];
+      control.Heading=definition[1];
+      control.Height=definition[2];
+      control.Data=fixtures[definition[0]];
+      if(definition[3])control.className=definition[3];
+      control.addEventListener("Navigate",function(){document.body.dataset.navigateTarget=control.Value;});
+      grid.append(control);
+    });
+  </script>
+</body>
+</html>

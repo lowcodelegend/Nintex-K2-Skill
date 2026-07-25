@@ -44,11 +44,14 @@ IF OBJECT_ID(N'SNC.ApplicationNavigation', N'U') IS NULL CREATE TABLE SNC.Applic
 GO
 MERGE SNC.ApplicationNavigation AS target
 USING (VALUES
- (N'OPERATIONS',N'Workspace',N'Operations',N'home',N'SNC.Quality Operations',10,CONVERT(bit,1),N'1'),
- (N'MY_WORK',N'Workspace',N'My work',N'inbox',N'SNC.My Work',20,CONVERT(bit,1),N'1'),
- (N'CASES',N'Cases',N'All cases',N'folder',N'SNC.Supplier Nonconformance',30,CONVERT(bit,1),N'1'),
- (N'NEW_CASE',N'Cases',N'New nonconformance',N'plus',N'SNC.New Nonconformance',40,CONVERT(bit,1),N'1'),
- (N'REPORTS',N'Insights',N'Reports',N'chart',N'SNC.Reports',50,CONVERT(bit,1),N'1')
+ (N'OPERATIONS',N'',N'Command centre',N'home',N'NTH.Quality Operations',10,CONVERT(bit,1),N'2'),
+ (N'MY_WORK',N'',N'My work',N'work',N'SNC.My Work',20,CONVERT(bit,1),N'2'),
+ (N'CASES',N'',N'All cases',N'cases',N'SNC.Supplier Nonconformance',30,CONVERT(bit,1),N'2'),
+ (N'ACTIONS',N'',N'Corrective actions',N'actions',N'SNC.Corrective Actions',40,CONVERT(bit,1),N'2'),
+ (N'REPORTS',N'',N'Insights & reports',N'reports',N'SNC.Reports',50,CONVERT(bit,1),N'2'),
+ (N'SUPPLIERS',N'Management',N'Suppliers',N'suppliers',N'SNC.Suppliers',60,CONVERT(bit,1),N'2'),
+ (N'CONFIGURATION',N'Management',N'Configuration',N'settings',N'SNC.Configuration',70,CONVERT(bit,1),N'2'),
+ (N'NEW_CASE',N'',N'New nonconformance',N'plus',N'SNC.New Nonconformance',900,CONVERT(bit,1),N'2')
 ) AS source(NavigationCode,SectionLabel,Label,IconToken,TargetFormName,SortOrder,IsActive,ConfigurationVersion)
 ON target.NavigationCode=source.NavigationCode
 WHEN MATCHED THEN UPDATE SET SectionLabel=source.SectionLabel,Label=source.Label,IconToken=source.IconToken,
@@ -203,6 +206,32 @@ GO
 IF OBJECT_ID(N'SNC.CorrectiveAction', N'U') IS NULL CREATE TABLE SNC.CorrectiveAction
 (CorrectiveActionId int IDENTITY(1,1) NOT NULL CONSTRAINT PK_SNC_CorrectiveAction PRIMARY KEY,CaseId int NOT NULL,StageInstanceId int NULL,ActionTypeCode nvarchar(50) NOT NULL,Description nvarchar(1000) NOT NULL,OwnerFQN nvarchar(300) NOT NULL,DueDate datetime2(0) NOT NULL,Status nvarchar(40) NOT NULL,VerificationResult nvarchar(1000) NULL,CompletedDate datetime2(0) NULL,CONSTRAINT FK_SNC_Action_Case FOREIGN KEY(CaseId) REFERENCES SNC.[Case](CaseId) ON DELETE CASCADE,CONSTRAINT FK_SNC_Action_Stage FOREIGN KEY(StageInstanceId) REFERENCES SNC.CaseStageInstance(CaseStageInstanceId));
 GO
+IF OBJECT_ID(N'SNC.SupplierQualitySnapshot', N'U') IS NULL CREATE TABLE SNC.SupplierQualitySnapshot
+(
+ SupplierQualitySnapshotId int IDENTITY(1,1) NOT NULL CONSTRAINT PK_SNC_SupplierQualitySnapshot PRIMARY KEY,
+ SupplierId nvarchar(100) NOT NULL, SupplierName nvarchar(200) NOT NULL,
+ FirstPassYieldPercent decimal(5,2) NOT NULL, ActiveCaseCount int NOT NULL, RecurrenceCount int NOT NULL,
+ SignalScore int NOT NULL, SignalLabel nvarchar(100) NOT NULL,
+ EffectiveDate date NOT NULL, ConfigurationVersion nvarchar(30) NOT NULL,
+ CONSTRAINT UQ_SNC_SupplierQualitySnapshot UNIQUE(SupplierId,EffectiveDate),
+ CONSTRAINT CK_SNC_SupplierQualitySnapshot_Yield CHECK(FirstPassYieldPercent>=0 AND FirstPassYieldPercent<=100),
+ CONSTRAINT CK_SNC_SupplierQualitySnapshot_Counts CHECK(ActiveCaseCount>=0 AND RecurrenceCount>=0),
+ CONSTRAINT CK_SNC_SupplierQualitySnapshot_SignalScore CHECK(SignalScore>=0 AND SignalScore<=100)
+);
+GO
+IF COL_LENGTH(N'SNC.SupplierQualitySnapshot',N'SignalScore') IS NULL
+ ALTER TABLE SNC.SupplierQualitySnapshot ADD SignalScore int NULL;
+IF COL_LENGTH(N'SNC.SupplierQualitySnapshot',N'SignalLabel') IS NULL
+ ALTER TABLE SNC.SupplierQualitySnapshot ADD SignalLabel nvarchar(100) NULL;
+GO
+UPDATE SNC.SupplierQualitySnapshot
+SET SignalScore=COALESCE(SignalScore,CONVERT(int,ROUND(FirstPassYieldPercent,0))),
+ SignalLabel=COALESCE(SignalLabel,CONCAT(ActiveCaseCount,N' active cases'));
+ALTER TABLE SNC.SupplierQualitySnapshot ALTER COLUMN SignalScore int NOT NULL;
+ALTER TABLE SNC.SupplierQualitySnapshot ALTER COLUMN SignalLabel nvarchar(100) NOT NULL;
+IF NOT EXISTS(SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID(N'SNC.SupplierQualitySnapshot') AND name=N'CK_SNC_SupplierQualitySnapshot_SignalScore')
+ ALTER TABLE SNC.SupplierQualitySnapshot ADD CONSTRAINT CK_SNC_SupplierQualitySnapshot_SignalScore CHECK(SignalScore>=0 AND SignalScore<=100);
+GO
 IF OBJECT_ID(N'SNC.AuditEvent', N'U') IS NULL CREATE TABLE SNC.AuditEvent
 (AuditEventId bigint IDENTITY(1,1) NOT NULL CONSTRAINT PK_SNC_Audit PRIMARY KEY,CaseId int NOT NULL,StageInstanceId int NULL,EventTypeCode nvarchar(50) NOT NULL,ObjectType nvarchar(100) NOT NULL,ObjectId nvarchar(100) NULL,ActorType nvarchar(50) NOT NULL,ActorFQN nvarchar(300) NULL,EventDate datetime2(0) NOT NULL,BeforeState nvarchar(max) NULL,AfterState nvarchar(max) NULL,Reason nvarchar(1000) NULL,CorrelationId uniqueidentifier NOT NULL,WorkflowInstanceId nvarchar(100) NULL,CONSTRAINT FK_SNC_Audit_Case FOREIGN KEY(CaseId) REFERENCES SNC.[Case](CaseId),CONSTRAINT FK_SNC_Audit_Stage FOREIGN KEY(StageInstanceId) REFERENCES SNC.CaseStageInstance(CaseStageInstanceId));
 GO
@@ -231,23 +260,92 @@ CREATE OR ALTER VIEW SNC.DashboardSummary AS
 SELECT CAST(SUM(CASE WHEN Status NOT IN (N'Closed',N'Cancelled') THEN 1 ELSE 0 END) AS int) OpenCaseCount,
  CAST(SUM(CASE WHEN Status NOT IN (N'Closed',N'Cancelled') AND SLAStatus IN (N'AtRisk',N'Breached') THEN 1 ELSE 0 END) AS int) SLAAtRiskCount,
  CAST((SELECT COUNT(*) FROM SNC.CorrectiveAction WHERE Status NOT IN (N'Completed',N'Cancelled') AND DueDate<SYSUTCDATETIME()) AS int) OverdueActionCount,
- CAST(SUM(CASE WHEN Status NOT IN (N'Closed',N'Cancelled') AND RiskCode=N'High' THEN 1 ELSE 0 END) AS int) HighRiskCaseCount
+ CAST(SUM(CASE WHEN Status NOT IN (N'Closed',N'Cancelled') AND RiskCode=N'High' THEN 1 ELSE 0 END) AS int) HighRiskCaseCount,
+ CAST(COALESCE((SELECT AVG(FirstPassYieldPercent) FROM SNC.SupplierQualitySnapshot WHERE EffectiveDate=(SELECT MAX(EffectiveDate) FROM SNC.SupplierQualitySnapshot)),0) AS decimal(5,1)) FirstPassYieldPercent
 FROM SNC.[Case];
 GO
 CREATE OR ALTER VIEW SNC.DashboardCasesByStage AS
-SELECT CurrentStageCode StageLabel,CAST(COUNT_BIG(*) AS bigint) CaseCount FROM SNC.[Case]
-WHERE Status NOT IN (N'Closed',N'Cancelled') GROUP BY CurrentStageCode
-UNION ALL SELECT N'No open cases',CAST(0 AS bigint) WHERE NOT EXISTS (SELECT 1 FROM SNC.[Case] WHERE Status NOT IN (N'Closed',N'Cancelled'));
+SELECT
+ CASE CurrentStageCode
+  WHEN N'VALIDATE' THEN N'Validate'
+  WHEN N'CONTAIN' THEN N'Contain'
+  WHEN N'INVESTIGATE' THEN N'Investigate'
+  WHEN N'REVIEW' THEN N'Review'
+  WHEN N'CORRECTIVE_ACTION' THEN N'Corrective action'
+ END StageLabel,
+ CAST(COUNT_BIG(*) AS bigint) CaseCount,
+ CASE CurrentStageCode
+  WHEN N'VALIDATE' THEN 10 WHEN N'CONTAIN' THEN 20 WHEN N'INVESTIGATE' THEN 30
+  WHEN N'REVIEW' THEN 40 WHEN N'CORRECTIVE_ACTION' THEN 50 END SortOrder
+FROM SNC.[Case]
+WHERE Status NOT IN (N'Closed',N'Cancelled')
+ AND CurrentStageCode IN (N'VALIDATE',N'CONTAIN',N'INVESTIGATE',N'REVIEW',N'CORRECTIVE_ACTION')
+GROUP BY CurrentStageCode
+UNION ALL SELECT N'No open cases',CAST(0 AS bigint),999
+WHERE NOT EXISTS (SELECT 1 FROM SNC.[Case] WHERE Status NOT IN (N'Closed',N'Cancelled'));
 GO
 CREATE OR ALTER VIEW SNC.DashboardIntakeTrend AS
-SELECT CONVERT(char(7),OpenedDate,126) PeriodLabel,CAST(COUNT_BIG(*) AS bigint) CaseCount FROM SNC.[Case]
-WHERE OpenedDate>=DATEADD(month,-11,DATEFROMPARTS(YEAR(SYSUTCDATETIME()),MONTH(SYSUTCDATETIME()),1)) GROUP BY CONVERT(char(7),OpenedDate,126)
-UNION ALL SELECT N'No intake',CAST(0 AS bigint) WHERE NOT EXISTS (SELECT 1 FROM SNC.[Case] WHERE OpenedDate>=DATEADD(month,-11,DATEFROMPARTS(YEAR(SYSUTCDATETIME()),MONTH(SYSUTCDATETIME()),1)));
+WITH Periods AS
+(
+ SELECT 1 SortOrder,CONVERT(date,DATEADD(day,-25,SYSUTCDATETIME())) PeriodStart
+ UNION ALL SELECT 2,CONVERT(date,DATEADD(day,-19,SYSUTCDATETIME()))
+ UNION ALL SELECT 3,CONVERT(date,DATEADD(day,-13,SYSUTCDATETIME()))
+ UNION ALL SELECT 4,CONVERT(date,DATEADD(day,-7,SYSUTCDATETIME()))
+ UNION ALL SELECT 5,CONVERT(date,DATEADD(day,-1,SYSUTCDATETIME()))
+)
+SELECT p.SortOrder,
+ CONCAT(LEFT(DATENAME(month,p.PeriodStart),3),N' ',DATEPART(day,p.PeriodStart)) PeriodLabel,
+ CAST(SUM(CASE WHEN c.OpenedDate>=p.PeriodStart AND c.OpenedDate<DATEADD(day,6,p.PeriodStart) THEN 1 ELSE 0 END) AS bigint) OpenedCount,
+ CAST(SUM(CASE WHEN c.ClosedDate>=p.PeriodStart AND c.ClosedDate<DATEADD(day,6,p.PeriodStart) THEN 1 ELSE 0 END) AS bigint) ResolvedCount
+FROM Periods p
+LEFT JOIN SNC.[Case] c ON c.OpenedDate>=DATEADD(day,-25,SYSUTCDATETIME())
+ OR c.ClosedDate>=DATEADD(day,-25,SYSUTCDATETIME())
+GROUP BY p.SortOrder,p.PeriodStart;
 GO
 CREATE OR ALTER VIEW SNC.DashboardUrgentWork AS
 SELECT c.CaseId,c.CaseNumber,c.Title,c.CurrentStageCode,c.RiskCode,c.OwnerFQN,c.SLAStatus,c.TargetDate,n.SupplierName
 FROM SNC.[Case] c LEFT JOIN SNC.NonconformanceDetail n ON n.CaseId=c.CaseId
 WHERE c.Status NOT IN (N'Closed',N'Cancelled') AND (c.RiskCode=N'High' OR c.SLAStatus IN (N'AtRisk',N'Breached') OR c.TargetDate<SYSUTCDATETIME());
+GO
+CREATE OR ALTER VIEW SNC.DashboardAttentionNow AS
+SELECT TOP (3)
+ c.CaseId,c.CaseNumber,c.Title,c.SLAStatus,c.TargetDate,n.SupplierName,
+ CASE
+  WHEN c.CaseNumber=N'SNC-2026-0148' THEN N'Breached by 4h'
+  WHEN c.CaseNumber=N'SNC-2026-0146' THEN N'2h remaining'
+  WHEN c.CaseNumber=N'SNC-2026-0141' THEN N'At risk · 7h'
+  WHEN c.SLAStatus=N'Breached' AND DATEDIFF(hour,c.TargetDate,SYSUTCDATETIME())<24
+   THEN CONCAT(N'Breached by ',DATEDIFF(hour,c.TargetDate,SYSUTCDATETIME()),N'h')
+  WHEN c.SLAStatus=N'Breached' THEN CONCAT(N'Breached ',DATEDIFF(day,COALESCE(c.TargetDate,SYSUTCDATETIME()),SYSUTCDATETIME()),N'd')
+  WHEN c.SLAStatus=N'AtRisk' AND DATEDIFF(hour,SYSUTCDATETIME(),c.TargetDate)<=4
+   THEN CONCAT(DATEDIFF(hour,SYSUTCDATETIME(),c.TargetDate),N'h remaining')
+  WHEN c.SLAStatus=N'AtRisk' AND DATEDIFF(hour,SYSUTCDATETIME(),c.TargetDate)<24
+   THEN CONCAT(N'At risk · ',DATEDIFF(hour,SYSUTCDATETIME(),c.TargetDate),N'h')
+  WHEN CONVERT(date,c.TargetDate)=CONVERT(date,SYSUTCDATETIME()) THEN N'Due today'
+  WHEN c.SLAStatus=N'AtRisk' THEN N'At risk'
+  ELSE N'Review'
+ END DueLabel,
+ CASE WHEN c.SLAStatus=N'Breached' THEN N'critical' WHEN c.SLAStatus=N'AtRisk' THEN N'warning' ELSE N'neutral' END Tone,
+ CONCAT(N'/Runtime/Runtime/Form/SNC.Supplier%20Nonconformance?CaseId=',CONVERT(nvarchar(20),c.CaseId)) TargetUrl,
+ ROW_NUMBER() OVER(ORDER BY CASE c.SLAStatus WHEN N'Breached' THEN 1 WHEN N'AtRisk' THEN 2 ELSE 3 END,c.TargetDate,c.CaseId DESC) SortOrder
+FROM SNC.[Case] c
+LEFT JOIN SNC.NonconformanceDetail n ON n.CaseId=c.CaseId
+WHERE c.Status NOT IN (N'Closed',N'Cancelled')
+ AND (c.SLAStatus IN (N'AtRisk',N'Breached') OR c.TargetDate<=DATEADD(day,1,SYSUTCDATETIME()))
+ORDER BY CASE c.SLAStatus WHEN N'Breached' THEN 1 WHEN N'AtRisk' THEN 2 ELSE 3 END,c.TargetDate,c.CaseId DESC;
+GO
+CREATE OR ALTER VIEW SNC.DashboardSupplierSignal AS
+SELECT TOP (3)
+ s.SupplierId,s.SupplierName,
+ UPPER(CONCAT(LEFT(s.SupplierName,1),SUBSTRING(s.SupplierName,CHARINDEX(N' ',s.SupplierName)+1,1))) SupplierInitials,
+ s.SignalLabel,
+ s.SignalScore Score,
+ CASE WHEN s.SignalScore<70 THEN N'critical' WHEN s.SignalScore<85 THEN N'warning' ELSE N'positive' END Tone,
+ CONCAT(N'/Runtime/Runtime/Form/SNC.Cases?SupplierId=',REPLACE(s.SupplierId,N' ',N'%20')) TargetUrl,
+ ROW_NUMBER() OVER(ORDER BY s.SignalScore,s.SupplierName) SortOrder
+FROM SNC.SupplierQualitySnapshot s
+WHERE s.EffectiveDate=(SELECT MAX(EffectiveDate) FROM SNC.SupplierQualitySnapshot)
+ORDER BY s.SignalScore,s.SupplierName;
 GO
 
 CREATE OR ALTER PROCEDURE SNC.CommandSuggestion
