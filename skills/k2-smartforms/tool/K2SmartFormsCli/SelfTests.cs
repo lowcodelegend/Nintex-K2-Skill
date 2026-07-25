@@ -26,7 +26,7 @@ namespace K2SmartFormsCli
             TestViewIdentityRebase();
             TestFlatFormViewOrdering();
             TestMultiTableWorkflowStateReconciliation();
-            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams and Form method-action rejection, orphan optional control mappings, lookup/detail List classification, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, multi-table workflow-state reconciliation");
+            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams and Form method-action rejection, orphan optional control mappings, lookup/detail List classification, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, native max-length/validation-pattern contracts, must-be-true checkbox validation groups, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, multi-table workflow-state reconciliation");
         }
 
         private static void TestIdentityNormalization()
@@ -76,7 +76,7 @@ namespace K2SmartFormsCli
                 MasterUpdateEvent = new ResolvedViewEvent { DefinitionId = updateDefinition, DisplayName = "K2Skills.MasterDetail.Update.ClaimId" },
                 RequiredControls = new List<ResolvedRequiredControl>
                 {
-                    new ResolvedRequiredControl { Property = "Title", ControlId = "title-control", ControlName = "Title Text Box", ControlDisplayName = "Title" }
+                    new ResolvedRequiredControl { Property = "Title", ControlId = "title-control", ControlName = "Title Text Box", ControlDisplayName = "Title", IsRequired = true }
                 },
                 Details = new List<ResolvedMasterDetailChild>
                 {
@@ -532,6 +532,19 @@ namespace K2SmartFormsCli
                 "two-column label-above responsive Item View defaults");
             view.RequiredProperties.Add("EmailAddress");
             view.RequiredProperties.Add("NDAAccepted");
+            view.Methods.Add("Create");
+            view.Validations.Add(new FieldValidationDefinition
+            {
+                Property = "EmailAddress", Required = true, MinLength = 6, MaxLength = 120,
+                Format = "email", Message = "Enter a valid email address.",
+                ValidationPatternGuid = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                ValidationPatternName = "K2Skills.PublicIntake.EmailAddress"
+            });
+            view.Validations.Add(new FieldValidationDefinition { Property = "Narrative", MaxLength = 2000 });
+            view.Validations.Add(new FieldValidationDefinition
+            {
+                Property = "NDAAccepted", Required = true, MustBeTrue = true
+            });
             view.PropertyLabels["EmailAddress"] = "Email address";
             view.Sections.Add(new ViewSectionDefinition { Title = "Contact", Properties = new List<string> { "EmailAddress", "PhoneNumber" } });
             view.Sections.Add(new ViewSectionDefinition { Title = "Report", Properties = new List<string> { "Narrative", "NDAAccepted" } });
@@ -566,7 +579,13 @@ namespace K2SmartFormsCli
                         new XElement("Columns",
                             new XElement("Column", new XAttribute("ID", "column-1"), new XAttribute("Size", "50%")),
                             new XElement("Column", new XAttribute("ID", "column-2"), new XAttribute("Size", "50%"))), rows)))),
-                new XElement("States", new XElement("State", new XElement("Events"))))).ToString(SaveOptions.DisableFormatting);
+                new XElement("States", new XElement("State", new XElement("Events",
+                    new XElement("Event", new XElement("Handlers", new XElement("Handler",
+                        new XElement("Actions", new XElement("Action",
+                            new XAttribute("ID", "create-action"), new XAttribute("Type", "Execute"),
+                            new XElement("Properties",
+                                new XElement("Property", new XElement("Name", "Method"),
+                                    new XElement("Value", "Create"))))))))))))).ToString(SaveOptions.DisableFormatting);
 
             var transformed = ViewPresentationDefinition.Apply(xml, view, false, false);
             ViewPresentationDefinition.Verify(transformed, view, false, false);
@@ -587,6 +606,26 @@ namespace K2SmartFormsCli
             Assert(document.Descendants("Cell").Any(cell =>
                 cell.Descendants("Control").Any(x => (string)x.Attribute("ID") == "label-p0") &&
                 cell.Descendants("Control").Any(x => (string)x.Attribute("ID") == "input-p0")), "email label and input share one label-above cell");
+            var emailControl = document.Descendants("Control").Single(x =>
+                (string)x.Attribute("ID") == "input-p0" && x.Attribute("Type") != null);
+            Assert(emailControl.Descendants("Property").Any(x =>
+                (string)x.Element("Name") == "MaxLength" && (string)x.Element("Value") == "120"),
+                "email maximum length applied");
+            Assert(emailControl.Descendants("Property").Any(x =>
+                (string)x.Element("Name") == "ValidationPattern" &&
+                (string)x.Element("Value") == "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                "email validation pattern applied");
+            var validationGroup = document.Descendants("ValidationGroup").Single(x =>
+                (string)x.Element("Name") == FieldValidationDefinitionXml.GroupName);
+            Assert(validationGroup.Descendants("ValidationGroupControl").Any(x =>
+                (string)x.Attribute("ControlID") == "input-p3" &&
+                x.Descendants("Equals").Any()), "must-be-true checkbox condition applied");
+            var createAction = document.Descendants("Action").Single(x =>
+                (string)x.Attribute("ID") == "create-action");
+            var preceding = createAction.ElementsBeforeSelf("Action").Last();
+            Assert((string)preceding.Attribute("Type") == "Validate" &&
+                ReadActionProperty(preceding, "GroupID") == (string)validationGroup.Attribute("ID"),
+                "field-validation group runs before Create");
             Assert(document.Descendants("Cell").Single(cell =>
                 cell.Descendants("Control").Any(x => (string)x.Attribute("ID") == "input-p2")).Attribute("ColumnSpan").Value == "2",
                 "narrative TextArea spans both label-above columns");

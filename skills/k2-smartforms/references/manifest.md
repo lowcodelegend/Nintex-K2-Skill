@@ -269,6 +269,31 @@ Use these Item View contracts:
 "singleLineProperties": ["ContactName", "TelephoneNumber"],
 "requiredProperties": ["FullName", "EmailAddress", "ReportSummary", "NDAAccepted"],
 "lookupRequiredProperties": ["ResidenceCountryCode", "EvidenceTypeCode"],
+"validationMethods": ["Create", "Update"],
+"validations": [
+  {
+    "property": "EmailAddress",
+    "required": true,
+    "minLength": 6,
+    "maxLength": 120,
+    "format": "email",
+    "message": "Enter a valid email address."
+  },
+  {
+    "property": "ReportSummary",
+    "required": true,
+    "minLength": 20,
+    "maxLength": 2000,
+    "message": "Enter at least 20 characters."
+  },
+  {
+    "property": "NDAAccepted",
+    "required": true,
+    "mustBeTrue": true,
+    "message": "Accept the NDA before continuing.",
+    "sourceConstraint": "CK_Submission_NDAAccepted"
+  }
+],
 "sections": [
   { "title": "Your details", "properties": ["FullName", "EmailAddress", "TelephoneNumber"] },
   { "title": "Report", "properties": ["ReportSummary", "NDAAccepted"] }
@@ -281,7 +306,11 @@ Use these Item View contracts:
 }]
 ```
 
-Properties containing `Email` automatically use TextBox. `singleLineProperties` is the explicit override for other Memo-mapped strings. `sections` must contain every visible property exactly once and in `properties` order. `requiredProperties` must be visible, editable, and user-supplied; a master-detail Form validates them with K2 rules before saving. `lookupRequiredProperties` makes a missing `lookupControls` binding a manifest error. `help` creates a native Button and valid `OnClick` popup rule; K2 Hyperlink does not support `OnClick`.
+Properties containing `Email` automatically use TextBox. `singleLineProperties` is the explicit override for other Memo-mapped strings. `sections` must contain every visible property exactly once and in `properties` order. `requiredProperties` must be visible, editable, and user-supplied; `validations[].required=true` also adds the property to that contract.
+
+`validations` supports `required`, `minLength`, `maxLength`, `format` (`email`, `phone`, `url`, or `guid`), custom JavaScript-compatible `pattern`, `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `mustBeTrue`, `message`, `example`, and traceability-only `sourceConstraint`. Text `maxLength` becomes native K2 `MaxLength`; min/format/pattern combinations become a solution-owned K2 Validation Pattern; numeric and must-be-true checks become validation-group conditions. A message is mandatory for min-length, numeric, format/pattern, and must-be-true constraints. The CLI verifies the stored control properties, pattern identity, group members/conditions, and validation immediately before persistence. It owns and cleans up the generated Validation Patterns by their deterministic names.
+
+By default, validation runs before selected `Create`, `Update`, `Save`, and `Submit` methods. Set `validationMethods` to the exact selected mutating methods when an application uses other names. `lookupRequiredProperties` makes a missing `lookupControls` binding a manifest error. `help` creates a native Button and valid `OnClick` popup rule; K2 Hyperlink does not support `OnClick`.
 
 `hiddenVariables` adds named Data Label controls inside a hidden `tblDebug` table:
 

@@ -150,7 +150,7 @@ namespace K2SmartFormsCli
             }
             foreach (var view in manifest.Application.Views)
             {
-                Console.WriteLine("    " + view.Type + " <= " + view.SmartObject + " [" + string.Join(",", view.Properties.ToArray()) + "], category=" + manifest.Application.GetViewCategoryPath(view) + ", lookups=" + view.LookupControls.Count);
+                Console.WriteLine("    " + view.Type + " <= " + view.SmartObject + " [" + string.Join(",", view.Properties.ToArray()) + "], category=" + manifest.Application.GetViewCategoryPath(view) + ", lookups=" + view.LookupControls.Count + ", validations=" + view.Validations.Count);
             }
             foreach (var form in manifest.Application.Forms)
             {
@@ -228,7 +228,7 @@ namespace K2SmartFormsCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2forms 0.35.0");
+            Console.WriteLine("k2forms 0.36.0");
         }
 
         private static void PrintHelp()

@@ -15,6 +15,7 @@ namespace K2SqlCli
         public K2Options K2 { get; set; }
         public List<ApprovalMatrixDefinition> ApprovalMatrices { get; set; }
         public List<MasterDetailDefinition> MasterDetails { get; set; }
+        public List<FormConstraintDefinition> FormConstraints { get; set; }
         public VerificationOptions Verification { get; set; }
 
         public DeploymentManifest()
@@ -24,6 +25,7 @@ namespace K2SqlCli
             K2 = new K2Options();
             ApprovalMatrices = new List<ApprovalMatrixDefinition>();
             MasterDetails = new List<MasterDetailDefinition>();
+            FormConstraints = new List<FormConstraintDefinition>();
             Verification = new VerificationOptions();
         }
 
@@ -70,6 +72,7 @@ namespace K2SqlCli
             if (K2 == null) K2 = new K2Options();
             if (ApprovalMatrices == null) ApprovalMatrices = new List<ApprovalMatrixDefinition>();
             if (MasterDetails == null) MasterDetails = new List<MasterDetailDefinition>();
+            if (FormConstraints == null) FormConstraints = new List<FormConstraintDefinition>();
             if (Verification == null) Verification = new VerificationOptions();
             if (K2.ServiceInstance == null) K2.ServiceInstance = new ServiceInstanceOptions();
             if (K2.SmartObjects == null) K2.SmartObjects = new SmartObjectGenerationOptions();
@@ -153,6 +156,74 @@ namespace K2SqlCli
 
             ValidateApprovalMatrices();
             ValidateMasterDetails();
+            ValidateFormConstraints();
+        }
+
+        private void ValidateFormConstraints()
+        {
+            var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var constraint in FormConstraints)
+            {
+                if (constraint == null) throw new CliException("formConstraints entries cannot be null.");
+                Require(constraint.SmartObject, "formConstraints.smartObject");
+                Require(constraint.Property, "formConstraints.property");
+                Require(constraint.Schema, "formConstraints.schema");
+                Require(constraint.Table, "formConstraints.table");
+                Require(constraint.Column, "formConstraints.column");
+                ValidateSqlIdentifier(constraint.Schema, "formConstraints.schema");
+                ValidateSqlIdentifier(constraint.Table, "formConstraints.table");
+                ValidateSqlIdentifier(constraint.Column, "formConstraints.column");
+                if (!keys.Add(constraint.SmartObject + "\n" + constraint.Property))
+                    throw new CliException("Duplicate formConstraints SmartObject/property: " +
+                        constraint.SmartObject + "." + constraint.Property);
+                constraint.Format = (constraint.Format ?? string.Empty).Trim().ToLowerInvariant();
+                if (!string.IsNullOrWhiteSpace(constraint.Format) &&
+                    !new[] { "email", "phone", "url", "guid" }.Contains(constraint.Format, StringComparer.OrdinalIgnoreCase))
+                    throw new CliException("formConstraints.format must be email, phone, url, or guid: " +
+                        constraint.SmartObject + "." + constraint.Property);
+                if (constraint.MinLength.HasValue && constraint.MinLength.Value < 1)
+                    throw new CliException("formConstraints.minLength must be positive: " +
+                        constraint.SmartObject + "." + constraint.Property);
+                if (constraint.MaxLength.HasValue && constraint.MaxLength.Value < 1)
+                    throw new CliException("formConstraints.maxLength must be positive: " +
+                        constraint.SmartObject + "." + constraint.Property);
+                if (constraint.MinLength.HasValue && constraint.MaxLength.HasValue &&
+                    constraint.MinLength.Value > constraint.MaxLength.Value)
+                    throw new CliException("formConstraints.minLength cannot exceed maxLength: " +
+                        constraint.SmartObject + "." + constraint.Property);
+                if (constraint.MustBeTrue &&
+                    (constraint.MinLength.HasValue || constraint.MaxLength.HasValue ||
+                     constraint.Minimum.HasValue || constraint.Maximum.HasValue ||
+                     !string.IsNullOrWhiteSpace(constraint.Pattern) || !string.IsNullOrWhiteSpace(constraint.Format)))
+                    throw new CliException("formConstraints.mustBeTrue cannot be combined with text constraints: " +
+                        constraint.SmartObject + "." + constraint.Property);
+                if (!constraint.Required && !constraint.MustBeTrue && !constraint.MinLength.HasValue &&
+                    !constraint.MaxLength.HasValue && !constraint.Minimum.HasValue && !constraint.Maximum.HasValue &&
+                    string.IsNullOrWhiteSpace(constraint.Pattern) &&
+                    string.IsNullOrWhiteSpace(constraint.Format))
+                    throw new CliException("formConstraints must declare required, mustBeTrue, minLength, maxLength, pattern, or format: " +
+                        constraint.SmartObject + "." + constraint.Property);
+                if (constraint.SourceConstraints == null) constraint.SourceConstraints = new List<string>();
+                if (constraint.Minimum.HasValue && constraint.Maximum.HasValue &&
+                    constraint.Minimum.Value > constraint.Maximum.Value)
+                    throw new CliException("formConstraints.minimum cannot exceed maximum: " +
+                        constraint.SmartObject + "." + constraint.Property);
+                if (constraint.Minimum.HasValue && constraint.Maximum.HasValue &&
+                    constraint.Minimum.Value == constraint.Maximum.Value &&
+                    (constraint.ExclusiveMinimum || constraint.ExclusiveMaximum))
+                    throw new CliException("formConstraints exclusive numeric range cannot be empty: " +
+                        constraint.SmartObject + "." + constraint.Property);
+                if (constraint.ExclusiveMinimum && !constraint.Minimum.HasValue)
+                    throw new CliException("formConstraints.exclusiveMinimum requires minimum: " +
+                        constraint.SmartObject + "." + constraint.Property);
+                if (constraint.ExclusiveMaximum && !constraint.Maximum.HasValue)
+                    throw new CliException("formConstraints.exclusiveMaximum requires maximum: " +
+                        constraint.SmartObject + "." + constraint.Property);
+                if (constraint.SourceConstraints.Any(string.IsNullOrWhiteSpace) ||
+                    constraint.SourceConstraints.Count != constraint.SourceConstraints.Distinct(StringComparer.OrdinalIgnoreCase).Count())
+                    throw new CliException("formConstraints.sourceConstraints must contain unique non-empty SQL constraint names: " +
+                        constraint.SmartObject + "." + constraint.Property);
+            }
         }
 
         private void ValidateMasterDetails()
@@ -466,6 +537,31 @@ namespace K2SqlCli
         public SmartObjectPropertyTypeOverride()
         {
             Type = "File";
+        }
+    }
+
+    public sealed class FormConstraintDefinition
+    {
+        public string SmartObject { get; set; }
+        public string Property { get; set; }
+        public string Schema { get; set; }
+        public string Table { get; set; }
+        public string Column { get; set; }
+        public bool Required { get; set; }
+        public int? MinLength { get; set; }
+        public int? MaxLength { get; set; }
+        public string Format { get; set; }
+        public string Pattern { get; set; }
+        public bool MustBeTrue { get; set; }
+        public decimal? Minimum { get; set; }
+        public decimal? Maximum { get; set; }
+        public bool ExclusiveMinimum { get; set; }
+        public bool ExclusiveMaximum { get; set; }
+        public List<string> SourceConstraints { get; set; }
+
+        public FormConstraintDefinition()
+        {
+            SourceConstraints = new List<string>();
         }
     }
 

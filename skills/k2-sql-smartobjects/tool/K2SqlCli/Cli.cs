@@ -97,6 +97,16 @@ namespace K2SqlCli
             new ApprovalMatrixSql(manifest).PrintPlan();
             foreach (var relationship in manifest.MasterDetails)
                 Console.WriteLine("  Master-detail: verify generated parent ID and indexed FK " + relationship.MasterSchema + "." + relationship.MasterTable + "." + relationship.MasterKey + " -> " + relationship.DetailSchema + "." + relationship.DetailTable + "." + relationship.DetailForeignKey + " (delete=" + relationship.DeleteBehavior + ")");
+            foreach (var constraint in manifest.FormConstraints)
+                Console.WriteLine("  Form constraint: " + constraint.SmartObject + "." + constraint.Property +
+                    " <= " + constraint.Schema + "." + constraint.Table + "." + constraint.Column +
+                    " (required=" + constraint.Required.ToString().ToLowerInvariant() +
+                    ", minLength=" + (constraint.MinLength.HasValue ? constraint.MinLength.Value.ToString() : "-") +
+                    ", maxLength=" + (constraint.MaxLength.HasValue ? constraint.MaxLength.Value.ToString() : "-") +
+                    ", minimum=" + (constraint.Minimum.HasValue ? constraint.Minimum.Value.ToString() : "-") +
+                    ", maximum=" + (constraint.Maximum.HasValue ? constraint.Maximum.Value.ToString() : "-") +
+                    ", format=" + (string.IsNullOrWhiteSpace(constraint.Format) ? "-" : constraint.Format) +
+                    ", mustBeTrue=" + constraint.MustBeTrue.ToString().ToLowerInvariant() + ")");
             if (!string.IsNullOrWhiteSpace(manifest.Database.RuntimePrincipal))
             {
                 Console.WriteLine("  SQL runtime access: grant DML, EXECUTE, and VIEW DEFINITION to " + manifest.Database.RuntimePrincipal);
@@ -174,7 +184,7 @@ namespace K2SqlCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2sql 0.5.0");
+            Console.WriteLine("k2sql 0.6.0");
         }
 
         private static void PrintHelp()

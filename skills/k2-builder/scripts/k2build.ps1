@@ -17,7 +17,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if ($Command -eq 'version') {
-    Write-Output 'k2build 0.22.0'
+    Write-Output 'k2build 0.23.0'
     return
 }
 
@@ -188,6 +188,7 @@ $smartObjectsManifest = $null
 $formsManifest = $null
 $approvalMatrices = @()
 $sqlMasterDetails = @()
+$sqlFormConstraints = @()
 
 if ($null -ne $smartObjects) {
     $smartObjectsPath = Resolve-ComponentManifest $smartObjects 'components.smartObjects'
@@ -235,6 +236,8 @@ if ($null -ne $smartObjectsManifest) {
     }
     $sqlMasterDetails = @(Get-PropertyValue $smartObjectsManifest 'masterDetails')
     if ($sqlMasterDetails.Count -eq 1 -and $null -eq $sqlMasterDetails[0]) { $sqlMasterDetails = @() }
+    $sqlFormConstraints = @(Get-PropertyValue $smartObjectsManifest 'formConstraints')
+    if ($sqlFormConstraints.Count -eq 1 -and $null -eq $sqlFormConstraints[0]) { $sqlFormConstraints = @() }
 }
 
 if ($null -ne $forms) {
@@ -316,6 +319,76 @@ if ($null -ne $formsManifest) {
         }
         if ((Get-PropertyValue $policies 'versionFreeNames') -ne $false) {
             Test-VersionFreeName ([string](Get-PropertyValue $view 'name')) 'View name'
+        }
+    }
+
+    foreach ($constraint in $sqlFormConstraints) {
+        $smartObjectName = [string](Get-PropertyValue $constraint 'smartObject')
+        $propertyName = [string](Get-PropertyValue $constraint 'property')
+        $editableViews = @($declaredViews | Where-Object {
+            [string](Get-PropertyValue $_ 'smartObject') -eq $smartObjectName -and
+            [string](Get-PropertyValue $_ 'type') -in @('capture', 'capture-list') -and
+            @((Get-PropertyValue $_ 'properties') | Where-Object { [string]$_ -eq $propertyName }).Count -gt 0 -and
+            @((Get-PropertyValue $_ 'readOnlyProperties') | Where-Object { [string]$_ -eq $propertyName }).Count -eq 0 -and
+            @((Get-PropertyValue $_ 'hiddenProperties') | Where-Object { [string]$_ -eq $propertyName }).Count -eq 0
+        })
+        if ($editableViews.Count -eq 0) {
+            Add-Issue "SQL form constraint '$smartObjectName.$propertyName' has no matching editable SmartForms View property."
+            continue
+        }
+        foreach ($view in $editableViews) {
+            $viewName = [string](Get-PropertyValue $view 'name')
+            $validation = @((Get-PropertyValue $view 'validations') | Where-Object {
+                [string](Get-PropertyValue $_ 'property') -eq $propertyName
+            })
+            if ($validation.Count -ne 1) {
+                Add-Issue "View '$viewName' must declare exactly one validations entry matching SQL form constraint '$smartObjectName.$propertyName'."
+                continue
+            }
+            $validation = $validation[0]
+            foreach ($field in @('minLength', 'maxLength', 'format', 'pattern', 'mustBeTrue',
+                'minimum', 'maximum')) {
+                $expected = Get-PropertyValue $constraint $field
+                if ($null -ne $expected -and $expected -ne $false -and
+                    [string](Get-PropertyValue $validation $field) -ne [string]$expected) {
+                    Add-Issue "View '$viewName' validation $field does not match SQL form constraint '$smartObjectName.$propertyName'."
+                }
+            }
+            foreach ($boundary in @(
+                @{ value = 'minimum'; exclusive = 'exclusiveMinimum' },
+                @{ value = 'maximum'; exclusive = 'exclusiveMaximum' }
+            )) {
+                if ($null -ne (Get-PropertyValue $constraint $boundary.value) -and
+                    [bool](Get-PropertyValue $validation $boundary.exclusive) -ne
+                    [bool](Get-PropertyValue $constraint $boundary.exclusive)) {
+                    Add-Issue "View '$viewName' validation $($boundary.exclusive) does not match SQL form constraint '$smartObjectName.$propertyName'."
+                }
+            }
+            if ((Get-PropertyValue $constraint 'required') -eq $true) {
+                $requiredByValidation = (Get-PropertyValue $validation 'required') -eq $true
+                $requiredByView = @((Get-PropertyValue $view 'requiredProperties') |
+                    Where-Object { [string]$_ -eq $propertyName }).Count -gt 0
+                if (-not $requiredByValidation -and -not $requiredByView) {
+                    Add-Issue "View '$viewName' must require SQL-constrained property '$smartObjectName.$propertyName'."
+                }
+            }
+        }
+    }
+
+    foreach ($view in $declaredViews) {
+        $viewName = [string](Get-PropertyValue $view 'name')
+        $smartObjectName = [string](Get-PropertyValue $view 'smartObject')
+        foreach ($validation in @(Get-PropertyValue $view 'validations')) {
+            $sourceConstraint = [string](Get-PropertyValue $validation 'sourceConstraint')
+            if ([string]::IsNullOrWhiteSpace($sourceConstraint)) { continue }
+            $propertyName = [string](Get-PropertyValue $validation 'property')
+            if (@($sqlFormConstraints | Where-Object {
+                [string](Get-PropertyValue $_ 'smartObject') -eq $smartObjectName -and
+                [string](Get-PropertyValue $_ 'property') -eq $propertyName -and
+                @((Get-PropertyValue $_ 'sourceConstraints') | Where-Object { [string]$_ -eq $sourceConstraint }).Count -gt 0
+            }).Count -eq 0) {
+                Add-Issue "View '$viewName' validation sourceConstraint '$sourceConstraint' has no matching SQL formConstraints entry for '$smartObjectName.$propertyName'."
+            }
         }
     }
 

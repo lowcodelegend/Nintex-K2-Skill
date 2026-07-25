@@ -26,6 +26,8 @@ Use `nvarchar` for user-entered text. Choose decimal precision deliberately; the
 
 Do not assume a SQL `DEFAULT` constraint makes a generated SmartObject Create input optional. `NOT NULL` still makes the SQL broker property required. For a system value supplied by a SmartForm Create-rule literal—status, language, channel, configuration version—make the SQL column nullable/optional, retain a defensive server default if useful, keep it off the user-facing layout, and map the literal in the Create rule. For database-managed audit values, use an optional column with a server-side default or a purpose-built stored-procedure method. Keep genuinely user-required business data `NOT NULL` and declare the corresponding visible SmartForm control required.
 
+After defining the tables, classify every column/check invariant as form-facing or server-only. A form-facing invariant is any rule on a property a user can edit in SmartForms. Declare it in manifest `formConstraints` with the generated SmartObject system name, property, SQL source column, and the same required/length/range/format semantics. Include named checks in `sourceConstraints`. This contract is mandatory even though SQL remains authoritative: the builder uses it to reject a form that would permit invalid input or truncate a bounded string. Hidden identities, workflow status, audit values, derived totals, and procedure-only invariants stay server-only and must be identified as such in the handoff.
+
 ## SQL-backed K2 File properties
 
 K2's File value is an XML structure containing the file name, MIME/content metadata, and Base64 payload. To persist that native value in the application SQL database:

@@ -15,6 +15,7 @@ namespace K2SmartFormsCli
             ApplyResponsiveTable(document, view);
             ApplySingleLineInputs(document, view);
             ApplyRequiredInputs(document, view);
+            FieldValidationDefinitionXml.Apply(document, view);
             RewriteHiddenControlMappings(document, view);
             ApplyHiddenProperties(document, view);
             PruneMissingOptionalControlMappings(document, view);
@@ -61,6 +62,7 @@ namespace K2SmartFormsCli
             VerifyResponsiveTable(document, view);
             VerifySingleLineInputs(document, view);
             VerifyRequiredInputs(document, view);
+            FieldValidationDefinitionXml.Verify(document, view);
             VerifySections(document, view);
             VerifyHelp(document, view);
             if (view.Type == "capture" && (view.Charts == null || view.Charts.Count == 0))
@@ -337,7 +339,7 @@ namespace K2SmartFormsCli
             }
         }
 
-        private static XElement FindEditableFieldControl(XDocument document, ViewDefinition view, string property)
+        internal static XElement FindEditableFieldControl(XDocument document, ViewDefinition view, string property)
         {
             var field = document.Descendants().FirstOrDefault(x => x.Name.LocalName == "Field" &&
                 string.Equals(ChildValue(x, "FieldName"), property, StringComparison.OrdinalIgnoreCase));

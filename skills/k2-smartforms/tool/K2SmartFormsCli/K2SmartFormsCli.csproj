@@ -68,6 +68,7 @@
     <Compile Include="Cli.cs" />
     <Compile Include="ControlRuleDefinition.cs" />
     <Compile Include="EnvironmentCommonHeader.cs" />
+    <Compile Include="FieldValidationDefinition.cs" />
     <Compile Include="FormLayoutDefinition.cs" />
     <Compile Include="FormThemeDefinition.cs" />
     <Compile Include="Manifest.cs" />

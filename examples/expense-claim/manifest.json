@@ -37,6 +37,79 @@
       "requireForeignKeyIndex": true
     }
   ],
+  "formConstraints": [
+    {
+      "smartObject": "EXP_ExpenseClaimsSql_EXP_ExpenseClaim",
+      "property": "ClaimTitle",
+      "schema": "EXP",
+      "table": "ExpenseClaim",
+      "column": "ClaimTitle",
+      "required": true,
+      "maxLength": 200
+    },
+    {
+      "smartObject": "EXP_ExpenseClaimsSql_EXP_ExpenseClaim",
+      "property": "Department",
+      "schema": "EXP",
+      "table": "ExpenseClaim",
+      "column": "Department",
+      "required": true,
+      "maxLength": 100
+    },
+    {
+      "smartObject": "EXP_ExpenseClaimsSql_EXP_ExpenseClaim",
+      "property": "BusinessPurpose",
+      "schema": "EXP",
+      "table": "ExpenseClaim",
+      "column": "BusinessPurpose",
+      "maxLength": 1000
+    },
+    {
+      "smartObject": "EXP_ExpenseClaimsSql_EXP_ExpenseLine",
+      "property": "CategoryCode",
+      "schema": "EXP",
+      "table": "ExpenseLine",
+      "column": "CategoryCode",
+      "required": true,
+      "maxLength": 30
+    },
+    {
+      "smartObject": "EXP_ExpenseClaimsSql_EXP_ExpenseLine",
+      "property": "ExpenseDate",
+      "schema": "EXP",
+      "table": "ExpenseLine",
+      "column": "ExpenseDate",
+      "required": true
+    },
+    {
+      "smartObject": "EXP_ExpenseClaimsSql_EXP_ExpenseLine",
+      "property": "Description",
+      "schema": "EXP",
+      "table": "ExpenseLine",
+      "column": "Description",
+      "required": true,
+      "maxLength": 300
+    },
+    {
+      "smartObject": "EXP_ExpenseClaimsSql_EXP_ExpenseLine",
+      "property": "Amount",
+      "schema": "EXP",
+      "table": "ExpenseLine",
+      "column": "Amount",
+      "required": true,
+      "minimum": 0,
+      "exclusiveMinimum": true,
+      "sourceConstraints": ["CK_EXP_ExpenseLine_Amount"]
+    },
+    {
+      "smartObject": "EXP_ExpenseClaimsSql_EXP_ExpenseLine",
+      "property": "ReceiptReference",
+      "schema": "EXP",
+      "table": "ExpenseLine",
+      "column": "ReceiptReference",
+      "maxLength": 200
+    }
+  ],
   "verification": {
     "sqlObjects": [{ "type": "view", "schema": "EXP", "name": "ExpenseClaimSummary" }],
     "queries": [{ "name": "expense category seed", "sql": "SELECT COUNT(*) FROM EXP.ExpenseCategory", "expectedScalar": "4" }],

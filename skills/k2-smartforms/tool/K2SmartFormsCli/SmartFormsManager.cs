@@ -12,6 +12,7 @@ using SourceCode.Forms.Utilities;
 using SourceCode.Hosting.Client.BaseAPI;
 using SourceCode.SmartObjects.Client;
 using AuthoringViewType = SourceCode.Forms.Authoring.ViewType;
+using ManagementValidationPattern = SourceCode.Forms.Management.ValidationPattern;
 
 namespace K2SmartFormsCli
 {
@@ -519,6 +520,8 @@ namespace K2SmartFormsCli
                 var originalPrimarySource = PrimarySmartObjectIdentity(originalDocument, viewName);
                 var originalDependencies = ViewDependencyIds(manager, originalInfo.Guid);
 
+                PrepareValidationPatterns();
+                EnsureValidationPatterns(manager, true);
                 string rendered;
                 using (var renderer = new AutoGenerator(manager.Connection))
                     rendered = RenderView(renderer, declaredView, lookupSources);
@@ -750,6 +753,7 @@ namespace K2SmartFormsCli
                 var renderedViews = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 if (!formsOnly)
                 {
+                    PrepareValidationPatterns();
                     using (var renderer = new AutoGenerator(manager.Connection))
                     {
                         foreach (var view in _manifest.Application.Views)
@@ -759,6 +763,12 @@ namespace K2SmartFormsCli
                         }
                     }
                     Console.WriteLine("Pre-render validation: " + renderedViews.Count + " View definition(s) generated before K2 mutation.");
+                    EnsureValidationPatterns(manager, true);
+                    using (var renderer = new AutoGenerator(manager.Connection))
+                    {
+                        foreach (var view in _manifest.Application.Views.Where(x => renderedViews.ContainsKey(x.Name)))
+                            renderedViews[view.Name] = RenderView(renderer, view, lookupSources);
+                    }
                 }
                 if (resume)
                     Console.WriteLine("Resume mode: preserving existing manifest artifacts and creating only missing Views/Forms.");
@@ -839,6 +849,8 @@ namespace K2SmartFormsCli
             var lookupSources = LoadLookupRuntimeSources();
             WithFormsManager(delegate(FormsManager manager)
             {
+                PrepareValidationPatterns();
+                EnsureValidationPatterns(manager, false);
                 var expectedStyleProfile = ResolveStyleProfile(manager);
                 var commonHeader = ResolveCommonHeader(manager);
                 foreach (var expected in _manifest.Verification.ExpectedViews)
@@ -990,8 +1002,109 @@ namespace K2SmartFormsCli
                     manager.DeleteView(info.Guid);
                     Console.WriteLine("View: deleted (" + view.Name + ", " + info.Guid + ")");
                 }
+                DeleteOwnedValidationPatterns(manager);
                 return 0;
             });
+        }
+
+        private IEnumerable<KeyValuePair<ViewDefinition, FieldValidationDefinition>> PatternValidations()
+        {
+            return _manifest.Application.Views.SelectMany(view => view.Validations
+                .Where(FieldValidationDefinitionXml.RequiresValidationPattern)
+                .Select(validation => new KeyValuePair<ViewDefinition, FieldValidationDefinition>(view, validation)));
+        }
+
+        private void PrepareValidationPatterns()
+        {
+            foreach (var pair in PatternValidations())
+            {
+                pair.Value.ValidationPatternName = ValidationPatternName(pair.Key, pair.Value);
+                pair.Value.ValidationPatternExpression = FieldValidationDefinitionXml.BuildPattern(pair.Value);
+                if (pair.Value.ValidationPatternGuid == Guid.Empty)
+                    pair.Value.ValidationPatternGuid = Guid.NewGuid();
+            }
+        }
+
+        private void EnsureValidationPatterns(FormsManager manager, bool createOrUpdate)
+        {
+            var contracts = PatternValidations().ToList();
+            if (contracts.Count == 0) return;
+            var live = manager.GetValidationPatterns().ValidationPatterns.Cast<ManagementValidationPattern>().ToList();
+            foreach (var pair in contracts)
+            {
+                var validation = pair.Value;
+                var pattern = live.SingleOrDefault(x =>
+                    string.Equals(x.Name, validation.ValidationPatternName, StringComparison.OrdinalIgnoreCase));
+                if (pattern == null)
+                {
+                    if (!createOrUpdate)
+                        throw new CliException("K2 validation pattern is missing for View '" + pair.Key.Name +
+                            "' property '" + validation.Property + "': " + validation.ValidationPatternName);
+                    pattern = manager.SetValidationPattern(new ManagementValidationPattern
+                    {
+                        Name = validation.ValidationPatternName,
+                        Pattern = validation.ValidationPatternExpression,
+                        Message = validation.Message,
+                        Example = validation.Example ?? string.Empty,
+                        Flags = 0
+                    });
+                    Console.WriteLine("Validation pattern: created (" + pattern.Name + ", " + pattern.Guid + ")");
+                    live.Add(pattern);
+                }
+                else if (!string.Equals(pattern.Pattern, validation.ValidationPatternExpression, StringComparison.Ordinal) ||
+                         !string.Equals(pattern.Message ?? string.Empty, validation.Message ?? string.Empty, StringComparison.Ordinal) ||
+                         !string.Equals(pattern.Example ?? string.Empty, validation.Example ?? string.Empty, StringComparison.Ordinal))
+                {
+                    if (!createOrUpdate)
+                        throw new CliException("K2 validation pattern differs from the manifest contract: " +
+                            validation.ValidationPatternName);
+                    pattern.Pattern = validation.ValidationPatternExpression;
+                    pattern.Message = validation.Message;
+                    pattern.Example = validation.Example ?? string.Empty;
+                    manager.SetValidationPattern(pattern);
+                    Console.WriteLine("Validation pattern: updated (" + pattern.Name + ", " + pattern.Guid + ")");
+                }
+                validation.ValidationPatternGuid = pattern.Guid;
+            }
+        }
+
+        private void DeleteOwnedValidationPatterns(FormsManager manager)
+        {
+            var contracts = PatternValidations().ToList();
+            if (contracts.Count == 0) return;
+            var live = manager.GetValidationPatterns().ValidationPatterns.Cast<ManagementValidationPattern>().ToList();
+            foreach (var pair in contracts)
+            {
+                var validation = pair.Value;
+                validation.ValidationPatternName = ValidationPatternName(pair.Key, validation);
+                validation.ValidationPatternExpression = FieldValidationDefinitionXml.BuildPattern(validation);
+                var pattern = live.SingleOrDefault(x =>
+                    string.Equals(x.Name, validation.ValidationPatternName, StringComparison.OrdinalIgnoreCase));
+                if (pattern == null)
+                {
+                    Console.WriteLine("Validation pattern: already absent (" + validation.ValidationPatternName + ")");
+                    continue;
+                }
+                if (!string.Equals(pattern.Pattern, validation.ValidationPatternExpression, StringComparison.Ordinal) ||
+                    !string.Equals(pattern.Message ?? string.Empty, validation.Message ?? string.Empty, StringComparison.Ordinal))
+                    throw new CliException("Refusing to delete validation pattern '" + pattern.Name +
+                        "' because its definition no longer matches this manifest.");
+                manager.DeleteValidationPattern(pattern.Name);
+                Console.WriteLine("Validation pattern: deleted (" + pattern.Name + ", " + pattern.Guid + ")");
+            }
+        }
+
+        private string ValidationPatternName(ViewDefinition view, FieldValidationDefinition validation)
+        {
+            var raw = "K2Skills." + _manifest.Name + "." + view.Name + "." + validation.Property;
+            raw = new string(raw.Select(ch => char.IsLetterOrDigit(ch) || ch == '.' || ch == '-' || ch == '_' ? ch : '_').ToArray());
+            if (raw.Length <= 120) return raw;
+            unchecked
+            {
+                uint hash = 2166136261;
+                foreach (var ch in raw) hash = (hash ^ ch) * 16777619;
+                return raw.Substring(0, 111) + "." + hash.ToString("x8");
+            }
         }
 
         private static bool IsCurrentIdentity(string owner)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Xml.Linq;
 using SourceCode.Forms.Management;
@@ -42,7 +43,13 @@ namespace K2SmartFormsCli
                 MasterCreateEvent = ResolveNamedEvent(masterDocument, MasterCreateRuleName(form.MasterDetail.MasterKeyProperty), form.MasterDetail.MasterView),
                 MasterUpdateEvent = ResolveNamedEvent(masterDocument, MasterUpdateRuleName(form.MasterDetail.MasterKeyProperty), form.MasterDetail.MasterView),
                 Details = new List<ResolvedMasterDetailChild>(),
-                RequiredControls = masterDefinition.RequiredProperties.Select(x => ResolveRequiredControl(masterDocument, x, form.MasterDetail.MasterView)).ToList()
+                RequiredControls = masterDefinition.RequiredProperties.Concat(masterDefinition.Validations.Select(x => x.Property))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Select(x => ResolveRequiredControl(masterDocument, x, form.MasterDetail.MasterView,
+                        masterDefinition.Validations.SingleOrDefault(v =>
+                            string.Equals(v.Property, x, StringComparison.OrdinalIgnoreCase)),
+                        masterDefinition.RequiredProperties.Contains(x, StringComparer.OrdinalIgnoreCase)))
+                    .ToList()
             };
             foreach (var child in form.MasterDetail.Details)
             {
@@ -138,7 +145,8 @@ namespace K2SmartFormsCli
             return property == null ? null : ChildValue(property, "Value");
         }
 
-        private static ResolvedRequiredControl ResolveRequiredControl(XDocument document, string property, string viewName)
+        private static ResolvedRequiredControl ResolveRequiredControl(XDocument document, string property, string viewName,
+            FieldValidationDefinition validation, bool isRequired)
         {
             var field = document.Descendants().FirstOrDefault(x => x.Name.LocalName == "Field" &&
                 string.Equals(ChildValue(x, "FieldName"), property, StringComparison.OrdinalIgnoreCase));
@@ -153,7 +161,13 @@ namespace K2SmartFormsCli
                 Property = property,
                 ControlId = (string)controls[0].Attribute("ID"),
                 ControlName = ChildValue(controls[0], "Name") ?? property,
-                ControlDisplayName = ChildValue(controls[0], "DisplayName") ?? property
+                ControlDisplayName = ChildValue(controls[0], "DisplayName") ?? property,
+                IsRequired = isRequired,
+                MustBeTrue = validation != null && validation.MustBeTrue,
+                Minimum = validation == null ? null : validation.Minimum,
+                Maximum = validation == null ? null : validation.Maximum,
+                ExclusiveMinimum = validation != null && validation.ExclusiveMinimum,
+                ExclusiveMaximum = validation != null && validation.ExclusiveMaximum
             };
         }
 
@@ -262,6 +276,12 @@ namespace K2SmartFormsCli
         public string ControlId { get; set; }
         public string ControlName { get; set; }
         public string ControlDisplayName { get; set; }
+        public bool IsRequired { get; set; }
+        public bool MustBeTrue { get; set; }
+        public decimal? Minimum { get; set; }
+        public decimal? Maximum { get; set; }
+        public bool ExclusiveMinimum { get; set; }
+        public bool ExclusiveMaximum { get; set; }
     }
 
     internal static class MasterDetailRules
@@ -781,7 +801,15 @@ namespace K2SmartFormsCli
                 if (!group.Descendants().Any(x => x.Name.LocalName == "ValidationGroupControl" &&
                     string.Equals((string)x.Attribute("ControlID"), required.ControlId, StringComparison.OrdinalIgnoreCase) &&
                     string.Equals((string)x.Attribute("InstanceID"), masterInstance, StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals((string)x.Attribute("IsRequired"), "True", StringComparison.OrdinalIgnoreCase)))
+                    string.Equals((string)x.Attribute("IsRequired"), required.IsRequired ? "True" : "False", StringComparison.OrdinalIgnoreCase) &&
+                    (!required.MustBeTrue || x.Descendants().Any(e => e.Name.LocalName == "Equals" &&
+                        e.Elements().Any(i => i.Name.LocalName == "Item" &&
+                            string.Equals((string)i.Attribute("SourceID"), required.ControlId, StringComparison.OrdinalIgnoreCase)) &&
+                        e.Elements().Any(i => i.Name.LocalName == "Item" &&
+                            string.Equals((string)i.Attribute("SourceType"), "Value", StringComparison.OrdinalIgnoreCase) &&
+                            string.Equals(i.Value, "true", StringComparison.OrdinalIgnoreCase)))) &&
+                    ((!required.Minimum.HasValue && !required.Maximum.HasValue) ||
+                        x.Elements().Any(e => e.Name.LocalName == "Condition"))))
                     throw new CliException("K2 Form '" + formName + "' validation group omits required property '" + required.Property + "'.");
         }
 
@@ -859,7 +887,15 @@ namespace K2SmartFormsCli
             foreach (var required in relationship.RequiredControls)
                 if (!group.Descendants().Any(x => x.Name.LocalName == "ValidationGroupControl" &&
                     string.Equals((string)x.Attribute("ControlID"), required.ControlId, StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals((string)x.Attribute("IsRequired"), "True", StringComparison.OrdinalIgnoreCase)))
+                    string.Equals((string)x.Attribute("IsRequired"), required.IsRequired ? "True" : "False", StringComparison.OrdinalIgnoreCase) &&
+                    (!required.MustBeTrue || x.Descendants().Any(e => e.Name.LocalName == "Equals" &&
+                        e.Elements().Any(i => i.Name.LocalName == "Item" &&
+                            string.Equals((string)i.Attribute("SourceID"), required.ControlId, StringComparison.OrdinalIgnoreCase)) &&
+                        e.Elements().Any(i => i.Name.LocalName == "Item" &&
+                            string.Equals((string)i.Attribute("SourceType"), "Value", StringComparison.OrdinalIgnoreCase) &&
+                            string.Equals(i.Value, "true", StringComparison.OrdinalIgnoreCase)))) &&
+                    ((!required.Minimum.HasValue && !required.Maximum.HasValue) ||
+                        x.Elements().Any(e => e.Name.LocalName == "Condition"))))
                     throw new CliException("K2 Form '" + formName + "' validation group omits required property '" + required.Property + "'.");
             foreach (var method in new[] { relationship.Definition.MasterCreateMethod, relationship.Definition.MasterUpdateMethod })
             {
@@ -1019,11 +1055,60 @@ namespace K2SmartFormsCli
             groups.Add(new XElement(ns + "ValidationGroup", new XAttribute("ID", groupId),
                 new XElement(ns + "Name", "ValidationGroupForEvent"),
                 new XElement(ns + "ValidationGroupControls", relationship.RequiredControls.Select(x =>
-                    new XElement(ns + "ValidationGroupControl", new XAttribute("ID", NewId()),
+                {
+                    var control = new XElement(ns + "ValidationGroupControl", new XAttribute("ID", NewId()),
                         new XAttribute("ControlID", x.ControlId), new XAttribute("InstanceID", masterInstance),
-                        new XAttribute("IsRequired", "True"), new XAttribute("ControlName", x.ControlName),
-                        new XAttribute("ControlDisplayName", x.ControlDisplayName))))));
+                        new XAttribute("IsRequired", x.IsRequired ? "True" : "False"), new XAttribute("ControlName", x.ControlName),
+                        new XAttribute("ControlDisplayName", x.ControlDisplayName));
+                    if (x.MustBeTrue)
+                    {
+                        control.Add(new XElement(ns + "Condition",
+                            new XElement(ns + "Equals",
+                                new XElement(ns + "Item", new XAttribute("SourceType", "Control"),
+                                    new XAttribute("SourceName", x.ControlName),
+                                    new XAttribute("SourceDisplayName", x.ControlDisplayName),
+                                    new XAttribute("SourceID", x.ControlId), new XAttribute("DataType", "Text")),
+                                new XElement(ns + "Item", new XAttribute("SourceType", "Value"),
+                                    new XAttribute("DataType", "Text"), "true"))));
+                    }
+                    else if (x.Minimum.HasValue || x.Maximum.HasValue)
+                    {
+                        var comparisons = new List<XElement>();
+                        if (x.Minimum.HasValue)
+                            comparisons.Add(BuildFormNumericComparison(ns, x, x.Minimum.Value,
+                                x.ExclusiveMinimum ? "GreaterThan" : "LessThan", !x.ExclusiveMinimum));
+                        if (x.Maximum.HasValue)
+                            comparisons.Add(BuildFormNumericComparison(ns, x, x.Maximum.Value,
+                                x.ExclusiveMaximum ? "LessThan" : "GreaterThan", !x.ExclusiveMaximum));
+                        XElement expression = comparisons[0];
+                        if (comparisons.Count == 2)
+                            expression = new XElement(ns + "And", comparisons[0], comparisons[1]);
+                        if (!x.IsRequired)
+                            expression = new XElement(ns + "Or",
+                                new XElement(ns + "IsBlank",
+                                    new XElement(ns + "Item", new XAttribute("SourceType", "Control"),
+                                        new XAttribute("SourceName", x.ControlName),
+                                        new XAttribute("SourceDisplayName", x.ControlDisplayName),
+                                        new XAttribute("SourceID", x.ControlId), new XAttribute("DataType", "Decimal"))),
+                                expression);
+                        control.Add(new XElement(ns + "Condition", expression));
+                    }
+                    return control;
+                }))));
             return groupId;
+        }
+
+        private static XElement BuildFormNumericComparison(XNamespace ns, ResolvedRequiredControl control,
+            decimal value, string operatorName, bool negate)
+        {
+            var comparison = new XElement(ns + operatorName,
+                new XElement(ns + "Item", new XAttribute("SourceType", "Control"),
+                    new XAttribute("SourceName", control.ControlName),
+                    new XAttribute("SourceDisplayName", control.ControlDisplayName),
+                    new XAttribute("SourceID", control.ControlId), new XAttribute("DataType", "Decimal")),
+                new XElement(ns + "Item", new XAttribute("SourceType", "Value"),
+                    new XAttribute("DataType", "Decimal"), value.ToString(CultureInfo.InvariantCulture)));
+            return negate ? new XElement(ns + "Not", comparison) : comparison;
         }
 
         private static void HideReviewUntilSaved(XElement form, ResolvedMasterDetailRules relationship)

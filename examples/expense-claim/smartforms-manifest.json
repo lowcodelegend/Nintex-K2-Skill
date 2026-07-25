@@ -33,6 +33,11 @@
         "type": "capture",
         "properties": ["ExpenseClaimId", "ClaimTitle", "Department", "BusinessPurpose", "Status", "TotalAmount", "CreatedOn"],
         "readOnlyProperties": ["ExpenseClaimId", "Status", "TotalAmount", "CreatedOn"],
+        "validations": [
+          { "property": "ClaimTitle", "required": true, "maxLength": 200 },
+          { "property": "Department", "required": true, "maxLength": 100 },
+          { "property": "BusinessPurpose", "maxLength": 1000 }
+        ],
         "defaultValues": { "Status": "Draft", "TotalAmount": "0" },
         "layoutColumns": 4,
         "hiddenVariables": [
@@ -50,6 +55,20 @@
         "methods": ["Create", "Update", "Delete", "List"],
         "defaultListMethod": "List",
         "options": ["editable", "toolbar"],
+        "validations": [
+          { "property": "CategoryCode", "required": true, "maxLength": 30 },
+          { "property": "ExpenseDate", "required": true },
+          { "property": "Description", "required": true, "maxLength": 300 },
+          {
+            "property": "Amount",
+            "required": true,
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "message": "Amount must be greater than zero.",
+            "sourceConstraint": "CK_EXP_ExpenseLine_Amount"
+          },
+          { "property": "ReceiptReference", "maxLength": 200 }
+        ],
         "lookupControls": [{ "property": "CategoryCode", "lookup": "Expense Category" }]
       }
     ],

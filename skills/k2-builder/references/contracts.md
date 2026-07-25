@@ -87,6 +87,19 @@ End-to-end scenarios must cover exact threshold boundaries, each dimension-speci
 - Put the selected profile's stable system name in `application.styleProfile` and keep `useLegacyTheme=false` explicit. Named themes such as Lithium are legacy; `application.theme` remains required generator compatibility metadata, not the modern presentation choice.
 - Verify the deployed form definition contains the selected Style Profile GUID and system name.
 
+## SQL-to-form validation contract
+
+Every SQL invariant on a user-editable property must fail in SmartForms before the persistence method runs. Declare the authoritative handoff in SQL `formConstraints` and mirror it in every editable SmartForms View's `validations` entry:
+
+- `required` mirrors user-supplied non-null input. Defaults, workflow-managed values, identities, audit columns, and derived values are not made editable merely to satisfy nullability.
+- `maxLength` exactly matches bounded SQL text and is rendered as native K2 `MaxLength`; use `minLength` for minimum-character checks.
+- `minimum`/`maximum` and `exclusiveMinimum`/`exclusiveMaximum` mirror numeric checks.
+- `format` (`email`, `phone`, `url`, or `guid`) or `pattern` mirrors row-local string-format checks and produces a solution-owned K2 Validation Pattern.
+- `mustBeTrue` mirrors checks such as `Accepted = 1`; K2 `IsRequired` alone is insufficient because `false` is a supplied Boolean value.
+- `sourceConstraints` lists named SQL checks, and the matching View validation repeats the applicable name in `sourceConstraint`.
+
+`k2build` rejects a missing or divergent editable View contract. Verify native control properties, validation-pattern identity/message, validation-group membership and conditions, and that the group runs immediately before Create/Update/Save/Submit. Browser tests must cover each boundary, one invalid format, an overlong paste, minimum-length failure, unchecked required consent, and valid boundary values. Record server-only constraints and why no editable control mirrors them.
+
 ## Form-state invariant
 
 For a dedicated request-entry form:
@@ -103,7 +116,7 @@ For a shared form, never infer a default-state change. Choose and record one of:
 
 1. Run each changed specialist's `doctor` and `plan` once. For a complete deployment, prefer `k2build deploy -Confirm`; do not repeat successful checks merely to collect duplicate output.
 2. Verify the database objects, Service Instance, every generated SmartObject's `<root>\Data` placement, and representative SmartObject methods.
-3. Verify form/view deployment, selected Style Profile, `useLegacyTheme=false`, required method input mappings (including explicit defaults for required read-only Create inputs), live dropdown bindings, and browser CRUD behavior.
+3. Verify form/view deployment, selected Style Profile, `useLegacyTheme=false`, required method input mappings (including explicit defaults for required read-only Create inputs), SQL-to-form validation coverage and boundary behavior, live dropdown bindings, and browser CRUD behavior.
 4. Verify workflow JSON shape, publication/version, SmartObject method mappings, recipients, task notification, and SmartForms integration; then reconcile every declared master-detail child load against every final Form master-Read path. Re-run full SmartForms verification and workflow Start/Task integration verification after reconciliation.
 5. Execute each end-to-end scenario from the ordinary Runtime entry URL when authenticated interaction is available. Treat an authentication redirect only as `reachable-authentication-required`; record interactive scenarios as skipped instead of spending retries trying to turn route reachability into browser proof.
 6. Correlate the saved request identifier, workflow instance, worklist task, selected action, and final status. Do not accept independent smoke tests as equivalent evidence.

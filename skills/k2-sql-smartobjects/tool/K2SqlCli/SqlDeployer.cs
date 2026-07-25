@@ -146,6 +146,7 @@ namespace K2SqlCli
                 {
                     VerifyQuery(connection, query);
                 }
+                VerifyFormConstraints(connection);
                 VerifyMasterDetails(connection);
                 new ApprovalMatrixSql(_manifest).Verify(connection, _manifest.Database.CommandTimeoutSeconds);
             }
@@ -247,6 +248,101 @@ WHERE s.name=@schema AND t.name=@table AND c.name=@column AND i.is_disabled=0 AN
                 }
                 Console.WriteLine("SQL master-detail verification: OK (" + relationship.Name + ")");
             }
+        }
+
+        private void VerifyFormConstraints(SqlConnection connection)
+        {
+            const string columnSql = @"SELECT TYPE_NAME(c.system_type_id), c.max_length, c.is_nullable,
+CASE WHEN c.default_object_id <> 0 THEN 1 ELSE 0 END AS has_default,
+c.is_identity, c.is_computed
+FROM sys.columns c
+INNER JOIN sys.tables t ON t.object_id=c.object_id
+INNER JOIN sys.schemas s ON s.schema_id=t.schema_id
+WHERE s.name=@schema AND t.name=@table AND c.name=@column";
+            const string checkSql = @"SELECT COUNT(*) FROM sys.check_constraints cc
+INNER JOIN sys.tables t ON t.object_id=cc.parent_object_id
+INNER JOIN sys.schemas s ON s.schema_id=t.schema_id
+WHERE s.name=@schema AND t.name=@table AND cc.name=@constraint";
+
+            foreach (var constraint in _manifest.FormConstraints)
+            {
+                string typeName;
+                short maxLength;
+                bool isNullable;
+                bool hasDefault;
+                bool isIdentity;
+                bool isComputed;
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = columnSql;
+                    command.CommandTimeout = _manifest.Database.CommandTimeoutSeconds;
+                    command.Parameters.AddWithValue("@schema", constraint.Schema);
+                    command.Parameters.AddWithValue("@table", constraint.Table);
+                    command.Parameters.AddWithValue("@column", constraint.Column);
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (!reader.Read())
+                            throw new CliException("Form constraint column is missing: " +
+                                constraint.Schema + "." + constraint.Table + "." + constraint.Column);
+                        typeName = reader.GetString(0);
+                        maxLength = reader.GetInt16(1);
+                        isNullable = reader.GetBoolean(2);
+                        hasDefault = reader.GetInt32(3) == 1;
+                        isIdentity = reader.GetBoolean(4);
+                        isComputed = reader.GetBoolean(5);
+                        if (reader.Read())
+                            throw new CliException("Form constraint column lookup was ambiguous: " +
+                                constraint.Schema + "." + constraint.Table + "." + constraint.Column);
+                    }
+                }
+
+                var boundedTextLength = GetBoundedTextLength(typeName, maxLength);
+                if (boundedTextLength.HasValue)
+                {
+                    if (!constraint.MaxLength.HasValue)
+                        throw new CliException("Form constraint must declare maxLength=" + boundedTextLength.Value +
+                            " to prevent UI-to-SQL truncation for " + constraint.SmartObject + "." + constraint.Property +
+                            " (" + constraint.Schema + "." + constraint.Table + "." + constraint.Column + ").");
+                    if (constraint.MaxLength.Value != boundedTextLength.Value)
+                        throw new CliException("Form constraint maxLength mismatch for " +
+                            constraint.SmartObject + "." + constraint.Property + ": manifest=" +
+                            constraint.MaxLength.Value + ", SQL=" + boundedTextLength.Value + ".");
+                }
+
+                if (!isNullable && !hasDefault && !isIdentity && !isComputed && !constraint.Required)
+                    throw new CliException("Form constraint must declare required=true for non-null SQL column " +
+                        constraint.Schema + "." + constraint.Table + "." + constraint.Column + ".");
+
+                foreach (var sourceConstraint in constraint.SourceConstraints)
+                {
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = checkSql;
+                        command.CommandTimeout = _manifest.Database.CommandTimeoutSeconds;
+                        command.Parameters.AddWithValue("@schema", constraint.Schema);
+                        command.Parameters.AddWithValue("@table", constraint.Table);
+                        command.Parameters.AddWithValue("@constraint", sourceConstraint);
+                        if (Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture) != 1)
+                            throw new CliException("Form constraint source CHECK is missing from " +
+                                constraint.Schema + "." + constraint.Table + ": " + sourceConstraint);
+                    }
+                }
+
+                Console.WriteLine("SQL form constraint verification: OK (" +
+                    constraint.SmartObject + "." + constraint.Property + ")");
+            }
+        }
+
+        private static int? GetBoundedTextLength(string typeName, short maxLength)
+        {
+            if (maxLength < 0) return null;
+            if (string.Equals(typeName, "nvarchar", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(typeName, "nchar", StringComparison.OrdinalIgnoreCase))
+                return maxLength / 2;
+            if (string.Equals(typeName, "varchar", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(typeName, "char", StringComparison.OrdinalIgnoreCase))
+                return maxLength;
+            return null;
         }
 
         private void VerifyPrimaryKey(SqlConnection connection, string schema, string table, string column, string label)

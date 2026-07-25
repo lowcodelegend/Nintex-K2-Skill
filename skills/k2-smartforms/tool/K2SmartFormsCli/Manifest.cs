@@ -118,6 +118,8 @@ namespace K2SmartFormsCli
                 if (view.SingleLineProperties == null) view.SingleLineProperties = new List<string>();
                 if (view.RequiredProperties == null) view.RequiredProperties = new List<string>();
                 if (view.LookupRequiredProperties == null) view.LookupRequiredProperties = new List<string>();
+                if (view.Validations == null) view.Validations = new List<FieldValidationDefinition>();
+                if (view.ValidationMethods == null) view.ValidationMethods = new List<string>();
                 if (view.Sections == null) view.Sections = new List<ViewSectionDefinition>();
                 if (view.Help == null) view.Help = new List<ViewHelpDefinition>();
                 if (view.HiddenVariables == null) view.HiddenVariables = new List<HiddenVariableDefinition>();
@@ -146,6 +148,56 @@ namespace K2SmartFormsCli
                 EnsureUniqueValues(view.SingleLineProperties, "single-line property", view.Name);
                 EnsureUniqueValues(view.RequiredProperties, "required property", view.Name);
                 EnsureUniqueValues(view.LookupRequiredProperties, "lookup-required property", view.Name);
+                EnsureUniqueValues(view.Validations.Select(x => x == null ? null : x.Property), "validation property", view.Name);
+                EnsureUniqueValues(view.ValidationMethods, "validation method", view.Name);
+                foreach (var validation in view.Validations)
+                {
+                    if (validation == null) throw new CliException("View '" + view.Name + "' validations cannot contain null entries.");
+                    Require(validation.Property, "view.validations.property");
+                    validation.Format = (validation.Format ?? string.Empty).Trim().ToLowerInvariant();
+                    if (!string.IsNullOrWhiteSpace(validation.Format) &&
+                        !new[] { "email", "phone", "url", "guid" }.Contains(validation.Format, StringComparer.OrdinalIgnoreCase))
+                        throw new CliException("View '" + view.Name + "' validation format must be email, phone, url, or guid: " + validation.Property);
+                    if (validation.MinLength.HasValue && validation.MinLength.Value < 1)
+                        throw new CliException("View '" + view.Name + "' validation minLength must be positive: " + validation.Property);
+                    if (validation.MaxLength.HasValue && validation.MaxLength.Value < 1)
+                        throw new CliException("View '" + view.Name + "' validation maxLength must be positive: " + validation.Property);
+                    if (validation.MinLength.HasValue && validation.MaxLength.HasValue &&
+                        validation.MinLength.Value > validation.MaxLength.Value)
+                        throw new CliException("View '" + view.Name + "' validation minLength cannot exceed maxLength: " + validation.Property);
+                    if (validation.MustBeTrue &&
+                        (validation.MinLength.HasValue || validation.MaxLength.HasValue ||
+                         validation.Minimum.HasValue || validation.Maximum.HasValue ||
+                         !string.IsNullOrWhiteSpace(validation.Pattern) || !string.IsNullOrWhiteSpace(validation.Format)))
+                        throw new CliException("View '" + view.Name + "' mustBeTrue validation cannot be combined with text constraints: " + validation.Property);
+                    if (validation.Minimum.HasValue && validation.Maximum.HasValue &&
+                        validation.Minimum.Value > validation.Maximum.Value)
+                        throw new CliException("View '" + view.Name + "' validation minimum cannot exceed maximum: " + validation.Property);
+                    if (validation.Minimum.HasValue && validation.Maximum.HasValue &&
+                        validation.Minimum.Value == validation.Maximum.Value &&
+                        (validation.ExclusiveMinimum || validation.ExclusiveMaximum))
+                        throw new CliException("View '" + view.Name + "' exclusive numeric validation has an empty range: " + validation.Property);
+                    if (validation.ExclusiveMinimum && !validation.Minimum.HasValue)
+                        throw new CliException("View '" + view.Name + "' exclusiveMinimum requires minimum: " + validation.Property);
+                    if (validation.ExclusiveMaximum && !validation.Maximum.HasValue)
+                        throw new CliException("View '" + view.Name + "' exclusiveMaximum requires maximum: " + validation.Property);
+                    if (!validation.Required && !validation.MustBeTrue && !validation.MinLength.HasValue &&
+                        !validation.MaxLength.HasValue && !validation.Minimum.HasValue && !validation.Maximum.HasValue &&
+                        string.IsNullOrWhiteSpace(validation.Pattern) &&
+                        string.IsNullOrWhiteSpace(validation.Format))
+                        throw new CliException("View '" + view.Name + "' validation must declare required, mustBeTrue, minLength, maxLength, pattern, or format: " + validation.Property);
+                    if ((validation.MinLength.HasValue || validation.Minimum.HasValue || validation.Maximum.HasValue ||
+                         validation.MustBeTrue || !string.IsNullOrWhiteSpace(validation.Pattern) ||
+                         !string.IsNullOrWhiteSpace(validation.Format)) && string.IsNullOrWhiteSpace(validation.Message))
+                        throw new CliException("View '" + view.Name + "' validation message is required for minLength, numeric, pattern, format, and mustBeTrue constraints: " + validation.Property);
+                    FieldValidationDefinitionXml.ValidatePatternSyntax(validation);
+                    if ((validation.Required || validation.MustBeTrue) &&
+                        !view.RequiredProperties.Contains(validation.Property, StringComparer.OrdinalIgnoreCase))
+                        view.RequiredProperties.Add(validation.Property);
+                }
+                foreach (var method in view.ValidationMethods)
+                    if (!view.Methods.Contains(method, StringComparer.OrdinalIgnoreCase))
+                        throw new CliException("View '" + view.Name + "' validationMethods entry is not selected in view.methods: " + method);
                 EnsureUniqueValues(view.HiddenVariables.Select(x => x == null ? null : x.Name), "hidden variable", view.Name);
                 foreach (var variable in view.HiddenVariables)
                 {
@@ -201,7 +253,8 @@ namespace K2SmartFormsCli
                 foreach (var property in view.HiddenProperties)
                     if (!view.Properties.Contains(property, StringComparer.OrdinalIgnoreCase))
                         throw new CliException("View '" + view.Name + "' hiddenProperties entry is not selected in view.properties: " + property);
-                foreach (var property in view.SingleLineProperties.Concat(view.RequiredProperties).Concat(view.LookupRequiredProperties))
+                foreach (var property in view.SingleLineProperties.Concat(view.RequiredProperties).Concat(view.LookupRequiredProperties)
+                    .Concat(view.Validations.Select(x => x.Property)))
                     if (!view.Properties.Contains(property, StringComparer.OrdinalIgnoreCase))
                         throw new CliException("View '" + view.Name + "' field contract references a property not selected in view.properties: " + property);
                 foreach (var property in view.RequiredProperties)
@@ -209,6 +262,11 @@ namespace K2SmartFormsCli
                         view.ReadOnlyProperties.Contains(property, StringComparer.OrdinalIgnoreCase) ||
                         view.DefaultValues.Keys.Contains(property, StringComparer.OrdinalIgnoreCase))
                         throw new CliException("View '" + view.Name + "' requiredProperties must be visible, editable, user-supplied fields: " + property);
+                foreach (var validation in view.Validations)
+                    if (view.HiddenProperties.Contains(validation.Property, StringComparer.OrdinalIgnoreCase) ||
+                        view.ReadOnlyProperties.Contains(validation.Property, StringComparer.OrdinalIgnoreCase) ||
+                        view.DefaultValues.Keys.Contains(validation.Property, StringComparer.OrdinalIgnoreCase))
+                        throw new CliException("View '" + view.Name + "' validations must target visible, editable, user-supplied fields: " + validation.Property);
                 EnsureUniqueValues(view.Sections.Select(x => x == null ? null : x.Title), "section title", view.Name);
                 if (view.Sections.Count > 0)
                 {
@@ -702,6 +760,8 @@ namespace K2SmartFormsCli
         public List<string> SingleLineProperties { get; set; }
         public List<string> RequiredProperties { get; set; }
         public List<string> LookupRequiredProperties { get; set; }
+        public List<FieldValidationDefinition> Validations { get; set; }
+        public List<string> ValidationMethods { get; set; }
         public List<ViewSectionDefinition> Sections { get; set; }
         public List<ViewHelpDefinition> Help { get; set; }
         public List<HiddenVariableDefinition> HiddenVariables { get; set; }
@@ -726,6 +786,8 @@ namespace K2SmartFormsCli
             SingleLineProperties = new List<string>();
             RequiredProperties = new List<string>();
             LookupRequiredProperties = new List<string>();
+            Validations = new List<FieldValidationDefinition>();
+            ValidationMethods = new List<string>();
             Sections = new List<ViewSectionDefinition>();
             Help = new List<ViewHelpDefinition>();
             HiddenVariables = new List<HiddenVariableDefinition>();
@@ -733,6 +795,33 @@ namespace K2SmartFormsCli
             MetricCards = new List<ViewMetricCardDefinition>();
             LifecycleTrackers = new List<ViewLifecycleDefinition>();
         }
+    }
+
+    public sealed class FieldValidationDefinition
+    {
+        public string Property { get; set; }
+        public bool Required { get; set; }
+        public int? MinLength { get; set; }
+        public int? MaxLength { get; set; }
+        public string Format { get; set; }
+        public string Pattern { get; set; }
+        public bool MustBeTrue { get; set; }
+        public decimal? Minimum { get; set; }
+        public decimal? Maximum { get; set; }
+        public bool ExclusiveMinimum { get; set; }
+        public bool ExclusiveMaximum { get; set; }
+        public string Message { get; set; }
+        public string Example { get; set; }
+        public string SourceConstraint { get; set; }
+
+        [ScriptIgnore]
+        public Guid ValidationPatternGuid { get; set; }
+
+        [ScriptIgnore]
+        public string ValidationPatternName { get; set; }
+
+        [ScriptIgnore]
+        public string ValidationPatternExpression { get; set; }
     }
 
     public sealed class ViewSectionDefinition
