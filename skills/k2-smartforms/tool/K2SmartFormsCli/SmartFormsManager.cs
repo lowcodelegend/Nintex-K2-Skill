@@ -261,6 +261,12 @@ namespace K2SmartFormsCli
                     {
                         throw new CliException("Lookup '" + source.Name + "' List execution failed for " + smartObject.Name + "." + method.Name + ": " + ex.Message);
                     }
+                    if (table.Rows.Count > 0)
+                    {
+                        var runtime = result[source.Name];
+                        runtime.SampleValue = ReadSampleValue(table.Rows[0], valueProperty.Name);
+                        runtime.SampleDisplayValue = ReadSampleValue(table.Rows[0], displayProperty.Name);
+                    }
                     Console.WriteLine("Lookup source: OK (" + source.Name + " <= " + smartObject.Name + "." + method.Name + ", value=" + valueProperty.Name + ", display=" + displayProperty.Name + ", sampleRows=" + table.Rows.Count + ")");
                 }
                 _lookupSources = result;
@@ -834,9 +840,12 @@ namespace K2SmartFormsCli
                         definition = FormLayoutDefinition.Apply(definition, form, commonHeader, ResolveHeaderParameters(commonHeader, form), ResolveHeaderControlTransfers(commonHeader, form));
                         var masterDetail = ResolvedMasterDetailRules.Resolve(manager, form, _manifest.Application.Views);
                         definition = MasterDetailRules.Apply(definition, form, masterDetail);
+                        var preFill = ResolvedFormPreFill.Resolve(manager, form, _manifest.Application.Views, lookupSources);
+                        definition = FormPreFillRules.Apply(definition, form, preFill);
                         manager.DeployForms(definition, _manifest.Application.GetFormCategoryPath(form), _manifest.Application.CheckIn);
                         var info = manager.GetForm(form.Name);
-                        Console.WriteLine("Form: deployed (" + form.Name + ", " + info.Guid + ", theme " + info.Theme.Name + ", styleProfile=" + (styleProfile == null ? "none" : styleProfile.Name) + ", legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant() + ", commonHeader=" + (commonHeader == null ? "none" : commonHeader.ViewName) + ", commonFooter=" + (commonHeader == null || commonHeader.Footer == null ? "none" : commonHeader.Footer.ViewName) + ", tabs=" + form.Tabs.Count + ", worklist=" + form.Tabs.Any(x => x.Worklist != null).ToString().ToLowerInvariant() + ")");
+                        Console.WriteLine("Form: deployed (" + form.Name + ", " + info.Guid + ", theme " + info.Theme.Name + ", styleProfile=" + (styleProfile == null ? "none" : styleProfile.Name) + ", legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant() + ", commonHeader=" + (commonHeader == null ? "none" : commonHeader.ViewName) + ", commonFooter=" + (commonHeader == null || commonHeader.Footer == null ? "none" : commonHeader.Footer.ViewName) + ", tabs=" + form.Tabs.Count + ", worklist=" + form.Tabs.Any(x => x.Worklist != null).ToString().ToLowerInvariant() + ", preFill=" + (form.PreFill.EffectiveEnabled ? "test-only" : "disabled") + ")");
+                        Console.WriteLine(FormPreFillRules.Errata(form));
                     }
                 }
                 return 0;
@@ -913,6 +922,8 @@ namespace K2SmartFormsCli
                         throw new CliException("K2 Form style profile does not match '" + expectedStyleProfile.DisplayName + "' [" + expectedStyleProfile.Name + "]: " + expected);
                     FormLayoutDefinition.Verify(definition, declaredForm, commonHeader, ResolveHeaderParameters(commonHeader, declaredForm), ResolveHeaderControlTransfers(commonHeader, declaredForm));
                     MasterDetailRules.Verify(definition, declaredForm, ResolvedMasterDetailRules.Resolve(manager, declaredForm, _manifest.Application.Views));
+                    var preFill = ResolvedFormPreFill.Resolve(manager, declaredForm, _manifest.Application.Views, lookupSources);
+                    FormPreFillRules.Verify(definition, declaredForm, preFill);
                     foreach (var viewName in declaredForm.Views)
                     {
                         var viewGuid = manager.GetView(viewName).Guid.ToString();
@@ -923,7 +934,8 @@ namespace K2SmartFormsCli
                         throw new CliException("K2 Form '" + expected + "' does not reference environment common header '" + commonHeader.ViewName + "'.");
                     if (commonHeader != null && commonHeader.Footer != null && definition.IndexOf(commonHeader.Footer.ViewGuid.ToString(), StringComparison.OrdinalIgnoreCase) < 0)
                         throw new CliException("K2 Form '" + expected + "' does not reference environment common footer '" + commonHeader.Footer.ViewName + "'.");
-                    Console.WriteLine("Form verification: OK (" + expected + ", " + info.Guid + ", v" + info.Version + ", theme " + info.Theme.Name + ", styleProfile=" + (actualStyleProfile == null ? "none" : actualStyleProfile.Name) + ", legacyTheme=" + useLegacyTheme.Value.ToString().ToLowerInvariant() + ")");
+                    Console.WriteLine("Form verification: OK (" + expected + ", " + info.Guid + ", v" + info.Version + ", theme " + info.Theme.Name + ", styleProfile=" + (actualStyleProfile == null ? "none" : actualStyleProfile.Name) + ", legacyTheme=" + useLegacyTheme.Value.ToString().ToLowerInvariant() + ", preFill=" + (declaredForm.PreFill.EffectiveEnabled ? "test-only" : "disabled") + ")");
+                    Console.WriteLine(FormPreFillRules.Errata(declaredForm));
                     runtimeForms.Add(expected);
                 }
                 return 0;
@@ -1005,6 +1017,15 @@ namespace K2SmartFormsCli
                 DeleteOwnedValidationPatterns(manager);
                 return 0;
             });
+        }
+
+        private static string ReadSampleValue(System.Data.DataRow row, string property)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(property)) return null;
+            var value = row[property];
+            return value == null || value == DBNull.Value
+                ? null
+                : Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture);
         }
 
         private IEnumerable<KeyValuePair<ViewDefinition, FieldValidationDefinition>> PatternValidations()

@@ -224,6 +224,17 @@ Set `area` on each view/form to `application` (the default) or `admin`. Admin ar
 
 Each form's optional `useLegacyTheme` defaults to `false`. Always keep it `false`, including when `application.styleProfile` is omitted; the CLI writes the K2 `UseLegacyTheme` property explicitly and verifies it after deployment, enabling K2's plain modern default theme when no custom Style Profile is selected. Never set it to `true`.
 
+Each newly generated Form also gets a test-only bottom `Pre-fill` button by default. It derives dummy values from control types, lookup samples, and `validations`; use `validations[].example` when a custom pattern cannot be synthesized. The CLI emits an `ERRATA test-only Pre-fill` warning while it is enabled. Before production, explicitly disable and remove it through regeneration:
+
+```json
+"preFill": {
+  "enabled": false,
+  "disabledReason": "Removed after authenticated test acceptance and before production go-live."
+}
+```
+
+When `enabled` is false, `disabledReason` is mandatory and verification rejects any retained Pre-fill control or rule. Omitting `preFill` keeps generation and verification enabled by default. Existing Forms created before this contract must therefore be regenerated with the helper for continued testing or declare the production opt-out explicitly. File uploads, cascading/empty lookups, unsupported controls, and custom patterns without a valid example remain manual and are counted in the button warning.
+
 ## Form view titles
 
 Every view added to a form receives a K2 view-instance title. The default is the declared view name. Use `viewTitles` for friendlier visible labels:

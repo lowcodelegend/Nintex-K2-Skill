@@ -27,8 +27,9 @@ namespace K2SmartFormsCli
             TestMalformedEditableListRejected();
             TestViewIdentityRebase();
             TestFlatFormViewOrdering();
+            TestFormPreFillRules();
             TestMultiTableWorkflowStateReconciliation();
-            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams and Form method-action rejection, master-detail field-validation composition, orphan optional control mappings, lookup/detail List classification, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, native max-length/validation-pattern contracts, must-be-true checkbox validation groups, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, editable-list File edit-template validation, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, multi-table workflow-state reconciliation");
+            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams and Form method-action rejection, master-detail field-validation composition, orphan optional control mappings, lookup/detail List classification, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, native max-length/validation-pattern contracts, must-be-true checkbox validation groups, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, editable-list File edit-template validation, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, constraint-aware test-data Pre-fill, multi-table workflow-state reconciliation");
         }
 
         private static void TestIdentityNormalization()
@@ -1125,6 +1126,104 @@ namespace K2SmartFormsCli
                 "</Actions></Handler></Handlers></Event><Event><Handlers><Handler><Actions><Action Type='Execute'><Properties><Property><Name>Method</Name><Value>Create</Value></Property></Properties>" +
                 "<Parameters><Parameter SourceID='statusControl' SourceType='Control' TargetID='Status' TargetType='ObjectProperty' /></Parameters>" +
                 "</Action></Actions></Handler></Handlers></Event></Events></View>";
+        }
+
+        private static void TestFormPreFillRules()
+        {
+            var viewGuid = Guid.Parse("61000000-0000-0000-0000-000000000001");
+            var form = new FormDefinition { Name = "Pre-fill Probe" };
+            Assert(form.PreFill.EffectiveEnabled, "Pre-fill defaults to enabled");
+            form.Views.Add("Probe View");
+            form.PreFill.Enabled = true;
+            var resolved = new ResolvedFormPreFill();
+            resolved.Targets.Add(new ResolvedPreFillTarget
+            {
+                ViewGuid = viewGuid, ViewName = "Probe View", Property = "EmailAddress",
+                ControlId = "email-control", ControlName = "Email Text Box", Value = "prefill@example.com"
+            });
+            resolved.Targets.Add(new ResolvedPreFillTarget
+            {
+                ViewGuid = viewGuid, ViewName = "Probe View", Property = "Accepted",
+                ControlId = "accepted-control", ControlName = "Accepted Check Box", Value = "true"
+            });
+            resolved.ManualProperties.Add("Probe View.FileContent");
+            var xml = "<Forms><Form ID='form-id'><Name>Pre-fill Probe</Name><Controls>" +
+                "<Control ID='visible-panel' Type='Panel'><Name>Entry</Name><Properties/></Control>" +
+                "<Control ID='hidden-panel' Type='Panel'><Name>Review</Name><Properties>" +
+                "<Property><Name>IsVisible</Name><Value>false</Value></Property></Properties></Control>" +
+                "<Control ID='probe-instance' Type='AreaItem'><Name>Probe View</Name><Properties/></Control>" +
+                "</Controls><Panels>" +
+                "<Panel ID='visible-panel'><Name>Entry</Name><Areas><Area ID='view-area'><Items>" +
+                "<Item ID='probe-instance' ViewID='" + viewGuid + "' ViewName='Probe View'/></Items></Area></Areas></Panel>" +
+                "<Panel ID='hidden-panel'><Name>Review</Name><Areas/></Panel>" +
+                "</Panels><States><State><Events/></State></States></Form></Forms>";
+            var transformed = FormPreFillRules.Apply(xml, form, resolved);
+            FormPreFillRules.Verify(transformed, form, resolved);
+            var document = XDocument.Parse(transformed);
+            var button = document.Descendants("Control").Single(x =>
+                (string)x.Element("Name") == FormPreFillRules.ButtonName &&
+                x.Attribute("Type") != null);
+            Assert((string)button.Descendants("Property").Single(x =>
+                (string)x.Element("Name") == "Text").Element("Value") == "Pre-fill",
+                "Pre-fill button has the required user-facing text");
+            Assert(document.Descendants("Panel").Single(x => (string)x.Attribute("ID") == "visible-panel")
+                .Element("Areas").Elements("Area").Last().Descendants("Control")
+                .Any(x => (string)x.Attribute("ID") == (string)button.Attribute("ID")),
+                "Pre-fill button is last on the last visible panel");
+            var transfer = document.Descendants("Action").Single(x => (string)x.Attribute("Type") == "Transfer");
+            Assert(transfer.Descendants("Parameter").Count() == 2 &&
+                transfer.Descendants("Parameter").All(x =>
+                    (string)x.Attribute("TargetInstanceID") == "probe-instance"),
+                "Pre-fill uses one Form transfer with exact View instances");
+            Assert(document.Descendants("Action").Single(x =>
+                (string)x.Attribute("Type") == "ShowMessage").Value.Contains("test-only"),
+                "Pre-fill finishes with a test-only warning");
+
+            string value;
+            Assert(ResolvedFormPreFill.TryBuildValue(TestInputControl("TextBox", "Text"), "EmailAddress",
+                new FieldValidationDefinition
+                {
+                    Property = "EmailAddress", Format = "email", MinLength = 20, MaxLength = 40
+                }, out value) && value.Length >= 20 && value.Length <= 40 && value.Contains("@"),
+                "Pre-fill creates a bounded email value");
+            Assert(ResolvedFormPreFill.TryBuildValue(TestInputControl("TextArea", "Memo"), "Narrative",
+                new FieldValidationDefinition
+                {
+                    Property = "Narrative", MinLength = 100, MaxLength = 120
+                }, out value) && value.Length >= 100 && value.Length <= 120,
+                "Pre-fill creates minimum-length narrative text");
+            Assert(ResolvedFormPreFill.TryBuildValue(TestInputControl("TextBox", "Number"), "Amount",
+                new FieldValidationDefinition
+                {
+                    Property = "Amount", Minimum = 0, ExclusiveMinimum = true, Maximum = 10
+                }, out value) && decimal.Parse(value) > 0 && decimal.Parse(value) < 10,
+                "Pre-fill creates an in-range numeric value");
+            Assert(!ResolvedFormPreFill.TryBuildValue(TestInputControl("TextBox", "Text"), "Code",
+                new FieldValidationDefinition { Property = "Code", Pattern = "[A-Z]{3}" }, out value),
+                "Pre-fill leaves custom patterns without examples for manual input");
+            Assert(ResolvedFormPreFill.TryBuildValue(TestInputControl("TextBox", "Text"), "Code",
+                new FieldValidationDefinition { Property = "Code", Pattern = "[A-Z]{3}", Example = "ABC" },
+                out value) && value == "ABC", "Pre-fill uses a valid custom-pattern example");
+            Assert(!ResolvedFormPreFill.TryBuildValue(TestInputControl("FilePostBack", "File"),
+                "FileContent", null, out value), "Pre-fill leaves File upload manual");
+
+            var disabled = new FormDefinition { Name = "Pre-fill Probe" };
+            disabled.Views.Add("Probe View");
+            disabled.PreFill.Enabled = false;
+            disabled.PreFill.DisabledReason = "Removed for production go-live.";
+            FormPreFillRules.Verify(xml, disabled, new ResolvedFormPreFill());
+            AssertThrows(delegate
+            {
+                FormPreFillRules.Verify(transformed, disabled, resolved);
+            }, "retains the test-only Pre-fill helper");
+        }
+
+        private static XElement TestInputControl(string type, string dataType)
+        {
+            return new XElement("Control", new XAttribute("ID", Guid.NewGuid()),
+                new XAttribute("Type", type), new XElement("Name", "Test Control"),
+                new XElement("Properties", new XElement("Property",
+                    new XElement("Name", "DataType"), new XElement("Value", dataType))));
         }
 
         private static void AssertThrows(Action action, string messagePart)

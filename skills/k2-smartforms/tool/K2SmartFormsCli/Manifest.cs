@@ -361,6 +361,7 @@ namespace K2SmartFormsCli
                 if (form.MasterDetail != null && form.MasterDetail.Details == null) form.MasterDetail.Details = new List<MasterDetailChildDefinition>();
                 if (form.ViewTitles == null) form.ViewTitles = new Dictionary<string, string>();
                 if (form.UntitledViews == null) form.UntitledViews = new Dictionary<string, string>();
+                if (form.PreFill == null) form.PreFill = new FormPreFillDefinition();
                 RequireArtifactName(form.Name, "form.name");
                 RejectVersionToken(form.Name, "form.name");
                 if (form.Views.Count == 0) throw new CliException("Form '" + form.Name + "' must reference at least one view.");
@@ -388,6 +389,7 @@ namespace K2SmartFormsCli
                 form.Area = NormalizeArea(form.Area, "form", form.Name);
                 ValidateTabs(form);
                 ValidateWorkflowStartButton(form);
+                ValidatePreFill(form);
                 ValidateListClickTabNavigation(form, Application.Views);
                 ValidateMasterDetail(form, Application.Views);
             }
@@ -494,6 +496,16 @@ namespace K2SmartFormsCli
                 throw new CliException("Form '" + form.Name + "' workflowStartButton requires a tabbed form.");
             if (!form.Tabs.Any(x => string.Equals(x.Name, button.Tab, StringComparison.OrdinalIgnoreCase)))
                 throw new CliException("Form '" + form.Name + "' workflowStartButton references undeclared tab '" + button.Tab + "'.");
+        }
+
+        private static void ValidatePreFill(FormDefinition form)
+        {
+            if (!form.PreFill.EffectiveEnabled && string.IsNullOrWhiteSpace(form.PreFill.DisabledReason))
+                throw new CliException("Form '" + form.Name +
+                    "' preFill.disabledReason is required when the test-only Pre-fill button is disabled.");
+            if (form.PreFill.EffectiveEnabled && !string.IsNullOrWhiteSpace(form.PreFill.DisabledReason))
+                throw new CliException("Form '" + form.Name +
+                    "' preFill.disabledReason is valid only when preFill.enabled is false.");
         }
 
         private static void ValidateTabs(FormDefinition form)
@@ -795,6 +807,7 @@ namespace K2SmartFormsCli
             MetricCards = new List<ViewMetricCardDefinition>();
             LifecycleTrackers = new List<ViewLifecycleDefinition>();
         }
+
     }
 
     public sealed class FieldValidationDefinition
@@ -897,6 +910,7 @@ namespace K2SmartFormsCli
         public List<ListClickTabNavigationDefinition> ListClickTabNavigation { get; set; }
         public MasterDetailFormDefinition MasterDetail { get; set; }
         public WorkflowStartButtonDefinition WorkflowStartButton { get; set; }
+        public FormPreFillDefinition PreFill { get; set; }
         public Dictionary<string, string> ViewTitles { get; set; }
         public Dictionary<string, string> UntitledViews { get; set; }
 
@@ -908,6 +922,7 @@ namespace K2SmartFormsCli
             Area = "application";
             Tabs = new List<FormTabDefinition>();
             ListClickTabNavigation = new List<ListClickTabNavigationDefinition>();
+            PreFill = new FormPreFillDefinition();
             ViewTitles = new Dictionary<string, string>();
             UntitledViews = new Dictionary<string, string>();
         }
@@ -918,6 +933,16 @@ namespace K2SmartFormsCli
             var custom = ViewTitles.FirstOrDefault(x => string.Equals(x.Key, viewName, StringComparison.OrdinalIgnoreCase));
             return string.IsNullOrWhiteSpace(custom.Key) ? viewName : custom.Value;
         }
+    }
+
+    public sealed class FormPreFillDefinition
+    {
+        public bool? Enabled { get; set; }
+        public string DisabledReason { get; set; }
+
+        [ScriptIgnore]
+        public bool EffectiveEnabled { get { return !Enabled.HasValue || Enabled.Value; } }
+
     }
 
     public sealed class WorkflowStartButtonDefinition

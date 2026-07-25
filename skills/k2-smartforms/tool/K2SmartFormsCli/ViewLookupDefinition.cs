@@ -562,5 +562,7 @@ namespace K2SmartFormsCli
         public string DisplayPropertyDisplayName { get; set; }
         public string DisplayPropertyType { get; set; }
         public HashSet<string> PropertyNames { get; set; }
+        public string SampleValue { get; set; }
+        public string SampleDisplayValue { get; set; }
     }
 }
