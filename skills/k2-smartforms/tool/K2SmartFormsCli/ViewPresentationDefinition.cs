@@ -15,7 +15,9 @@ namespace K2SmartFormsCli
             ApplyResponsiveTable(document, view);
             ApplySingleLineInputs(document, view);
             ApplyRequiredInputs(document, view);
+            RewriteHiddenControlMappings(document, view);
             ApplyHiddenProperties(document, view);
+            PruneMissingOptionalControlMappings(document, view);
             ApplyPropertyLabels(document, view);
             ApplyColonLabels(document, view);
             if (view.Type == "capture" && !UsesLabelsLeft(view) &&
@@ -54,6 +56,7 @@ namespace K2SmartFormsCli
                 VerifyEditableListStructure(document, view);
             }
             VerifyHiddenProperties(document, view);
+            VerifyNoMissingControlMappings(document, view);
             VerifyPropertyLabels(document, view);
             VerifyResponsiveTable(document, view);
             VerifySingleLineInputs(document, view);
@@ -105,6 +108,68 @@ namespace K2SmartFormsCli
         private static bool UsesLabelsLeft(ViewDefinition view)
         {
             return view.Options.Contains("labels-left", StringComparer.OrdinalIgnoreCase);
+        }
+
+        internal static void PruneMissingOptionalControlMappings(XDocument document, ViewDefinition view)
+        {
+            var controls = new HashSet<string>(document.Descendants().Where(x =>
+                x.Name.LocalName == "Control" && x.Attribute("Type") != null)
+                .Select(x => (string)x.Attribute("ID"))
+                .Where(x => !string.IsNullOrWhiteSpace(x)), StringComparer.OrdinalIgnoreCase);
+            foreach (var parameter in document.Descendants().Where(x =>
+                x.Name.LocalName == "Parameter" &&
+                string.Equals((string)x.Attribute("SourceType"), "Control", StringComparison.OrdinalIgnoreCase) &&
+                !controls.Contains((string)x.Attribute("SourceID"))).ToList())
+            {
+                if (string.Equals((string)parameter.Attribute("IsRequired"), "True", StringComparison.OrdinalIgnoreCase))
+                    throw new CliException("View '" + view.Name + "' required method input '" +
+                        ((string)parameter.Attribute("TargetName") ?? (string)parameter.Attribute("TargetID")) +
+                        "' references a removed control. Keep the input visible or supply it with defaultValues.");
+                parameter.Remove();
+            }
+        }
+
+        internal static void RewriteHiddenControlMappings(XDocument document, ViewDefinition view)
+        {
+            foreach (var property in view.HiddenProperties)
+            {
+                var field = document.Descendants().FirstOrDefault(x => x.Name.LocalName == "Field" &&
+                    (string.Equals(ChildValue(x, "FieldName"), property, StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(ChildValue(x, "Name"), property, StringComparison.OrdinalIgnoreCase)));
+                if (field == null) continue;
+                var fieldId = (string)field.Attribute("ID");
+                if (string.IsNullOrWhiteSpace(fieldId)) continue;
+                var controlIds = new HashSet<string>(FindFieldControlIds(document, view, property, "hidden rule mapping"),
+                    StringComparer.OrdinalIgnoreCase);
+                foreach (var parameter in document.Descendants().Where(x =>
+                    x.Name.LocalName == "Parameter" &&
+                    string.Equals((string)x.Attribute("SourceType"), "Control", StringComparison.OrdinalIgnoreCase) &&
+                    controlIds.Contains((string)x.Attribute("SourceID"))))
+                {
+                    parameter.SetAttributeValue("SourceType", "ViewField");
+                    parameter.SetAttributeValue("SourceID", fieldId);
+                    parameter.SetAttributeValue("SourceName", ChildValue(field, "Name") ?? property);
+                    parameter.SetAttributeValue("SourceDisplayName", ChildValue(field, "FieldDisplayName") ?? property);
+                    parameter.Attributes("SourceInstanceID").Remove();
+                }
+            }
+        }
+
+        private static void VerifyNoMissingControlMappings(XDocument document, ViewDefinition view)
+        {
+            var controls = new HashSet<string>(document.Descendants().Where(x =>
+                x.Name.LocalName == "Control" && x.Attribute("Type") != null)
+                .Select(x => (string)x.Attribute("ID"))
+                .Where(x => !string.IsNullOrWhiteSpace(x)), StringComparer.OrdinalIgnoreCase);
+            var missing = document.Descendants().Where(x =>
+                x.Name.LocalName == "Parameter" &&
+                string.Equals((string)x.Attribute("SourceType"), "Control", StringComparison.OrdinalIgnoreCase) &&
+                !controls.Contains((string)x.Attribute("SourceID")))
+                .Select(x => (string)x.Attribute("SourceName") ?? (string)x.Attribute("SourceID"))
+                .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            if (missing.Count > 0)
+                throw new CliException("View '" + view.Name + "' contains method mappings to removed controls: " +
+                    string.Join(", ", missing.ToArray()) + ".");
         }
 
         private static void ApplyResponsiveTable(XDocument document, ViewDefinition view)

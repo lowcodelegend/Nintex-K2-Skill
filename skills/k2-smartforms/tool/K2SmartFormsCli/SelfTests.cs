@@ -10,7 +10,8 @@ namespace K2SmartFormsCli
         public static void Run()
         {
             TestIdentityNormalization();
-            TestDesignerLoadableMasterDetailRules();
+            TestDesignerLoadableLocalMasterDetailRules();
+            TestMissingOptionalControlMappings();
             TestRequiredReadOnlyCreateInputGate();
             TestLookupAndDefaultValueRoundTrip();
             TestMasterButtonSuppression();
@@ -25,7 +26,7 @@ namespace K2SmartFormsCli
             TestViewIdentityRebase();
             TestFlatFormViewOrdering();
             TestMultiTableWorkflowStateReconciliation();
-            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, Designer-loadable inherited master-detail rules, lookup/detail List classification, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, multi-table workflow-state reconciliation");
+            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, Designer-loadable local master-detail rules, orphan optional control mappings, lookup/detail List classification, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, multi-table workflow-state reconciliation");
         }
 
         private static void TestIdentityNormalization()
@@ -35,7 +36,7 @@ namespace K2SmartFormsCli
             Assert(ResolvedMasterDetailRules.NormalizeConditionDataType("AutoGuid") == "Guid", "AutoGuid normalization");
         }
 
-        private static void TestDesignerLoadableMasterDetailRules()
+        private static void TestDesignerLoadableLocalMasterDetailRules()
         {
             var masterGuid = Guid.Parse("10000000-0000-0000-0000-000000000010");
             var detailGuid = Guid.Parse("20000000-0000-0000-0000-000000000010");
@@ -104,28 +105,20 @@ namespace K2SmartFormsCli
             var saveEvent = document.Descendants("Event").Single(x => (string)x.Attribute("SourceName") == "btnSave");
             foreach (var action in saveEvent.Descendants("Action").Where(x => (string)x.Attribute("Type") == "Execute"))
             {
-                Assert((string)action.Attribute("IsReference") == "True", "Form View action reference identity");
-                Assert((string)action.Attribute("IsInherited") == "True", "Form View action inherited identity");
+                Assert(action.Attribute("IsReference") == null, "local Form View action is not a partial reference");
+                Assert(action.Attribute("IsInherited") == null, "local Form View action is not partially inherited");
+                Assert(!string.IsNullOrWhiteSpace((string)action.Attribute("InstanceID")), "local Form View action has an instance");
             }
             var masterCreate = saveEvent.Descendants("Action").Single(x => ReadMethod(x) == "Create" && (string)x.Attribute("InstanceID") == "master-instance");
-            Assert((string)masterCreate.Attribute("DefinitionID") == createDefinition, "master View DefinitionID preserved");
+            Assert((string)masterCreate.Attribute("DefinitionID") != createDefinition, "local master action has its own DefinitionID");
             Assert((string)masterCreate.Attribute("ExecutionType") == "Parallel", "master persistence remains in the parent-child batch");
             var detailCreate = masterCreate.Parent.Elements("Action").Single(x => (string)x.Attribute("ItemState") == "Added");
-            Assert((string)detailCreate.Attribute("DefinitionID") == detailCreateDefinition, "detail View DefinitionID preserved");
+            Assert((string)detailCreate.Attribute("DefinitionID") != detailCreateDefinition, "local detail action has its own DefinitionID");
             Assert((string)detailCreate.Attribute("ExecutionType") == "Parallel", "editable-list state persistence remains in the parent-child batch");
 
-            var persisted = XDocument.Parse(transformed);
-            var persistedSave = persisted.Descendants("Event").Single(x => (string)x.Attribute("SourceName") == "btnSave");
-            foreach (var action in persistedSave.Descendants("Action").Where(x => (string)x.Attribute("Type") == "Execute"))
-            {
-                action.Attributes("InstanceID").Remove();
-                action.Elements().Where(x => x.Name.LocalName == "Parameters" || x.Name.LocalName == "Results").Remove();
-                action.SetAttributeValue("ExecutionType", action.Attribute("ItemState") == null ? "Synchronous" : "Single");
-            }
-            MasterDetailRules.Verify(persisted.ToString(), formDefinition, resolved);
-
-            detailCreate.Attribute("IsReference").Remove();
-            AssertThrows(delegate { MasterDetailRules.Verify(document.ToString(), formDefinition, resolved); }, "Designer-loadable batch detail action");
+            detailCreate.SetAttributeValue("IsReference", "True");
+            detailCreate.SetAttributeValue("IsInherited", "True");
+            AssertThrows(delegate { MasterDetailRules.Verify(document.ToString(), formDefinition, resolved); }, "Designer-loadable local batch detail action");
         }
 
         private static string TestViewAction(string definitionId, Guid viewId, string viewName, string method, string itemState, bool includeKeyResult)
@@ -138,8 +131,41 @@ namespace K2SmartFormsCli
                 "<Properties><Property><Name>Location</Name><Value>View</Value></Property>" +
                 "<Property><Name>Method</Name><Value>" + method + "</Value></Property>" +
                 "<Property><Name>ViewID</Name><DisplayValue>" + viewName + "</DisplayValue><Value>" + viewId + "</Value></Property></Properties>" +
-                "<Parameters><Parameter SourceID='ClaimId' SourceName='ClaimId' SourceType='ViewField' TargetID='ClaimId' TargetType='ObjectProperty'/></Parameters>" +
+                "<Parameters><Parameter SourceID='ClaimId' SourceName='ClaimId' SourceType='ViewField' TargetID='ClaimId' TargetType='ObjectProperty'/>" +
+                "<Parameter SourceID='title-control' SourceName='Title' SourceType='Control' TargetID='Title' TargetType='ObjectProperty'/></Parameters>" +
                 results + "</Action>";
+        }
+
+        private static void TestMissingOptionalControlMappings()
+        {
+            var view = new ViewDefinition { Name = "Claim" };
+            view.Properties.Add("CaseId");
+            view.HiddenProperties.Add("CaseId");
+            var hidden = XDocument.Parse(
+                "<View><Fields><Field ID='case-field'><Name>CaseId</Name><FieldName>CaseId</FieldName><FieldDisplayName>Case ID</FieldDisplayName></Field></Fields>" +
+                "<Controls><Control ID='case-control' Type='DropDownList' FieldID='case-field'/></Controls><Events><Event><Handlers><Handler><Actions><Action><Parameters>" +
+                "<Parameter SourceType='Control' SourceID='case-control' SourceName='CaseId Drop-Down List' TargetID='CaseId'/>" +
+                "</Parameters></Action></Actions></Handler></Handlers></Event></Events></View>");
+            ViewPresentationDefinition.RewriteHiddenControlMappings(hidden, view);
+            var rewritten = hidden.Descendants("Parameter").Single();
+            Assert((string)rewritten.Attribute("SourceType") == "ViewField", "hidden control mapping rewritten to ViewField");
+            Assert((string)rewritten.Attribute("SourceID") == "case-field", "hidden control mapping uses field identity");
+
+            var document = XDocument.Parse(
+                "<View><Controls><Control ID='present' Type='TextBox'/></Controls><Events><Event><Handlers><Handler><Actions><Action><Parameters>" +
+                "<Parameter SourceType='Control' SourceID='present' SourceName='Present' TargetID='Present'/>" +
+                "<Parameter SourceType='Control' SourceID='missing' SourceName='Missing optional' TargetID='Optional'/>" +
+                "</Parameters></Action></Actions></Handler></Handlers></Event></Events></View>");
+            ViewPresentationDefinition.PruneMissingOptionalControlMappings(document, view);
+            Assert(document.Descendants("Parameter").Count() == 1, "orphan optional control mapping pruned");
+            Assert((string)document.Descendants("Parameter").Single().Attribute("SourceID") == "present", "valid control mapping retained");
+
+            var required = XDocument.Parse(
+                "<View><Controls/><Events><Event><Handlers><Handler><Actions><Action><Parameters>" +
+                "<Parameter SourceType='Control' SourceID='missing' SourceName='Missing required' TargetName='Required' IsRequired='True'/>" +
+                "</Parameters></Action></Actions></Handler></Handlers></Event></Events></View>");
+            AssertThrows(delegate { ViewPresentationDefinition.PruneMissingOptionalControlMappings(required, view); },
+                "references a removed control");
         }
 
         private static void TestRequiredReadOnlyCreateInputGate()

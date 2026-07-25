@@ -283,7 +283,7 @@ namespace K2SmartFormsCli
             VerifyRequiredValidation(form, saveEvent, masterInstance, relationship, formDefinition.Name);
             VerifyReviewNavigation(form, saveEvent, masterInstance, relationship, formDefinition.Name);
             var create = FindMethodActions(saveEvent, masterInstance, relationship.Definition.MasterCreateMethod, null).First();
-            if (!HasMasterKeyResult(create, masterInstance, relationship.MasterKey.Id) && !IsNormalizedInheritedAction(create))
+            if (!HasMasterKeyResult(create, masterInstance, relationship.MasterKey.Id))
                 throw new CliException("K2 Form '" + formDefinition.Name + "' Form-level Create does not transfer the generated master key back to the master View field.");
             var masterReads = FindMethodActions(baseState, masterInstance, relationship.Definition.MasterReadMethod, null).ToList();
             if (masterReads.Count == 0)
@@ -312,9 +312,10 @@ namespace K2SmartFormsCli
                 var masterAction = FindMethodActions(saveEvent, masterInstance, method, null).Single();
                 var actions = masterAction.Parent.Elements().Where(x => x.Name.LocalName == "Action").ToList();
                 var read = actions.SingleOrDefault(x => ActionMatchesInstance(x, reviewInstance) && string.Equals(ReadProperty(x, "Method"), relationship.Definition.Review.ReadMethod, StringComparison.OrdinalIgnoreCase));
-                if (read == null || (!HasMasterKeyMapping(read, masterInstance, relationship.MasterKey.Id, relationship.Definition.Review.KeyProperty) && !IsNormalizedInheritedAction(read))) throw new CliException("K2 Form '" + formName + "' does not load review View '" + relationship.ReviewViewName + "' from the saved master key after " + method + ".");
-                if (!IsNativeInheritedViewAction(read, relationship.ReviewReadAction))
-                    throw new CliException("K2 Form '" + formName + "' review Read after " + method + " is not a Designer-loadable inherited View action.");
+                if (read == null || !HasMasterKeyMapping(read, masterInstance, relationship.MasterKey.Id, relationship.Definition.Review.KeyProperty))
+                    throw new CliException("K2 Form '" + formName + "' does not load review View '" + relationship.ReviewViewName + "' from the saved master key after " + method + ".");
+                if (!IsDesignerLoadableLocalViewAction(read, relationship.ReviewReadAction, reviewInstance))
+                    throw new CliException("K2 Form '" + formName + "' review Read after " + method + " is not a Designer-loadable local View action.");
                 var show = actions.SingleOrDefault(x => string.Equals((string)x.Attribute("Type"), "Transfer", StringComparison.OrdinalIgnoreCase) &&
                     x.Descendants().Any(p => p.Name.LocalName == "Parameter" &&
                         string.Equals((string)p.Attribute("TargetID"), "IsVisible", StringComparison.OrdinalIgnoreCase) &&
@@ -360,7 +361,7 @@ namespace K2SmartFormsCli
                 var listActions = FindDetailListActions(baseState, detailInstance, child.Definition.ListMethod).ToList();
                 if (listActions.Count == 0)
                     throw new CliException("K2 Form '" + formDefinition.Name + "' loads the master but has no Form-level List action for detail view '" + child.ViewName + "'.");
-                if (listActions.Any(x => !HasMasterKeyMapping(x, masterInstance, relationship.MasterKey.Id, child.Definition.ForeignKeyProperty) && !IsNormalizedInheritedAction(x)))
+                if (listActions.Any(x => !HasMasterKeyMapping(x, masterInstance, relationship.MasterKey.Id, child.Definition.ForeignKeyProperty)))
                     throw new CliException("K2 Form '" + formDefinition.Name + "' has an unfiltered List action for detail view '" + child.ViewName + "'. Every detail List must receive the master key as the foreign-key input.");
                 if (listActions.Any(x => !HasMasterKeyNotBlankCondition(x, masterInstance, relationship.MasterKey.Id)))
                     throw new CliException("K2 Form '" + formDefinition.Name + "' has an ungated List action for detail view '" + child.ViewName + "'. Detail List actions must run only when the master key is not blank.");
@@ -385,7 +386,7 @@ namespace K2SmartFormsCli
                 foreach (var state in new[] { "Added", "Changed", "Removed" })
                 {
                     var matches = FindMethodActions(baseState, detailInstance, MethodForState(child, state), state)
-                        .Where(x => state == "Removed" || HasMasterKeyMapping(x, masterInstance, relationship.MasterKey.Id, child.Definition.ForeignKeyProperty) || IsNormalizedInheritedAction(x)).ToList();
+                        .Where(x => state == "Removed" || HasMasterKeyMapping(x, masterInstance, relationship.MasterKey.Id, child.Definition.ForeignKeyProperty)).ToList();
                     if (matches.Count == 0)
                         throw new CliException("K2 Form '" + formDefinition.Name + "' has no valid Form-level " + state + " persistence action for detail view '" + child.ViewName + "'.");
                 }
@@ -576,8 +577,7 @@ namespace K2SmartFormsCli
         private static XElement BuildReviewReadAction(XNamespace ns, ResolvedMasterDetailRules relationship, string masterInstance, string reviewInstance)
         {
             var action = XElement.Parse(relationship.ReviewReadAction);
-            PrepareInheritedViewAction(action, reviewInstance, "Synchronous",
-                relationship.ReviewViewName + "." + relationship.Definition.Review.ReadMethod);
+            PrepareLocalViewAction(action, reviewInstance, "Synchronous");
             var parameters = action.Elements().FirstOrDefault(x => x.Name.LocalName == "Parameters");
             if (parameters == null) { parameters = new XElement(ns + "Parameters"); action.Add(parameters); }
             parameters.RemoveNodes();
@@ -716,10 +716,14 @@ namespace K2SmartFormsCli
         private static XElement BuildMasterAction(string prototypeXml, string masterInstance, ResolvedViewField masterKey)
         {
             var action = XElement.Parse(prototypeXml);
-            PrepareInheritedViewAction(action, masterInstance, "Parallel", "master persistence");
-            foreach (var parameter in action.Descendants().Where(x => x.Name.LocalName == "Parameter" && string.Equals((string)x.Attribute("SourceType"), "ViewField", StringComparison.OrdinalIgnoreCase)))
+            PrepareLocalViewAction(action, masterInstance, "Parallel");
+            foreach (var parameter in action.Descendants().Where(x => x.Name.LocalName == "Parameter" &&
+                (string.Equals((string)x.Attribute("SourceType"), "ViewField", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals((string)x.Attribute("SourceType"), "Control", StringComparison.OrdinalIgnoreCase))))
                 parameter.SetAttributeValue("SourceInstanceID", masterInstance);
-            foreach (var result in action.Descendants().Where(x => x.Name.LocalName == "Result" && string.Equals((string)x.Attribute("TargetType"), "ViewField", StringComparison.OrdinalIgnoreCase)))
+            foreach (var result in action.Descendants().Where(x => x.Name.LocalName == "Result" &&
+                (string.Equals((string)x.Attribute("TargetType"), "ViewField", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals((string)x.Attribute("TargetType"), "Control", StringComparison.OrdinalIgnoreCase))))
                 result.SetAttributeValue("TargetInstanceID", masterInstance);
             foreach (var result in action.Descendants().Where(x => x.Name.LocalName == "Result" &&
                 string.Equals((string)x.Attribute("SourceID"), masterKey.Name, StringComparison.OrdinalIgnoreCase)))
@@ -736,26 +740,28 @@ namespace K2SmartFormsCli
         private static XElement BuildStateAction(XNamespace ns, ResolvedMasterDetailChild child, string prototypeXml, string state, string masterInstance, ResolvedViewField masterKey, string detailInstance)
         {
             var action = XElement.Parse(prototypeXml);
-            PrepareInheritedViewAction(action, detailInstance, "Parallel",
-                child.ViewName + "." + ReadProperty(action, "Method"));
+            PrepareLocalViewAction(action, detailInstance, "Parallel");
             action.SetAttributeValue("ItemState", state);
             var parameters = action.Elements().FirstOrDefault(x => x.Name.LocalName == "Parameters");
             if (parameters == null) { parameters = new XElement(ns + "Parameters"); action.Add(parameters); }
-            foreach (var parameter in parameters.Elements().Where(x => x.Name.LocalName == "Parameter"))
+            foreach (var parameter in parameters.Elements().Where(x => x.Name.LocalName == "Parameter").ToList())
             {
                 if (string.Equals((string)parameter.Attribute("TargetID"), child.Definition.ForeignKeyProperty, StringComparison.OrdinalIgnoreCase))
                 {
                     parameter.Remove();
                     continue;
                 }
-                if (string.Equals((string)parameter.Attribute("SourceType"), "ViewField", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals((string)parameter.Attribute("SourceType"), "ViewField", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals((string)parameter.Attribute("SourceType"), "Control", StringComparison.OrdinalIgnoreCase))
                     parameter.SetAttributeValue("SourceInstanceID", detailInstance);
             }
             if (state != "Removed")
                 parameters.AddFirst(BuildMasterKeyParameter(ns, child.Definition.ForeignKeyProperty, masterInstance, masterKey));
             var results = action.Elements().FirstOrDefault(x => x.Name.LocalName == "Results");
             if (results != null)
-                foreach (var result in results.Elements().Where(x => string.Equals((string)x.Attribute("TargetType"), "ViewField", StringComparison.OrdinalIgnoreCase)))
+                foreach (var result in results.Elements().Where(x =>
+                    string.Equals((string)x.Attribute("TargetType"), "ViewField", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals((string)x.Attribute("TargetType"), "Control", StringComparison.OrdinalIgnoreCase)))
                     result.SetAttributeValue("TargetInstanceID", detailInstance);
             return action;
         }
@@ -776,46 +782,23 @@ namespace K2SmartFormsCli
                         Property(ns, "Method", child.Definition.ListMethod, child.Definition.ListMethod, child.Definition.ListMethod),
                         Property(ns, "ViewID", child.ViewGuid.ToString(), child.ViewDisplayName, child.ViewName)));
             }
-            action.SetAttributeValue("ID", NewId());
-            action.SetAttributeValue("Type", "Execute");
-            action.SetAttributeValue("ExecutionType", "Synchronous");
-            action.SetAttributeValue("InstanceID", detailInstance);
+            PrepareLocalViewAction(action, detailInstance, "Synchronous");
             action.Attributes("ItemState").Remove();
-            if (!string.IsNullOrWhiteSpace(child.ListAction))
-            {
-                RequireDefinitionId(action, child.ViewName + "." + child.Definition.ListMethod);
-                action.SetAttributeValue("IsReference", "True");
-                action.SetAttributeValue("IsInherited", "True");
-            }
-            else
-            {
-                action.SetAttributeValue("DefinitionID", NewId());
-                action.Attributes("IsReference").Remove();
-                action.Attributes("IsInherited").Remove();
-            }
             action.Add(new XElement(ns + "Parameters", BuildMasterKeyParameter(ns, child.Definition.ForeignKeyProperty, masterInstance, masterKey)));
             return action;
         }
 
-        private static void PrepareInheritedViewAction(XElement action, string instanceId, string executionType, string owner)
+        private static void PrepareLocalViewAction(XElement action, string instanceId, string executionType)
         {
-            // K2 Designer resolves a Form-level View action through the originating View rule DefinitionID.
-            // Re-keying or detaching this clone leaves its View fields unresolved and can hang the rule editor.
-            RequireDefinitionId(action, owner);
+            // An action inserted under a local Form event/handler must itself be local. Marking only
+            // the leaf action inherited creates a partial reference tree that the Rule Designer cannot hydrate.
             action.SetAttributeValue("ID", NewId());
+            action.SetAttributeValue("DefinitionID", NewId());
+            action.SetAttributeValue("Type", "Execute");
             action.SetAttributeValue("InstanceID", instanceId);
             action.SetAttributeValue("ExecutionType", executionType);
-            action.SetAttributeValue("IsReference", "True");
-            action.SetAttributeValue("IsInherited", "True");
-        }
-
-        private static string RequireDefinitionId(XElement action, string owner)
-        {
-            var definitionId = (string)action.Attribute("DefinitionID");
-            Guid parsed;
-            if (string.IsNullOrWhiteSpace(definitionId) || !Guid.TryParse(definitionId, out parsed))
-                throw new CliException("Generated View action '" + owner + "' has no valid DefinitionID and cannot be inherited safely by a Form rule.");
-            return definitionId;
+            action.Attributes("IsReference").Remove();
+            action.Attributes("IsInherited").Remove();
         }
 
         private static XElement BuildMasterKeyParameter(XNamespace ns, string target, string masterInstance, ResolvedViewField masterKey)
@@ -857,12 +840,11 @@ namespace K2SmartFormsCli
             IList<ResolvedMasterDetailChild> children, IEnumerable<string> states, ResolvedViewField masterKey, string formName)
         {
             var master = FindMethodActions(scope, masterInstance, masterMethod, null)
-                .FirstOrDefault(x => string.Equals((string)x.Attribute("ExecutionType"), "Parallel", StringComparison.OrdinalIgnoreCase) ||
-                    (IsNormalizedInheritedAction(x) && string.Equals((string)x.Attribute("ExecutionType"), "Synchronous", StringComparison.OrdinalIgnoreCase)));
+                .FirstOrDefault(x => string.Equals((string)x.Attribute("ExecutionType"), "Parallel", StringComparison.OrdinalIgnoreCase));
             if (master == null)
                 throw new CliException("K2 Form '" + formName + "' master method '" + masterMethod + "' is not configured for batch persistence.");
-            if (!IsNativeInheritedViewAction(master, masterPrototype))
-                throw new CliException("K2 Form '" + formName + "' master method '" + masterMethod + "' is not a Designer-loadable inherited View action.");
+            if (!IsDesignerLoadableLocalViewAction(master, masterPrototype, masterInstance))
+                throw new CliException("K2 Form '" + formName + "' master method '" + masterMethod + "' is not a Designer-loadable local View action.");
             var siblingActions = master.Parent.Elements().Where(x => x.Name.LocalName == "Action").ToList();
             foreach (var child in children)
             {
@@ -872,29 +854,45 @@ namespace K2SmartFormsCli
                     var match = siblingActions.FirstOrDefault(x => ActionMatchesInstance(x, detailInstance) &&
                         string.Equals((string)x.Attribute("ItemState"), state, StringComparison.OrdinalIgnoreCase) &&
                         string.Equals(ReadProperty(x, "Method"), MethodForState(child, state), StringComparison.OrdinalIgnoreCase) &&
-                        (string.Equals((string)x.Attribute("ExecutionType"), "Parallel", StringComparison.OrdinalIgnoreCase) ||
-                         (IsNormalizedInheritedAction(x) && string.Equals((string)x.Attribute("ExecutionType"), "Single", StringComparison.OrdinalIgnoreCase))) &&
-                        IsNativeInheritedViewAction(x, PrototypeForState(child, state)) &&
-                        (state == "Removed" || HasMasterKeyMapping(x, masterInstance, masterKey.Id, child.Definition.ForeignKeyProperty) || IsNormalizedInheritedAction(x)));
-                    if (match == null) throw new CliException("K2 Form '" + formName + "' master method '" + masterMethod + "' is missing a Designer-loadable batch detail action " + child.ViewName + "/" + state + ". Candidates: " +
+                        string.Equals((string)x.Attribute("ExecutionType"), "Parallel", StringComparison.OrdinalIgnoreCase) &&
+                        IsDesignerLoadableLocalViewAction(x, PrototypeForState(child, state), detailInstance) &&
+                        (state == "Removed" || HasMasterKeyMapping(x, masterInstance, masterKey.Id, child.Definition.ForeignKeyProperty)));
+                    if (match == null) throw new CliException("K2 Form '" + formName + "' master method '" + masterMethod + "' is missing a Designer-loadable local batch detail action " + child.ViewName + "/" + state + ". Candidates: " +
                         string.Join("; ", siblingActions.Where(x => string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase))
                             .Select(x => ReadProperty(x, "Method") + "/" + (string)x.Attribute("ItemState") + "/instance=" + (string)x.Attribute("InstanceID") +
                                 "/view=" + ReadProperty(x, "ViewID") + "/definition=" + (string)x.Attribute("DefinitionID") +
-                                "/execution=" + (string)x.Attribute("ExecutionType") + "/normalized=" + IsNormalizedInheritedAction(x)).ToArray()));
+                                "/execution=" + (string)x.Attribute("ExecutionType") + "/reference=" + (string)x.Attribute("IsReference") +
+                                "/inherited=" + (string)x.Attribute("IsInherited") + "/mappings=" + HasCompleteInstanceMappings(x)).ToArray()));
                 }
             }
         }
 
-        private static bool IsNativeInheritedViewAction(XElement action, string prototypeXml)
+        private static bool IsDesignerLoadableLocalViewAction(XElement action, string prototypeXml, string expectedInstanceId)
         {
             if (action == null || string.IsNullOrWhiteSpace(prototypeXml)) return false;
             var prototype = XElement.Parse(prototypeXml);
-            var expectedDefinitionId = (string)prototype.Attribute("DefinitionID");
-            Guid parsed;
-            return Guid.TryParse(expectedDefinitionId, out parsed) &&
-                string.Equals((string)action.Attribute("DefinitionID"), expectedDefinitionId, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals((string)action.Attribute("IsReference"), "True", StringComparison.OrdinalIgnoreCase) &&
-                string.Equals((string)action.Attribute("IsInherited"), "True", StringComparison.OrdinalIgnoreCase);
+            Guid definitionId;
+            return Guid.TryParse((string)action.Attribute("DefinitionID"), out definitionId) &&
+                !string.Equals((string)action.Attribute("DefinitionID"), (string)prototype.Attribute("DefinitionID"), StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)action.Attribute("InstanceID"), expectedInstanceId, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals((string)action.Attribute("IsReference"), "True", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals((string)action.Attribute("IsInherited"), "True", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(ReadProperty(action, "ViewID"), ReadProperty(prototype, "ViewID"), StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(ReadProperty(action, "Method"), ReadProperty(prototype, "Method"), StringComparison.OrdinalIgnoreCase) &&
+                HasCompleteInstanceMappings(action);
+        }
+
+        private static bool HasCompleteInstanceMappings(XElement action)
+        {
+            return
+                action.Descendants().Where(x => x.Name.LocalName == "Parameter" &&
+                    (string.Equals((string)x.Attribute("SourceType"), "ViewField", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals((string)x.Attribute("SourceType"), "Control", StringComparison.OrdinalIgnoreCase)))
+                    .All(x => !string.IsNullOrWhiteSpace((string)x.Attribute("SourceInstanceID"))) &&
+                action.Descendants().Where(x => x.Name.LocalName == "Result" &&
+                    (string.Equals((string)x.Attribute("TargetType"), "ViewField", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals((string)x.Attribute("TargetType"), "Control", StringComparison.OrdinalIgnoreCase)))
+                    .All(x => !string.IsNullOrWhiteSpace((string)x.Attribute("TargetInstanceID")));
         }
 
         private static string PrototypeForState(ResolvedMasterDetailChild child, string state)
@@ -977,21 +975,7 @@ namespace K2SmartFormsCli
 
         private static bool ActionMatchesInstance(XElement action, string instanceId)
         {
-            var declared = (string)action.Attribute("InstanceID");
-            if (string.Equals(declared, instanceId, StringComparison.OrdinalIgnoreCase)) return true;
-            if (!string.IsNullOrWhiteSpace(declared) || !IsNormalizedInheritedAction(action)) return false;
-            var form = action.Ancestors().FirstOrDefault(x => x.Name.LocalName == "Form");
-            var item = form == null ? null : form.Descendants().FirstOrDefault(x => x.Name.LocalName == "Item" &&
-                string.Equals((string)x.Attribute("ID"), instanceId, StringComparison.OrdinalIgnoreCase));
-            return item != null && string.Equals(ReadProperty(action, "ViewID"), (string)item.Attribute("ViewID"), StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool IsNormalizedInheritedAction(XElement action)
-        {
-            return action != null &&
-                string.Equals((string)action.Attribute("IsReference"), "True", StringComparison.OrdinalIgnoreCase) &&
-                string.Equals((string)action.Attribute("IsInherited"), "True", StringComparison.OrdinalIgnoreCase) &&
-                string.IsNullOrWhiteSpace((string)action.Attribute("InstanceID"));
+            return string.Equals((string)action.Attribute("InstanceID"), instanceId, StringComparison.OrdinalIgnoreCase);
         }
 
         private static string FindInstance(XElement form, Guid viewGuid, string viewName, string formName)
