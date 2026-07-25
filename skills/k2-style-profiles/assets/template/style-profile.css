@@ -1,5 +1,7 @@
 /*
  * Runtime-scoped starter for a K2 Style Profile.
+ * k2-color-scheme.min.css owns the complete platform variable mapping.
+ * Keep this file for solution-specific layout and polish gaps.
  * Keep every selector under html:not(.designer) so Designer remains untouched.
  */
 html:not(.designer) {

@@ -52,7 +52,7 @@ $missing = @($release.skills.name | Where-Object {
 if ($missing) { throw "Missing installed skills: $($missing -join ', ')" }
 
 & "$installed\k2-style-profiles\scripts\k2style.ps1" version
-# Expected for this release: k2style 0.3.0
+# Expected for this release: k2style 0.4.0
 ```
 
 Restart or reload the agent session after installing so its skill inventory is rediscovered. A source checkout is not a substitute for the installed operational package.
@@ -121,9 +121,10 @@ evidence summarisation, then produce the build-manifest handoff to $k2-builder.
 For a custom modern shell, use `k2-style-profiles` before generating the consuming Forms:
 
 ```text
-Use $k2-style-profiles to create a same-origin K2 Style Profile with a
-SmartObject-backed cross-Form sidebar, anti-flash boot coordination, mobile
-navigation, Designer isolation, and authenticated Runtime validation.
+Use $k2-style-profiles to create a same-origin K2 Style Profile with a complete
+target-version K2 colour-variable scheme, SmartObject-backed cross-Form
+sidebar, anti-flash boot coordination, mobile navigation, Designer isolation,
+and authenticated Runtime validation.
 ```
 
 ## Implemented features
@@ -174,6 +175,7 @@ navigation, Designer isolation, and authenticated Runtime validation.
 
 - Host source-controlled CSS and JavaScript in isolated same-origin IIS virtual directories.
 - Create new K2 Style Profiles from scratch, update exact profiles in place, check them in, inspect definitions, and block unsafe name collisions.
+- Generate a semantic colour adapter from the installed K2 variable contract, prove every variable/context mapping before deployment, and audit computed native Runtime colours at desktop and mobile widths.
 - Preserve CSS/JS file order and verify category, metadata, checkout state, HTTPS responses, MIME types, and source/served hashes.
 - Enforce runtime-only CSS scoping and explicit JavaScript Designer guards so shell transforms, observers, overlays, and loading screens do not run in design mode.
 - Build either a cross-Form shell from a SmartObject-backed K2 List View or an in-Form shell that relocates K2’s real native tab strip, preserving K2 rules, Worklist behavior, accessibility, and programmatic selection.

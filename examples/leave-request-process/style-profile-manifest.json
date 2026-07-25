@@ -10,15 +10,20 @@
   "styleProfile": {
     "systemName": "LPR Blue and White",
     "displayName": "LPR Blue and White",
-    "description": "",
+    "description": "Complete blue-and-white K2 variable colour system with solution polish.",
     "categoryPath": "K2 Skills\\LPR.Leave Request Process",
     "previewFormId": null,
-    "replaceExisting": false,
+    "replaceExisting": true,
     "files": [
       {
         "type": "css",
-        "source": "assets/lpr-blue-white.v1.css",
-        "target": "lpr-blue-white.v1.css"
+        "source": "assets/lpr-blue-white-k2-vars.v2.min.css",
+        "target": "lpr-blue-white-k2-vars.v2.min.css"
+      },
+      {
+        "type": "css",
+        "source": "assets/lpr-blue-white.v2.css",
+        "target": "lpr-blue-white.v2.css"
       }
     ]
   },

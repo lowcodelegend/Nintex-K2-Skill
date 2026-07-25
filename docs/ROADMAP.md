@@ -69,11 +69,11 @@ Next increments:
 - Add subworkflows, exception paths, instance-start/task-action smoke tests, and rollback/import.
 - **Mid-horizon iterative improvement:** import the current HTML5 workflow JSON graph and K2 version metadata; assign stable ownership-aware node/link identities; generate a semantic graph diff; patch supported nodes, routes, mappings, and integrations without replacing unrelated Designer work; detect concurrent/manual edit conflicts; and support version/export-backed rollback.
 
-### 5. K2 Style Profiles — v0.3 implemented
+### 5. K2 Style Profiles — v0.4 implemented
 
 Create, update, inspect, verify, and safely remove modern Style Profiles through the installed K2 Designer save implementation. Host exact CSS/JavaScript assets in isolated same-origin IIS virtual directories, preserve deterministic file order, and verify K2 metadata plus served bytes.
 
-The current release includes a SmartObject-backed cross-Form sidebar and a native-tabs relocation pattern. Both enforce Designer isolation, critical/application CSS separation, bounded fail-open behavior, responsive navigation, accessibility, and authenticated cold/warm/transition browser gates.
+The current release includes a target-version K2 colour-variable generator and coverage gate, a computed Runtime colour audit, a SmartObject-backed cross-Form sidebar, and a native-tabs relocation pattern. Colour schemes now map every discovered platform colour variable across nested Form, dialog, toolbar, list-selection, state, icon, Worklist, progress, and chart contexts before selector polish. Navigation patterns enforce Designer isolation, critical/application CSS separation, bounded fail-open behavior, responsive navigation, accessibility, and authenticated cold/warm/transition browser gates.
 
 Next increments:
 

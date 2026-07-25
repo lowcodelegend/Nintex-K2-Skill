@@ -10,6 +10,8 @@ K2 loads a Style Profile's external files in declared order. Treat that list as 
 
 Keep assets few and small. Minify production files before deployment, enable IIS static compression, cache immutable versioned filenames, and avoid font families that require blocking cross-origin downloads.
 
+For a colour scheme, do not begin with button and header selectors. Generate a complete adapter from the target server's installed K2 dynamic variable contract as described in [color-schemes.md](color-schemes.md), then add narrowly scoped polish only where the platform exposes no variable.
+
 For an application shell, split delivery into render-blocking critical CSS, a small boot coordinator, and asynchronously loaded application CSS. Critical CSS owns the initial cover, immediate native-source suppression, and CSS-only fail-open deadline. The coordinator owns readiness, cache reconciliation, and the two-frame reveal. See [smartobject-sidebar.md](smartobject-sidebar.md).
 
 ## Runtime/Designer boundary
@@ -67,3 +69,4 @@ Never clone native tab anchors into a second menu. Moving the original node pres
 - Runtime works with empty, long, invalid, slow, mobile, keyboard-only, and reduced-motion states.
 - Designer opens without runtime classes, overlays, observers, sidebar transforms, or loading screens.
 - Existing forms using other Style Profiles are unchanged.
+- Generated and minified colour adapters both cover every colour-bearing K2 variable in every declared K2 context on the target version.

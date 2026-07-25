@@ -2,16 +2,16 @@
   "schemaVersion": 2,
   "shortCode": "LPR",
   "solution": "LPR.Leave Request Process",
-  "deployedAtUtc": "2026-07-23T12:43:10Z",
+  "deployedAtUtc": "2026-07-23T14:21:47Z",
   "environment": "spk2-local",
-  "sourceRevision": "bc7d23c4bba36f895fafdfcfbaf292eabae62673",
+  "sourceRevision": "0f5050b77ff8708280f7b8ab0234ae3136f9a6ff",
   "result": "complete-with-errata",
   "manifestChecksums": {
     "manifest.json": "2177C872D851B42F38351F84A8785F07A2B11E2482BA340A35377A51CB5CF121",
     "smartforms-manifest.json": "5457B5A7BDBFF5EF075B8BF4FE3B4E20E4AD3B1338702EA402A484342072E764",
     "workflow-manifest.json": "C00CE461D5A464304480DEDAE157D926D6BB7BF85CB09C6B13422BE25898B324",
     "solution-manifest.json": "740497E30F72EE7DE3246BFAEED9A37B293109E38900CFAAADECF779A5455D92",
-    "style-profile-manifest.json": "4697DC3659BE0D9E0B5AC7C33DBA3E489D9D048EB77E612578EC292E555035DB"
+    "style-profile-manifest.json": "5D6820715D89DBA5705A0BEF3754CC63984329549D33ACB91416B038424A2695"
   },
   "artifacts": [
     {
@@ -255,28 +255,40 @@
       "verification": "verified: hosted endpoint returned HTTP 200 with text/css"
     },
     {
-      "id": "hosted-css:lpr-blue-white.v1.css",
+      "id": "hosted-css:lpr-blue-white-k2-vars.v2.min.css",
       "layer": "style-profile",
       "kind": "hosted-css",
-      "name": "lpr-blue-white.v1.css",
-      "action": "created",
-      "location": "https://spk2.trials.demome.tech/LPRAssets/lpr-blue-white.v1.css",
+      "name": "lpr-blue-white-k2-vars.v2.min.css",
+      "action": "updated",
+      "location": "https://spk2.trials.demome.tech/LPRAssets/lpr-blue-white-k2-vars.v2.min.css",
       "identifier": null,
-      "version": "v1",
-      "source": "assets/lpr-blue-white.v1.css",
-      "verification": "verified: HTTP 200, text/css, and served SHA-256 F20C9805C9941398C26F7727E811B363A73BAF5B950B2AE19A6D2DB007A67DF3 matched source"
+      "version": "v2",
+      "source": "assets/lpr-blue-white-k2-vars.v2.min.css",
+      "verification": "verified: 410/410 colour variables and 31129/31129 contextual declarations; HTTP 200, text/css, and served SHA-256 F9B5799EA29D5B813D8FCF32ADF7451CEBEB8E040CB1BA8862162E73C2460CC1 matched source"
+    },
+    {
+      "id": "hosted-css:lpr-blue-white.v2.css",
+      "layer": "style-profile",
+      "kind": "hosted-css",
+      "name": "lpr-blue-white.v2.css",
+      "action": "updated",
+      "location": "https://spk2.trials.demome.tech/LPRAssets/lpr-blue-white.v2.css",
+      "identifier": null,
+      "version": "v2",
+      "source": "assets/lpr-blue-white.v2.css",
+      "verification": "verified: HTTP 200, text/css, and served SHA-256 B5A5D9C945CB2D1EF785008752AB8D2FB76C8849457CCC1D390B945406D6EB9E matched source"
     },
     {
       "id": "style-profile:LPR-Blue-and-White",
       "layer": "style-profile",
       "kind": "style-profile",
       "name": "LPR Blue and White",
-      "action": "created",
+      "action": "updated",
       "location": "K2 Skills\\LPR.Leave Request Process",
       "identifier": "ba82a3e7-8e28-4046-b122-0b80cebec163",
-      "version": "2",
+      "version": "4",
       "source": "style-profile-manifest.json",
-      "verification": "verified: checked in, exact CSS URL, HTTP 200, source/served bytes matched; selected by both deployed Forms"
+      "verification": "verified: checked in, exact ordered CSS URLs, source/served bytes matched, complete K2 variable contract loaded at desktop and mobile, no horizontal overflow; selected by both deployed Forms"
     },
     {
       "id": "smartforms-view:LPR.Leave-Request-Editor",
@@ -444,8 +456,8 @@
         "layer": "style-profile",
         "command": "k2style verify --manifest style-profile-manifest.json",
         "status": "passed",
-        "completedAtUtc": "2026-07-23T12:38:34Z",
-        "detail": "LPR Blue and White ba82a3e7-8e28-4046-b122-0b80cebec163 v2 verified with hosted asset bytes."
+        "completedAtUtc": "2026-07-23T14:21:47Z",
+        "detail": "LPR Blue and White ba82a3e7-8e28-4046-b122-0b80cebec163 v4 verified with two hosted assets; desktop and mobile Runtime audits populated all 410 K2 colour variables without overflow."
       },
       {
         "layer": "smartforms",
@@ -477,7 +489,8 @@
       "severity": "blocker",
       "artifactIds": [
         "iis-vdir:LPRAssets",
-        "hosted-css:lpr-blue-white.v1.css",
+        "hosted-css:lpr-blue-white-k2-vars.v2.min.css",
+        "hosted-css:lpr-blue-white.v2.css",
         "style-profile:LPR-Blue-and-White"
       ],
       "description": "The LPR Blue and White Style Profile required manual creation after the local authoring operation could not load App_GlobalResources.",
@@ -537,6 +550,6 @@
   "rollbackNotes": [
     "Use k2build cleanup -Manifest solution-manifest.json -Confirm to remove manifest-owned workflow, Forms, Views, SmartObjects, and the SQL Service Instance in reverse dependency order. The database is preserved unless -DropDatabase is explicitly authorized.",
     "LPR Blue and White is now consumed by the deployed Forms. Remove those Forms before attempting Style Profile cleanup; the utility deliberately preserves the IIS virtual directory and physical directory.",
-    "The source directory is currently uncommitted. The recorded sourceRevision identifies the repository base commit, while the complete solution source is the untracked examples/leave-request-process directory."
+    "Regenerate the colour adapter from the target server's installed Variables_Dynamic.css after any K2 upgrade, then redeploy with versioned asset names."
   ]
 }

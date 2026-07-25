@@ -17,6 +17,11 @@
     "files": [
       {
         "type": "css",
+        "source": "k2-color-scheme.min.css",
+        "target": "k2-color-scheme.v1.min.css"
+      },
+      {
+        "type": "css",
         "source": "style-profile.css",
         "target": "style-profile.css"
       },

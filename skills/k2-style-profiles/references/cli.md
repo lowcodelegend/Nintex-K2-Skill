@@ -34,6 +34,17 @@ $manifest = '.\style-profile-manifest.json'
 
 Use `cleanup --confirm` only for disposable or explicitly retired profiles. If any Form consumes the profile, cleanup stops and reports the consumers.
 
+## Colour-scheme helpers
+
+`new-k2-color-scheme.ps1` reads the target installation's dynamic K2 variable
+contract and generates a Runtime-guarded semantic adapter.
+`test-k2-color-scheme.ps1` rejects missing variables, missing contextual
+redefinitions, and unguarded selectors. `audit-runtime-colors.ps1` then opens
+an authenticated Form in headless Edge, confirms the expected stylesheet and
+computed variable inventory, records representative native colours/contrast,
+captures a screenshot, and rejects page overflow. See
+[color-schemes.md](color-schemes.md) for the required sequence.
+
 ## Runtime UX validation
 
 For application shells and DOM enhancement, the separate browser validator exercises behavior the management CLI cannot observe:

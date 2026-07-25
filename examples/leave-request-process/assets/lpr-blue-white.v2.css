@@ -1,5 +1,6 @@
 /*
- * LPR Blue and White.
+ * LPR Blue and White solution polish.
+ * The complete K2 variable mapping is loaded before this file.
  * Every selector is Runtime-scoped so K2 Designer remains untouched.
  */
 html:not(.designer) {
@@ -39,37 +40,9 @@ html:not(.designer) .theme-entry .view {
   overflow: hidden;
 }
 
-html:not(.designer) .view .view-header,
-html:not(.designer) .theme-entry .view .view-header {
-  background: linear-gradient(90deg, var(--lpr-blue-800), var(--lpr-blue-600));
-  border: 0;
-  color: var(--lpr-white);
-  min-height: 42px;
-}
-
-html:not(.designer) .view .view-header .view-header-text,
-html:not(.designer) .view .view-header .view-header-text a,
-html:not(.designer) .theme-entry .view .view-header .view-header-text {
-  color: var(--lpr-white);
-  font-weight: 650;
-}
-
-html:not(.designer) .tab-box ul.tab-box-tabs,
-html:not(.designer) .theme-entry .tab-box ul.tab-box-tabs {
-  background: var(--lpr-white);
-  border-bottom: 2px solid var(--lpr-blue-100);
-}
-
 html:not(.designer) .tab-box ul.tab-box-tabs li a,
 html:not(.designer) .theme-entry .tab-box ul.tab-box-tabs li a {
-  color: var(--lpr-blue-800);
   font-weight: 600;
-}
-
-html:not(.designer) .tab-box ul.tab-box-tabs li.selected a,
-html:not(.designer) .theme-entry .tab-box ul.tab-box-tabs li.selected a {
-  background: var(--lpr-blue-700);
-  color: var(--lpr-white);
 }
 
 html:not(.designer) input[type="text"],
@@ -78,10 +51,7 @@ html:not(.designer) textarea,
 html:not(.designer) select,
 html:not(.designer) .input-control,
 html:not(.designer) .theme-entry .input-control {
-  background-color: var(--lpr-white);
-  border-color: var(--lpr-border);
   border-radius: 6px;
-  color: var(--lpr-ink);
 }
 
 html:not(.designer) input:focus,
@@ -97,49 +67,13 @@ html:not(.designer) .input-control:focus-within {
 html:not(.designer) .SourceCode-Forms-Controls-Web-Button,
 html:not(.designer) .theme-entry a.SourceCode-Forms-Controls-Web-Button,
 html:not(.designer) .theme-entry button {
-  background: var(--lpr-blue-700);
-  border: 1px solid var(--lpr-blue-700);
   border-radius: 6px;
-  color: var(--lpr-white);
   font-weight: 600;
-}
-
-html:not(.designer) .SourceCode-Forms-Controls-Web-Button:hover,
-html:not(.designer) .theme-entry a.SourceCode-Forms-Controls-Web-Button:hover,
-html:not(.designer) .theme-entry button:hover {
-  background: var(--lpr-blue-950);
-  border-color: var(--lpr-blue-950);
 }
 
 html:not(.designer) .grid-header,
 html:not(.designer) .theme-entry .grid-header {
-  background: var(--lpr-blue-100);
-  color: var(--lpr-blue-950);
   font-weight: 650;
-}
-
-html:not(.designer) .grid-content tr:nth-child(even),
-html:not(.designer) .theme-entry .grid-content tr:nth-child(even) {
-  background: var(--lpr-blue-050);
-}
-
-html:not(.designer) .grid-content tr:hover,
-html:not(.designer) .theme-entry .grid-content tr:hover {
-  background: var(--lpr-blue-100);
-}
-
-html:not(.designer) label,
-html:not(.designer) .form-field label,
-html:not(.designer) .theme-entry .form-field label {
-  color: var(--lpr-blue-950);
-}
-
-html:not(.designer) .message-box-content,
-html:not(.designer) .popup,
-html:not(.designer) .theme-entry .popup {
-  background: var(--lpr-white);
-  border-color: var(--lpr-border);
-  color: var(--lpr-ink);
 }
 
 @media (max-width: 720px) {

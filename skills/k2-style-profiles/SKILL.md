@@ -1,6 +1,6 @@
 ---
 name: k2-style-profiles
-description: Create, host, deploy, inspect, verify, update, and safely remove self-hosted Nintex K2 Five Style Profiles backed by custom CSS and JavaScript. Use for new Style Profiles, same-origin IIS asset hosting, SmartObject-backed cross-Form sidebars, relocated native K2 Form tabs, anti-flash boot coordination, runtime-only Designer isolation, cache-safe asset revisions, or preparing a Style Profile for k2-smartforms. Do not use for cloud Nintex Forms, custom control registration, direct K2 database edits, or styling an existing form without a Style Profile.
+description: Create, host, deploy, inspect, verify, update, and safely remove self-hosted Nintex K2 Five Style Profiles backed by custom CSS and JavaScript. Use for new Style Profiles, complete K2 theme-variable colour schemes, same-origin IIS asset hosting, SmartObject-backed cross-Form sidebars, relocated native K2 Form tabs, anti-flash boot coordination, runtime-only Designer isolation, cache-safe asset revisions, or preparing a Style Profile for k2-smartforms. Do not use for cloud Nintex Forms, custom control registration, direct K2 database edits, or styling an existing form without a Style Profile.
 ---
 
 # K2 Style Profiles
@@ -9,10 +9,10 @@ Create checked-in K2 Style Profiles from declarative manifests, host their CSS/J
 
 ## Workflow
 
-1. Confirm this is self-hosted K2 Five on a Windows K2 development server. Read [design.md](references/design.md), [manifest.md](references/manifest.md), and [cli.md](references/cli.md). For a sidebar between Forms, read [smartobject-sidebar.md](references/smartobject-sidebar.md). For one Form whose native K2 tabs become the sidebar, read [native-tabs-sidebar.md](references/native-tabs-sidebar.md). Use the matching complete example.
-2. Copy `assets/template` into the solution workspace. Preserve its runtime-only CSS scope and JavaScript Designer guard.
+1. Confirm this is self-hosted K2 Five on a Windows K2 development server. Read [design.md](references/design.md), [manifest.md](references/manifest.md), and [cli.md](references/cli.md). For a colour scheme, read [color-schemes.md](references/color-schemes.md). For a sidebar between Forms, read [smartobject-sidebar.md](references/smartobject-sidebar.md). For one Form whose native K2 tabs become the sidebar, read [native-tabs-sidebar.md](references/native-tabs-sidebar.md). Use the matching complete example.
+2. Copy `assets/template` into the solution workspace. Preserve its runtime-only CSS scope and JavaScript Designer guard. Edit `palette.json`, generate the K2 variable adapter from the target server's installed `Variables_Dynamic.css`, and require complete variable plus contextual coverage before visual polish.
 3. Choose an existing K2 category, unique system/display names, a same-origin HTTPS asset URL, an isolated physical directory, and an IIS virtual path. Never reuse K2 product directories.
-4. Define CSS and JS files in exact load order. Put base tokens/reset first, component styles next, and behavior JavaScript last. Use a new target file name when browser cache invalidation is required.
+4. Define CSS and JS files in exact load order. Put the generated K2 colour adapter first, solution tokens/reset and component styles next, and behavior JavaScript last. Use a new target file name when browser cache invalidation is required.
 5. Run `scripts/k2style.ps1 doctor --manifest <path>`, then `plan`. Resolve collisions, foreign checkouts, invalid hosting mappings, missing sources, mixed content, and Designer-isolation failures before mutation.
 6. Run `deploy --manifest <path> --confirm`. Deployment creates or updates the IIS virtual directory, copies declared assets, creates or updates the Style Profile through the installed K2 Designer save implementation, checks it in, and verifies metadata, category, ordered files, HTTPS responses, MIME types, and source/served hashes.
 7. Run `inspect` for GUID/version evidence. Apply the exact Style Profile name or GUID from that output in `$k2-smartforms`; keep modern Forms on `useLegacyTheme=false`.
@@ -21,6 +21,8 @@ Create checked-in K2 Style Profiles from declarative manifests, host their CSS/J
 ## Design gates
 
 - Treat CSS/JS as application code. Source-control it, review it, and use Content Security Policy-compatible code without `eval` or remote script injection.
+- Apply colour schemes through K2's installed dynamic variable contract before writing selector overrides. Cover every colour-bearing variable in every K2 context reported by `test-k2-color-scheme.ps1`; counts vary by K2 version. Preserve distinct hover, focus, selected, disabled, read-only, error, warning, success, chart, icon, dialog, list, tab, input, and Worklist roles.
+- Keep the small semantic palette as the source of truth. Regenerate after a K2 upgrade, validate both readable and minified CSS, load the adapter before polish, and use direct selectors only for proven gaps outside the variable contract.
 - Keep every CSS selector runtime-scoped under `html:not(.designer)` or an equally strict reviewed guard. A marker only records a deliberate review; it does not make an unsafe stylesheet safe.
 - Put `/* k2style: designer-guard */` beside the JavaScript function that returns before any DOM mutation when the URL or root element indicates Designer mode.
 - Prefer same-origin HTTPS URLs. Runtime HTTPS plus HTTP assets is mixed content and must fail planning.

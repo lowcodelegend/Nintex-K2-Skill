@@ -129,7 +129,7 @@ namespace K2StyleProfilesCli
             return value == "help" || value == "--help" || value == "-h" || value == "/?";
         }
 
-        private static void PrintVersion() { Console.WriteLine("k2style 0.3.0"); }
+        private static void PrintVersion() { Console.WriteLine("k2style 0.4.0"); }
 
         private static void PrintHelp()
         {
