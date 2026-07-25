@@ -108,6 +108,13 @@ namespace K2SmartFormsCli
             var group = document.Descendants("ValidationGroup").Single();
             Assert((string)group.Element("Name") == "ValidationGroupForEvent", "native validation-group name");
             var saveEvent = document.Descendants("Event").Single(x => (string)x.Attribute("SourceName") == "btnSave");
+            var saveButtonId = (string)saveEvent.Attribute("SourceID");
+            Assert(document.Descendants("Event").Count(x =>
+                (string)x.Attribute("Type") == "System" &&
+                (string)x.Attribute("SourceType") == "Control" &&
+                (string)x.Attribute("SourceID") == saveButtonId &&
+                (string)x.Element("Name") == "OnClick") == 1,
+                "Form Save button has the canonical K2 system OnClick declaration");
             Assert(!saveEvent.Descendants("Action").Any(x => !string.IsNullOrWhiteSpace(ReadMethod(x))),
                 "Form Save rule contains no embedded View method actions");
             Assert(saveEvent.Descendants("Action").Count(x => ReadActionProperty(x, "EventID") == createDefinition) == 1,
@@ -117,6 +124,23 @@ namespace K2SmartFormsCli
             Assert(saveEvent.Descendants("Parameter").Count(x => (string)x.Attribute("TargetType") == "ViewParameter" &&
                 (string)x.Attribute("TargetInstanceID") == "detail-instance" &&
                 (string)x.Attribute("TargetID") == "ClaimId") == 2, "master key is transferred to the detail View parameter");
+
+            var missingSystemEvent = XDocument.Parse(transformed);
+            missingSystemEvent.Descendants("Event").Single(x =>
+                (string)x.Attribute("Type") == "System" &&
+                (string)x.Attribute("SourceID") == saveButtonId &&
+                (string)x.Element("Name") == "OnClick").Remove();
+            AssertThrows(delegate { MasterDetailRules.Verify(missingSystemEvent.ToString(), formDefinition, resolved); },
+                "must contain exactly one K2 system OnClick declaration");
+
+            var malformedSystemEvent = XDocument.Parse(transformed);
+            malformedSystemEvent.Descendants("Event").Single(x =>
+                (string)x.Attribute("Type") == "System" &&
+                (string)x.Attribute("SourceID") == saveButtonId &&
+                (string)x.Element("Name") == "OnClick")
+                .Descendants("Action").Single().SetAttributeValue("Type", "Transfer");
+            AssertThrows(delegate { MasterDetailRules.Verify(malformedSystemEvent.ToString(), formDefinition, resolved); },
+                "has a malformed K2 system OnClick declaration");
 
             var corrupt = saveEvent.Descendants("Action").First(x => ReadActionProperty(x, "EventID") == detailCreateDefinition);
             corrupt.Element("Properties").Add(XElement.Parse("<Property><Name>Method</Name><Value>Create</Value></Property>"));

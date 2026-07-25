@@ -688,6 +688,8 @@ namespace K2SmartFormsCli
             var masterInstance = FindInstance(form, relationship.MasterViewGuid, relationship.MasterViewName, formDefinition.Name);
             var saveEvent = FindFormSaveEvent(form, relationship.Definition.SaveButtonText);
             if (saveEvent == null) throw new CliException("K2 Form '" + formDefinition.Name + "' has no Form-level master-detail Save button rule.");
+            ControlRuleDefinition.VerifySystemEvent(form, (string)saveEvent.Attribute("SourceID"), "OnClick",
+                "K2 Form '" + formDefinition.Name + "' master-detail Save button");
             if (saveEvent.Descendants().Any(x => x.Name.LocalName == "Action" &&
                 string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
                 (!string.IsNullOrWhiteSpace(ReadProperty(x, "Method")) || !string.IsNullOrWhiteSpace(ReadProperty(x, "ViewID")))))
@@ -1083,6 +1085,7 @@ namespace K2SmartFormsCli
             var handlers = saveEvent.Elements().First(x => x.Name.LocalName == "Handlers");
             handlers.Add(BuildSaveHandler(form, relationship, masterInstance, true, validationGroupId));
             handlers.Add(BuildSaveHandler(form, relationship, masterInstance, false, validationGroupId));
+            events.Add(ControlRuleDefinition.BuildSystemEvent(ns, buttonId, "OnClick"));
             events.Add(saveEvent);
         }
 

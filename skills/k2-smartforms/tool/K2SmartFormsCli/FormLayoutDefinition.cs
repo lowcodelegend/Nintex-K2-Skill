@@ -635,6 +635,7 @@ namespace K2SmartFormsCli
             var events = RequiredChild(RequiredChild(form, "States"), "State").Elements().FirstOrDefault(x => x.Name.LocalName == "Events");
             if (events == null) { events = new XElement(ns + "Events"); RequiredChild(RequiredChild(form, "States"), "State").Add(events); }
             var button = definition.WorkflowStartButton;
+            events.Add(ControlRuleDefinition.BuildSystemEvent(ns, buttonId, "OnClick"));
             events.Add(new XElement(ns + "Event", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
                 new XAttribute("Type", "User"), new XAttribute("SourceID", buttonId), new XAttribute("SourceType", "Control"),
                 new XAttribute("SourceName", button.Name), new XAttribute("SourceDisplayName", button.Name),
@@ -653,8 +654,13 @@ namespace K2SmartFormsCli
             var id = (string)control.Attribute("ID");
             if (!panel.Descendants().Any(x => x.Name.LocalName == "Control" && string.Equals((string)x.Attribute("ID"), id, StringComparison.OrdinalIgnoreCase))) throw new CliException("K2 Form '" + definition.Name + "' workflow start button is not on tab '" + button.Tab + "'.");
             var baseState = RequiredChild(RequiredChild(form, "States"), "State");
-            var clickRules = baseState.Descendants().Where(x => x.Name.LocalName == "Event" && string.Equals((string)x.Attribute("SourceID"), id, StringComparison.OrdinalIgnoreCase) && string.Equals(ChildValue(x, "Name"), "OnClick", StringComparison.OrdinalIgnoreCase)).ToList();
+            var clickRules = baseState.Descendants().Where(x => x.Name.LocalName == "Event" &&
+                string.Equals((string)x.Attribute("Type"), "User", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("SourceID"), id, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(ChildValue(x, "Name"), "OnClick", StringComparison.OrdinalIgnoreCase)).ToList();
             if (clickRules.Count != 1) throw new CliException("K2 Form '" + definition.Name + "' workflow start button must have exactly one OnClick rule.");
+            ControlRuleDefinition.VerifySystemEvent(baseState, id, "OnClick",
+                "K2 Form '" + definition.Name + "' workflow start button");
         }
 
         private static XElement BasicControl(XNamespace ns, string id, string type, string name)
