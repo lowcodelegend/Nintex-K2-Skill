@@ -130,7 +130,7 @@ Stage codes must be unique and match the values persisted by the lifecycle model
 
 `k2` supports integrated authentication by default. For explicit AD authentication, set `integrated` false plus `domain`, `userName`, and `passwordEnvironmentVariable`; never store the password itself.
 
-`application.rootCategoryPath` is the stable application root. It must not contain a version segment or end in `Forms`, `Views`, or `Admin`. The CLI derives `<root>\Views`, `<root>\Forms`, `<root>\Admin\Views`, and `<root>\Admin\Forms`. Form and view names must not contain version tokens because K2 maintains internal artifact versions. `theme` must match an installed legacy K2 theme because `FormGenerator` requires that compatibility metadata; it is not the modern styling choice. For new forms, set `styleProfile` to an unambiguous installed Style Profile system name, display name, or GUID; prefer the system name stored by `k2env`. The CLI writes the StyleProfile GUID/name into every generated form and verifies it independently from the legacy theme field. `checkIn` should normally remain true.
+`application.rootCategoryPath` is the stable application root. It must not contain a version segment or end in `Forms`, `Views`, or `Admin`. The CLI derives `<root>\Views`, `<root>\Forms`, `<root>\Admin\Views`, and `<root>\Admin\Forms`. Form and view names must not contain version tokens because K2 maintains internal artifact versions. `theme` must match an installed legacy K2 theme because `FormGenerator` requires that compatibility metadata; it is not the modern styling choice. When using a custom Style Profile, set `styleProfile` to an unambiguous installed system name, display name, or GUID; prefer the system name stored by `k2env`. Omitting `styleProfile` uses K2's plain modern default theme because Forms still disable legacy-theme rendering. The CLI writes the StyleProfile GUID/name into every generated form when one is selected and verifies it independently from the legacy theme field. `checkIn` should normally remain true.
 
 Set `application.solutionCode` to the solution's three- or four-letter prefix. It is available to environment common-header templates as `{{solution.code}}`; when omitted, the CLI derives the text before the first dot in the form name.
 
@@ -222,7 +222,7 @@ For cascading dropdowns, declare both parent and child controls and add the join
 
 Set `area` on each view/form to `application` (the default) or `admin`. Admin artifacts deploy below `<root>\Admin`, while ordinary artifacts remain in the standard `Views` and `Forms` folders.
 
-Each form's optional `useLegacyTheme` defaults to `false`. The CLI writes the K2 `UseLegacyTheme` property explicitly and verifies it after deployment. Keep the default for Style Profile rendering; set it to `true` only when legacy named-theme compatibility is intentional.
+Each form's optional `useLegacyTheme` defaults to `false`. Always keep it `false`, including when `application.styleProfile` is omitted; the CLI writes the K2 `UseLegacyTheme` property explicitly and verifies it after deployment, enabling K2's plain modern default theme when no custom Style Profile is selected. Never set it to `true`.
 
 ## Form view titles
 

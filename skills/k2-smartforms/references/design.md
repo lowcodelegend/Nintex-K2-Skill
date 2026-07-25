@@ -73,7 +73,7 @@ Use a native `Progress` control for the canonical ordered stage path when the ca
 
 ## Presentation
 
-Use an installed Style Profile for modern K2 presentation. K2's named themes—including `Lithium`—are the legacy theme system; the manifest still supplies one as required `FormGenerator` compatibility metadata. New forms must normally set a Style Profile and explicitly write `UseLegacyTheme=false`. Set `useLegacyTheme=true`, or omit a Style Profile, only for an intentional legacy-compatible application and report that exception. Prefer the durable environment profile's selected default Style Profile unless the solution explicitly overrides it.
+K2's named themes—including `Lithium`—are the legacy theme system; the manifest still supplies one as required `FormGenerator` compatibility metadata. Always explicitly write `UseLegacyTheme=false`, regardless of whether the Form uses a custom Style Profile. When no Style Profile is selected, this enables K2's plain modern default theme. Never set `useLegacyTheme=true`. Prefer the durable environment profile's selected default Style Profile when custom styling is wanted unless the solution explicitly overrides it.
 
 ## Environment common frameworks
 
