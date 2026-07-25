@@ -110,6 +110,10 @@
   margin: 0;
 }
 
+.northstar-widget--trend .northstar-widget__figure {
+  margin-top: 28px;
+}
+
 .northstar-widget__figure svg {
   display: block;
   width: 100%;
