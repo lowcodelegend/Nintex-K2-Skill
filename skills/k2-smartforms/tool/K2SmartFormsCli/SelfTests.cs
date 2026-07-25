@@ -10,7 +10,7 @@ namespace K2SmartFormsCli
         public static void Run()
         {
             TestIdentityNormalization();
-            TestDesignerLoadableLocalMasterDetailRules();
+            TestViewOwnedMasterDetailRules();
             TestMissingOptionalControlMappings();
             TestRequiredReadOnlyCreateInputGate();
             TestLookupAndDefaultValueRoundTrip();
@@ -26,7 +26,7 @@ namespace K2SmartFormsCli
             TestViewIdentityRebase();
             TestFlatFormViewOrdering();
             TestMultiTableWorkflowStateReconciliation();
-            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, Designer-loadable local master-detail rules, orphan optional control mappings, lookup/detail List classification, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, multi-table workflow-state reconciliation");
+            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams and Form method-action rejection, orphan optional control mappings, lookup/detail List classification, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, multi-table workflow-state reconciliation");
         }
 
         private static void TestIdentityNormalization()
@@ -36,7 +36,7 @@ namespace K2SmartFormsCli
             Assert(ResolvedMasterDetailRules.NormalizeConditionDataType("AutoGuid") == "Guid", "AutoGuid normalization");
         }
 
-        private static void TestDesignerLoadableLocalMasterDetailRules()
+        private static void TestViewOwnedMasterDetailRules()
         {
             var masterGuid = Guid.Parse("10000000-0000-0000-0000-000000000010");
             var detailGuid = Guid.Parse("20000000-0000-0000-0000-000000000010");
@@ -72,6 +72,8 @@ namespace K2SmartFormsCli
                 MasterKey = new ResolvedViewField { Id = "claim-key", Name = "ClaimId", DisplayName = "Claim ID", DataType = "Number" },
                 MasterCreateAction = TestViewAction(createDefinition, masterGuid, "Claim", "Create", null, true),
                 MasterUpdateAction = TestViewAction(updateDefinition, masterGuid, "Claim", "Update", null, false),
+                MasterCreateEvent = new ResolvedViewEvent { DefinitionId = createDefinition, DisplayName = "Create Button" },
+                MasterUpdateEvent = new ResolvedViewEvent { DefinitionId = updateDefinition, DisplayName = "Update Button" },
                 RequiredControls = new List<ResolvedRequiredControl>
                 {
                     new ResolvedRequiredControl { Property = "Title", ControlId = "title-control", ControlName = "Title Text Box", ControlDisplayName = "Title" }
@@ -86,7 +88,10 @@ namespace K2SmartFormsCli
                         ViewDisplayName = "Claim Lines",
                         CreateAction = TestViewAction(detailCreateDefinition, detailGuid, "Claim Lines", "Create", "Added", false),
                         UpdateAction = TestViewAction(detailUpdateDefinition, detailGuid, "Claim Lines", "Update", "Changed", false),
-                        DeleteAction = TestViewAction(detailDeleteDefinition, detailGuid, "Claim Lines", "Delete", "Removed", false)
+                        DeleteAction = TestViewAction(detailDeleteDefinition, detailGuid, "Claim Lines", "Delete", "Removed", false),
+                        SaveEvent = new ResolvedViewEvent { DefinitionId = detailCreateDefinition, DisplayName = "Save ToolBar Button" },
+                        LoadEvent = new ResolvedViewEvent { DefinitionId = "40000000-0000-0000-0000-000000000040", DisplayName = "K2Skills.MasterDetail.Load.ClaimId" },
+                        KeyParameterName = "ClaimId"
                     }
                 }
             };
@@ -103,22 +108,44 @@ namespace K2SmartFormsCli
             var group = document.Descendants("ValidationGroup").Single();
             Assert((string)group.Element("Name") == "ValidationGroupForEvent", "native validation-group name");
             var saveEvent = document.Descendants("Event").Single(x => (string)x.Attribute("SourceName") == "btnSave");
-            foreach (var action in saveEvent.Descendants("Action").Where(x => (string)x.Attribute("Type") == "Execute"))
-            {
-                Assert(action.Attribute("IsReference") == null, "local Form View action is not a partial reference");
-                Assert(action.Attribute("IsInherited") == null, "local Form View action is not partially inherited");
-                Assert(!string.IsNullOrWhiteSpace((string)action.Attribute("InstanceID")), "local Form View action has an instance");
-            }
-            var masterCreate = saveEvent.Descendants("Action").Single(x => ReadMethod(x) == "Create" && (string)x.Attribute("InstanceID") == "master-instance");
-            Assert((string)masterCreate.Attribute("DefinitionID") != createDefinition, "local master action has its own DefinitionID");
-            Assert((string)masterCreate.Attribute("ExecutionType") == "Parallel", "master persistence remains in the parent-child batch");
-            var detailCreate = masterCreate.Parent.Elements("Action").Single(x => (string)x.Attribute("ItemState") == "Added");
-            Assert((string)detailCreate.Attribute("DefinitionID") != detailCreateDefinition, "local detail action has its own DefinitionID");
-            Assert((string)detailCreate.Attribute("ExecutionType") == "Parallel", "editable-list state persistence remains in the parent-child batch");
+            Assert(!saveEvent.Descendants("Action").Any(x => !string.IsNullOrWhiteSpace(ReadMethod(x))),
+                "Form Save rule contains no embedded View method actions");
+            Assert(saveEvent.Descendants("Action").Count(x => ReadActionProperty(x, "EventID") == createDefinition) == 1,
+                "master Create is a View-event call");
+            Assert(saveEvent.Descendants("Action").Count(x => ReadActionProperty(x, "EventID") == detailCreateDefinition) == 2,
+                "detail Save View event is called once in each branch");
+            Assert(saveEvent.Descendants("Parameter").Count(x => (string)x.Attribute("TargetType") == "ViewParameter" &&
+                (string)x.Attribute("TargetInstanceID") == "detail-instance" &&
+                (string)x.Attribute("TargetID") == "ClaimId") == 2, "master key is transferred to the detail View parameter");
 
-            detailCreate.SetAttributeValue("IsReference", "True");
-            detailCreate.SetAttributeValue("IsInherited", "True");
-            AssertThrows(delegate { MasterDetailRules.Verify(document.ToString(), formDefinition, resolved); }, "Designer-loadable local batch detail action");
+            var corrupt = saveEvent.Descendants("Action").First(x => ReadActionProperty(x, "EventID") == detailCreateDefinition);
+            corrupt.Element("Properties").Add(XElement.Parse("<Property><Name>Method</Name><Value>Create</Value></Property>"));
+            AssertThrows(delegate { MasterDetailRules.Verify(document.ToString(), formDefinition, resolved); },
+                "embeds a View method action");
+
+            var detailView = "<View ID='" + detailGuid + "'><Name>Claim Lines</Name>" +
+                "<Fields><Field ID='claim-field' DataType='Number'><Name>ClaimId</Name><FieldName>ClaimId</FieldName></Field></Fields><Events>" +
+                "<Event ID='save-event' DefinitionID='41000000-0000-0000-0000-000000000010'><Handlers><Handler><Actions>" +
+                TestViewAction(detailCreateDefinition, detailGuid, "Claim Lines", "Create", "Added", false) +
+                TestViewAction(detailUpdateDefinition, detailGuid, "Claim Lines", "Update", "Changed", false) +
+                TestViewAction(detailDeleteDefinition, detailGuid, "Claim Lines", "Delete", "Removed", false) +
+                "</Actions></Handler></Handlers></Event><Event ID='list-event' DefinitionID='41000000-0000-0000-0000-000000000020'><Handlers><Handler><Actions>" +
+                TestViewAction("42000000-0000-0000-0000-000000000010", detailGuid, "Claim Lines", "List", null, false) +
+                "</Actions></Handler></Handlers></Event></Events></View>";
+            var configured = MasterDetailRules.ConfigureViewRuleSeams(detailView, "Claim Lines",
+                new[] { childDefinition }, new MasterDetailReviewDefinition[0]);
+            MasterDetailRules.VerifyDetailViewLoads(configured, "Claim Lines", new[] { childDefinition });
+            var configuredDocument = XDocument.Parse(configured);
+            Assert(configuredDocument.Descendants("Parameter").Any(x => (string)x.Attribute("DataType") == "Number" &&
+                (string)x.Element("Name") == "ClaimId"), "detail key View parameter emitted");
+            Assert(configuredDocument.Descendants("Action").Count(x => ReadMethod(x) == "List") == 1,
+                "only the View-owned filtered List action remains");
+        }
+
+        private static string ReadActionProperty(XElement action, string name)
+        {
+            var property = action.Descendants("Property").FirstOrDefault(x => (string)x.Element("Name") == name);
+            return property == null ? null : (string)property.Element("Value");
         }
 
         private static string TestViewAction(string definitionId, Guid viewId, string viewName, string method, string itemState, bool includeKeyResult)
@@ -235,7 +262,6 @@ namespace K2SmartFormsCli
 
             var child = new MasterDetailChildDefinition { View = view.Name, ListMethod = "List" };
             var suppressed = MasterDetailRules.SuppressUnfilteredDetailLoads(xml, view.Name, new[] { child });
-            MasterDetailRules.VerifyDetailViewLoads(suppressed, view.Name, new[] { child });
             ViewLookupDefinition.Verify(suppressed, view, sources);
             var suppressedDocument = XDocument.Parse(suppressed);
             Assert(suppressedDocument.Descendants("Action").Count(x => (string)x.Attribute("Type") == "Execute" &&
@@ -290,8 +316,12 @@ namespace K2SmartFormsCli
                 MasterKey = new ResolvedViewField { Id = "requestIdField", Name = "RequestId", DisplayName = "Request ID", DataType = "Number" },
                 Details = new List<ResolvedMasterDetailChild>
                 {
-                    new ResolvedMasterDetailChild { Definition = first, ViewGuid = firstGuid, ViewName = "Lines", ViewDisplayName = "Lines" },
-                    new ResolvedMasterDetailChild { Definition = second, ViewGuid = secondGuid, ViewName = "Attachments", ViewDisplayName = "Attachments" }
+                    new ResolvedMasterDetailChild { Definition = first, ViewGuid = firstGuid, ViewName = "Lines", ViewDisplayName = "Lines",
+                        LoadEvent = new ResolvedViewEvent { DefinitionId = "60000000-0000-0000-0000-000000000010", DisplayName = "Load Lines" },
+                        KeyParameterName = "RequestId" },
+                    new ResolvedMasterDetailChild { Definition = second, ViewGuid = secondGuid, ViewName = "Attachments", ViewDisplayName = "Attachments",
+                        LoadEvent = new ResolvedViewEvent { DefinitionId = "60000000-0000-0000-0000-000000000020", DisplayName = "Load Attachments" },
+                        KeyParameterName = "RequestId" }
                 }
             };
             var xml = "<Form><Items>" +
@@ -306,9 +336,9 @@ namespace K2SmartFormsCli
             Assert(document.Descendants("Action").Count(x => (string)x.Attribute("Type") == "StartProcess") == 1, "StartProcess action preserved");
             Assert(document.Descendants("Action").Count(x => (string)x.Attribute("Type") == "ActionProcess") == 1, "ActionProcess action preserved");
             Assert(document.Descendants("Action").Count(x => (string)x.Attribute("Type") == "Execute" &&
-                ReadMethod(x) == "List" &&
-                !x.Descendants("Property").Any(p => (string)p.Element("Name") == "ControlID")) == 4,
-                "two filtered detail tables on two master Read paths");
+                (ReadActionProperty(x, "EventID") == "60000000-0000-0000-0000-000000000010" ||
+                 ReadActionProperty(x, "EventID") == "60000000-0000-0000-0000-000000000020")) == 2,
+                "two View-owned filtered detail load events on the base-state master Read path");
             Assert(document.Descendants("Action").Count(x => (string)x.Attribute("Type") == "Execute" &&
                 ReadMethod(x) == "List" &&
                 x.Descendants("Property").Any(p => (string)p.Element("Name") == "ControlID" && (string)p.Element("Value") == "line-type-lookup")) == 2,
