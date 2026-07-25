@@ -292,7 +292,7 @@ namespace K2SmartFormsCli
             IEnumerable<MasterDetailReviewDefinition> reviewRelationships)
         {
             var masters = (masterRelationships ?? Enumerable.Empty<MasterDetailFormDefinition>())
-                .GroupBy(x => string.Join("|", new[] { x.MasterKeyProperty, x.MasterCreateMethod, x.MasterUpdateMethod }),
+                .GroupBy(x => string.Join("|", new[] { x.MasterKeyProperty, x.MasterCreateMethod, x.MasterUpdateMethod, x.MasterReadMethod }),
                     StringComparer.OrdinalIgnoreCase).Select(x => x.First()).ToList();
             var details = (detailRelationships ?? Enumerable.Empty<MasterDetailChildDefinition>())
                 .GroupBy(x => string.Join("|", new[] { x.ForeignKeyProperty, x.CreateMethod, x.UpdateMethod, x.DeleteMethod, x.ListMethod }),
@@ -308,8 +308,9 @@ namespace K2SmartFormsCli
             {
                 var create = new XElement(FindOwnedMethodAction(view, master.MasterCreateMethod, null, viewName));
                 var update = new XElement(FindOwnedMethodAction(view, master.MasterUpdateMethod, null, viewName));
+                var read = new XElement(FindOwnedMethodAction(view, master.MasterReadMethod, null, viewName));
                 AddOwnedMethodRule(view, ResolvedMasterDetailRules.MasterCreateRuleName(master.MasterKeyProperty),
-                    PrepareOwnedAction(create));
+                    PrepareOwnedAction(create), PrepareOwnedAction(read));
                 AddOwnedMethodRule(view, ResolvedMasterDetailRules.MasterUpdateRuleName(master.MasterKeyProperty),
                     PrepareOwnedAction(update));
             }
@@ -446,7 +447,7 @@ namespace K2SmartFormsCli
                 RemoveActionAndEmptyHandler(action);
         }
 
-        private static void AddOwnedMethodRule(XElement view, string ruleName, XElement action)
+        private static void AddOwnedMethodRule(XElement view, string ruleName, params XElement[] actions)
         {
             var ns = view.Name.Namespace;
             var events = view.Elements().FirstOrDefault(x => x.Name.LocalName == "Events");
@@ -476,7 +477,7 @@ namespace K2SmartFormsCli
                         new XElement(ns + "Properties",
                             Property(ns, "HandlerName", "IfLogicalHandler", null, null),
                             Property(ns, "Location", "view", null, null)),
-                        new XElement(ns + "Actions", action)))));
+                        new XElement(ns + "Actions", actions)))));
         }
 
         private static string ReadRuleName(XElement owner)
@@ -584,20 +585,21 @@ namespace K2SmartFormsCli
         {
             var document = XDocument.Parse(xml);
             foreach (var relationship in relationships.GroupBy(x =>
-                string.Join("|", new[] { x.MasterKeyProperty, x.MasterCreateMethod, x.MasterUpdateMethod }),
+                string.Join("|", new[] { x.MasterKeyProperty, x.MasterCreateMethod, x.MasterUpdateMethod, x.MasterReadMethod }),
                 StringComparer.OrdinalIgnoreCase).Select(x => x.First()))
             {
                 VerifyMasterOwnedMethodRule(document, viewName,
                     ResolvedMasterDetailRules.MasterCreateRuleName(relationship.MasterKeyProperty),
-                    relationship.MasterCreateMethod);
+                    relationship.MasterCreateMethod, relationship.MasterReadMethod);
                 VerifyMasterOwnedMethodRule(document, viewName,
                     ResolvedMasterDetailRules.MasterUpdateRuleName(relationship.MasterKeyProperty),
                     relationship.MasterUpdateMethod);
+                VerifyPostCreateMasterHydration(document, viewName, relationship);
             }
         }
 
         private static void VerifyMasterOwnedMethodRule(XDocument document, string viewName,
-            string ruleName, string method)
+            string ruleName, params string[] methods)
         {
             var events = document.Descendants().Where(x => x.Name.LocalName == "Event" &&
                 string.Equals((string)x.Attribute("SourceType"), "Rule", StringComparison.OrdinalIgnoreCase) &&
@@ -606,16 +608,79 @@ namespace K2SmartFormsCli
                 throw new CliException("Master View '" + viewName + "' must contain exactly one View-owned persistence rule '" +
                     ruleName + "'.");
             VerifyCustomRuleHandlerContext(events[0], viewName, ruleName);
-            var actions = events[0].Descendants().Where(x => x.Name.LocalName == "Action" &&
-                string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(ReadProperty(x, "Method"), method, StringComparison.OrdinalIgnoreCase)).ToList();
-            if (actions.Count != 1 || actions.Any(x =>
+            var actions = events[0].Elements().Where(x => x.Name.LocalName == "Handlers")
+                .SelectMany(x => x.Elements()).Where(x => x.Name.LocalName == "Handler")
+                .SelectMany(x => x.Elements().Where(y => y.Name.LocalName == "Actions"))
+                .SelectMany(x => x.Elements()).Where(x => x.Name.LocalName == "Action").ToList();
+            if (actions.Count != methods.Length ||
+                actions.Where((action, index) =>
+                    !string.Equals((string)action.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals(ReadProperty(action, "Method"), methods[index], StringComparison.OrdinalIgnoreCase))
+                    .Any() ||
+                actions.Any(x =>
                 !string.Equals((string)x.Attribute("ExecutionType"), "Synchronous", StringComparison.OrdinalIgnoreCase) ||
                 x.DescendantsAndSelf().Any(y =>
                     string.Equals((string)y.Attribute("IsReference"), "True", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals((string)y.Attribute("IsInherited"), "True", StringComparison.OrdinalIgnoreCase))))
                 throw new CliException("Master View '" + viewName + "' persistence rule '" + ruleName +
-                    "' must contain one local synchronous '" + method + "' method action.");
+                    "' must contain the local synchronous method sequence '" + string.Join(" -> ", methods) + "'.");
+        }
+
+        private static void VerifyPostCreateMasterHydration(XDocument document, string viewName,
+            MasterDetailFormDefinition relationship)
+        {
+            var createEvent = document.Descendants().Single(x => x.Name.LocalName == "Event" &&
+                string.Equals((string)x.Attribute("SourceType"), "Rule", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(ReadRuleName(x),
+                    ResolvedMasterDetailRules.MasterCreateRuleName(relationship.MasterKeyProperty),
+                    StringComparison.Ordinal));
+            var updateEvent = document.Descendants().Single(x => x.Name.LocalName == "Event" &&
+                string.Equals((string)x.Attribute("SourceType"), "Rule", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(ReadRuleName(x),
+                    ResolvedMasterDetailRules.MasterUpdateRuleName(relationship.MasterKeyProperty),
+                    StringComparison.Ordinal));
+            var createActions = createEvent.Descendants().Where(x => x.Name.LocalName == "Action" &&
+                string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase)).ToList();
+            var read = createActions.Single(x =>
+                string.Equals(ReadProperty(x, "Method"), relationship.MasterReadMethod, StringComparison.OrdinalIgnoreCase));
+            var update = updateEvent.Descendants().Single(x => x.Name.LocalName == "Action" &&
+                string.Equals((string)x.Attribute("Type"), "Execute", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(ReadProperty(x, "Method"), relationship.MasterUpdateMethod, StringComparison.OrdinalIgnoreCase));
+            var view = document.Descendants().Single(x => x.Name.LocalName == "View");
+            var keyField = view.Descendants().SingleOrDefault(x => x.Name.LocalName == "Field" &&
+                (string.Equals(ChildValue(x, "FieldName"), relationship.MasterKeyProperty, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(ChildValue(x, "Name"), relationship.MasterKeyProperty, StringComparison.OrdinalIgnoreCase)));
+            var keyFieldId = keyField == null ? null : (string)keyField.Attribute("ID");
+            if (string.IsNullOrWhiteSpace(keyFieldId) || !read.Descendants().Any(x =>
+                x.Name.LocalName == "Parameter" &&
+                string.Equals((string)x.Attribute("SourceType"), "ViewField", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("SourceID"), keyFieldId, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("TargetID"), relationship.MasterKeyProperty, StringComparison.OrdinalIgnoreCase)))
+                throw new CliException("Master View '" + viewName + "' post-Create Read must use the returned master key '" +
+                    relationship.MasterKeyProperty + "'.");
+
+            foreach (var input in update.Descendants().Where(x => x.Name.LocalName == "Parameter" &&
+                string.Equals((string)x.Attribute("SourceType"), "ViewField", StringComparison.OrdinalIgnoreCase)))
+            {
+                var fieldId = (string)input.Attribute("SourceID");
+                var property = (string)input.Attribute("TargetID");
+                if (string.IsNullOrWhiteSpace(fieldId) || string.IsNullOrWhiteSpace(property)) continue;
+                var hydrated = read.Descendants().Where(x => x.Name.LocalName == "Result" &&
+                    string.Equals((string)x.Attribute("SourceID"), property, StringComparison.OrdinalIgnoreCase)).Any(result =>
+                {
+                    if (string.Equals((string)result.Attribute("TargetType"), "ViewField", StringComparison.OrdinalIgnoreCase))
+                        return string.Equals((string)result.Attribute("TargetID"), fieldId, StringComparison.OrdinalIgnoreCase);
+                    if (!string.Equals((string)result.Attribute("TargetType"), "Control", StringComparison.OrdinalIgnoreCase))
+                        return false;
+                    var controlId = (string)result.Attribute("TargetID");
+                    return view.Descendants().Any(control => control.Name.LocalName == "Control" &&
+                        string.Equals((string)control.Attribute("ID"), controlId, StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals((string)control.Attribute("FieldID"), fieldId, StringComparison.OrdinalIgnoreCase));
+                });
+                if (!hydrated)
+                    throw new CliException("Master View '" + viewName + "' post-Create Read does not hydrate Update View field '" +
+                        property + "'. A later intentional Update could send a null or stale persisted value.");
+            }
         }
 
         private static void VerifyCustomRuleHandlerContext(XElement customEvent, string viewName, string ruleName)
@@ -726,6 +791,7 @@ namespace K2SmartFormsCli
                 (!string.IsNullOrWhiteSpace(ReadProperty(x, "Method")) || !string.IsNullOrWhiteSpace(ReadProperty(x, "ViewID")))))
                 throw new CliException("K2 Form '" + formDefinition.Name +
                     "' Save rule embeds a View method action. Form button rules must invoke View-owned events so the Rule Designer can hydrate them.");
+            VerifyMutuallyExclusiveSaveBranches(saveEvent, formDefinition, relationship, masterInstance);
             VerifyEventSaveBranch(form, saveEvent, formDefinition, relationship, masterInstance, true);
             VerifyEventSaveBranch(form, saveEvent, formDefinition, relationship, masterInstance, false);
             var masterReads = FindMethodActions(baseState, masterInstance, relationship.Definition.MasterReadMethod, null).ToList();
@@ -748,8 +814,7 @@ namespace K2SmartFormsCli
                     target.DisplayName + "' exactly once in its " + (create ? "Create" : "Update") + " branch.");
             var call = calls[0];
             var handler = call.Ancestors().First(x => x.Name.LocalName == "Handler");
-            if (create ? !HasMasterKeyBlankCondition(call, masterInstance, relationship.MasterKey.Id) :
-                !HasMasterKeyNotBlankCondition(call, masterInstance, relationship.MasterKey.Id))
+            if (create && !HasMasterKeyBlankCondition(call, masterInstance, relationship.MasterKey.Id))
                 throw new CliException("K2 Form '" + formDefinition.Name + "' has an invalid master-key condition on its " +
                     (create ? "Create" : "Update") + " branch.");
             var actions = handler.Elements().First(x => x.Name.LocalName == "Actions")
@@ -798,6 +863,36 @@ namespace K2SmartFormsCli
                 !HasMessageValue(message, "Body", relationship.Definition.SuccessMessageBody))
                 throw new CliException("K2 Form '" + formDefinition.Name + "' " + (create ? "Create" : "Update") +
                     " branch does not finish with the configured success popup.");
+        }
+
+        private static void VerifyMutuallyExclusiveSaveBranches(XElement saveEvent, FormDefinition formDefinition,
+            ResolvedMasterDetailRules relationship, string masterInstance)
+        {
+            var handlers = saveEvent.Elements().Where(x => x.Name.LocalName == "Handlers")
+                .SelectMany(x => x.Elements()).Where(x => x.Name.LocalName == "Handler").ToList();
+            if (handlers.Count != 2)
+                throw new CliException("K2 Form '" + formDefinition.Name +
+                    "' master Create/Update Save paths must be one native If/Else pair.");
+            var createHandler = handlers[0];
+            var updateHandler = handlers[1];
+            var createCalls = FindEventCalls(createHandler, masterInstance, relationship.MasterCreateEvent).ToList();
+            var updateCalls = FindEventCalls(updateHandler, masterInstance, relationship.MasterUpdateEvent).ToList();
+            var createHandlerName = ReadProperty(createHandler, "HandlerName");
+            var updateHandlerName = ReadProperty(updateHandler, "HandlerName");
+            var createLocation = ReadProperty(createHandler, "Location");
+            var updateLocation = ReadProperty(updateHandler, "Location");
+            if (createCalls.Count != 1 ||
+                !string.Equals(createHandlerName, "IfLogicalHandler", StringComparison.Ordinal) ||
+                !string.Equals(createLocation, "form", StringComparison.Ordinal) ||
+                !HasMasterKeyBlankCondition(createCalls[0], masterInstance, relationship.MasterKey.Id) ||
+                updateCalls.Count != 1 ||
+                !string.Equals((string)updateHandler.Attribute("Type"), "Else", StringComparison.Ordinal) ||
+                !string.Equals(updateHandlerName, "ElseLogicalHandler", StringComparison.Ordinal) ||
+                !string.Equals(updateLocation, "form", StringComparison.Ordinal) ||
+                updateHandler.Elements().Any(x => x.Name.LocalName == "Conditions"))
+                throw new CliException("K2 Form '" + formDefinition.Name +
+                    "' master Create/Update Save paths are not a canonical mutually exclusive native If/Else pair. " +
+                    "Do not use sibling blank/not-blank conditions because Create can populate the key before the second condition is evaluated.");
         }
 
         private static void VerifyValidationGroup(XElement form, XElement validate, string masterInstance,
@@ -1241,9 +1336,19 @@ namespace K2SmartFormsCli
                 actions.Add(BuildReviewFocusAction(form, relationship.Definition.Review.Tab));
             }
             actions.Add(BuildSuccessMessage(ns, relationship.Definition.SuccessMessageTitle, relationship.Definition.SuccessMessageBody));
-            return new XElement(ns + "Handler", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
-                new XElement(ns + "Properties", Property(ns, "HandlerName", "IfLogicalHandler", null, null), Property(ns, "Location", "form", null, null)),
-                new XElement(ns + "Conditions", BuildMasterKeyCondition(ns, masterInstance, relationship.MasterKey, !create)), actions);
+            if (create)
+                return new XElement(ns + "Handler", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                    new XElement(ns + "Properties",
+                        Property(ns, "HandlerName", "IfLogicalHandler", null, null),
+                        Property(ns, "Location", "form", null, null)),
+                    new XElement(ns + "Conditions",
+                        BuildMasterKeyCondition(ns, masterInstance, relationship.MasterKey, false)), actions);
+            return new XElement(ns + "Handler", new XAttribute("ID", NewId()),
+                new XAttribute("DefinitionID", NewId()), new XAttribute("Type", "Else"),
+                new XElement(ns + "Properties",
+                    Property(ns, "HandlerName", "ElseLogicalHandler", null, null),
+                    Property(ns, "Location", "form", null, null)),
+                actions);
         }
 
         private static XElement BuildValidateAction(XNamespace ns, string groupId)

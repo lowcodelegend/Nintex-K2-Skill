@@ -895,6 +895,7 @@ namespace K2SmartFormsCli
                         MasterDetailRules.VerifyReviewViewRules(definition, declaredView.Name, reviewRelationships);
                     if (masterRelationships.Count > 0)
                         MasterDetailRules.VerifyMasterViewRules(definition, declaredView.Name, masterRelationships);
+                    VerifyDesignerAuthoringHydration(definition, expected, false);
                     Console.WriteLine("View verification: OK (" + expected + ", " + info.Guid + ", v" + info.Version + ", " + info.Type + ")");
                 }
 
@@ -924,6 +925,7 @@ namespace K2SmartFormsCli
                     MasterDetailRules.Verify(definition, declaredForm, ResolvedMasterDetailRules.Resolve(manager, declaredForm, _manifest.Application.Views));
                     var preFill = ResolvedFormPreFill.Resolve(manager, declaredForm, _manifest.Application.Views, lookupSources);
                     FormPreFillRules.Verify(definition, declaredForm, preFill);
+                    VerifyDesignerAuthoringHydration(definition, expected, true);
                     foreach (var viewName in declaredForm.Views)
                     {
                         var viewGuid = manager.GetView(viewName).Guid.ToString();
@@ -1017,6 +1019,40 @@ namespace K2SmartFormsCli
                 DeleteOwnedValidationPatterns(manager);
                 return 0;
             });
+        }
+
+        private static void VerifyDesignerAuthoringHydration(string definition, string name, bool isForm)
+        {
+            try
+            {
+                string roundTrip;
+                if (isForm)
+                {
+                    var hydrated = new SourceCode.Forms.Authoring.Form();
+                    hydrated.FromXml(definition);
+                    roundTrip = hydrated.ToXml();
+                }
+                else
+                {
+                    var hydrated = new SourceCode.Forms.Authoring.View();
+                    hydrated.FromXml(definition);
+                    roundTrip = hydrated.ToXml();
+                }
+                if (string.IsNullOrWhiteSpace(roundTrip))
+                    throw new CliException("K2 " + (isForm ? "Form" : "View") + " '" + name +
+                        "' produced an empty definition after Designer authoring-model hydration.");
+                Console.WriteLine("Designer authoring hydration: OK (" +
+                    (isForm ? "Form" : "View") + " " + name + ")");
+            }
+            catch (CliException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw new CliException("K2 " + (isForm ? "Form" : "View") + " '" + name +
+                    "' cannot hydrate through the installed Designer authoring model: " + ex.Message);
+            }
         }
 
         private static string ReadSampleValue(System.Data.DataRow row, string property)

@@ -29,7 +29,7 @@ namespace K2SmartFormsCli
             TestFlatFormViewOrdering();
             TestFormPreFillRules();
             TestMultiTableWorkflowStateReconciliation();
-            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams and Form method-action rejection, master-detail field-validation composition, orphan optional control mappings, lookup/detail List classification, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, native max-length/validation-pattern contracts, must-be-true checkbox validation groups, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, editable-list File edit-template validation, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, constraint-aware test-data Pre-fill, multi-table workflow-state reconciliation");
+            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams, mutually exclusive native If/Else Save branching, post-Create master hydration and Form method-action rejection, master-detail field-validation composition, orphan optional control mappings, lookup/detail List classification, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, native max-length/validation-pattern contracts, must-be-true checkbox validation groups, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, capture and editable-list hidden-property composition, editable-list File edit-template validation, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, constraint-aware test-data Pre-fill, multi-table workflow-state reconciliation");
         }
 
         private static void TestIdentityNormalization()
@@ -129,6 +129,26 @@ namespace K2SmartFormsCli
                 "Form Save rule contains no embedded View method actions");
             Assert(saveEvent.Descendants("Action").Count(x => ReadActionProperty(x, "EventID") == createDefinition) == 1,
                 "master Create is a View-event call");
+            var saveHandlers = saveEvent.Element("Handlers").Elements("Handler").ToList();
+            Assert(saveHandlers.Count == 2 &&
+                ReadActionProperty(saveHandlers[0], "HandlerName") == "IfLogicalHandler" &&
+                (string)saveHandlers[1].Attribute("Type") == "Else" &&
+                ReadActionProperty(saveHandlers[1], "HandlerName") == "ElseLogicalHandler" &&
+                saveHandlers[1].Element("Conditions") == null,
+                "blank-key Create and nonblank-key Update are one native mutually exclusive If/Else pair");
+            Assert(saveHandlers[0].Descendants("Action").Count(x =>
+                    ReadActionProperty(x, "EventID") == createDefinition) == 1 &&
+                !saveHandlers[0].Descendants("Action").Any(x =>
+                    ReadActionProperty(x, "EventID") == updateDefinition),
+                "blank-key Save invokes Create exactly once and Update zero times");
+            Assert(saveHandlers[1].Descendants("Action").Count(x =>
+                    ReadActionProperty(x, "EventID") == updateDefinition) == 1 &&
+                !saveHandlers[1].Descendants("Action").Any(x =>
+                    ReadActionProperty(x, "EventID") == createDefinition),
+                "nonblank-key Save invokes Update exactly once and Create zero times");
+            Assert(saveHandlers[0].Descendants("Action").Last().Attribute("Type").Value == "ShowMessage" &&
+                (string)saveHandlers[1].Descendants("Action").Last().Attribute("Type") == "ShowMessage",
+                "dismissing either terminal success popup cannot enter the other branch");
             foreach (var seamCall in saveEvent.Descendants("Action").Where(x =>
                 ReadActionProperty(x, "EventID") == createDefinition ||
                 ReadActionProperty(x, "EventID") == updateDefinition))
@@ -180,7 +200,20 @@ namespace K2SmartFormsCli
                 .Descendants("Property").Single(x => (string)x.Element("Name") == "Name");
             unsupportedName.Element("Value").Value = "SimpleBlankViewFieldCondition";
             AssertThrows(delegate { MasterDetailRules.Verify(unsupportedCondition.ToString(), formDefinition, resolved); },
-                "has an invalid master-key condition");
+                "not a canonical mutually exclusive native If/Else pair");
+
+            var siblingConditions = XDocument.Parse(transformed);
+            var siblingSave = siblingConditions.Descendants("Event").Single(x =>
+                (string)x.Attribute("SourceName") == "btnSave");
+            var siblingHandlers = siblingSave.Element("Handlers").Elements("Handler").ToList();
+            siblingHandlers[1].Attribute("Type").Remove();
+            siblingHandlers[1].Descendants("Property").First(x =>
+                (string)x.Element("Name") == "HandlerName").Element("Value").Value = "IfLogicalHandler";
+            var notBlank = new XElement(siblingHandlers[0].Element("Conditions"));
+            notBlank.Descendants("IsBlank").Single().Name = "IsNotBlank";
+            siblingHandlers[1].AddFirst(notBlank);
+            AssertThrows(delegate { MasterDetailRules.Verify(siblingConditions.ToString(), formDefinition, resolved); },
+                "not a canonical mutually exclusive native If/Else pair");
 
             var corrupt = saveEvent.Descendants("Action").First(x => ReadActionProperty(x, "EventID") == detailCreateDefinition);
             corrupt.Element("Properties").Add(XElement.Parse("<Property><Name>Method</Name><Value>Create</Value></Property>"));
@@ -205,14 +238,51 @@ namespace K2SmartFormsCli
             Assert(configuredDocument.Descendants("Action").Count(x => ReadMethod(x) == "List") == 1,
                 "only the View-owned filtered List action remains");
 
-            var masterView = "<View ID='" + masterGuid + "'><Name>Claim</Name><Events>" +
+            var masterView = "<View ID='" + masterGuid + "'><Name>Claim</Name>" +
+                "<Fields><Field ID='claim-key' DataType='Number'><Name>ClaimId</Name><FieldName>ClaimId</FieldName></Field>" +
+                "<Field ID='language-field' DataType='Text'><Name>PreferredLanguageCode</Name><FieldName>PreferredLanguageCode</FieldName></Field>" +
+                "<Field ID='nda-field' DataType='Text'><Name>NDAContentVersion</Name><FieldName>NDAContentVersion</FieldName></Field>" +
+                "<Field ID='channel-field' DataType='Text'><Name>SubmissionChannelCode</Name><FieldName>SubmissionChannelCode</FieldName></Field></Fields>" +
+                "<Controls><Control ID='claim-control' FieldID='claim-key' Type='TextBox'/>" +
+                "<Control ID='language-control' FieldID='language-field' Type='TextBox'/>" +
+                "<Control ID='nda-control' FieldID='nda-field' Type='TextBox'/>" +
+                "<Control ID='channel-control' FieldID='channel-field' Type='TextBox'/></Controls><Events>" +
                 "<Event ID='create-event' DefinitionID='43000000-0000-0000-0000-000000000010' SourceType='Control'><Handlers><Handler><Actions>" +
                 TestViewAction(createDefinition, masterGuid, "Claim", "Create", null, true) +
                 "</Actions></Handler></Handlers></Event>" +
                 "<Event ID='update-event' DefinitionID='43000000-0000-0000-0000-000000000020' SourceType='Control'><Handlers><Handler><Actions>" +
                 TestViewAction(updateDefinition, masterGuid, "Claim", "Update", null, false) +
+                "</Actions></Handler></Handlers></Event>" +
+                "<Event ID='read-event' DefinitionID='43000000-0000-0000-0000-000000000030' SourceType='Control'><Handlers><Handler><Actions>" +
+                TestViewAction("30000000-0000-0000-0000-000000000030", masterGuid, "Claim", "Read", null, false) +
                 "</Actions></Handler></Handlers></Event></Events></View>";
-            var configuredMaster = MasterDetailRules.ConfigureViewRuleSeams(masterView, "Claim",
+            var masterViewDocument = XDocument.Parse(masterView);
+            var defaults = new[]
+            {
+                new[] { "PreferredLanguageCode", "language-field", "language-control", "en" },
+                new[] { "NDAContentVersion", "nda-field", "nda-control", "FTA-WB-2022-04" },
+                new[] { "SubmissionChannelCode", "channel-field", "channel-control", "PUBLIC_WEB" }
+            };
+            var sourceCreate = masterViewDocument.Descendants("Action").Single(x => ReadMethod(x) == "Create");
+            var sourceUpdate = masterViewDocument.Descendants("Action").Single(x => ReadMethod(x) == "Update");
+            var sourceRead = masterViewDocument.Descendants("Action").Single(x => ReadMethod(x) == "Read");
+            foreach (var value in defaults)
+            {
+                sourceCreate.Element("Parameters").Add(new XElement("Parameter",
+                    new XAttribute("SourceID", "Sources"), new XAttribute("SourceType", "Value"),
+                    new XAttribute("TargetID", value[0]), new XAttribute("TargetType", "ObjectProperty"),
+                    new XElement("SourceValue", value[3])));
+                sourceUpdate.Element("Parameters").Add(new XElement("Parameter",
+                    new XAttribute("SourceID", value[1]), new XAttribute("SourceType", "ViewField"),
+                    new XAttribute("TargetID", value[0]), new XAttribute("TargetType", "ObjectProperty")));
+                var results = sourceRead.Element("Results");
+                if (results == null) { results = new XElement("Results"); sourceRead.Add(results); }
+                results.Add(new XElement("Result",
+                    new XAttribute("SourceID", value[0]), new XAttribute("SourceType", "ObjectProperty"),
+                    new XAttribute("TargetID", value[2]), new XAttribute("TargetType", "Control")));
+            }
+            var configuredMaster = MasterDetailRules.ConfigureViewRuleSeams(
+                masterViewDocument.ToString(SaveOptions.DisableFormatting), "Claim",
                 new[] { contract }, new MasterDetailChildDefinition[0], new MasterDetailReviewDefinition[0]);
             MasterDetailRules.VerifyMasterViewRules(configuredMaster, "Claim", new[] { contract });
             var configuredMasterDocument = XDocument.Parse(configuredMaster);
@@ -234,6 +304,27 @@ namespace K2SmartFormsCli
                 .SelectMany(x => x.Elements("Handlers").Elements("Handler"))
                 .All(x => ReadActionProperty(x, "Location") == "view"),
                 "custom View rule handlers use the canonical view context");
+            var createSeam = configuredMasterDocument.Descendants("Event").Single(x =>
+                ReadActionProperty(x, "RuleName") == "K2Skills.MasterDetail.Create.ClaimId");
+            Assert(createSeam.Descendants("Action").Select(ReadMethod)
+                .SequenceEqual(new[] { "Create", "Read" }),
+                "master Create seam synchronously re-reads the persisted master");
+            foreach (var value in defaults)
+                Assert(createSeam.Descendants("Action").Single(x => ReadMethod(x) == "Read")
+                    .Descendants("Result").Any(x =>
+                        (string)x.Attribute("SourceID") == value[0] &&
+                        (string)x.Attribute("TargetID") == value[2]),
+                    "post-Create Read hydrates " + value[0] + " for a later intentional Update");
+            var missingHydration = XDocument.Parse(configuredMaster);
+            missingHydration.Descendants("Event").Single(x =>
+                ReadActionProperty(x, "RuleName") == "K2Skills.MasterDetail.Create.ClaimId")
+                .Descendants("Action").Single(x => ReadMethod(x) == "Read")
+                .Descendants("Result").Single(x =>
+                    (string)x.Attribute("SourceID") == "PreferredLanguageCode").Remove();
+            AssertThrows(delegate
+            {
+                MasterDetailRules.VerifyMasterViewRules(missingHydration.ToString(), "Claim", new[] { contract });
+            }, "does not hydrate Update View field 'PreferredLanguageCode'");
             var invalidMaster = XDocument.Parse(configuredMaster);
             invalidMaster.Descendants("Event").First(x =>
                 ReadActionProperty(x, "RuleName") == "K2Skills.MasterDetail.Create.ClaimId")
@@ -279,7 +370,7 @@ namespace K2SmartFormsCli
 
             var masterDefinition = NewView("Submission", "Submission", "capture",
                 "ClaimId", "EmailAddress", "Narrative", "Amount", "Accepted");
-            masterDefinition.Methods.AddRange(new[] { "Create", "Update" });
+            masterDefinition.Methods.AddRange(new[] { "Create", "Read", "Update" });
             masterDefinition.RequiredProperties.AddRange(new[] { "EmailAddress", "Narrative", "Accepted" });
             masterDefinition.Validations.Add(new FieldValidationDefinition
             {
@@ -308,13 +399,13 @@ namespace K2SmartFormsCli
             var masterDocument = new XDocument(new XElement("View", new XAttribute("ID", masterGuid),
                 new XElement("Name", "Submission"),
                 new XElement("Fields",
-                    TestField("submission-field", "ClaimId", "Number"),
+                    TestField("claim-key", "ClaimId", "Number"),
                     TestField("email-field", "EmailAddress", "Text"),
                     TestField("narrative-field", "Narrative", "Memo"),
                     TestField("amount-field", "Amount", "Decimal"),
                     TestField("accepted-field", "Accepted", "YesNo")),
                 new XElement("Controls",
-                    FieldControlDefinition("submission-control", "TextBox", "submission-field"),
+                    FieldControlDefinition("claim-control", "TextBox", "claim-key"),
                     FieldControlDefinition("email-control", "TextBox", "email-field"),
                     FieldControlDefinition("narrative-control", "TextArea", "narrative-field"),
                     FieldControlDefinition("amount-control", "TextBox", "amount-field"),
@@ -325,7 +416,10 @@ namespace K2SmartFormsCli
                             "Submission", "Create", null, true)),
                     TestMethodEvent("master-update-event",
                         TestViewAction("31000000-0000-0000-0000-000000000020", masterGuid,
-                            "Submission", "Update", null, false)))));
+                            "Submission", "Update", null, false)),
+                    TestMethodEvent("master-read-event",
+                        TestViewAction("31000000-0000-0000-0000-000000000030", masterGuid,
+                            "Submission", "Read", null, false)))));
             FieldValidationDefinitionXml.Apply(masterDocument, masterDefinition);
             var configuredMaster = MasterDetailRules.ConfigureViewRuleSeams(
                 masterDocument.ToString(SaveOptions.DisableFormatting), "Submission",
@@ -334,8 +428,8 @@ namespace K2SmartFormsCli
             FieldValidationDefinitionXml.Verify(configuredMasterDocument, masterDefinition);
             MasterDetailRules.VerifyMasterViewRules(configuredMaster, "Submission", new[] { contract });
             Assert(configuredMasterDocument.Descendants("Action").Count(
-                MasterDetailRules.IsMasterPersistenceSeamAction) == 2,
-                "master Create and Update seam actions are recognized as Form-validated internal paths");
+                MasterDetailRules.IsMasterPersistenceSeamAction) == 3,
+                "master Create, post-Create Read, and Update seam actions are recognized as Form-validated internal paths");
             Assert(configuredMasterDocument.Descendants("Control").Single(x =>
                 (string)x.Attribute("ID") == "email-control").Descendants("Property").Any(x =>
                     (string)x.Element("Name") == "MaxLength" && (string)x.Element("Value") == "320"),
@@ -425,12 +519,14 @@ namespace K2SmartFormsCli
             var state = itemState == null ? string.Empty : " ItemState='" + itemState + "'";
             var results = includeKeyResult
                 ? "<Results><Result SourceID='ClaimId' SourceType='ObjectProperty' TargetID='claim-key' TargetType='ViewField'/></Results>"
-                : string.Empty;
+                : string.Equals(method, "Read", StringComparison.OrdinalIgnoreCase)
+                    ? "<Results><Result SourceID='ClaimId' SourceType='ObjectProperty' TargetID='claim-control' TargetType='Control'/></Results>"
+                    : string.Empty;
             return "<Action ID='prototype-id' DefinitionID='" + definitionId + "' Type='Execute' ExecutionType='Synchronous'" + state + ">" +
                 "<Properties><Property><Name>Location</Name><Value>View</Value></Property>" +
                 "<Property><Name>Method</Name><Value>" + method + "</Value></Property>" +
                 "<Property><Name>ViewID</Name><DisplayValue>" + viewName + "</DisplayValue><Value>" + viewId + "</Value></Property></Properties>" +
-                "<Parameters><Parameter SourceID='ClaimId' SourceName='ClaimId' SourceType='ViewField' TargetID='ClaimId' TargetType='ObjectProperty'/>" +
+                "<Parameters><Parameter SourceID='claim-key' SourceName='ClaimId' SourceType='ViewField' TargetID='ClaimId' TargetType='ObjectProperty'/>" +
                 "<Parameter SourceID='title-control' SourceName='Title' SourceType='Control' TargetID='Title' TargetType='ObjectProperty'/></Parameters>" +
                 results + "</Action>";
         }
