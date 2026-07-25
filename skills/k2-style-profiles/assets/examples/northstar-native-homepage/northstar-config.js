@@ -9,13 +9,48 @@
     return;
   }
 
-  window.K2SP_SIDEBAR_CONFIG = {
-    version: "1",
-    applicationCssUrl: window.location.origin + "/NorthstarAssets/northstar-homepage.css?v=1",
+  window.K2SP_NORTHSTAR_CONFIG = {
+    version: "3",
+    applicationCssUrl: window.location.origin + "/NorthstarAssets/northstar-homepage.v3.css",
     navigationViewTitle: "Application navigation",
+    commandPaletteViewTitle: "Command palette",
     formNamePrefix: "",
     brandMark: "N",
     brandLabel: "Northstar",
+    brandSubtitle: "Quality operations",
+    userInitials: "AM",
+    userName: "Alex Morgan",
+    userRole: "Quality manager",
+    newCaseNavigationCode: "NEW_CASE",
+    insightNavigationCode: "CASES",
+    kpiViewTitle: "Operational position",
+    trendViewTitle: "Case intake trend",
+    trendDataViewTitle: "Case intake trend data",
+    attentionViewTitle: "Urgent work",
+    stagesViewTitle: "Open cases by stage",
+    stagesDataViewTitle: "Open cases by stage data",
+    supplierSignalViewTitle: "Supplier signal",
+    suppressedFrameworkViews: [],
+    suppressedFrameworkPanelNames: ["Header", "Footer"],
+    enableDashboardComposition: true,
+    kpiDecorations: {
+      OpenCaseCount: { text: "↓ 8.6% vs last month", tone: "positive" },
+      SLAAtRiskCount: { text: "↑ 3 need intervention", tone: "critical" },
+      OverdueActionCount: { text: "2 supplier-owned", tone: "critical" },
+      HighRiskCaseCount: { text: "↑ 2 this week", tone: "critical" }
+    },
+    pages: {
+      "NTH.Quality Operations": {
+        key: "command",
+        eyebrow: "Wednesday, 22 July",
+        title: "Good morning, Alex",
+        subtitle: "Here is what changed, what needs attention, and where quality is trending.",
+        insightTitle: "Three related defects may share a machining cause",
+        insightBody: "Cases from Apex Precision Metals reference the same cell, alloy batch, and surface condition. Estimated exposure: 1,840 units.",
+        insightAction: "Review cluster",
+        insightNavigationCode: "CASES"
+      }
+    },
     bootTimeoutMilliseconds: 2500,
     navigationTimeoutMilliseconds: 1800,
     cacheVersionKey: "northstar:navigation:version",

@@ -30,6 +30,33 @@ foreach ($expected in @('navigation target does not exist', 'requires table_alte
 }
 Write-Output 'Case-UX validator tests passed.'
 
+$styleExample = Join-Path $PSScriptRoot '..\..\k2-style-profiles\assets\examples\northstar-native-homepage'
+$northstarShell = Get-Content -Raw -LiteralPath (Join-Path $styleExample 'northstar-shell.js')
+$northstarCss = Get-Content -Raw -LiteralPath (Join-Path $styleExample 'northstar-homepage.css')
+if ($northstarShell -match 'card\.appendChild\((label|value)\)' -or $northstarShell -match 'source\.style\.display\s*=\s*[''"]none') {
+    throw 'Northstar presentation must not move or replace live K2 metric controls.'
+}
+if ($northstarShell -match 'chartView\.appendChild\(' -or $northstarShell -match 'addDataAlternativeToggle') {
+    throw 'Northstar presentation must not inject chart actions into native K2 Views.'
+}
+if ($northstarShell -notmatch 'k2sp-kpi-native-grid' -or $northstarCss -notmatch '\.k2sp-kpi-native-grid') {
+    throw 'Northstar presentation must decorate the native K2 metric grid in place.'
+}
+if ($northstarShell -notmatch 'suppressedFrameworkPanelNames' -or $northstarShell -notmatch 'panel\.closest\(''\.row''\)') {
+    throw 'Northstar presentation must preserve lifecycle-required common Views and suppress only configured semantic panels in place.'
+}
+if ($northstarShell -notmatch 'alignNarrowNativeForm' -or $northstarShell -notmatch 'minimumTop - formTop') {
+    throw 'Northstar presentation must reserve narrow-layout space after suppressing a lifecycle framework panel.'
+}
+if ($northstarShell -notmatch 'layoutKpiCells' -or $northstarShell -notmatch 'grid-row' -or $northstarShell -notmatch 'grid-column') {
+    throw 'Northstar presentation must coordinate the existing K2 KPI cells at responsive breakpoints without reparenting controls.'
+}
+& (Get-Command node -ErrorAction Stop).Source --check (Join-Path $styleExample 'northstar-shell.js')
+if ($LASTEXITCODE -ne 0) { throw 'Northstar runtime shell JavaScript did not parse.' }
+& (Get-Command node -ErrorAction Stop).Source --check (Join-Path $PSScriptRoot '..\scripts\capture-browser-page-cdp.mjs')
+if ($LASTEXITCODE -ne 0) { throw 'Northstar Node browser driver JavaScript did not parse.' }
+Write-Output 'Northstar K2-ownership and browser-driver tests passed.'
+
 $composer = Join-Path $PSScriptRoot '..\scripts\compose-case-ux.ps1'
 $overlay = Join-Path $PSScriptRoot '..\assets\case-ux-overlay.yaml'
 $composed = [IO.Path]::GetTempFileName()
@@ -74,6 +101,7 @@ try {
     $dashboardForm = @($manifest.application.forms | Where-Object { $_.name -eq 'TST.Quality Operations' })[0]
     if ($dashboardForm.views.Count -ne 6 -or $dashboardForm.views[0] -ne 'TST.Application Navigation' -or $dashboardForm.views[1] -ne 'TST.Command Palette') { throw 'Compiled native homepage did not compose navigation first, palette second, and every native dashboard View.' }
     if ($dashboardForm.useLegacyTheme -ne $false -or $dashboardForm.preFill.enabled -ne $false) { throw 'Native homepage Form must use the modern theme and an explicit Pre-fill opt-out.' }
+    if ($null -ne $manifest.application.PSObject.Properties['commonHeader']) { throw 'Northstar compilation must not remove an environment common framework that can participate in required native Form-load rules; suppress duplicate chrome through the guarded Style Profile.' }
 } finally {
     if (Test-Path -LiteralPath $compiled) { Remove-Item -LiteralPath $compiled -Force }
 }

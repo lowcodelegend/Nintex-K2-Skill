@@ -13,22 +13,22 @@
     "description": "Runtime-only Northstar shell for native K2 navigation, command palette, KPI, chart, data-alternative, and queue Views.",
     "categoryPath": "K2 Skills\\UX",
     "previewFormId": null,
-    "replaceExisting": false,
+    "replaceExisting": true,
     "files": [
       {
         "type": "css",
-        "source": "../smartobject-sidebar/sidebar-critical.css",
-        "target": "northstar-critical.css"
+        "source": "northstar-critical.css",
+        "target": "northstar-critical.v3.css"
       },
       {
         "type": "js",
         "source": "northstar-config.js",
-        "target": "northstar-config.js"
+        "target": "northstar-config.v3.js"
       },
       {
         "type": "js",
-        "source": "../smartobject-sidebar/sidebar-shell.js",
-        "target": "northstar-shell.js"
+        "source": "northstar-shell.js",
+        "target": "northstar-shell.v3.js"
       }
     ]
   },
@@ -44,7 +44,7 @@
       {
         "type": "css",
         "source": "northstar-homepage.css",
-        "target": "northstar-homepage.css"
+        "target": "northstar-homepage.v3.css"
       }
     ]
   },

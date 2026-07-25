@@ -4,9 +4,9 @@
   "designerUrl": "https://spk2.trials.demome.tech/Designer/",
   "trustedAuthHost": "spk2.trials.demome.tech",
   "assetUrls": {
-    "criticalCss": "https://spk2.trials.demome.tech/NorthstarAssets/northstar-critical.css",
-    "applicationCss": "https://spk2.trials.demome.tech/NorthstarAssets/northstar-homepage.css",
-    "bootJavaScript": "https://spk2.trials.demome.tech/NorthstarAssets/northstar-shell.js"
+    "criticalCss": "https://spk2.trials.demome.tech/NorthstarAssets/northstar-critical.v3.css",
+    "applicationCss": "https://spk2.trials.demome.tech/NorthstarAssets/northstar-homepage.v3.css",
+    "bootJavaScript": "https://spk2.trials.demome.tech/NorthstarAssets/northstar-shell.v3.js"
   },
   "startForm": {
     "name": "APP.Quality Operations",
@@ -25,7 +25,7 @@
     "commandPaletteTitle": "[data-sf-title=\"Command palette\"]",
     "transition": ".k2sp-transition"
   },
-  "stateObject": "__k2spSidebarBoot",
+  "stateObject": "__k2spNorthstar",
   "readyClass": "k2sp-ready",
   "leavingClass": "k2sp-leaving",
   "runtimeRootClass": "k2sp-runtime",

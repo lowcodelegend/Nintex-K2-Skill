@@ -30,6 +30,8 @@ Treat these as templates. Rename the `APP` prefix, K2 category, physical directo
 
 For the case-management landing page, start from `assets/examples/northstar-native-homepage`. It reuses this governed navigation loader, adds the Northstar native-control visual system, and expects the semantic `Application navigation` View followed by `Command palette` and native dashboard Views. The profile owns presentation only: native K2 controls and View-owned rules continue to own actions, navigation, data, focus, validation, and accessibility. The full-page Northstar Web Component is a comparison oracle, not a production fallback.
 
+The Northstar shell may visually place the `Command palette` row in the top bar, but it must not move that live row or View to another DOM parent. Reparenting can deadlock K2 Runtime control initialization. Mark the original row idempotently and position it with runtime-scoped CSS so the View's K2 lifecycle, binding, rule events, and Designer model remain intact.
+
 ## Navigation contract
 
 Expose a parameterless `List` method with properties in this exact order:

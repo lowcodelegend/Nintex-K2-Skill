@@ -1,0 +1,33 @@
+# Northstar native SmartForms homepage
+
+This example reproduces the Northstar case-operations homepage while keeping K2 native artifacts authoritative.
+
+## Ownership
+
+- The `Application navigation` List View supplies governed routes.
+- The `Command palette` View hosts the registered `northstar-command-palette` modern Web Component and owns its navigation rule.
+- Metric, chart, chart-data, and urgent-work Views remain native SmartForms controls over governed SmartObjects.
+- The Style Profile adds only application chrome, responsive arrangement, and presentation behavior.
+
+The shell never moves a live K2 View out of its Form ownership tree. It marks the command-palette row and positions it visually in the top bar; K2 bindings, events, lifecycle, and Designer hydration remain intact.
+
+Metric cards follow the same rule: the shell adds classes and presentation metadata to the existing K2 Table cells, and CSS lays those cells out as cards. It never reparents a bound Label/Data Label or copies its value into a replacement dashboard. Accessible chart-data Views also remain native; add any reveal/export interaction as a native SmartForms control and View-owned rule, not as injected Style Profile markup.
+
+## Adaptation
+
+Copy this directory into a solution workspace and edit `northstar-config.js`:
+
+- set brand and signed-in-user presentation;
+- map the solution's exact semantic View titles;
+- map `NEW_CASE`, insight, and other actions to codes already returned by the governed navigation SmartObject;
+- replace the example `pages` entry with the solution's Form name and approved page/insight copy;
+- preserve the environment common framework by default because its Views may own required server-load transfers and completion rules. Use `suppressedFrameworkViews` for stable control names or `suppressedFrameworkPanelNames` for stable native panel names only after inspecting the authenticated Runtime DOM; do not use generated GUIDs or remove lifecycle Views merely to change page chrome.
+- keep `enableDashboardComposition` enabled in accepted builds; set it to `false` only during a documented browser-isolation pass.
+
+Keep `Application navigation` and `Command palette` as the exact visible View titles. Do not put SQL calls, credentials, authorization filtering, lifecycle decisions, persistence, or workflow actions in the Style Profile.
+
+## Browser loop
+
+Deploy the profile and native Form, then capture the authenticated Runtime at 1440×1000, 1280×800, 768×1024, and 390×844. Use the case-management capture script, compare every image to the supplier-nonconformance gold-standard prototype, correct unexplained structural or visual regions, and repeat until the acceptance gate passes.
+
+The browser driver uses one disposable Edge profile per run and Node's built-in DevTools WebSocket (`node --experimental-websocket`). A screenshot is accepted only when the native Runtime has released its loading lifecycle and the Northstar shell reports both styles and content ready.
