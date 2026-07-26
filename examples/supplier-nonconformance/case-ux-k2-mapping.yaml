@@ -110,6 +110,9 @@
   },
   "initiation": {
     "journey":"canonical-initiation",
+    "guidedMode":"auto",
+    "journeyTitle":"Report a Supplier Nonconformance",
+    "journeyDescription":"Describe the nonconformance, add supporting evidence, then review and submit it.",
     "formName":"SNC.New Nonconformance",
     "smartObject":"SNC_SupplierNonconformance_SNC_Case",
     "masterView":"SNC.Case Workspace",
@@ -126,6 +129,11 @@
     "detailsTab":"Case Details",
     "evidenceTab":"Evidence",
     "reviewTab":"Review & Submit",
+    "stepTabs":[
+      {"id":"incident","name":"Case Details","label":"Case details","description":"Describe the nonconformance and provide its supplier and impact context.","views":["$master","SNC.Nonconformance Details"]},
+      {"id":"evidence","name":"Evidence","label":"Evidence","description":"Add the records needed to investigate and verify the nonconformance.","views":["SNC.Evidence"]},
+      {"id":"review","name":"Review & Submit","label":"Review","description":"Check the complete case before submitting it.","views":["$review"]}
+    ],
     "submitButtonName":"btnSubmitCase",
     "submitButtonText":"Submit case",
     "saveButtonText":"Save draft and review",

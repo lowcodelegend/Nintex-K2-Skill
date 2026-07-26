@@ -25,6 +25,37 @@ function Test-IncludeDataAlternative {
     return $Binding.includeDataAlternative
 }
 
+function Test-UseGuidedJourney {
+    param($Initiation, $Journey)
+    $mode=[string](Get-ValueOrDefault $Initiation.guidedMode 'auto')
+    if($mode -notin @('auto','always','never')){throw "initiation.guidedMode must be auto, always, or never; found '$mode'."}
+    if($mode -eq 'always'){return $true}
+    if($mode -eq 'never'){return $false}
+    $steps=@($Journey.steps)
+    $fieldCount=0
+    $hasCollection=$false
+    $hasReview=$false
+    foreach($step in $steps){
+        $fieldCount+=@($step.fields).Count
+        if(-not [string]::IsNullOrWhiteSpace([string]$step.collection)){$hasCollection=$true}
+        if([bool]$step.summary){$hasReview=$true}
+    }
+    $resumable=[bool]$Journey.autosave -or [bool]$Journey.resume_draft
+    $reviewed=[bool]$Journey.review_before_submit -or $hasReview
+    return $steps.Count -ge 3 -and ($fieldCount -gt 8 -or $hasCollection -or $resumable -or $reviewed)
+}
+
+function Resolve-InitiationStepViews {
+    param($Step, [string]$MasterView, [string]$ReviewView)
+    $resolved=@($Step.views|ForEach-Object {
+        if([string]$_ -eq '$master'){$MasterView}
+        elseif([string]$_ -eq '$review'){$ReviewView}
+        else{[string]$_}
+    })
+    if($resolved.Count -eq 0){throw "initiation.stepTabs '$($Step.id)' must place at least one View."}
+    return $resolved
+}
+
 $uxDocument=Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $Ux)|ConvertFrom-Json
 $mappingDocument=Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $Mapping)|ConvertFrom-Json
 $usesStyleProfile=-not [string]::IsNullOrWhiteSpace([string]$mappingDocument.application.styleProfile)
@@ -261,7 +292,55 @@ if ($BaseManifest) {
         $initViews=@($effectiveMasterView)+@($init.details|ForEach-Object {$_.view})+@($init.reviewViewName)
         foreach($requiredView in $initViews){if(@($manifest.application.views|Where-Object {[string]$_.name -eq [string]$requiredView}).Count -eq 0){throw "Initiation references unknown View: $requiredView"}}
         $detailContracts=@($init.details|ForEach-Object {[ordered]@{view=$_.view;foreignKeyProperty=$_.foreignKeyProperty;createMethod=(Get-ValueOrDefault $_.createMethod 'Create');updateMethod=(Get-ValueOrDefault $_.updateMethod 'Update');deleteMethod=(Get-ValueOrDefault $_.deleteMethod 'Delete');listMethod=(Get-ValueOrDefault $_.listMethod 'List')}})
-        $initForm=[ordered]@{name=$init.formName;useLegacyTheme=$false;useStyleProfile=$usesStyleProfile;useCommonHeader=$false;useCommonFooter=$false;views=$initViews;behaviors=@('refresh-list-form-submit','refresh-list-form-load');viewTitles=[ordered]@{};tabs=@([ordered]@{name=(Get-ValueOrDefault $init.detailsTab 'Case Details');views=@($effectiveMasterView)+@($init.details|Where-Object {$_.step -eq 'details'}|ForEach-Object {$_.view})},[ordered]@{name=(Get-ValueOrDefault $init.evidenceTab 'Evidence');views=@($init.details|Where-Object {$_.step -eq 'evidence'}|ForEach-Object {$_.view})},[ordered]@{name=(Get-ValueOrDefault $init.reviewTab 'Review & Submit');views=@($init.reviewViewName)});listClickTabNavigation=@();masterDetail=[ordered]@{masterView=$effectiveMasterView;masterKeyProperty=$init.masterKeyProperty;masterCreateMethod=(Get-ValueOrDefault $init.createMethod 'Create');masterUpdateMethod=(Get-ValueOrDefault $init.updateMethod 'Update');masterReadMethod=(Get-ValueOrDefault $init.readMethod 'Read');saveButtonText=(Get-ValueOrDefault $init.saveButtonText 'Save draft and review');successMessageTitle=(Get-ValueOrDefault $init.successTitle 'Draft saved');successMessageBody=(Get-ValueOrDefault $init.successBody 'Your draft was saved and is ready to review.');details=$detailContracts;review=[ordered]@{view=$init.reviewViewName;keyProperty=$init.masterKeyProperty;readMethod=(Get-ValueOrDefault $init.readMethod 'Read');tab=(Get-ValueOrDefault $init.reviewTab 'Review & Submit')}};workflowStartButton=[ordered]@{name=(Get-ValueOrDefault $init.submitButtonName 'btnSubmitCase');text=(Get-ValueOrDefault $init.submitButtonText 'Submit case');tab=(Get-ValueOrDefault $init.reviewTab 'Review & Submit')}}
+        $compiledTabs=[Collections.Generic.List[object]]::new()
+        $guidedSteps=[Collections.Generic.List[object]]::new()
+        $useGuided=Test-UseGuidedJourney $init $journey
+        if($null -ne $init.stepTabs -and @($init.stepTabs).Count -gt 0){
+            if(@($init.stepTabs).Count -lt 3 -or @($init.stepTabs).Count -gt 7){throw 'initiation.stepTabs must contain between 3 and 7 physical screens.'}
+            foreach($stepTab in @($init.stepTabs)){
+                $journeyStep=@($journey.steps|Where-Object {[string]$_.id -eq [string]$stepTab.id})|Select-Object -First 1
+                if($null -eq $journeyStep){throw "initiation.stepTabs references unknown journey step '$($stepTab.id)'."}
+                $tabName=Get-ValueOrDefault $stepTab.name (Get-ValueOrDefault $stepTab.tab $journeyStep.title)
+                $stepViews=@(Resolve-InitiationStepViews $stepTab $effectiveMasterView ([string]$init.reviewViewName))
+                $compiledTabs.Add([ordered]@{name=$tabName;views=$stepViews})
+                $guidedSteps.Add([ordered]@{
+                    code=([string]$stepTab.id).ToUpperInvariant().Replace('-','_')
+                    label=(Get-ValueOrDefault $stepTab.label $journeyStep.title)
+                    description=(Get-ValueOrDefault $stepTab.description ("Complete "+([string]$journeyStep.title).ToLowerInvariant()+"."))
+                    tab=$tabName
+                    advance='continue'
+                })
+            }
+            $placed=@($compiledTabs|ForEach-Object {@($_.views)})
+            if($placed.Count -ne $initViews.Count -or @($placed|Select-Object -Unique).Count -ne $placed.Count -or @($initViews|Where-Object {$placed -notcontains $_}).Count -gt 0){
+                throw 'initiation.stepTabs must place every initiation View exactly once. Use $master and $review for the generated capture and review Views.'
+            }
+        } else {
+            $detailsTab=Get-ValueOrDefault $init.detailsTab 'Case Details'
+            $evidenceTab=Get-ValueOrDefault $init.evidenceTab 'Evidence'
+            $reviewTab=Get-ValueOrDefault $init.reviewTab 'Review & Submit'
+            $compiledTabs.Add([ordered]@{name=$detailsTab;views=@($effectiveMasterView)+@($init.details|Where-Object {$_.step -eq 'details'}|ForEach-Object {$_.view})})
+            $compiledTabs.Add([ordered]@{name=$evidenceTab;views=@($init.details|Where-Object {$_.step -eq 'evidence'}|ForEach-Object {$_.view})})
+            $compiledTabs.Add([ordered]@{name=$reviewTab;views=@($init.reviewViewName)})
+            $guidedSteps.Add([ordered]@{code='DETAILS';label=(Get-ValueOrDefault $init.detailsStepLabel 'Case details');description=(Get-ValueOrDefault $init.detailsStepDescription 'Describe what happened and provide the case context and impact.');tab=$detailsTab;advance='continue'})
+            $guidedSteps.Add([ordered]@{code='EVIDENCE';label=(Get-ValueOrDefault $init.evidenceStepLabel 'Evidence');description=(Get-ValueOrDefault $init.evidenceStepDescription 'Add the supporting records needed to understand the case.');tab=$evidenceTab;advance='continue'})
+            $guidedSteps.Add([ordered]@{code='REVIEW';label=(Get-ValueOrDefault $init.reviewStepLabel 'Review');description=(Get-ValueOrDefault $init.reviewStepDescription 'Check the complete case before submitting it.');tab=$reviewTab;advance='continue'})
+        }
+        $guidedSteps[$guidedSteps.Count-2].advance='save'
+        $guidedSteps[$guidedSteps.Count-1].advance='submit'
+        $reviewTabName=[string]$compiledTabs[$compiledTabs.Count-1].name
+        $initForm=[ordered]@{name=$init.formName;useLegacyTheme=$false;useStyleProfile=$usesStyleProfile;useCommonHeader=$false;useCommonFooter=$false;views=$initViews;behaviors=@('refresh-list-form-submit','refresh-list-form-load');viewTitles=[ordered]@{};tabs=@($compiledTabs);listClickTabNavigation=@();masterDetail=[ordered]@{masterView=$effectiveMasterView;masterKeyProperty=$init.masterKeyProperty;masterCreateMethod=(Get-ValueOrDefault $init.createMethod 'Create');masterUpdateMethod=(Get-ValueOrDefault $init.updateMethod 'Update');masterReadMethod=(Get-ValueOrDefault $init.readMethod 'Read');saveButtonText=(Get-ValueOrDefault $init.saveButtonText 'Save draft and review');successMessageTitle=(Get-ValueOrDefault $init.successTitle 'Draft saved');successMessageBody=(Get-ValueOrDefault $init.successBody 'Your draft was saved and is ready to review.');details=$detailContracts;review=[ordered]@{view=$init.reviewViewName;keyProperty=$init.masterKeyProperty;readMethod=(Get-ValueOrDefault $init.readMethod 'Read');tab=$reviewTabName}};workflowStartButton=[ordered]@{name=(Get-ValueOrDefault $init.submitButtonName 'btnSubmitCase');text=(Get-ValueOrDefault $init.submitButtonText 'Submit case');tab=$reviewTabName}}
+        if($useGuided){
+            $journeyPage=@($uxDocument.pages|Where-Object {[string]$_.journey -eq [string]$init.journey})|Select-Object -First 1
+            $initForm.guidedJourney=[ordered]@{
+                title=(Get-ValueOrDefault $init.journeyTitle (Get-ValueOrDefault $journeyPage.title 'New case'))
+                description=(Get-ValueOrDefault $init.journeyDescription 'Complete each screen, save the draft, then review and submit the case.')
+                validateOnContinue=$true
+                backButtonText=(Get-ValueOrDefault $init.backButtonText 'Back')
+                continueButtonText=(Get-ValueOrDefault $init.continueButtonText 'Continue')
+                steps=@($guidedSteps)
+            }
+        }
         foreach($viewName in $initViews){$initForm.viewTitles[$viewName]=if($viewName -eq $init.reviewViewName){'Review the case before submission'}elseif($viewName -eq $effectiveMasterView){'Case details'}else{($viewName -replace '^[^.]+\.','')}}
         $manifest.application.forms=@($manifest.application.forms)+@($initForm)
     }

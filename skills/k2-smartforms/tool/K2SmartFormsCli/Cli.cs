@@ -171,6 +171,10 @@ namespace K2SmartFormsCli
                     Console.WriteLine("      list click: " + navigation.SourceView + " -> load selected item -> tab '" + navigation.TargetTab + "'");
                 if (form.MasterDetail != null)
                     Console.WriteLine("      master-detail: " + form.MasterDetail.MasterView + "." + form.MasterDetail.MasterKeyProperty + " -> [" + string.Join(", ", form.MasterDetail.Details.Select(x => x.View + "." + x.ForeignKeyProperty).ToArray()) + "]; Form key transfers plus View-owned persistence/load events");
+                if (form.GuidedJourney != null)
+                    Console.WriteLine("      guided journey: " + form.GuidedJourney.Title + " [" +
+                        string.Join(" -> ", form.GuidedJourney.Steps.Select(x => x.Label + " (" + x.Advance + ")").ToArray()) +
+                        "]; native Progress, current-screen validation, Back/Continue, Save, Review, Submit");
             }
             if (dependencies.Count > 0)
             {
@@ -238,7 +242,7 @@ namespace K2SmartFormsCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2forms 0.41.0");
+            Console.WriteLine("k2forms 0.42.0");
         }
 
         private static void PrintHelp()

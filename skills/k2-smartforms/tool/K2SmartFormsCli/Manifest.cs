@@ -427,6 +427,7 @@ namespace K2SmartFormsCli
                 if (form.Tabs == null) form.Tabs = new List<FormTabDefinition>();
                 if (form.ListClickTabNavigation == null) form.ListClickTabNavigation = new List<ListClickTabNavigationDefinition>();
                 if (form.MasterDetail != null && form.MasterDetail.Details == null) form.MasterDetail.Details = new List<MasterDetailChildDefinition>();
+                if (form.GuidedJourney != null && form.GuidedJourney.Steps == null) form.GuidedJourney.Steps = new List<GuidedJourneyStepDefinition>();
                 if (form.ViewTitles == null) form.ViewTitles = new Dictionary<string, string>();
                 if (form.UntitledViews == null) form.UntitledViews = new Dictionary<string, string>();
                 if (form.PreFill == null) form.PreFill = new FormPreFillDefinition();
@@ -470,6 +471,7 @@ namespace K2SmartFormsCli
                 ValidatePreFill(form);
                 ValidateListClickTabNavigation(form, Application.Views);
                 ValidateMasterDetail(form, Application.Views);
+                ValidateGuidedJourney(form);
             }
 
             foreach (var lookup in Application.Lookups.Where(x => !string.IsNullOrWhiteSpace(x.AdminForm)))
@@ -574,6 +576,61 @@ namespace K2SmartFormsCli
                 throw new CliException("Form '" + form.Name + "' workflowStartButton requires a tabbed form.");
             if (!form.Tabs.Any(x => string.Equals(x.Name, button.Tab, StringComparison.OrdinalIgnoreCase)))
                 throw new CliException("Form '" + form.Name + "' workflowStartButton references undeclared tab '" + button.Tab + "'.");
+        }
+
+        private static void ValidateGuidedJourney(FormDefinition form)
+        {
+            var journey = form.GuidedJourney;
+            if (journey == null) return;
+            Require(journey.Title, "form.guidedJourney.title");
+            Require(journey.Description, "form.guidedJourney.description");
+            Require(journey.BackButtonText, "form.guidedJourney.backButtonText");
+            Require(journey.ContinueButtonText, "form.guidedJourney.continueButtonText");
+            if (form.MasterDetail == null || form.MasterDetail.Review == null)
+                throw new CliException("Form '" + form.Name + "' guidedJourney requires masterDetail.review so Save can persist before Review.");
+            if (form.WorkflowStartButton == null)
+                throw new CliException("Form '" + form.Name + "' guidedJourney requires workflowStartButton on its final Review step.");
+            if (form.Tabs.Any(x => x.Worklist != null))
+                throw new CliException("Form '" + form.Name + "' guidedJourney cannot contain a Worklist tab.");
+            if (journey.Steps.Count < 3 || journey.Steps.Count > 7)
+                throw new CliException("Form '" + form.Name + "' guidedJourney must contain between 3 and 7 steps.");
+            if (journey.Steps.Count != form.Tabs.Count)
+                throw new CliException("Form '" + form.Name + "' guidedJourney must map every Form tab exactly once and in the same order.");
+
+            EnsureUniqueValues(journey.Steps.Select(x => x == null ? null : x.Code), "guided journey step code", form.Name);
+            EnsureUniqueValues(journey.Steps.Select(x => x == null ? null : x.Label), "guided journey step label", form.Name);
+            EnsureUniqueValues(journey.Steps.Select(x => x == null ? null : x.Tab), "guided journey step tab", form.Name);
+            for (var index = 0; index < journey.Steps.Count; index++)
+            {
+                var step = journey.Steps[index];
+                if (step == null) throw new CliException("Form '" + form.Name + "' guidedJourney.steps cannot contain null entries.");
+                RequireArtifactName(step.Code, "form.guidedJourney.steps.code");
+                Require(step.Label, "form.guidedJourney.steps.label");
+                Require(step.Description, "form.guidedJourney.steps.description");
+                RequireArtifactName(step.Tab, "form.guidedJourney.steps.tab");
+                var tab = form.Tabs[index];
+                if (!string.Equals(step.Tab, tab.Name, StringComparison.OrdinalIgnoreCase))
+                    throw new CliException("Form '" + form.Name + "' guidedJourney step " + (index + 1) +
+                        " maps tab '" + step.Tab + "', expected '" + tab.Name + "' from Form tab order.");
+                var expectedAdvance = index == journey.Steps.Count - 1 ? "submit" :
+                    index == journey.Steps.Count - 2 ? "save" : "continue";
+                if (!string.Equals(step.Advance, expectedAdvance, StringComparison.OrdinalIgnoreCase))
+                    throw new CliException("Form '" + form.Name + "' guidedJourney step '" + step.Code +
+                        "' must use advance='" + expectedAdvance + "'.");
+            }
+            var saveStep = journey.Steps[journey.Steps.Count - 2];
+            var submitStep = journey.Steps[journey.Steps.Count - 1];
+            var saveTab = form.Tabs.Single(x => string.Equals(x.Name, saveStep.Tab, StringComparison.OrdinalIgnoreCase));
+            var finalDetail = form.MasterDetail.Details.Last();
+            if (!saveTab.Views.Contains(finalDetail.View, StringComparer.OrdinalIgnoreCase))
+                throw new CliException("Form '" + form.Name + "' guidedJourney Save step must contain the final master-detail child View '" +
+                    finalDetail.View + "' so the generated Save action is on that screen.");
+            if (!string.Equals(form.MasterDetail.Review.Tab, submitStep.Tab, StringComparison.OrdinalIgnoreCase))
+                throw new CliException("Form '" + form.Name + "' guidedJourney final step must be masterDetail.review.tab.");
+            if (!string.Equals(form.WorkflowStartButton.Tab, submitStep.Tab, StringComparison.OrdinalIgnoreCase))
+                throw new CliException("Form '" + form.Name + "' guidedJourney final step must contain workflowStartButton.");
+            if (string.Equals(saveStep.Tab, submitStep.Tab, StringComparison.OrdinalIgnoreCase))
+                throw new CliException("Form '" + form.Name + "' guidedJourney Save and Submit steps must be distinct.");
         }
 
         private static void ValidatePreFill(FormDefinition form)
@@ -1018,6 +1075,7 @@ namespace K2SmartFormsCli
         public List<FormTabDefinition> Tabs { get; set; }
         public List<ListClickTabNavigationDefinition> ListClickTabNavigation { get; set; }
         public MasterDetailFormDefinition MasterDetail { get; set; }
+        public GuidedJourneyDefinition GuidedJourney { get; set; }
         public WorkflowStartButtonDefinition WorkflowStartButton { get; set; }
         public FormPreFillDefinition PreFill { get; set; }
         public Dictionary<string, string> ViewTitles { get; set; }
@@ -1095,6 +1153,35 @@ namespace K2SmartFormsCli
         public string Name { get; set; }
         public string Text { get; set; }
         public string Tab { get; set; }
+    }
+
+    public sealed class GuidedJourneyDefinition
+    {
+        public string Title { get; set; }
+        public string Description { get; set; }
+        public bool ValidateOnContinue { get; set; }
+        public string BackButtonText { get; set; }
+        public string ContinueButtonText { get; set; }
+        public List<GuidedJourneyStepDefinition> Steps { get; set; }
+
+        public GuidedJourneyDefinition()
+        {
+            ValidateOnContinue = true;
+            BackButtonText = "Back";
+            ContinueButtonText = "Continue";
+            Steps = new List<GuidedJourneyStepDefinition>();
+        }
+    }
+
+    public sealed class GuidedJourneyStepDefinition
+    {
+        public string Code { get; set; }
+        public string Label { get; set; }
+        public string Description { get; set; }
+        public string Tab { get; set; }
+        public string Advance { get; set; }
+
+        public GuidedJourneyStepDefinition() { Advance = "continue"; }
     }
 
     public sealed class MasterDetailFormDefinition

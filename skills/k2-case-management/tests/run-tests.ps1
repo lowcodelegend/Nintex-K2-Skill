@@ -158,6 +158,16 @@ if (Test-Path -LiteralPath $exampleUx) {
     $form = @($manifest.application.forms | Where-Object { $_.name -eq 'SNC.New Nonconformance' })[0]
     if ($null -eq $form) { throw 'Initiation compiler did not emit the guided initiation Form.' }
     if (@($form.tabs.name) -join '|' -ne 'Case Details|Evidence|Review & Submit') { throw 'Initiation compiler emitted the wrong journey steps.' }
+    if ($form.guidedJourney.title -ne 'Report a Supplier Nonconformance' -or
+        (@($form.guidedJourney.steps.advance) -join '|') -ne 'continue|save|submit' -or
+        (@($form.guidedJourney.steps.label) -join '|') -ne 'Case details|Evidence|Review') {
+        throw 'Initiation compiler did not emit the intelligent native guided-journey contract.'
+    }
+    if ($form.guidedJourney.steps[0].description -notmatch 'supplier' -or
+        $form.guidedJourney.steps[1].tab -ne 'Evidence' -or
+        $form.guidedJourney.steps[2].tab -ne $form.workflowStartButton.tab) {
+        throw 'Initiation compiler did not preserve the task-oriented physical screen mapping.'
+    }
     if ($form.masterDetail.review.view -ne 'SNC.New Case Review' -or $form.masterDetail.review.tab -ne 'Review & Submit') { throw 'Initiation compiler did not emit saved-key review navigation.' }
     if ($form.masterDetail.masterView -ne 'SNC.New Case Details' -or $form.tabs[0].views[0] -ne 'SNC.New Case Details') { throw 'Initiation compiler did not use the dedicated reporter-facing entry View.' }
     $entry = @($manifest.application.views | Where-Object { $_.name -eq 'SNC.New Case Details' })[0]
@@ -202,6 +212,7 @@ try {
     if (@($shell.tabs.name) -join '|' -ne 'Cases|Insights|My Tasks') { throw 'Portable compilation did not embellish the second shell at its mapped seam.' }
     $initiation = @($manifest.application.forms | Where-Object name -eq 'RQT.New Request')[0]
     if ($initiation.workflowStartButton.name -ne 'btnSubmitRequest' -or $initiation.masterDetail.details[0].view -ne 'RQT.Request Detail') { throw 'Portable compilation leaked supplier-nonconformance assumptions.' }
+    if ($null -eq $initiation.guidedJourney -or (@($initiation.guidedJourney.steps.advance) -join '|') -ne 'continue|save|submit') { throw 'Portable compilation did not apply the reusable guided-journey decision.' }
     if (@($manifest.application.views.name | Where-Object { $_ -like 'SNC.*' }).Count -ne 0) { throw 'Portable compilation emitted an SNC-specific artifact.' }
 } finally {
     if (Test-Path -LiteralPath $portableCompiled) { Remove-Item -LiteralPath $portableCompiled -Force }

@@ -1801,6 +1801,36 @@
           "name": "btnSubmitCase",
           "text": "Submit case",
           "tab": "Review & Submit"
+        },
+        "guidedJourney": {
+          "title": "Report a Supplier Nonconformance",
+          "description": "Describe the nonconformance, add supporting evidence, then review and submit it.",
+          "validateOnContinue": true,
+          "backButtonText": "Back",
+          "continueButtonText": "Continue",
+          "steps": [
+            {
+              "code": "INCIDENT",
+              "label": "Case details",
+              "description": "Describe the nonconformance and provide its supplier and impact context.",
+              "tab": "Case Details",
+              "advance": "continue"
+            },
+            {
+              "code": "EVIDENCE",
+              "label": "Evidence",
+              "description": "Add the records needed to investigate and verify the nonconformance.",
+              "tab": "Evidence",
+              "advance": "save"
+            },
+            {
+              "code": "REVIEW",
+              "label": "Review",
+              "description": "Check the complete case before submitting it.",
+              "tab": "Review & Submit",
+              "advance": "submit"
+            }
+          ]
         }
       }
     ]

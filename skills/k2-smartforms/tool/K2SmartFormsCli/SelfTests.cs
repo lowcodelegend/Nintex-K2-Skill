@@ -19,6 +19,7 @@ namespace K2SmartFormsCli
             TestNativeChartComposition();
             TestMetricCardComposition();
             TestLifecycleComposition();
+            TestGuidedJourneyComposition();
             TestModernWebComponentComposition();
             TestHiddenPropertyComposition();
             TestLabelAboveHiddenCellComposition();
@@ -32,7 +33,7 @@ namespace K2SmartFormsCli
             TestRedundantFormFrameworkRemoval();
             TestFormPreFillRules();
             TestMultiTableWorkflowStateReconciliation();
-            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams, mutually exclusive native If/Else Save branching, post-Create master hydration and Form method-action rejection, master-detail field-validation composition, orphan optional control mappings, lookup/detail List classification, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, native max-length/validation-pattern contracts, must-be-true checkbox validation groups, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, modern Web Component full-body placement, capture and editable-list hidden-property composition, editable-list File edit-template validation, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, conditional per-Form framework selection, redundant profile/header/footer removal, constraint-aware test-data Pre-fill, multi-table workflow-state reconciliation");
+            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams, mutually exclusive native If/Else Save branching, post-Create master hydration and Form method-action rejection, master-detail field-validation composition, orphan optional control mappings, lookup/detail List classification, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, native max-length/validation-pattern contracts, must-be-true checkbox validation groups, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, native guided-journey Progress and current-screen navigation validation, modern Web Component full-body placement, capture and editable-list hidden-property composition, editable-list File edit-template validation, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, conditional per-Form framework selection, redundant profile/header/footer removal, constraint-aware test-data Pre-fill, multi-table workflow-state reconciliation");
         }
 
         private static void TestConditionalFormFrameworkSelection()
@@ -930,6 +931,73 @@ namespace K2SmartFormsCli
             var progress = document.Descendants("Control").Single(x => (string)x.Attribute("ID") == "stage-control" && x.Attribute("Type") != null);
             Assert((string)progress.Attribute("Type") == "Progress", "lifecycle property control transformed to native Progress");
             Assert((string)progress.Attribute("FieldID") == "stage", "lifecycle SmartObject field binding preserved");
+        }
+
+        private static void TestGuidedJourneyComposition()
+        {
+            var form = new FormDefinition { Name = "New Case" };
+            form.Tabs.Add(new FormTabDefinition { Name = "What happened", Views = new List<string> { "Case Entry" } });
+            form.Tabs.Add(new FormTabDefinition { Name = "Evidence", Views = new List<string> { "Evidence" } });
+            form.Tabs.Add(new FormTabDefinition { Name = "Review", Views = new List<string> { "Case Review" } });
+            form.WorkflowStartButton = new WorkflowStartButtonDefinition { Name = "btnSubmitCase", Text = "Submit case", Tab = "Review" };
+            form.MasterDetail = new MasterDetailFormDefinition
+            {
+                MasterView = "Case Entry",
+                MasterKeyProperty = "CaseId",
+                Review = new MasterDetailReviewDefinition { View = "Case Review", KeyProperty = "CaseId", Tab = "Review" }
+            };
+            form.MasterDetail.Details.Add(new MasterDetailChildDefinition { View = "Evidence", ForeignKeyProperty = "CaseId" });
+            form.GuidedJourney = new GuidedJourneyDefinition
+            {
+                Title = "Report a concern",
+                Description = "Tell us what happened, attach evidence, and review before submitting."
+            };
+            form.GuidedJourney.Steps.Add(new GuidedJourneyStepDefinition
+            {
+                Code = "INCIDENT", Label = "What happened?", Description = "Describe the concern in your own words.",
+                Tab = "What happened", Advance = "continue"
+            });
+            form.GuidedJourney.Steps.Add(new GuidedJourneyStepDefinition
+            {
+                Code = "EVIDENCE", Label = "Evidence", Description = "Add any files or supporting details.",
+                Tab = "Evidence", Advance = "save"
+            });
+            form.GuidedJourney.Steps.Add(new GuidedJourneyStepDefinition
+            {
+                Code = "REVIEW", Label = "Review", Description = "Check the report before submitting it.",
+                Tab = "Review", Advance = "submit"
+            });
+
+            var xml = "<Forms><Form ID='form-id'><Name>New Case</Name><Controls>" +
+                "<Control ID='entry-area' Type='Area'/><Control ID='entry-item' Type='AreaItem'/>" +
+                "<Control ID='evidence-area' Type='Area'/><Control ID='evidence-item' Type='AreaItem'/>" +
+                "<Control ID='review-area' Type='Area'/><Control ID='review-item' Type='AreaItem'/>" +
+                "<Control ID='save-area' Type='Area'/><Control ID='save-item' Type='AreaItem'/>" +
+                "<Control ID='submit-area' Type='Area'/><Control ID='submit-item' Type='AreaItem'/>" +
+                "<Control ID='save' Type='Button'><Name>btnSave</Name><Properties><Property><Name>Text</Name><Value>Save draft and review</Value></Property></Properties></Control>" +
+                "<Control ID='submit' Type='Button'><Name>btnSubmitCase</Name><Properties><Property><Name>Text</Name><Value>Submit case</Value></Property></Properties></Control>" +
+                "</Controls><ValidationGroups><ValidationGroup ID='validation-group'><Name>ValidationGroupForEvent</Name></ValidationGroup></ValidationGroups>" +
+                "<Panels>" +
+                "<Panel ID='p1'><Name>What happened</Name><Areas><Area ID='entry-area'><Items><Item ID='entry-item' ViewName='Case Entry'/></Items></Area></Areas></Panel>" +
+                "<Panel ID='p2'><Name>Evidence</Name><Areas><Area ID='evidence-area'><Items><Item ID='evidence-item' ViewName='Evidence'/></Items></Area><Area ID='save-area'><Items><Item ID='save-item'><Canvas><Control ID='save'/></Canvas></Item></Items></Area></Areas></Panel>" +
+                "<Panel ID='p3'><Name>Review</Name><Areas><Area ID='review-area'><Items><Item ID='review-item' ViewName='Case Review'/></Items></Area><Area ID='submit-area'><Items><Item ID='submit-item'><Canvas><Control ID='submit'/></Canvas></Item></Items></Area></Areas></Panel>" +
+                "</Panels><States><State><Events/></State></States></Form></Forms>";
+            var transformed = GuidedJourneyRules.Apply(xml, form, null);
+            GuidedJourneyRules.Verify(transformed, form, null);
+            var document = XDocument.Parse(transformed);
+            Assert(document.Descendants("Control").Count(x => (string)x.Attribute("Type") == "Progress") == 3,
+                "guided journey emits one native Progress control per screen");
+            var continueRule = document.Descendants("Event").Single(x => (string)x.Attribute("Type") == "User" &&
+                (string)x.Attribute("SourceName") == "btnJourneyContinue1");
+            var actions = continueRule.Descendants("Action").ToList();
+            Assert(actions.Count == 2 && (string)actions[0].Attribute("Type") == "Validate" &&
+                (string)actions[1].Attribute("Type") == "Focus",
+                "Continue validates the visible screen before focusing the next step");
+            var backRules = document.Descendants("Event").Where(x => (string)x.Attribute("Type") == "User" &&
+                ((string)x.Attribute("SourceName") ?? string.Empty).StartsWith("btnJourneyBack", StringComparison.Ordinal)).ToList();
+            Assert(backRules.Count == 2 && backRules.All(x => x.Descendants("Action").Count() == 1 &&
+                (string)x.Descendants("Action").Single().Attribute("Type") == "Focus"),
+                "Back navigation is non-destructive and does not validate");
         }
 
         private static void TestFlatFormViewOrdering()

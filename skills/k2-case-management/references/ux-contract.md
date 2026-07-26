@@ -64,6 +64,8 @@ Map the composed UX to live SmartObjects using `assets/case-ux-k2-mapping.yaml`,
 
 Native FormGenerator cannot safely compose a list plus editor plus review over the same master SmartObject on one generated initiation Form in the tested K2 build (`ViewID 'Property' already exists`). Resume drafts through the reusable case list/workspace instead of duplicating a master list on the initiation Form. Treat this as a platform composition constraint, not permission to rebuild the journey as bespoke HTML.
 
+Before compiling initiation, apply [the initiation UX contract](initiation-ux.md). `initiation.guidedMode` defaults to `auto`: a composed journey with at least three coherent tasks becomes guided when it has a large field set, a collection, resumable draft behavior, or review-before-submit. The compiler emits a native Progress control on each screen, current-screen validation before Continue, non-destructive Back, master-detail Save on the penultimate screen, and workflow Submit on the final review screen. Use `initiation.stepTabs` only when real task-specific Views can place every initiation View once; otherwise retain the portable Details → Evidence → Review physical mapping rather than manufacturing decorative screens.
+
 ## UX release scorecard
 
 Score task correctness 25%, information hierarchy 15%, forms/error prevention 15%, navigation 10%, responsive behavior 10%, accessibility 10%, visual consistency 10%, and performance/feedback 5%. Require at least 85/100, no critical task defects, no accessibility blockers, and no clipping/overlap at required viewports.

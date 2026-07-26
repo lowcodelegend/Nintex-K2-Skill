@@ -420,6 +420,47 @@ For a guided initiation journey, add `masterDetail.review` with `view`, `keyProp
 
 `capture-list` is a manifest intent: the CLI uses K2's List generator with editable mode, producing the native editable-list View and item-state rules. The generated View disables K2's `Enable Add new row link` setting by omitting the `ShowAddRow` property; on K2 Five the property's presence enables the option even when its stored value is `false`. Users stage a new item through the explicit native Add toolbar action. On complete solution forms, combine it with a list tab and `listClickTabNavigation` so a selected master is read before its child List runs.
 
+## Guided journeys
+
+Add `guidedJourney` when the tabs are deliberate screens in one initiation task:
+
+```json
+"guidedJourney": {
+  "title": "Report a concern",
+  "description": "Complete each screen, save the draft, then review and submit.",
+  "validateOnContinue": true,
+  "backButtonText": "Back",
+  "continueButtonText": "Continue",
+  "steps": [
+    {
+      "code": "DETAILS",
+      "label": "Case details",
+      "description": "Describe what happened and provide the relevant context.",
+      "tab": "Case Details",
+      "advance": "continue"
+    },
+    {
+      "code": "EVIDENCE",
+      "label": "Evidence",
+      "description": "Add supporting records that will help the case team.",
+      "tab": "Evidence",
+      "advance": "save"
+    },
+    {
+      "code": "REVIEW",
+      "label": "Review",
+      "description": "Check the complete case before submitting it.",
+      "tab": "Review & Submit",
+      "advance": "submit"
+    }
+  ]
+}
+```
+
+A guided journey has 3–7 steps, maps every Form tab exactly once in the same order, and cannot contain a Worklist. Codes, tabs, and labels are unique; descriptions are mandatory. Every step before the final two uses `advance: "continue"`, the penultimate step uses `save`, and the final step uses `submit`. The Save step must contain the final declared master-detail child so the generated `btnSave` is physically on that screen. The Submit step must match both `masterDetail.review.tab` and `workflowStartButton.tab`.
+
+The CLI adds one enabled/read-only native `Progress` control plus the screen description to every tab. A generated Back button performs only a native Form `Focus` action. A generated Continue button first runs `ValidationGroupForEvent` when it exists, with invisible, disabled, and read-only controls ignored, then focuses the next tab. Save and Submit retain their existing owned rules rather than receiving duplicate Continue actions. Verification checks the progress item contract, exact button placement, K2 system/user event hydration, validation-before-focus ordering, Save placement, and final Submit placement.
+
 ## Tabs and Worklist
 
 Use `form.tabs` to assign every declared form view to one named tab exactly once. A tab contains either `views` or one `worklist`, never both. Do not combine `tabs` with `options: ["no-tabs"]`.

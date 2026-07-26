@@ -86,6 +86,9 @@
   },
   "initiation": {
     "journey":"canonical-initiation",
+    "guidedMode":"auto",
+    "journeyTitle":"New case",
+    "journeyDescription":"Describe the case, add supporting evidence, then review and submit it.",
     "formName":"{{CODE}}.New Case",
     "masterView":"{{CODE}}.Case Workspace",
     "captureViewName":"{{CODE}}.New Case Details",
@@ -98,6 +101,11 @@
     "detailsTab":"Case Details",
     "evidenceTab":"Evidence",
     "reviewTab":"Review & Submit",
+    "stepTabs":[
+      {"id":"incident","name":"Case Details","label":"Case details","description":"Describe what happened and provide the relevant case context.","views":["$master","{{CODE}}.Case Detail"]},
+      {"id":"evidence","name":"Evidence","label":"Evidence","description":"Add the supporting records needed to understand the case.","views":["{{CODE}}.Evidence"]},
+      {"id":"review","name":"Review & Submit","label":"Review","description":"Check the complete case before submitting it.","views":["$review"]}
+    ],
     "saveButtonText":"Save draft and review",
     "submitButtonName":"btnSubmitCase",
     "submitButtonText":"Submit case",

@@ -914,6 +914,7 @@ namespace K2SmartFormsCli
                         definition = FormLayoutDefinition.Apply(definition, form, formCommonHeader, ResolveHeaderParameters(formCommonHeader, form), ResolveHeaderControlTransfers(formCommonHeader, form));
                         var masterDetail = ResolvedMasterDetailRules.Resolve(manager, form, _manifest.Application.Views);
                         definition = MasterDetailRules.Apply(definition, form, masterDetail);
+                        definition = GuidedJourneyRules.Apply(definition, form, formCommonHeader);
                         var preFill = ResolvedFormPreFill.Resolve(manager, form, _manifest.Application.Views, lookupSources);
                         definition = FormPreFillRules.Apply(definition, form, preFill);
                         manager.DeployForms(definition, _manifest.Application.GetFormCategoryPath(form), _manifest.Application.CheckIn);
@@ -1001,6 +1002,7 @@ namespace K2SmartFormsCli
                         throw new CliException("K2 Form style profile does not match '" + formStyleProfile.DisplayName + "' [" + formStyleProfile.Name + "]: " + expected);
                     FormLayoutDefinition.Verify(definition, declaredForm, formCommonHeader, ResolveHeaderParameters(formCommonHeader, declaredForm), ResolveHeaderControlTransfers(formCommonHeader, declaredForm));
                     MasterDetailRules.Verify(definition, declaredForm, ResolvedMasterDetailRules.Resolve(manager, declaredForm, _manifest.Application.Views));
+                    GuidedJourneyRules.Verify(definition, declaredForm, formCommonHeader);
                     var preFill = ResolvedFormPreFill.Resolve(manager, declaredForm, _manifest.Application.Views, lookupSources);
                     FormPreFillRules.Verify(definition, declaredForm, preFill);
                     VerifyDesignerAuthoringHydration(definition, expected, true);
