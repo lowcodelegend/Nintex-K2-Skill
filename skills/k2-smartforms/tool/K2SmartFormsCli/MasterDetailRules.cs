@@ -784,6 +784,10 @@ namespace K2SmartFormsCli
             var masterInstance = FindInstance(form, relationship.MasterViewGuid, relationship.MasterViewName, formDefinition.Name);
             var saveEvent = FindFormSaveEvent(form, relationship.Definition.SaveButtonText);
             if (saveEvent == null) throw new CliException("K2 Form '" + formDefinition.Name + "' has no Form-level master-detail Save button rule.");
+            FormActionAlignment.VerifyButtonCell(form,
+                form.Elements().First(x => x.Name.LocalName == "Controls"),
+                (string)saveEvent.Attribute("SourceID"), FormActionAlignment.Right,
+                "K2 Form '" + formDefinition.Name + "' master-detail Save button");
             ControlRuleDefinition.VerifySystemEvent(form, (string)saveEvent.Attribute("SourceID"), "OnClick",
                 "K2 Form '" + formDefinition.Name + "' master-detail Save button");
             if (saveEvent.Descendants().Any(x => x.Name.LocalName == "Action" &&
@@ -1274,7 +1278,8 @@ namespace K2SmartFormsCli
 
             controls.Add(Control(ns, tableId, "Table", "tblFormActions", Property(ns, "IsResponsive", "true", "true", "true")));
             controls.Add(Control(ns, rowId, "Row", "Form Actions Row"));
-            controls.Add(Control(ns, cellId, "Cell", "Form Actions Cell"));
+            controls.Add(FormActionAlignment.CellControl(ns, cellId, "Form Actions Cell",
+                FormActionAlignment.Right));
             controls.Add(Control(ns, buttonId, "Button", buttonName,
                 Property(ns, "Text", buttonText, buttonText, buttonText),
                 Property(ns, "ButtonStyle", "mainaction", "mainaction", "mainaction")));

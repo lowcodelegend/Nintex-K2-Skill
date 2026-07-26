@@ -247,8 +247,10 @@ namespace K2SmartFormsCli
             controls.Add(Control(ns, tableId, "Table", "tblJourneyActions" + (index + 1),
                 Property(ns, "IsResponsive", "true")));
             controls.Add(Control(ns, rowId, "Row", "Journey Actions Row " + (index + 1)));
-            controls.Add(Control(ns, leftCellId, "Cell", "Journey Back Cell " + (index + 1)));
-            controls.Add(Control(ns, rightCellId, "Cell", "Journey Continue Cell " + (index + 1)));
+            controls.Add(FormActionAlignment.CellControl(ns, leftCellId,
+                "Journey Back Cell " + (index + 1), FormActionAlignment.Left));
+            controls.Add(FormActionAlignment.CellControl(ns, rightCellId,
+                "Journey Continue Cell " + (index + 1), FormActionAlignment.Right));
             if (hasBack)
             {
                 backId = NewId();
@@ -333,6 +335,11 @@ namespace K2SmartFormsCli
                 throw new CliException("K2 Form '" + definition.Name + "' guided journey is missing navigation button '" + name + "'.");
             AssertProperty(control, "Text", text, definition.Name, name);
             var id = (string)control.Attribute("ID");
+            FormActionAlignment.VerifyButtonCell(panel, controls, id,
+                name.StartsWith("btnJourneyBack", StringComparison.OrdinalIgnoreCase)
+                    ? FormActionAlignment.Left
+                    : FormActionAlignment.Right,
+                "K2 Form '" + definition.Name + "' guided journey button '" + name + "'");
             var rules = baseState.Descendants().Where(x => x.Name.LocalName == "Event" &&
                 string.Equals((string)x.Attribute("Type"), "User", StringComparison.OrdinalIgnoreCase) &&
                 string.Equals((string)x.Attribute("SourceID"), id, StringComparison.OrdinalIgnoreCase) &&
@@ -396,6 +403,8 @@ namespace K2SmartFormsCli
             AssertProperty(control, "Text", button.Text, definition.Name, button.Name);
             AssertProperty(control, "ButtonStyle", "mainaction", definition.Name, button.Name);
             var id = (string)control.Attribute("ID");
+            FormActionAlignment.VerifyButtonCell(panel, controls, id, FormActionAlignment.Right,
+                "K2 Form '" + definition.Name + "' guided journey completion button '" + button.Name + "'");
             ControlRuleDefinition.VerifySystemEvent(baseState, id, "OnClick",
                 "K2 Form '" + definition.Name + "' guided journey completion button '" + button.Name + "'");
             var rules = baseState.Descendants().Where(x => x.Name.LocalName == "Event" &&

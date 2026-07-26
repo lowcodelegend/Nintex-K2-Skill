@@ -92,6 +92,7 @@ When `stepTabs` is omitted, the compiler preserves the portable Details → Evid
 - Show the journey title/description and one native read-only Progress control on every screen so the plain modern K2 fallback remains understandable.
 - Continue validates the current visible screen before focusing the next screen. It does not persist.
 - Back changes screen without validation, mutation, or data loss.
+- Keep alignment semantic and native: Back and the test-only Pre-fill helper occupy left-aligned K2 Table cells; Continue, Save, Finish, and Submit occupy right-aligned cells. `$k2-smartforms` infers this contract, so case manifests do not repeat alignment metadata. A Style Profile may refine spacing but cannot be the sole alignment mechanism.
 - The penultimate Save action validates, creates or updates the aggregate, transfers the returned key, saves children, reads the review projection, reveals Review, and focuses it.
 - In `workflow` mode, final Submit is the workflow start seam. It never shares the Save Draft rule.
 - In `complete` mode, final Finish only confirms the persisted draft is complete for this iteration and explicitly says it has not been submitted.

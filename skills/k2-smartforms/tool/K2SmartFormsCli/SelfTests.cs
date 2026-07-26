@@ -22,6 +22,7 @@ namespace K2SmartFormsCli
             TestLifecycleComposition();
             TestGuidedJourneyComposition();
             TestGuidedJourneyCompletionComposition();
+            TestWorkflowStartActionAlignment();
             TestModernWebComponentComposition();
             TestHiddenPropertyComposition();
             TestLabelAboveHiddenCellComposition();
@@ -35,7 +36,7 @@ namespace K2SmartFormsCli
             TestRedundantFormFrameworkRemoval();
             TestFormPreFillRules();
             TestMultiTableWorkflowStateReconciliation();
-            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams, mutually exclusive native If/Else Save branching, post-Create master hydration and Form method-action rejection, master-detail field-validation composition, orphan optional control mappings, lookup/detail List classification, governed lookup-domain validation, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, native max-length/validation-pattern contracts, must-be-true checkbox validation groups, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, native guided-journey Progress/current-screen navigation and workflow-free completion validation, modern Web Component full-body placement, capture and editable-list hidden-property composition, editable-list File edit-template validation, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, conditional per-Form framework selection, redundant profile/header/footer removal, constraint-aware test-data Pre-fill, multi-table workflow-state reconciliation");
+            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams, mutually exclusive native If/Else Save branching, post-Create master hydration and Form method-action rejection, master-detail field-validation composition, orphan optional control mappings, lookup/detail List classification, governed lookup-domain validation, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, native max-length/validation-pattern contracts, must-be-true checkbox validation groups, required controls, help popups, semantic native action-cell alignment, master-detail buttons, native chart, metric-card, lifecycle, native guided-journey Progress/current-screen navigation and workflow-free completion validation, modern Web Component full-body placement, capture and editable-list hidden-property composition, editable-list File edit-template validation, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, conditional per-Form framework selection, redundant profile/header/footer removal, constraint-aware test-data Pre-fill, multi-table workflow-state reconciliation");
         }
 
         private static void TestConditionalFormFrameworkSelection()
@@ -289,6 +290,8 @@ namespace K2SmartFormsCli
             Assert((string)group.Element("Name") == "ValidationGroupForEvent", "native validation-group name");
             var saveEvent = document.Descendants("Event").Single(x => (string)x.Attribute("SourceName") == "btnSave");
             var saveButtonId = (string)saveEvent.Attribute("SourceID");
+            Assert(ReadButtonCellAlignment(document, saveButtonId) == FormActionAlignment.Right,
+                "master-detail Save uses native right-aligned Table-cell styling");
             Assert(document.Descendants("Event").Count(x =>
                 (string)x.Attribute("Type") == "System" &&
                 (string)x.Attribute("SourceType") == "Control" &&
@@ -1012,6 +1015,22 @@ namespace K2SmartFormsCli
             Assert(backRules.Count == 2 && backRules.All(x => x.Descendants("Action").Count() == 1 &&
                 (string)x.Descendants("Action").Single().Attribute("Type") == "Focus"),
                 "Back navigation is non-destructive and does not validate");
+            var continueButton = document.Descendants("Control").Single(x =>
+                (string)x.Attribute("Type") == "Button" &&
+                (string)x.Element("Name") == "btnJourneyContinue1");
+            var backButton = document.Descendants("Control").First(x =>
+                (string)x.Attribute("Type") == "Button" &&
+                ((string)x.Element("Name") ?? string.Empty).StartsWith("btnJourneyBack", StringComparison.Ordinal));
+            Assert(ReadButtonCellAlignment(document, (string)continueButton.Attribute("ID")) ==
+                    FormActionAlignment.Right &&
+                ReadButtonCellAlignment(document, (string)backButton.Attribute("ID")) ==
+                    FormActionAlignment.Left,
+                "guided Continue and Back use native semantic right/left Cell alignment");
+            var drifted = XDocument.Parse(transformed);
+            RemoveButtonCellAlignment(drifted, (string)continueButton.Attribute("ID"));
+            AssertThrows(delegate { GuidedJourneyRules.Verify(
+                    drifted.ToString(SaveOptions.DisableFormatting), form, null); },
+                "native Table cell alignment");
         }
 
         private static void TestGuidedJourneyCompletionComposition()
@@ -1092,6 +1111,49 @@ namespace K2SmartFormsCli
                 (string)x.Attribute("SourceID") == (string)finish.Attribute("ID") &&
                 (string)x.Element("Name") == "OnClick"),
                 "workflow-free completion retains the Designer-hydratable system event");
+            Assert(ReadButtonCellAlignment(document, (string)finish.Attribute("ID")) ==
+                FormActionAlignment.Right,
+                "workflow-free Finish uses native right-aligned Table-cell styling");
+        }
+
+        private static void TestWorkflowStartActionAlignment()
+        {
+            var definition = new FormDefinition { Name = "Submit Probe" };
+            definition.Views.Add("Review View");
+            definition.Tabs.Add(new FormTabDefinition
+            {
+                Name = "Review",
+                Views = new List<string> { "Review View" }
+            });
+            definition.WorkflowStartButton = new WorkflowStartButtonDefinition
+            {
+                Name = "btnSubmitCase", Text = "Submit case", Tab = "Review"
+            };
+            var xml = "<Forms><Form ID='form'><Name>Submit Probe</Name><Controls>" +
+                "<Control ID='old-panel' Type='Panel'><Name>Old</Name><Properties/></Control>" +
+                "<Control ID='view-area' Type='Area'><Name>View Area</Name><Properties/></Control>" +
+                "<Control ID='view-item' Type='AreaItem'><Name>Review View</Name><Properties/></Control>" +
+                "</Controls><Panels><Panel ID='old-panel'><Name>Old</Name><Areas>" +
+                "<Area ID='view-area'><Items><Item ID='view-item' ViewID='view-id' ViewName='Review View'/></Items></Area>" +
+                "</Areas></Panel></Panels><States><State><Events/></State></States></Form></Forms>";
+            var transformed = FormLayoutDefinition.Apply(xml, definition, null,
+                new Dictionary<string, string>(), new Dictionary<Guid, ResolvedHeaderControlTransfer>());
+            FormLayoutDefinition.Verify(transformed, definition, null,
+                new Dictionary<string, string>(), new Dictionary<Guid, ResolvedHeaderControlTransfer>());
+            var document = XDocument.Parse(transformed);
+            var submit = document.Descendants("Control").Single(x =>
+                (string)x.Attribute("Type") == "Button" &&
+                (string)x.Element("Name") == "btnSubmitCase");
+            Assert(ReadButtonCellAlignment(document, (string)submit.Attribute("ID")) ==
+                FormActionAlignment.Right,
+                "workflow Submit uses native right-aligned Table-cell styling");
+            RemoveButtonCellAlignment(document, (string)submit.Attribute("ID"));
+            AssertThrows(delegate
+            {
+                FormLayoutDefinition.Verify(document.ToString(SaveOptions.DisableFormatting),
+                    definition, null, new Dictionary<string, string>(),
+                    new Dictionary<Guid, ResolvedHeaderControlTransfer>());
+            }, "native Table cell alignment");
         }
 
         private static void TestFlatFormViewOrdering()
@@ -1643,6 +1705,9 @@ namespace K2SmartFormsCli
             Assert((string)button.Descendants("Property").Single(x =>
                 (string)x.Element("Name") == "Text").Element("Value") == "Pre-fill",
                 "Pre-fill button has the required user-facing text");
+            Assert(ReadButtonCellAlignment(document, (string)button.Attribute("ID")) ==
+                FormActionAlignment.Left,
+                "Pre-fill uses native left-aligned Table-cell styling");
             Assert(document.Descendants("Panel").Single(x => (string)x.Attribute("ID") == "review-panel")
                 .Element("Areas").Elements("Area").Last().Descendants("Control")
                 .Any(x => (string)x.Attribute("ID") == (string)button.Attribute("ID")),
@@ -1744,6 +1809,31 @@ namespace K2SmartFormsCli
             {
                 FormPreFillRules.Verify(transformed, disabled, resolved);
             }, "retains the test-only Pre-fill helper");
+        }
+
+        private static string ReadButtonCellAlignment(XDocument document, string buttonId)
+        {
+            var reference = document.Descendants("Control").Single(x =>
+                (string)x.Attribute("ID") == buttonId &&
+                x.Ancestors("Cell").Any());
+            var cellId = (string)reference.Ancestors("Cell").First().Attribute("ID");
+            return document.Descendants("Control").Single(x =>
+                    (string)x.Attribute("Type") == "Cell" &&
+                    (string)x.Attribute("ID") == cellId)
+                .Descendants("Align").Select(x => x.Value).SingleOrDefault();
+        }
+
+        private static void RemoveButtonCellAlignment(XDocument document, string buttonId)
+        {
+            var reference = document.Descendants("Control").Single(x =>
+                (string)x.Attribute("ID") == buttonId &&
+                x.Ancestors("Cell").Any());
+            var cellId = (string)reference.Ancestors("Cell").First().Attribute("ID");
+            var cell = document.Descendants("Control").Single(x =>
+                (string)x.Attribute("Type") == "Cell" &&
+                (string)x.Attribute("ID") == cellId);
+            var styles = cell.Element("Styles");
+            if (styles != null) styles.Remove();
         }
 
         private static XElement TestInputControl(string type, string dataType)

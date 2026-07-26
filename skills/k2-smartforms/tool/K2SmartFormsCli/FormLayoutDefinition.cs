@@ -700,7 +700,8 @@ namespace K2SmartFormsCli
                 new XElement(ns + "Name", "tblWorkflowActions"), new XElement(ns + "DisplayName", "Workflow Actions"),
                 new XElement(ns + "Properties", Property(ns, "ControlName", "tblWorkflowActions", true), Property(ns, "IsResponsive", "true", true))));
             controls.Add(BasicControl(ns, rowId, "Row", "Workflow Actions Row"));
-            controls.Add(BasicControl(ns, cellId, "Cell", "Workflow Actions Cell"));
+            controls.Add(FormActionAlignment.CellControl(ns, cellId, "Workflow Actions Cell",
+                FormActionAlignment.Right));
             controls.Add(new XElement(ns + "Control", new XAttribute("ID", buttonId), new XAttribute("Type", "Button"),
                 new XElement(ns + "Name", button.Name), new XElement(ns + "DisplayName", button.Name),
                 new XElement(ns + "Properties", Property(ns, "ControlName", button.Name, true), Property(ns, "Text", button.Text, true), Property(ns, "ButtonStyle", "mainaction", true))));
@@ -739,6 +740,8 @@ namespace K2SmartFormsCli
             if (!string.Equals(ReadProperty(control, "Text"), button.Text, StringComparison.Ordinal)) throw new CliException("K2 Form '" + definition.Name + "' workflow start button text is incorrect.");
             var id = (string)control.Attribute("ID");
             if (!panel.Descendants().Any(x => x.Name.LocalName == "Control" && string.Equals((string)x.Attribute("ID"), id, StringComparison.OrdinalIgnoreCase))) throw new CliException("K2 Form '" + definition.Name + "' workflow start button is not on tab '" + button.Tab + "'.");
+            FormActionAlignment.VerifyButtonCell(panel, controls, id, FormActionAlignment.Right,
+                "K2 Form '" + definition.Name + "' workflow start button '" + button.Name + "'");
             var baseState = RequiredChild(RequiredChild(form, "States"), "State");
             var clickRules = baseState.Descendants().Where(x => x.Name.LocalName == "Event" &&
                 string.Equals((string)x.Attribute("Type"), "User", StringComparison.OrdinalIgnoreCase) &&

@@ -297,7 +297,8 @@ namespace K2SmartFormsCli
             controls.Add(Control(ns, tableId, "Table", "tblPreFillActions",
                 Property(ns, "IsResponsive", "true", "true", "true")));
             controls.Add(Control(ns, rowId, "Row", "Pre-fill Row"));
-            controls.Add(Control(ns, cellId, "Cell", "Pre-fill Cell"));
+            controls.Add(FormActionAlignment.CellControl(ns, cellId, "Pre-fill Cell",
+                FormActionAlignment.Left));
             controls.Add(Control(ns, buttonId, "Button", ButtonName,
                 Property(ns, "Text", ButtonText, ButtonText, ButtonText)));
             controls.Add(Control(ns, areaId, "Area", "Pre-fill Area"));
@@ -343,6 +344,9 @@ namespace K2SmartFormsCli
                 throw new CliException("K2 Form '" + definition.Name + "' test-only Pre-fill button is malformed.");
             var buttonId = (string)button.Attribute("ID");
             var targetPanel = SelectTargetPanel(form, definition);
+            FormActionAlignment.VerifyButtonCell(targetPanel, controls, buttonId,
+                FormActionAlignment.Left,
+                "K2 Form '" + definition.Name + "' test-only Pre-fill button");
             var areas = RequiredChild(targetPanel, "Areas").Elements().Where(x => x.Name.LocalName == "Area").ToList();
             if (areas.Count == 0 || !areas[areas.Count - 1].Descendants().Any(x => x.Name.LocalName == "Control" &&
                 string.Equals((string)x.Attribute("ID"), buttonId, StringComparison.OrdinalIgnoreCase)))
