@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "suiteName": "k2-skills",
-  "suiteVersion": "0.66.0",
+  "suiteVersion": "0.67.0",
   "skills": [
     {
       "name": "k2-sql-smartobjects",
@@ -99,9 +99,9 @@
     },
     {
       "name": "k2-case-management",
-      "version": "0.16.0",
+      "version": "0.17.0",
       "platform": "win-x64",
-      "buildScript": null,
+      "buildScript": "skills/k2-case-management/scripts/build.ps1",
       "builtFiles": [],
       "versionCommand": null
     },

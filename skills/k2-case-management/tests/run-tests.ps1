@@ -291,3 +291,13 @@ try {
     if ($resolvedReference.StartsWith($resolvedTemp + '\',[StringComparison]::OrdinalIgnoreCase) -and (Test-Path -LiteralPath $resolvedReference)) { Remove-Item -LiteralPath $resolvedReference -Recurse -Force }
 }
 Write-Output 'Case-UX multi-page reference renderer tests passed.'
+
+$caseAgent = Join-Path $PSScriptRoot '..\scripts\case-agent-framework.ps1'
+$caseAgentContract = Join-Path $PSScriptRoot '..\assets\case-agent-creation-contract.yaml'
+& $caseAgent validate-contract $caseAgentContract
+if ($LASTEXITCODE -ne 0) { throw 'Expected the canonical case-agent creation contract to pass.' }
+& $caseAgent selftest
+if ($LASTEXITCODE -ne 0) { throw 'Expected the transport-neutral case-agent self-test to pass.' }
+& (Get-Command python -ErrorAction Stop).Source -m unittest discover -s $PSScriptRoot -p 'test_*.py' -v
+if ($LASTEXITCODE -ne 0) { throw 'Case-agent framework unit tests failed.' }
+Write-Output 'Case-agent creation-contract and transport-neutral framework tests passed.'

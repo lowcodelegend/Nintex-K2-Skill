@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "caseTypeCode": "EVIDENCE_EXCEPTION",
+  "name": "Evidence-Driven Exception Review",
+  "contractVersion": 1,
+  "creationMode": "deferredMaterialization",
+  "creationAdapter": "CM.EvidenceException.CreateFromIntake",
+  "canonicalFields": [
+    {
+      "path": "canonical.Title",
+      "label": "Case title",
+      "prompt": "Give this case a short, recognisable title.",
+      "type": "string",
+      "required": true,
+      "minimumLength": 5,
+      "maximumLength": 200,
+      "sensitivity": "internal"
+    },
+    {
+      "path": "canonical.Description",
+      "label": "Description",
+      "prompt": "Describe what happened and why this case needs review.",
+      "type": "string",
+      "required": true,
+      "minimumLength": 30,
+      "maximumLength": 4000,
+      "sensitivity": "confidential"
+    },
+    {
+      "path": "canonical.ConfidentialityCode",
+      "label": "Confidentiality",
+      "prompt": "How should access to this case be restricted?",
+      "type": "string",
+      "required": true,
+      "lookupSource": "CONFIDENTIALITY",
+      "sensitivity": "internal"
+    }
+  ],
+  "extensionEntities": [
+    {
+      "entityCode": "exception",
+      "caseKey": "CaseId",
+      "writeTarget": "CM.EvidenceException",
+      "fields": [
+        {
+          "path": "extensions.exception.ExceptionTypeCode",
+          "label": "Exception type",
+          "prompt": "What kind of exception are you reporting?",
+          "type": "string",
+          "required": true,
+          "lookupSource": "EXCEPTION_TYPE",
+          "sensitivity": "internal"
+        },
+        {
+          "path": "extensions.exception.OccurredDate",
+          "label": "Date of occurrence",
+          "prompt": "When did the exception occur?",
+          "type": "date",
+          "required": true,
+          "sensitivity": "internal"
+        },
+        {
+          "path": "extensions.exception.ExternalReference",
+          "label": "External reference",
+          "prompt": "Is there a related reference in another system?",
+          "type": "string",
+          "required": false,
+          "maximumLength": 100,
+          "pattern": "[A-Za-z0-9][A-Za-z0-9._/-]{0,99}",
+          "sensitivity": "internal"
+        },
+        {
+          "path": "extensions.exception.ContainsPersonalData",
+          "label": "Contains personal data",
+          "prompt": "Does this case contain personal data?",
+          "type": "boolean",
+          "required": true,
+          "sensitivity": "confidential"
+        },
+        {
+          "path": "extensions.exception.PersonalDataReason",
+          "label": "Personal-data reason",
+          "prompt": "Explain why personal data is needed for this case.",
+          "type": "string",
+          "required": false,
+          "requiredWhen": {
+            "path": "extensions.exception.ContainsPersonalData",
+            "isTrue": true
+          },
+          "minimumLength": 10,
+          "maximumLength": 500,
+          "sensitivity": "restricted"
+        }
+      ]
+    }
+  ],
+  "evidenceRequirements": [
+    {
+      "code": "SUPPORTING_EVIDENCE",
+      "label": "Supporting evidence",
+      "minimumFiles": 0,
+      "maximumFiles": 10,
+      "allowedExtensions": ["pdf", "docx", "jpg", "jpeg", "png"],
+      "maximumSizeBytes": 26214400,
+      "requiresCleanScan": true
+    }
+  ],
+  "submission": {
+    "enabled": true,
+    "commandTypeCode": "SUBMIT",
+    "readinessRule": "CAPTURE_COMPLETE"
+  }
+}

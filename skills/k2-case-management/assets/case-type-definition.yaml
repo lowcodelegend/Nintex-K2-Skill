@@ -23,5 +23,11 @@
     {"from": "DECIDE", "outcome": "RETURNED_FOR_INVESTIGATION", "to": "INVESTIGATE", "reentry": true},
     {"from": "DECIDE", "outcome": "APPROVED", "to": "CLOSE"}
   ],
+  "agentic_creation": {
+    "enabled": true,
+    "contract": "case-agent-creation-contract.yaml",
+    "contract_version": 1,
+    "creation_mode": "deferredMaterialization"
+  },
   "extensions": {"entities": [], "notes": "Add solution-specific data; retain the canonical model in case-model.yaml."}
 }

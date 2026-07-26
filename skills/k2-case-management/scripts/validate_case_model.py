@@ -121,6 +121,27 @@ def validate(document: dict[str, Any]) -> list[str]:
             pending.extend(graph[code] - reachable)
         for code in sorted(set(stage_by_code) - reachable):
             errors.append(f"unreachable stage: {code}")
+
+    agentic_creation = document.get("agentic_creation")
+    if agentic_creation is not None:
+        if not isinstance(agentic_creation, dict):
+            errors.append("agentic_creation must be a mapping")
+        elif agentic_creation.get("enabled") is True:
+            if not agentic_creation.get("contract"):
+                errors.append("agentic_creation.contract is required when enabled")
+            contract_version = agentic_creation.get("contract_version")
+            if (
+                not isinstance(contract_version, int)
+                or isinstance(contract_version, bool)
+                or contract_version < 1
+            ):
+                errors.append(
+                    "agentic_creation.contract_version must be a positive integer"
+                )
+            if agentic_creation.get("creation_mode") != "deferredMaterialization":
+                errors.append(
+                    "agentic_creation.creation_mode must be deferredMaterialization"
+                )
     return errors
 
 

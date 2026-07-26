@@ -16,10 +16,14 @@
     "CaseComment": ["CommentId", "CaseId", "StageInstanceId", "CommentTypeCode", "CommentText", "CreatedByFQN", "CreatedDate", "VisibilityCode", "IsPinned"],
     "CaseRelationship": ["CaseRelationshipId", "CaseId", "RelatedCaseId", "RelationshipTypeCode", "CreatedByFQN", "CreatedDate", "Reason"],
     "CaseCommand": ["CommandId", "CaseId", "CommandTypeCode", "RequestedByFQN", "RequestedDate", "Reason", "Status", "ProcessedDate", "ProcessingResult", "CorrelationId"],
+    "CaseIntakeDraft": ["DraftId", "PrincipalFQN", "CaseTypeId", "ContractVersion", "StatusCode", "ProtectedCanonicalPayload", "ProtectedExtensionPayload", "FileHandlesReference", "Revision", "CreatedDate", "UpdatedDate", "ExpiresDate", "MaterializedCaseId", "IdempotencyKey", "RowVersion"],
+    "CaseAgentProfile": ["AgentProfileId", "CaseTypeId", "ProfileCode", "ProfileVersion", "CreationContractReference", "AllowedPurposeCodes", "RetentionCode", "ConfigurationVersion", "IsActive"],
+    "CaseAgentContextSource": ["ContextSourceId", "AgentProfileId", "SourceCode", "SourceKind", "EntityCode", "ReadAdapter", "CaseKeyPath", "FieldAllowlist", "SensitivityCode", "RetrievalMode", "SortOrder", "IsActive"],
+    "CaseTypePolicyDocument": ["PolicyDocumentId", "CaseTypeId", "PolicyCode", "Title", "Version", "JurisdictionCode", "StageCode", "EffectiveFrom", "EffectiveTo", "ApprovalStatus", "StorageMode", "FileContent", "RepositoryReference", "Hash", "ExtractedTextReference", "ApprovedByFQN", "ApprovedDate", "IsActive"],
     "AuditEvent": ["AuditEventId", "CaseId", "StageInstanceId", "EventTypeCode", "ObjectType", "ObjectId", "ActorType", "ActorFQN", "EventDate", "BeforeState", "AfterState", "Reason", "CorrelationId", "WorkflowInstanceId"],
     "AIInteraction": ["AIInteractionId", "CaseId", "StageInstanceId", "PurposeCode", "ProviderCode", "ModelId", "ModelVersion", "PromptTemplateCode", "InputReference", "OutputReference", "ConfidenceScore", "CreatedDate", "ReviewedByFQN", "ReviewedDate", "HumanDispositionCode", "ErrorCode", "ContainsSensitiveData", "CorrelationId"]
   },
-  "configuration_entities": ["Status", "Priority", "Severity", "Risk", "Confidentiality", "Jurisdiction", "Outcome", "EvidenceType", "CommunicationType", "DecisionType", "SLAProfile", "SLAThreshold", "BusinessCalendar", "AssignmentRule", "BusinessRule", "EscalationRule", "NotificationTemplate", "Role", "AuthorityLevel", "AIPolicy"],
+  "configuration_entities": ["Status", "Priority", "Severity", "Risk", "Confidentiality", "Jurisdiction", "Outcome", "EvidenceType", "CommunicationType", "DecisionType", "SLAProfile", "SLAThreshold", "BusinessCalendar", "AssignmentRule", "BusinessRule", "EscalationRule", "NotificationTemplate", "Role", "AuthorityLevel", "AIPolicy", "CaseAgentProfile", "CaseAgentContextSource", "CaseTypePolicyDocument"],
   "extensions": {
     "instructions": "Add solution-specific entities/fields here. Link extensions to CaseId or CaseStageInstanceId; do not duplicate or delete canonical entities.",
     "entities": []

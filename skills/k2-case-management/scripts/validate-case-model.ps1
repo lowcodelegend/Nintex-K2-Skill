@@ -86,6 +86,24 @@ if ($stageByCode.ContainsKey([string]$caseType.initial_stage)) {
     foreach ($code in $stageByCode.Keys) { if (-not $reachable.ContainsKey($code)) { Add-ValidationError $errors "unreachable stage: $code" } }
 }
 
+if ($document.PSObject.Properties.Name -contains 'agentic_creation') {
+    $agenticCreation = $document.agentic_creation
+    if ($null -eq $agenticCreation) {
+        Add-ValidationError $errors 'agentic_creation must be a mapping'
+    } elseif ($agenticCreation.enabled -eq $true) {
+        if ([string]::IsNullOrWhiteSpace([string]$agenticCreation.contract)) {
+            Add-ValidationError $errors 'agentic_creation.contract is required when enabled'
+        }
+        $contractVersion = 0L
+        if (-not [int64]::TryParse([string]$agenticCreation.contract_version, [ref]$contractVersion) -or $contractVersion -lt 1) {
+            Add-ValidationError $errors 'agentic_creation.contract_version must be a positive integer'
+        }
+        if ([string]$agenticCreation.creation_mode -ne 'deferredMaterialization') {
+            Add-ValidationError $errors 'agentic_creation.creation_mode must be deferredMaterialization'
+        }
+    }
+}
+
 if ($errors.Count -gt 0) {
     foreach ($validationError in $errors) { Write-Output "ERROR: $validationError" }
     Write-Output "Validation failed with $($errors.Count) error(s)."

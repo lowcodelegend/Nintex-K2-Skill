@@ -34,6 +34,16 @@ class CaseModelValidatorTests(unittest.TestCase):
         value["transitions"].append({"from": "CLOSE", "outcome": "REOPENED", "to": "INVESTIGATE", "reentry": True})
         self.assertTrue(any("not marked reopen" in error for error in validate(value)))
 
+    def test_rejects_incomplete_or_unsupported_agentic_creation(self):
+        value = copy.deepcopy(self.valid)
+        value["agentic_creation"]["contract"] = ""
+        value["agentic_creation"]["contract_version"] = 0
+        value["agentic_creation"]["creation_mode"] = "earlyCanonicalDraft"
+        errors = validate(value)
+        self.assertTrue(any("contract is required" in error for error in errors))
+        self.assertTrue(any("positive integer" in error for error in errors))
+        self.assertTrue(any("must be deferredMaterialization" in error for error in errors))
+
 
 if __name__ == "__main__":
     unittest.main()

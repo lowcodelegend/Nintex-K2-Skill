@@ -9,12 +9,17 @@
 - **CaseParty**, **EvidenceItem**, **CaseTask**, **Decision**, **Communication**, and **CaseComment** are repeatable children. Evidence uses one row per file/document and declares its storage mode. For SQL-resident native K2 attachments, keep the K2 File XML/Base64 payload in a SQL `varchar(max)` column and publish that generated SmartObject property as type `File`; also retain filename/content type, size, hash, upload actor/time, source/version/provenance, verification or malware-scan status, sensitivity, required/current flags, and parent links. Use `RepositoryReference` only for an explicitly external repository mode. CaseTask stores only correlation/reporting history not already satisfied by native K2 worklist state. Decision separates AI recommendation from accountable disposition and supports supersession.
 - **CaseRelationship** supports related, duplicate, parent/child, and other typed links without overloading `ParentCaseId`.
 - **CaseCommand** records controlled hold, resume, cancel, reassign, escalate, add-information, withdraw, reopen, and correction requests for idempotent parent processing.
+- **CaseIntakeDraft** is an optional principal-owned, expiring collection envelope for conversational or multi-session case creation. It records the immutable creation-contract version, optimistic revision, protected canonical and extension payloads, staged-file reference, materialized Case, and idempotency key. Do not weaken normalized extension-table constraints to store incomplete agent input.
 - **AuditEvent** is append-only and records actor, time, object, before/after references or protected snapshots, reason, correlation, and workflow instance.
 - **AIInteraction** records purpose, provider/model/template versions, protected input/output references, confidence, review/disposition, error, sensitivity, and correlation. Do not store sensitive content inline without approval.
 
 ## Configuration
 
 CaseType holds code/name, active flag, initial stage, defaults, workflow/configuration versions, AI policy, and retention. StageDefinition holds stage workflow, order, entry/exit rules, SLA and assignment rules, re-entry/skip/human/terminal flags. AllowedTransition maps case type + source + outcome to destination with guard, approval, reopen, and active flags.
+
+CaseAgentProfile binds one case type to an immutable agent profile and creation-contract version. CaseAgentContextSource allowlists canonical, extension, evidence, policy, SmartObject, or external read providers, their Case key, permitted fields, sensitivity, retrieval mode, and order. A generic agent gateway discovers these records; it never discovers arbitrary SQL or SmartObject methods.
+
+CaseTypePolicyDocument holds approved, effective-dated policy material separately from case-instance evidence. Record case type, policy/version, jurisdiction, applicable stage, approval, storage mode, hash, extracted-text reference, approver, and effective dates. Retrieval must resolve the version applicable to the case context and retain document/section citations.
 
 Keep definitions separate from runtime state for status, priority, severity, risk, confidentiality, jurisdiction, outcome, evidence/communication/decision types, SLA profile and thresholds, business calendar, assignment and escalation rules, notification templates, roles, and authority levels. Version and effective-date mutable configuration; runtime records retain the version used.
 
