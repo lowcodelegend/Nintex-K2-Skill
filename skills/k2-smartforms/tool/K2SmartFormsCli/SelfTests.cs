@@ -28,9 +28,101 @@ namespace K2SmartFormsCli
             TestMalformedEditableListRejected();
             TestViewIdentityRebase();
             TestFlatFormViewOrdering();
+            TestConditionalFormFrameworkSelection();
+            TestRedundantFormFrameworkRemoval();
             TestFormPreFillRules();
             TestMultiTableWorkflowStateReconciliation();
-            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams, mutually exclusive native If/Else Save branching, post-Create master hydration and Form method-action rejection, master-detail field-validation composition, orphan optional control mappings, lookup/detail List classification, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, native max-length/validation-pattern contracts, must-be-true checkbox validation groups, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, modern Web Component full-body placement, capture and editable-list hidden-property composition, editable-list File edit-template validation, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, constraint-aware test-data Pre-fill, multi-table workflow-state reconciliation");
+            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams, mutually exclusive native If/Else Save branching, post-Create master hydration and Form method-action rejection, master-detail field-validation composition, orphan optional control mappings, lookup/detail List classification, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, native max-length/validation-pattern contracts, must-be-true checkbox validation groups, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, modern Web Component full-body placement, capture and editable-list hidden-property composition, editable-list File edit-template validation, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, conditional per-Form framework selection, redundant profile/header/footer removal, constraint-aware test-data Pre-fill, multi-table workflow-state reconciliation");
+        }
+
+        private static void TestConditionalFormFrameworkSelection()
+        {
+            var application = new ApplicationOptions { StyleProfile = "Application Style" };
+            var form = new FormDefinition { Name = "Plain Form" };
+            Assert(FormFrameworkUsage.UsesStyleProfile(application, form),
+                "an explicitly selected application Style Profile applies by default");
+            Assert(!FormFrameworkUsage.UsesCommonHeader(application, form),
+                "an environment-selected common header does not leak into an undeclared Form");
+            Assert(!FormFrameworkUsage.UsesCommonFooter(application, form, true),
+                "an environment-selected common footer does not leak into an undeclared Form");
+
+            form.UseStyleProfile = false;
+            form.UseCommonHeader = true;
+            form.UseCommonFooter = false;
+            Assert(!FormFrameworkUsage.UsesStyleProfile(application, form),
+                "a Form can explicitly decline the application Style Profile");
+            Assert(FormFrameworkUsage.UsesCommonHeader(application, form),
+                "a Form can explicitly opt into the environment common header");
+            Assert(!FormFrameworkUsage.UsesCommonFooter(application, form, true),
+                "a Form can use the header without the footer");
+
+            application.CommonHeader = new CommonHeaderDefinition { Enabled = true };
+            var inherited = new FormDefinition { Name = "Inherited Framework Form" };
+            Assert(FormFrameworkUsage.UsesCommonHeader(application, inherited),
+                "an explicitly selected application common header applies by default");
+            Assert(FormFrameworkUsage.UsesCommonFooter(application, inherited, true),
+                "the selected application footer applies by default when available");
+            inherited.UseCommonHeader = false;
+            Assert(!FormFrameworkUsage.UsesCommonFooter(application, inherited, true),
+                "declining the header also declines the footer");
+        }
+
+        private static void TestRedundantFormFrameworkRemoval()
+        {
+            var headerGuid = Guid.Parse("71000000-0000-0000-0000-000000000001");
+            var footerGuid = Guid.Parse("71000000-0000-0000-0000-000000000002");
+            var styleGuid = Guid.Parse("71000000-0000-0000-0000-000000000003");
+            var xml = "<Forms><Form ID='form-id'><Name>Conditional Framework Form</Name>" +
+                "<Controls><Control ID='form-control' Type='Form'><Properties><Property><Name>StyleProfile</Name><DisplayValue>Old Style</DisplayValue><NameValue>Old Style</NameValue><Value>" + styleGuid + "</Value></Property></Properties></Control>" +
+                "<Control ID='header-area' Type='Area'/><Control ID='header-instance' Type='AreaItem'/>" +
+                "<Control ID='body-area' Type='Area'/><Control ID='body-instance' Type='AreaItem'/>" +
+                "<Control ID='footer-area' Type='Area'/><Control ID='footer-instance' Type='AreaItem'/></Controls>" +
+                "<Panels><Panel ID='panel'><Areas>" +
+                "<Area ID='header-area'><Items><Item ID='header-instance' ViewID='" + headerGuid + "' ViewName='Shared Header'/></Items></Area>" +
+                "<Area ID='body-area'><Items><Item ID='body-instance' ViewID='72000000-0000-0000-0000-000000000001' ViewName='Business View'/></Items></Area>" +
+                "<Area ID='footer-area'><Items><Item ID='footer-instance' ViewID='" + footerGuid + "' ViewName='Shared Footer'/></Items></Area>" +
+                "</Areas></Panel></Panels>" +
+                "<States><State><Events>" +
+                "<Event ID='header-rule' Type='User' SourceType='View' InstanceID='header-instance'><Handlers><Handler><Actions/></Handler></Handlers></Event>" +
+                "<Event ID='form-rule' Type='User' SourceType='Form'><Handlers><Handler><Actions>" +
+                "<Action ID='header-call' Type='Execute' InstanceID='header-instance'/>" +
+                "<Action ID='footer-transfer' Type='Transfer'><Parameters><Parameter TargetInstanceID='footer-instance'/></Parameters></Action>" +
+                "<Action ID='business-action' Type='Execute' InstanceID='body-instance'/></Actions></Handler></Handlers></Event>" +
+                "</Events></State></States></Form></Forms>";
+
+            bool styleChanged;
+            var withoutStyle = FormThemeDefinition.RemoveStyleProfile(xml, out styleChanged);
+            Assert(styleChanged && FormThemeDefinition.ReadStyleProfile(withoutStyle) == null,
+                "redundant Style Profile property is removed");
+
+            bool frameworkChanged;
+            var reconciled = FormLayoutDefinition.RemoveFrameworkViews(withoutStyle,
+                new[] { headerGuid, footerGuid }, out frameworkChanged);
+            Assert(frameworkChanged, "redundant header/footer are removed");
+            var document = XDocument.Parse(reconciled);
+            Assert(!document.Descendants("Item").Any(x =>
+                string.Equals((string)x.Attribute("ViewID"), headerGuid.ToString(), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals((string)x.Attribute("ViewID"), footerGuid.ToString(), StringComparison.OrdinalIgnoreCase)),
+                "removed framework Views have no remaining layout instances");
+            Assert(!document.Descendants("Control").Any(x =>
+                new[] { "header-area", "header-instance", "footer-area", "footer-instance" }
+                    .Contains((string)x.Attribute("ID"), StringComparer.OrdinalIgnoreCase)),
+                "removed framework Views have no orphan Form controls");
+            Assert(!document.Descendants("Event").Any(x => (string)x.Attribute("ID") == "header-rule") &&
+                !document.Descendants("Action").Any(x =>
+                    (string)x.Attribute("ID") == "header-call" || (string)x.Attribute("ID") == "footer-transfer"),
+                "removed framework Views have no orphan lifecycle rules or actions");
+            Assert(document.Descendants("Item").Any(x => (string)x.Attribute("ViewName") == "Business View") &&
+                document.Descendants("Action").Any(x => (string)x.Attribute("ID") == "business-action"),
+                "business layout and actions survive framework cleanup");
+            FormLayoutDefinition.VerifyFrameworkViewsAbsent(reconciled, new[] { headerGuid, footerGuid },
+                "Conditional Framework Form");
+
+            bool changedAgain;
+            var secondPass = FormLayoutDefinition.RemoveFrameworkViews(reconciled,
+                new[] { headerGuid, footerGuid }, out changedAgain);
+            Assert(!changedAgain && string.Equals(reconciled, secondPass, StringComparison.Ordinal),
+                "framework cleanup is idempotent");
         }
 
         private static void TestModernWebComponentComposition()

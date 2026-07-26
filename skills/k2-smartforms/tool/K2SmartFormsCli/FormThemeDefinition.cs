@@ -84,6 +84,24 @@ namespace K2SmartFormsCli
             return document.ToString(SaveOptions.DisableFormatting);
         }
 
+        public static string RemoveStyleProfile(string definition, out bool changed)
+        {
+            var document = Parse(definition);
+            var control = FindFormControl(document);
+            var properties = control.Elements().SingleOrDefault(x => x.Name.LocalName == "Properties");
+            if (properties == null)
+            {
+                changed = false;
+                return definition;
+            }
+            var matching = properties.Elements().Where(x => IsProperty(x, StyleProfilePropertyName)).ToList();
+            if (matching.Count > 1) throw new CliException("K2 form definition contains duplicate " + StyleProfilePropertyName + " properties.");
+            changed = matching.Count == 1;
+            if (!changed) return definition;
+            matching[0].Remove();
+            return document.ToString(SaveOptions.DisableFormatting);
+        }
+
         public static FormStyleProfileReference ReadStyleProfile(string definition)
         {
             var document = Parse(definition);

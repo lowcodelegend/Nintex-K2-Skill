@@ -10,7 +10,7 @@ This disposable spike proves the case-management homepage architecture against t
 - palette View `NTH.Command Palette`: `cd7aa945-d09f-4c97-aaed-588db5f48b58`;
 - navigation View `NTH.Application Navigation`: `6155f049-3a3b-475d-847b-3234a767ddb8`.
 
-The full `smartforms-manifest.json` owns eight Views and one Form. `k2forms 0.38.0` verified every definition, Designer hydration, Style Profile identity, `useLegacyTheme=false`, and `preFill=disabled`. The palette View initializes from the user-scoped `SNC_SupplierNonconformance_SNC_CommandSuggestion.List` method and raises a View-owned native `Navigate` action.
+The full `smartforms-manifest.json` owns eleven Views and one Form. `k2forms 0.40.0` verified every definition, Designer hydration, explicit Style Profile identity, `useLegacyTheme=false`, `useCommonHeader=false`, `useCommonFooter=false`, and `preFill=disabled`. The palette View initializes from the user-scoped `SNC_SupplierNonconformance_SNC_CommandSuggestion.List` method and raises a View-owned native `Navigate` action.
 
 ## Data security
 

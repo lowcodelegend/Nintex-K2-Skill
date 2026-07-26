@@ -49,7 +49,7 @@ K2 Runtime performs partial updates and can replace nodes. DOM manipulation must
 
 ## Integration with SmartForms
 
-Create and verify the Style Profile first. In a `$k2-smartforms` manifest, set `application.styleProfile` to its exact name or GUID and keep `useLegacyTheme=false`. Style Profile deployment does not edit existing Forms; changing a Form's selected profile remains SmartForms work.
+Create and verify the Style Profile first. In a `$k2-smartforms` manifest, set `application.styleProfile` to its exact name or GUID, keep `useLegacyTheme=false`, and set `form.useStyleProfile=false` on Forms that should retain K2's plain modern default. Style Profile deployment does not edit existing Forms; changing or removing a Form's selected profile remains SmartForms reconciliation/regeneration work.
 
 For shared navigation or shell behavior, keep the data and server rules native where possible. Use Style Profile JavaScript to progressively enhance stable native markup, not to replace authorization, routing, persistence, or workflow logic.
 

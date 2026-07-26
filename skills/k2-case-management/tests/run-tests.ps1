@@ -100,7 +100,9 @@ try {
     if ($chartView.charts[0].showLabels -ne $true) { throw 'Compiled UX did not apply the chart label default.' }
     $dashboardForm = @($manifest.application.forms | Where-Object { $_.name -eq 'TST.Quality Operations' })[0]
     if ($dashboardForm.views.Count -ne 6 -or $dashboardForm.views[0] -ne 'TST.Application Navigation' -or $dashboardForm.views[1] -ne 'TST.Command Palette') { throw 'Compiled native homepage did not compose navigation first, palette second, and every native dashboard View.' }
-    if ($dashboardForm.useLegacyTheme -ne $false -or $dashboardForm.preFill.enabled -ne $false) { throw 'Native homepage Form must use the modern theme and an explicit Pre-fill opt-out.' }
+    if ($dashboardForm.useLegacyTheme -ne $false -or $dashboardForm.useStyleProfile -ne $true -or
+        $dashboardForm.useCommonHeader -ne $false -or $dashboardForm.useCommonFooter -ne $false -or
+        $dashboardForm.preFill.enabled -ne $false) { throw 'Native homepage Form must use only its selected modern Style Profile, decline the environment header/footer, and declare an explicit Pre-fill opt-out.' }
     if ($null -ne $manifest.application.PSObject.Properties['commonHeader']) { throw 'Northstar compilation must not remove an environment common framework that can participate in required native Form-load rules; suppress duplicate chrome through the guarded Style Profile.' }
 } finally {
     if (Test-Path -LiteralPath $compiled) { Remove-Item -LiteralPath $compiled -Force }
@@ -148,7 +150,9 @@ try {
     $reports = @($manifest.application.forms | Where-Object { $_.name -eq 'SNC.Reports' })[0]
     if (@($reports.tabs.name) -join '|' -ne 'Operations|Performance|Quality' -or @($reports.views).Count -ne 12) { throw 'Reports compiler did not emit the reusable governed report collection with accessible data alternatives.' }
     $dashboard = @($manifest.application.forms | Where-Object { $_.name -eq 'SNC.Quality Operations' })[0]
-    if ($dashboard.useLegacyTheme -ne $false -or $dashboard.preFill.enabled -ne $false -or @($dashboard.views).Count -ne 11) { throw 'Northstar dashboard compiler did not emit the modern native shell and complete bounded-widget composition.' }
+    if ($dashboard.useLegacyTheme -ne $false -or $dashboard.useStyleProfile -ne $true -or
+        $dashboard.useCommonHeader -ne $false -or $dashboard.useCommonFooter -ne $false -or
+        $dashboard.preFill.enabled -ne $false -or @($dashboard.views).Count -ne 11) { throw 'Northstar dashboard compiler did not emit the explicit modern shell dependency contract and complete bounded-widget composition.' }
     $widgetViews = @($manifest.application.views | Where-Object { @($_.webComponents | Where-Object controlType -eq 'northstar-dashboard-widget').Count -eq 1 })
     if ($widgetViews.Count -ne 4 -or (@($widgetViews.webComponents.properties.Variant | Sort-Object) -join '|') -ne 'attention|stage|supplier|trend') { throw 'Northstar dashboard compiler did not emit the four bounded widget variants.' }
     foreach ($widgetView in $widgetViews) {

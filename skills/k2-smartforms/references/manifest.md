@@ -42,6 +42,9 @@
       {
         "name": "Expense Management",
         "useLegacyTheme": false,
+        "useStyleProfile": false,
+        "useCommonHeader": false,
+        "useCommonFooter": false,
         "views": ["Expense Editor", "Expense List"],
         "options": ["no-tabs"],
         "behaviors": ["load-form-list-click", "refresh-list-form-submit", "refresh-list-form-load"]
@@ -172,11 +175,11 @@ Stage codes must be unique and match the values persisted by the lifecycle model
 
 `k2` supports integrated authentication by default. For explicit AD authentication, set `integrated` false plus `domain`, `userName`, and `passwordEnvironmentVariable`; never store the password itself.
 
-`application.rootCategoryPath` is the stable application root. It must not contain a version segment or end in `Forms`, `Views`, or `Admin`. The CLI derives `<root>\Views`, `<root>\Forms`, `<root>\Admin\Views`, and `<root>\Admin\Forms`. Form and view names must not contain version tokens because K2 maintains internal artifact versions. `theme` must match an installed legacy K2 theme because `FormGenerator` requires that compatibility metadata; it is not the modern styling choice. When using a custom Style Profile, set `styleProfile` to an unambiguous installed system name, display name, or GUID; prefer the system name stored by `k2env`. Omitting `styleProfile` uses K2's plain modern default theme because Forms still disable legacy-theme rendering. The CLI writes the StyleProfile GUID/name into every generated form when one is selected and verifies it independently from the legacy theme field. `checkIn` should normally remain true.
+`application.rootCategoryPath` is the stable application root. It must not contain a version segment or end in `Forms`, `Views`, or `Admin`. The CLI derives `<root>\Views`, `<root>\Forms`, `<root>\Admin\Views`, and `<root>\Admin\Forms`. Form and view names must not contain version tokens because K2 maintains internal artifact versions. `theme` must match an installed legacy K2 theme because `FormGenerator` requires that compatibility metadata; it is not the modern styling choice. When using a custom Style Profile, set `styleProfile` to an unambiguous installed system name, display name, or GUID; prefer the system name stored by `k2env`. Omitting `styleProfile` uses K2's plain modern default theme because Forms still disable legacy-theme rendering. A selected application Style Profile applies to each Form by default; set that Form's `useStyleProfile` to `false` when it does not use the profile. Set `useStyleProfile` to `true` only when `application.styleProfile` is selected. The CLI writes and verifies the StyleProfile GUID/name only on Forms that use it. `checkIn` should normally remain true.
 
 Set `application.solutionCode` to the solution's three- or four-letter prefix. It is available to environment common-header templates as `{{solution.code}}`; when omitted, the CLI derives the text before the first dot in the form name.
 
-By default the CLI reads the selected common header from `%CODEX_HOME%\k2` (or `%USERPROFILE%\.codex\k2`). Use an explicit block only to select another environment, override the header for this solution, or opt out:
+An environment common-header selection is available but is not automatically added to a Form. Declare an enabled `application.commonHeader` to make the application contract the default for its Forms, or set a Form's `useCommonHeader` to `true` to opt that Form into the selected environment contract from `%CODEX_HOME%\k2` (or `%USERPROFILE%\.codex\k2`). Use an explicit block to select another environment or override the framework:
 
 ```json
 "commonHeader": {
@@ -206,7 +209,11 @@ By default the CLI reads the selected common header from `%CODEX_HOME%\k2` (or `
 }
 ```
 
-Supported templates are `{{form.name}}`, `{{application.name}}`, `{{application.rootCategoryPath}}`, and `{{solution.code}}`; other text is literal. `instanceName`, `title`, and `isCollapsible` control the external header instance independently. `initializeEvent` must name a callable user rule on the header View; `parameters` are passed as View parameters. `serverLoadControlTransfers` maps exact header control names to literal/template values and writes all mappings with one Form-level `ServerDataTransfer` action. Each `serverRules` entry names a callable header rule. Set `serverRulesBeforeControlTransfers` when the discovered framework requires rule execution before the combined transfer; otherwise transfers precede calls. `footer` selects an optional paired external View that is always kept in the final form view position. An explicit `view` takes precedence over the environment selection. To suppress the framework use `{ "enabled": false, "reason": "..." }`; the reason is mandatory. External framework Views are never created, replaced, or removed by the manifest.
+Supported templates are `{{form.name}}`, `{{application.name}}`, `{{application.rootCategoryPath}}`, and `{{solution.code}}`; other text is literal. `instanceName`, `title`, and `isCollapsible` control the external header instance independently. `initializeEvent` must name a callable user rule on the header View; `parameters` are passed as View parameters. `serverLoadControlTransfers` maps exact header control names to literal/template values and writes all mappings with one Form-level `ServerDataTransfer` action. Each `serverRules` entry names a callable header rule. Set `serverRulesBeforeControlTransfers` when the discovered framework requires rule execution before the combined transfer; otherwise transfers precede calls. `footer` selects an optional paired external View kept in the final Form position only where used. An explicit `view` takes precedence over the environment selection. To suppress the application framework use `{ "enabled": false, "reason": "..." }`; the reason is mandatory.
+
+Per Form, `useCommonHeader` inherits an explicitly enabled `application.commonHeader`; when the application block is omitted it defaults to `false`, and `true` means opt into the selected environment contract. `useCommonFooter` inherits the selected header contract's footer when the header is used. Set it to `false` for a header-only Form. `useCommonFooter=true` requires the header and an available footer. A Form that declines the header cannot request its footer.
+
+Generation never includes unused framework Views. `reconcile --confirm` removes a known redundant Style Profile binding and exact selected header/footer instances, their Form layout controls, and their lifecycle calls while preserving Form identity and business Views/rules. Regeneration remains the authoritative path when switching between unrelated framework bundles. External framework View artifacts themselves are never created, replaced, deleted, or otherwise mutated by the manifest.
 
 ## Lookup sources and controls
 

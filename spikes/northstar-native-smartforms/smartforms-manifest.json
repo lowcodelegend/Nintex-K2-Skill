@@ -425,6 +425,9 @@
       {
         "name": "NTH.Quality Operations",
         "useLegacyTheme": false,
+        "useStyleProfile": true,
+        "useCommonHeader": false,
+        "useCommonFooter": false,
         "views": [
           "NTH.Application Navigation",
           "NTH.Command Palette",

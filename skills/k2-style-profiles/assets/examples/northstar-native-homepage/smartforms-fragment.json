@@ -25,6 +25,9 @@
       {
         "name": "APP.Quality Operations",
         "useLegacyTheme": false,
+        "useStyleProfile": true,
+        "useCommonHeader": false,
+        "useCommonFooter": false,
         "preFill": {
           "enabled": false,
           "disabledReason": "The read-only operations homepage uses governed projection data and has no user-entry fields."

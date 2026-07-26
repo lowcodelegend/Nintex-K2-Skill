@@ -5,16 +5,48 @@ using System.Web.Script.Serialization;
 
 namespace K2SmartFormsCli
 {
+    internal static class FormFrameworkUsage
+    {
+        public static bool UsesStyleProfile(ApplicationOptions application, FormDefinition form)
+        {
+            return form.UseStyleProfile ?? !string.IsNullOrWhiteSpace(application.StyleProfile);
+        }
+
+        public static bool UsesCommonHeader(ApplicationOptions application, FormDefinition form)
+        {
+            return form.UseCommonHeader ?? (application.CommonHeader != null && application.CommonHeader.Enabled);
+        }
+
+        public static bool UsesCommonFooter(ApplicationOptions application, FormDefinition form, bool selectedHeaderHasFooter)
+        {
+            if (!UsesCommonHeader(application, form)) return false;
+            return form.UseCommonFooter ?? selectedHeaderHasFooter;
+        }
+    }
+
     internal static class EnvironmentCommonHeader
     {
-        public static CommonHeaderDefinition Resolve(ApplicationOptions application)
+        public static CommonHeaderDefinition ResolveDesired(ApplicationOptions application, bool allowImplicitEnvironment)
         {
             if (application.CommonHeader != null)
             {
                 if (!application.CommonHeader.Enabled) return null;
                 if (!string.IsNullOrWhiteSpace(application.CommonHeader.View)) return application.CommonHeader;
             }
+            else if (!allowImplicitEnvironment) return null;
 
+            return ResolveEnvironment(application, true);
+        }
+
+        public static CommonHeaderDefinition ResolveRemovalCandidate(ApplicationOptions application)
+        {
+            if (application.CommonHeader != null && !string.IsNullOrWhiteSpace(application.CommonHeader.View))
+                return application.CommonHeader;
+            return ResolveEnvironment(application, false);
+        }
+
+        private static CommonHeaderDefinition ResolveEnvironment(ApplicationOptions application, bool strict)
+        {
             var root = Path.Combine(GetCodexHome(), "k2");
             var environment = application.CommonHeader == null ? null : application.CommonHeader.Environment;
             if (string.IsNullOrWhiteSpace(environment))
@@ -27,16 +59,25 @@ namespace K2SmartFormsCli
             if (string.IsNullOrWhiteSpace(environment)) return null;
             var profilePath = Path.Combine(root, "environments", environment + ".json");
             if (!File.Exists(profilePath))
+            {
+                if (!strict) return null;
                 throw new CliException("K2 environment profile does not exist for the requested common header: " + profilePath);
+            }
             var profile = Deserialize<EnvironmentProfile>(profilePath);
             var smartForms = profile == null ? null : profile.SmartForms;
             if (smartForms == null) return null;
             if (string.Equals(smartForms.CommonHeaderSelection, "unselected", StringComparison.OrdinalIgnoreCase))
-                throw new CliException("The default K2 environment common-header choice is unselected. Ask whether a shared header should be used, inspect it, and persist set-common-header (or --no-common-header) before generating forms: " + environment);
+            {
+                if (!strict) return null;
+                throw new CliException("The requested K2 environment common-header choice is unselected. Inspect it and persist set-common-header (or --no-common-header) before generating Forms that opt in: " + environment);
+            }
             if (!string.Equals(smartForms.CommonHeaderSelection, "selected", StringComparison.OrdinalIgnoreCase))
                 return null;
             if (smartForms.DefaultCommonHeader == null)
-                throw new CliException("The default K2 environment marks a common header selected but has no header contract: " + environment);
+            {
+                if (!strict) return null;
+                throw new CliException("The requested K2 environment marks a common header selected but has no header contract: " + environment);
+            }
             var selected = smartForms.DefaultCommonHeader;
             return new CommonHeaderDefinition
             {

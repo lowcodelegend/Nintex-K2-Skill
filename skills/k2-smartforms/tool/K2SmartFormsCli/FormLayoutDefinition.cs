@@ -7,6 +7,74 @@ namespace K2SmartFormsCli
 {
     internal static class FormLayoutDefinition
     {
+        public static string RemoveFrameworkViews(string xml, IEnumerable<Guid> viewGuids, out bool changed)
+        {
+            var targets = new HashSet<string>((viewGuids ?? Enumerable.Empty<Guid>())
+                .Where(x => x != Guid.Empty).Select(x => x.ToString()), StringComparer.OrdinalIgnoreCase);
+            if (targets.Count == 0)
+            {
+                changed = false;
+                return xml;
+            }
+
+            var document = Parse(xml);
+            var form = FindForm(document);
+            var items = form.Descendants().Where(x => x.Name.LocalName == "Item" &&
+                x.Attribute("ViewID") != null && targets.Contains((string)x.Attribute("ViewID"))).ToList();
+            changed = items.Count > 0;
+            if (!changed) return xml;
+
+            var instanceIds = new HashSet<string>(items.Select(x => (string)x.Attribute("ID"))
+                .Where(x => !string.IsNullOrWhiteSpace(x)), StringComparer.OrdinalIgnoreCase);
+            var structuralIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in items)
+            {
+                var area = item.Ancestors().FirstOrDefault(x => x.Name.LocalName == "Area");
+                if (area == null)
+                    throw new CliException("Refusing to remove a redundant framework View whose Form layout item has no containing Area.");
+                var retainedView = area.Descendants().FirstOrDefault(x => x.Name.LocalName == "Item" &&
+                    x.Attribute("ViewID") != null && !targets.Contains((string)x.Attribute("ViewID")));
+                if (retainedView != null)
+                    throw new CliException("Refusing to remove redundant framework View '" +
+                        ((string)item.Attribute("ViewName") ?? (string)item.Attribute("ViewID")) +
+                        "' because its layout Area also contains business View '" +
+                        ((string)retainedView.Attribute("ViewName") ?? (string)retainedView.Attribute("ViewID")) + "'.");
+                foreach (var node in area.DescendantsAndSelf().Where(x =>
+                    (x.Name.LocalName == "Area" || x.Name.LocalName == "Item") && x.Attribute("ID") != null))
+                    structuralIds.Add((string)node.Attribute("ID"));
+                area.Remove();
+            }
+
+            var controls = RequiredChild(form, "Controls");
+            foreach (var control in controls.Elements().Where(x => x.Name.LocalName == "Control" &&
+                structuralIds.Contains((string)x.Attribute("ID"))).ToList())
+                control.Remove();
+
+            foreach (var action in form.Descendants().Where(x => x.Name.LocalName == "Action" &&
+                ReferencesAnyInstance(x, instanceIds)).ToList())
+                action.Remove();
+            foreach (var rule in form.Descendants().Where(x => x.Name.LocalName == "Event" &&
+                ReferencesFrameworkSource(x, instanceIds)).ToList())
+                rule.Remove();
+
+            return document.ToString(SaveOptions.DisableFormatting);
+        }
+
+        public static void VerifyFrameworkViewsAbsent(string xml, IEnumerable<Guid> viewGuids, string formName)
+        {
+            var targets = new HashSet<string>((viewGuids ?? Enumerable.Empty<Guid>())
+                .Where(x => x != Guid.Empty).Select(x => x.ToString()), StringComparer.OrdinalIgnoreCase);
+            if (targets.Count == 0) return;
+            var form = FindForm(Parse(xml));
+            var remaining = form.Descendants().Where(x => x.Name.LocalName == "Item" &&
+                x.Attribute("ViewID") != null && targets.Contains((string)x.Attribute("ViewID")))
+                .Select(x => (string)x.Attribute("ViewName") ?? ChildValue(x, "Name") ?? (string)x.Attribute("ViewID"))
+                .ToList();
+            if (remaining.Count > 0)
+                throw new CliException("K2 Form '" + formName + "' retains redundant framework View(s): " +
+                    string.Join(", ", remaining.ToArray()) + ".");
+        }
+
         public static string Apply(string xml, FormDefinition definition, ResolvedCommonHeader header, IDictionary<string, string> headerParameters, IDictionary<Guid, ResolvedHeaderControlTransfer> headerControlTransfers)
         {
             var document = Parse(xml);
@@ -435,6 +503,24 @@ namespace K2SmartFormsCli
                     string.Equals((string)x.Attribute("TargetInstanceID"), instanceId, StringComparison.OrdinalIgnoreCase) &&
                     string.Equals((string)x.Attribute("TargetID"), controlGuid.ToString(), StringComparison.OrdinalIgnoreCase) &&
                     string.Equals((string)x.Attribute("TargetType"), "Control", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static bool ReferencesAnyInstance(XElement element, ISet<string> instanceIds)
+        {
+            return element.DescendantsAndSelf().Attributes().Any(attribute =>
+                (attribute.Name.LocalName.Equals("InstanceID", StringComparison.OrdinalIgnoreCase) ||
+                 attribute.Name.LocalName.Equals("TargetInstanceID", StringComparison.OrdinalIgnoreCase) ||
+                 attribute.Name.LocalName.Equals("SourceInstanceID", StringComparison.OrdinalIgnoreCase)) &&
+                instanceIds.Contains(attribute.Value));
+        }
+
+        private static bool ReferencesFrameworkSource(XElement element, ISet<string> instanceIds)
+        {
+            return element.DescendantsAndSelf().Attributes().Any(attribute =>
+                (attribute.Name.LocalName.Equals("InstanceID", StringComparison.OrdinalIgnoreCase) ||
+                 attribute.Name.LocalName.Equals("SourceID", StringComparison.OrdinalIgnoreCase) ||
+                 attribute.Name.LocalName.Equals("SourceInstanceID", StringComparison.OrdinalIgnoreCase)) &&
+                instanceIds.Contains(attribute.Value));
         }
 
         private static XElement EnsureFormLifecycleActions(XElement form, string eventName, string sourceName, string sourceDisplayName, string friendlyName)

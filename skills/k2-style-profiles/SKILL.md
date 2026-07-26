@@ -15,7 +15,7 @@ Create checked-in K2 Style Profiles from declarative manifests, host their CSS/J
 4. Define CSS and JS files in exact load order. Put the generated K2 colour adapter first, solution tokens/reset and component styles next, and behavior JavaScript last. Use a new target file name when browser cache invalidation is required.
 5. Run `scripts/k2style.ps1 doctor --manifest <path>`, then `plan`. Resolve collisions, foreign checkouts, invalid hosting mappings, missing sources, mixed content, and Designer-isolation failures before mutation.
 6. Run `deploy --manifest <path> --confirm`. Deployment creates or updates the IIS virtual directory, copies declared assets, creates or updates the Style Profile through the installed K2 Designer save implementation, checks it in, and verifies metadata, category, ordered files, HTTPS responses, MIME types, and source/served hashes.
-7. Run `inspect` for GUID/version evidence. Apply the exact Style Profile name or GUID from that output in `$k2-smartforms`; keep modern Forms on `useLegacyTheme=false`.
+7. Run `inspect` for GUID/version evidence. Apply the exact Style Profile name or GUID from that output in `$k2-smartforms` only to Forms that use it; set `form.useStyleProfile=false` for plain modern Forms and reconcile stale bindings. Keep every modern Form on `useLegacyTheme=false`.
 8. Test authenticated Runtime Forms at desktop and mobile widths. Also open the Form and Style Profile designers and confirm that custom runtime UI, overlays, loaders, and DOM manipulation do not execute there. For shell work, configure and run `scripts/test-runtime.ps1`; do not accept an unmeasured cold load, warm transition, timeout, or Designer boundary.
 
 ## Design gates

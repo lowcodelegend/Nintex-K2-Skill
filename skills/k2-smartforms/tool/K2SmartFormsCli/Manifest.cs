@@ -432,6 +432,16 @@ namespace K2SmartFormsCli
                 if (form.PreFill == null) form.PreFill = new FormPreFillDefinition();
                 RequireArtifactName(form.Name, "form.name");
                 RejectVersionToken(form.Name, "form.name");
+                if (form.UseStyleProfile == true && string.IsNullOrWhiteSpace(Application.StyleProfile))
+                    throw new CliException("Form '" + form.Name + "' sets useStyleProfile=true but application.styleProfile is not selected.");
+                if (form.UseCommonHeader == true && Application.CommonHeader != null && !Application.CommonHeader.Enabled)
+                    throw new CliException("Form '" + form.Name + "' sets useCommonHeader=true but application.commonHeader is disabled.");
+                if (form.UseCommonFooter == true && form.UseCommonHeader == false)
+                    throw new CliException("Form '" + form.Name + "' cannot set useCommonFooter=true while useCommonHeader=false.");
+                if (form.UseCommonFooter == true && Application.CommonHeader != null &&
+                    Application.CommonHeader.Enabled && !string.IsNullOrWhiteSpace(Application.CommonHeader.View) &&
+                    Application.CommonHeader.Footer == null)
+                    throw new CliException("Form '" + form.Name + "' sets useCommonFooter=true but application.commonHeader has no footer.");
                 if (form.Views.Count == 0) throw new CliException("Form '" + form.Name + "' must reference at least one view.");
                 EnsureUniqueValues(form.Views, "view reference", form.Name);
                 foreach (var viewName in form.Views)
@@ -998,6 +1008,9 @@ namespace K2SmartFormsCli
     {
         public string Name { get; set; }
         public bool UseLegacyTheme { get; set; }
+        public bool? UseStyleProfile { get; set; }
+        public bool? UseCommonHeader { get; set; }
+        public bool? UseCommonFooter { get; set; }
         public List<string> Views { get; set; }
         public List<string> Options { get; set; }
         public List<string> Behaviors { get; set; }

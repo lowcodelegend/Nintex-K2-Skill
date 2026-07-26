@@ -473,6 +473,9 @@
       {
         "name": "SNC.Quality Operations",
         "useLegacyTheme": false,
+        "useStyleProfile": true,
+        "useCommonHeader": false,
+        "useCommonFooter": false,
         "views": [
           "SNC.Application Navigation",
           "SNC.Command Palette",
@@ -504,6 +507,9 @@
       {
         "name": "SNC.Reports",
         "useLegacyTheme": false,
+        "useStyleProfile": true,
+        "useCommonHeader": false,
+        "useCommonFooter": false,
         "views": [
           "SNC.Backlog Aging",
           "SNC.Backlog Aging Data",
@@ -565,6 +571,9 @@
       {
         "name": "SNC.My Work",
         "useLegacyTheme": false,
+        "useStyleProfile": true,
+        "useCommonHeader": false,
+        "useCommonFooter": false,
         "views": [
           "SNC.Urgent Work"
         ],
