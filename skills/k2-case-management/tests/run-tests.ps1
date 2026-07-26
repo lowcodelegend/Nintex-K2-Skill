@@ -56,10 +56,21 @@ if ($northstarShell -notmatch 'enhanceGuidedJourney' -or
     $northstarCss -notmatch '\.k2sp-guided-journey') {
     throw 'Northstar presentation must enhance the original K2 guided-journey tab strip in place and prevent forward tab-click validation bypass.'
 }
+if ($northstarCss -notmatch 'body\.k2sp-spike \.k2sp-sidebar a\.k2sp-nav-item[\s\S]{0,500}color:\s*var\(--k2sp-nav-text\)\s*!important' -or
+    $northstarCss -notmatch '--k2sp-nav-text:\s*#aeb7c7' -or
+    $northstarCss -notmatch 'body\.k2sp-spike \.k2sp-sidebar a\.k2sp-nav-item\.active[\s\S]{0,250}color:\s*#fff\s*!important') {
+    throw 'Northstar application navigation must preserve the prototype neutral-grey text and white active state against the broader K2 accent-link rule.'
+}
 & (Get-Command node -ErrorAction Stop).Source --check (Join-Path $styleExample 'northstar-shell.js')
 if ($LASTEXITCODE -ne 0) { throw 'Northstar runtime shell JavaScript did not parse.' }
-& (Get-Command node -ErrorAction Stop).Source --check (Join-Path $PSScriptRoot '..\scripts\capture-browser-page-cdp.mjs')
+$browserDriver = Join-Path $PSScriptRoot '..\scripts\capture-browser-page-cdp.mjs'
+& (Get-Command node -ErrorAction Stop).Source --check $browserDriver
 if ($LASTEXITCODE -ne 0) { throw 'Northstar Node browser driver JavaScript did not parse.' }
+$browserDriverText = Get-Content -Raw -LiteralPath $browserDriver
+if ($browserDriverText -notmatch 'navigationItems' -or
+    $browserDriverText -notmatch 'textColor:\s*getComputedStyle\(label\)\.color') {
+    throw 'Northstar browser evidence must measure the computed application-navigation text colour.'
+}
 Write-Output 'Northstar K2-ownership and browser-driver tests passed.'
 
 $composer = Join-Path $PSScriptRoot '..\scripts\compose-case-ux.ps1'

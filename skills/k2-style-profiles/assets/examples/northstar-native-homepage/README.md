@@ -15,6 +15,8 @@ On a `$k2-smartforms` guided journey, the shell detects the stable generated jou
 
 Metric cards follow the same rule: the shell adds classes and presentation metadata to the existing K2 Table cells, and CSS lays those cells out as cards. It never reparents a bound Label/Data Label or copies its value into a replacement dashboard. Accessible chart-data Views also remain native; add any reveal/export interaction as a native SmartForms control and View-owned rule, not as injected Style Profile markup.
 
+Application-navigation labels use the Northstar prototype's neutral grey and turn white only for hover, keyboard focus, and the active route. Keep those shell-scoped selectors more specific than the general K2 link-accent rule; otherwise K2's violet hyperlink colour bleeds into every sidebar route.
+
 ## Adaptation
 
 Copy this directory into a solution workspace and edit `northstar-config.js`:

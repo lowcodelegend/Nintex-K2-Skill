@@ -235,6 +235,18 @@ try {
       northstarStyles: Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
         .map((link) => link.href)
         .filter((source) => /NorthstarAssets/i.test(source)),
+      navigationItems: Array.from(document.querySelectorAll("#k2sp-shell .k2sp-nav-item"))
+        .map((item) => {
+          const label = item.querySelector(".k2sp-nav-text") || item;
+          const icon = item.querySelector(".k2sp-nav-icon");
+          return {
+            text: (label.textContent || "").replace(/\\s+/g, " ").trim(),
+            active: item.classList.contains("active"),
+            textColor: getComputedStyle(label).color,
+            iconColor: icon ? getComputedStyle(icon).color : null,
+            backgroundColor: getComputedStyle(item).backgroundColor
+          };
+        }),
       customControls: Array.from(document.querySelectorAll("northstar-command-palette,northstar-dashboard-widget"))
         .map((control) => ({
           tag: control.tagName.toLowerCase(),
