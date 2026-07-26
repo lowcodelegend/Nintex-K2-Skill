@@ -1241,8 +1241,10 @@ body.k2sp-page-initiation .k2sp-journey-stepper a.tab[data-k2sp-step-locked='tru
 }
 
 body.k2sp-page-initiation .k2sp-step-number {
-  display: grid;
-  place-items: center;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 28px;
   height: 28px;
   border: 1px solid #d7dbe3;
@@ -1251,6 +1253,7 @@ body.k2sp-page-initiation .k2sp-step-number {
   color: var(--k2sp-muted);
   font-size: 10px;
   font-weight: 800;
+  line-height: 1;
 }
 
 body.k2sp-page-initiation .k2sp-step-copy {
@@ -1297,11 +1300,19 @@ body.k2sp-page-initiation .k2sp-journey-stepper a.tab[data-k2sp-step-state='done
   border-color: var(--k2sp-teal);
   background: var(--k2sp-teal);
   color: transparent;
+  font-size: 0;
 }
 
 body.k2sp-page-initiation .k2sp-journey-stepper a.tab[data-k2sp-step-state='done'] .k2sp-step-number::after {
-  content: '✓';
-  color: #fff;
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 4px;
+  border-bottom: 2px solid #fff;
+  border-left: 2px solid #fff;
+  transform: translate(-50%, -65%) rotate(-45deg);
 }
 
 body.k2sp-page-initiation .k2sp-guided-journey > .formpanel {
@@ -1324,6 +1335,37 @@ body.k2sp-page-initiation .k2sp-guided-journey > .formpanel {
 body.k2sp-page-initiation .k2sp-guided-journey > .formpanel[style*='display: none'],
 body.k2sp-page-initiation .k2sp-guided-journey > .formpanel.hidden {
   display: none !important;
+}
+
+/*
+ * The palette remains owned by its first-screen K2 View. When another native
+ * tab is active, keep only that fixed row alive; never move the bound control.
+ */
+body.k2sp-page-initiation .k2sp-guided-journey .formpanel.k2sp-command-palette-panel[style*='display: none'],
+body.k2sp-page-initiation .k2sp-guided-journey .formpanel.k2sp-command-palette-panel.hidden {
+  position: absolute !important;
+  display: block !important;
+  width: 0 !important;
+  height: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  pointer-events: none;
+}
+
+body.k2sp-page-initiation .k2sp-guided-journey .formpanel.k2sp-command-palette-panel[style*='display: none'] > .row:not(.k2sp-command-palette-row),
+body.k2sp-page-initiation .k2sp-guided-journey .formpanel.k2sp-command-palette-panel.hidden > .row:not(.k2sp-command-palette-row) {
+  display: none !important;
+}
+
+body.k2sp-page-initiation .k2sp-guided-journey .formpanel.k2sp-command-palette-panel[style*='display: none'] > .k2sp-command-palette-row,
+body.k2sp-page-initiation .k2sp-guided-journey .formpanel.k2sp-command-palette-panel.hidden > .k2sp-command-palette-row {
+  display: block !important;
+  pointer-events: auto;
 }
 
 body.k2sp-page-initiation .k2sp-guided-journey .k2sp-native-progress-source,

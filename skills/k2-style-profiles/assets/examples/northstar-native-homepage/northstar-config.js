@@ -10,8 +10,8 @@
   }
 
   window.K2SP_NORTHSTAR_CONFIG = {
-    version: "14",
-    applicationCssUrl: window.location.origin + "/NorthstarAssets/northstar-homepage.v14.css",
+    version: "15",
+    applicationCssUrl: window.location.origin + "/NorthstarAssets/northstar-homepage.v15.css",
     navigationViewTitle: "Application navigation",
     commandPaletteViewTitle: "Command palette",
     formNamePrefix: "",

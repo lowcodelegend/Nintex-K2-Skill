@@ -60,6 +60,10 @@ Choose the navigation source deliberately:
 
 Never clone native tab anchors into a second menu. Moving the original node preserves K2 click handlers, IDs, rule-driven selection, tab panels, and Worklist behavior.
 
+When a guided Form owns the command-palette View on its first screen, advancing the native tab causes K2 to hide the containing `.formpanel`. Keep the live control in that ownership tree. Mark the palette's stable row and its closest native panel, then use a later, narrowly scoped CSS override to reduce a hidden palette panel to a zero-size, overflow-visible surface. Hide every sibling row and restore pointer events only on the palette row. This keeps one Designer-hydratable control and its View-owned rule available on every screen without revealing stale first-screen content.
+
+Completed-step indicators must not depend on a text glyph's font metrics. Remove the step number from layout with `font-size: 0`, make the circle a centered flex container, and draw the check as an absolutely centered, fixed-size bordered pseudo-element. Verify its computed position and dimensions at desktop and mobile widths.
+
 ## Validation presentation
 
 Native K2 validation remains authoritative. A Style Profile that changes an input border, background, or shadow must explicitly cover invalid TextBox/TextArea and memo wrappers, dropdown/select-box buttons, calendars, checkboxes, and File controls. Put the invalid contract after the neutral contract with equal or greater selector specificity. Important neutral declarations require important invalid declarations; manifest loading, `doctor`, and every mutating command reject important overrides without that later protection.
@@ -76,6 +80,8 @@ Some K2 5.10 Runtime builds reference the misspelled localization global `locVal
 - Served bytes equal source bytes.
 - Runtime works with empty, long, invalid, slow, mobile, keyboard-only, and reduced-motion states.
 - Clicking an empty guided Continue/Save action invokes its real K2 event, blocks navigation/persistence, visibly treats every expected invalid control, exposes the matching summary count, and focuses/reveals the first failure without browser exceptions or horizontal overflow.
+- After real Pre-fill/Continue/Save navigation, the original command palette remains visible, opens, focuses its search input, and returns governed options on every guided screen.
+- Every completed-step check uses the declared centered geometry rather than a font-dependent glyph.
 - Designer opens without runtime classes, overlays, observers, sidebar transforms, or loading screens.
 - Existing forms using other Style Profiles are unchanged.
 - Generated and minified colour adapters both cover every colour-bearing K2 variable in every declared K2 context on the target version.

@@ -825,12 +825,15 @@
   function moveCommandPalette() {
     var host = document.querySelector('#k2sp-shell .k2sp-command-palette-host');
     if (!host) return false;
-    var existing = document.querySelector('.k2sp-command-palette-row');
-    if (existing) return true;
-    var view = findViewByTitle(config.commandPaletteViewTitle || 'Command palette');
-    var row = view && (view.closest('.row') || view);
+    var row = document.querySelector('.k2sp-command-palette-row');
+    if (!row) {
+      var view = findViewByTitle(config.commandPaletteViewTitle || 'Command palette');
+      row = view && (view.closest('.row') || view);
+    }
     if (!row) return false;
     row.classList.add('k2sp-command-palette-row');
+    var panel = row.closest('.formpanel');
+    if (panel) panel.classList.add('k2sp-command-palette-panel');
     host.classList.add('k2sp-command-palette-native');
     return true;
   }

@@ -7,6 +7,17 @@ function argument(name, fallback = undefined) {
   return index >= 0 ? process.argv[index + 1] : fallback;
 }
 
+function argumentsFor(name) {
+  const flag = `--${name}`;
+  const values = [];
+  for (let index = 0; index < process.argv.length; index += 1) {
+    if (process.argv[index] === flag && index + 1 < process.argv.length) {
+      values.push(process.argv[index + 1]);
+    }
+  }
+  return values;
+}
+
 const url = argument("url");
 const output = path.resolve(argument("output"));
 const profile = path.resolve(argument("profile"));
@@ -15,7 +26,10 @@ const height = Number(argument("height", "1000"));
 const port = Number(argument("port", "9333"));
 const settleMilliseconds = Number(argument("settle", "3000"));
 const trustedAuthHost = argument("trusted-auth-host", "");
-const clickName = argument("click-name", "");
+const clickNames = argumentsFor("click-name");
+const clickName = clickNames[0] || "";
+const dismissDialogs = process.argv.includes("--dismiss-dialogs");
+const paletteProbeText = argument("palette-probe-text", "");
 const noScreenshot = process.argv.includes("--no-screenshot");
 const edge = argument(
   "edge",
@@ -199,10 +213,11 @@ try {
   await delay(settleMilliseconds);
 
   let clickProbe = null;
-  if (clickName) {
+  const clickProbes = [];
+  for (const requestedClickName of clickNames) {
     const beforeClick = await session.send("Runtime.evaluate", {
       expression: `(() => {
-        const requestedName = ${JSON.stringify(clickName)};
+        const requestedName = ${JSON.stringify(requestedClickName)};
         const root = document.querySelector('[name="' +
           (window.CSS && CSS.escape ? CSS.escape(requestedName) : requestedName.replace(/"/g, '\\\\"')) +
           '"]');
@@ -235,7 +250,119 @@ try {
       returnByValue: true
     }, 5000);
     clickProbe = beforeClick.result.value;
-    await delay(1200);
+    clickProbes.push(clickProbe);
+    await delay(700);
+    if (dismissDialogs) {
+      const dismissed = await session.send("Runtime.evaluate", {
+        expression: `(() => {
+          const visible = (node) => !!node &&
+            getComputedStyle(node).display !== 'none' &&
+            getComputedStyle(node).visibility !== 'hidden' &&
+            !!(node.offsetWidth || node.offsetHeight || node.getClientRects().length);
+          const dialogs = Array.from(document.querySelectorAll(
+            '.popup,.dialog,.message-box,[role="dialog"]'
+          )).filter(visible);
+          const actions = dialogs.flatMap((dialog) =>
+            Array.from(dialog.querySelectorAll('a,button,input[type="button"]'))
+          ).filter(visible);
+          const target = actions.find((node) =>
+            /^(ok|close|continue)$/i.test((node.textContent || node.value || '').trim())
+          ) || actions[actions.length - 1];
+          if (!target) return { found: false };
+          target.dispatchEvent(new MouseEvent('click', {
+            bubbles: true, cancelable: true, view: window
+          }));
+          return {
+            found: true,
+            text: (target.textContent || target.value || '').trim()
+          };
+        })()`,
+        returnByValue: true
+      }, 5000);
+      clickProbe.dialogDismissal = dismissed.result.value;
+      await delay(500);
+    }
+  }
+
+  let paletteProbe = null;
+  if (paletteProbeText) {
+    const opened = await session.send("Runtime.evaluate", {
+      expression: `(() => {
+        const control = document.querySelector('northstar-command-palette');
+        const row = control && control.closest('.k2sp-command-palette-row');
+        const panel = control && control.closest('.formpanel');
+        const trigger = control && control.shadowRoot &&
+          control.shadowRoot.querySelector('.northstar-command__trigger');
+        const visible = (node) => !!node &&
+          getComputedStyle(node).display !== 'none' &&
+          getComputedStyle(node).visibility !== 'hidden' &&
+          !!(node.offsetWidth || node.offsetHeight || node.getClientRects().length);
+        if (!control || !trigger) return {
+          found: false,
+          controlVisible: visible(control),
+          rowVisible: visible(row),
+          panelDisplay: panel ? getComputedStyle(panel).display : null,
+          rowClass: row ? row.className : null,
+          panelClass: panel ? panel.className : null,
+          panelStyle: panel ? panel.getAttribute('style') : null,
+          panelParentClass: panel && panel.parentElement ? panel.parentElement.className : null,
+          directGuidedPanel: !!panel &&
+            !!panel.parentElement?.classList.contains('k2sp-guided-journey')
+        };
+        trigger.click();
+        return {
+          found: true,
+          controlVisible: visible(control),
+          rowVisible: visible(row),
+          panelDisplay: panel ? getComputedStyle(panel).display : null,
+          triggerVisible: visible(trigger),
+          rowClass: row ? row.className : null,
+          panelClass: panel ? panel.className : null,
+          panelStyle: panel ? panel.getAttribute('style') : null,
+          panelParentClass: panel && panel.parentElement ? panel.parentElement.className : null,
+          directGuidedPanel: !!panel &&
+            !!panel.parentElement?.classList.contains('k2sp-guided-journey')
+        };
+      })()`,
+      returnByValue: true
+    }, 5000);
+    paletteProbe = opened.result.value;
+    await delay(150);
+    if (paletteProbe.found) {
+      const typed = await session.send("Runtime.evaluate", {
+        expression: `(() => {
+          const control = document.querySelector('northstar-command-palette');
+          const input = control && control.shadowRoot &&
+            control.shadowRoot.querySelector('input[type="search"]');
+          if (!input) return { inputFound: false };
+          input.value = ${JSON.stringify(paletteProbeText)};
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          return { inputFound: true };
+        })()`,
+        returnByValue: true
+      }, 5000);
+      Object.assign(paletteProbe, typed.result.value);
+      await delay(350);
+      const result = await session.send("Runtime.evaluate", {
+        expression: `(() => {
+          const control = document.querySelector('northstar-command-palette');
+          const root = control && control.shadowRoot;
+          const input = root && root.querySelector('input[type="search"]');
+          const dialog = root && root.querySelector('[role="dialog"]');
+          const options = root ? root.querySelectorAll('[role="option"]') : [];
+          const status = root && root.querySelector('[role="status"]');
+          return {
+            dialogVisible: !!dialog,
+            inputValue: input ? input.value : null,
+            focused: !!input && root.activeElement === input,
+            optionCount: options.length,
+            statusText: status ? (status.textContent || '').trim() : ''
+          };
+        })()`,
+        returnByValue: true
+      }, 5000);
+      Object.assign(paletteProbe, result.result.value);
+    }
   }
 
   if (!noScreenshot) {
@@ -250,6 +377,8 @@ try {
   const evaluated = await session.send("Runtime.evaluate", {
     expression: `({
       clickProbe: ${JSON.stringify(clickProbe)},
+      clickProbes: ${JSON.stringify(clickProbes)},
+      commandPaletteProbe: ${JSON.stringify(paletteProbe)},
       clientWidth: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth,
       horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
@@ -438,13 +567,33 @@ try {
               .map(describe)
           })),
           tabs: describe(tabs),
-          tabAnchors: tabs ? Array.from(tabs.querySelectorAll("a")).map((anchor) => ({
-            ...describe(anchor),
-            stepState: anchor.getAttribute("data-k2sp-step-state") || "",
-            stepLocked: anchor.getAttribute("data-k2sp-step-locked") || "",
-            ariaDisabled: anchor.getAttribute("aria-disabled") || "",
-            parent: describe(anchor.parentElement)
-          })) : [],
+          tabAnchors: tabs ? Array.from(tabs.querySelectorAll("a")).map((anchor) => {
+            const indicator = anchor.querySelector(".k2sp-step-number");
+            const tick = indicator && getComputedStyle(indicator, "::after");
+            return {
+              ...describe(anchor),
+              stepState: anchor.getAttribute("data-k2sp-step-state") || "",
+              stepLocked: anchor.getAttribute("data-k2sp-step-locked") || "",
+              ariaDisabled: anchor.getAttribute("aria-disabled") || "",
+              parent: describe(anchor.parentElement),
+              indicator: indicator ? {
+                ...describe(indicator),
+                display: getComputedStyle(indicator).display,
+                alignItems: getComputedStyle(indicator).alignItems,
+                justifyContent: getComputedStyle(indicator).justifyContent,
+                fontSize: getComputedStyle(indicator).fontSize,
+                tickContent: tick.content,
+                tickPosition: tick.position,
+                tickTop: tick.top,
+                tickLeft: tick.left,
+                tickWidth: tick.width,
+                tickHeight: tick.height,
+                tickTransform: tick.transform,
+                tickBorderBottomWidth: tick.borderBottomWidth,
+                tickBorderLeftWidth: tick.borderLeftWidth
+              } : null
+            };
+          }) : [],
           directAdvanceProbe: (() => {
             const anchors = tabs ? Array.from(tabs.querySelectorAll("a.tab")) : [];
             if (anchors.length < 2 || !anchors[0].classList.contains("selected")) return null;
@@ -483,6 +632,9 @@ try {
             ));
             return {
               ...describe(table),
+              panelIndex: Array.from(document.querySelectorAll(
+                ".k2sp-guided-journey .formpanel"
+              )).indexOf(table.closest(".formpanel")),
               cells: cells.map((cell) => ({
                 ...describe(cell),
                 textAlign: getComputedStyle(cell).textAlign
@@ -500,7 +652,7 @@ try {
           preFill: (() => {
             const control = document.querySelector('[name="btnPreFill"]');
             const panels = Array.from(document.querySelectorAll(
-              ".k2sp-guided-journey > .formpanel"
+              ".k2sp-guided-journey .formpanel"
             ));
             return control ? {
               ...describe(control),

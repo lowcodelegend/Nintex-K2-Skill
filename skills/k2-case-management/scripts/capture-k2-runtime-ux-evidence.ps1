@@ -6,6 +6,8 @@ param(
     [string]$TrustedAuthHost,
     [hashtable]$ValidationClickNames=@{},
     [hashtable]$ExpectedInvalidCounts=@{},
+    [hashtable]$InteractionClickNames=@{},
+    [hashtable]$CommandPaletteProbeTexts=@{},
     [ValidateRange(0,30000)][int]$SettleMilliseconds=5000,
     [ValidateRange(1024,65500)][int]$StartingPort=9500
 )
@@ -45,8 +47,26 @@ foreach($formName in $FormNames){
         $validationClick=if($ValidationClickNames.ContainsKey($formName)){
             [string]$ValidationClickNames[$formName]
         }else{''}
-        if(-not[string]::IsNullOrWhiteSpace($validationClick)){
-            $arguments+=@('--click-name',$validationClick)
+        $interactionClicks=if($InteractionClickNames.ContainsKey($formName)){
+            @($InteractionClickNames[$formName])
+        }else{@()}
+        if(-not[string]::IsNullOrWhiteSpace($validationClick) -and
+            $interactionClicks -notcontains $validationClick){
+            $interactionClicks+=@($validationClick)
+        }
+        foreach($interactionClick in $interactionClicks){
+            if(-not[string]::IsNullOrWhiteSpace([string]$interactionClick)){
+                $arguments+=@('--click-name',[string]$interactionClick)
+            }
+        }
+        if($interactionClicks.Count-gt 1){
+            $arguments+='--dismiss-dialogs'
+        }
+        $paletteProbeText=if($CommandPaletteProbeTexts.ContainsKey($formName)){
+            [string]$CommandPaletteProbeTexts[$formName]
+        }else{''}
+        if(-not[string]::IsNullOrWhiteSpace($paletteProbeText)){
+            $arguments+=@('--palette-probe-text',$paletteProbeText)
         }
         $raw=@(& $node @arguments)
         if($LASTEXITCODE-ne 0){throw "Browser capture failed for '$formName' at $($viewport.name) with exit code $LASTEXITCODE."}
@@ -73,12 +93,17 @@ foreach($formName in $FormNames){
         $guidedControls=@($result.layout.guidedJourney.controls)
         if($guidedControls.Count-gt 0){
             $tabs=@($result.layout.guidedJourney.tabAnchors)
-            if($result.layout.bodyClass-notmatch 'k2sp-page-initiation' -or
+            $currentTab=@($tabs|Where-Object stepState -eq 'current'|Select-Object -First 1)
+            $currentTabIndex=if($currentTab.Count){[array]::IndexOf($tabs,$currentTab[0])}else{-1}
+            $forwardGateFailed=$currentTabIndex-eq 0-and(
                 $null-eq$result.layout.guidedJourney.directAdvanceProbe -or
-                -not[bool]$result.layout.guidedJourney.directAdvanceProbe.blocked -or
+                -not[bool]$result.layout.guidedJourney.directAdvanceProbe.blocked)
+            if($result.layout.bodyClass-notmatch 'k2sp-page-initiation' -or
+                $forwardGateFailed -or
                 $tabs.Count-lt 3 -or
-                [string]$tabs[0].stepState-ne'current' -or
-                @($tabs|Select-Object -Skip 1|Where-Object stepLocked -ne 'true').Count-gt 0){
+                $currentTabIndex-lt 0 -or
+                @($tabs|Select-Object -Skip ($currentTabIndex+1)|
+                    Where-Object stepLocked -ne 'true').Count-gt 0){
                 throw "Northstar guided-journey ownership/forward-navigation gate failed at $formName/$($viewport.name)."
             }
             $preFill=$result.layout.guidedJourney.preFill
@@ -86,7 +111,7 @@ foreach($formName in $FormNames){
                 throw "The test-only Pre-fill action is not on the first guided screen at $formName/$($viewport.name)."
             }
             $visibleJourneyButtons=@($result.layout.guidedJourney.actionRows|
-                Where-Object visible|
+                Where-Object{$_.visible-and[int]$_.panelIndex-eq$currentTabIndex}|
                 ForEach-Object{$_.buttons}|
                 Where-Object visible)
             $misaligned=@($visibleJourneyButtons|Where-Object{
@@ -95,6 +120,35 @@ foreach($formName in $FormNames){
             })
             if($misaligned.Count-gt 0){
                 throw "Guided action '$($misaligned[0].name)' is not aligned to its Northstar action edge at $formName/$($viewport.name)."
+            }
+            if([int]$viewport.width-gt 800){
+                $completed=@($tabs|Where-Object stepState -eq 'done')
+                $badTick=@($completed|Where-Object{
+                    $null-eq$_.indicator -or
+                    [string]$_.indicator.display-ne'flex' -or
+                    [string]$_.indicator.alignItems-ne'center' -or
+                    [string]$_.indicator.justifyContent-ne'center' -or
+                    [string]$_.indicator.fontSize-ne'0px' -or
+                    [string]$_.indicator.tickPosition-ne'absolute' -or
+                    [double]([string]$_.indicator.tickWidth-replace'px$','')-ne 8 -or
+                    [double]([string]$_.indicator.tickHeight-replace'px$','')-ne 4 -or
+                    [double]([string]$_.indicator.tickBorderBottomWidth-replace'px$','')-ne 2 -or
+                    [double]([string]$_.indicator.tickBorderLeftWidth-replace'px$','')-ne 2
+                })
+                if($badTick.Count-gt 0){
+                    throw "A completed guided-step tick is not using the centered Northstar geometry at $formName/$($viewport.name)."
+                }
+            }
+        }
+        if(-not[string]::IsNullOrWhiteSpace($paletteProbeText)){
+            $palette=$result.layout.commandPaletteProbe
+            if($null-eq$palette-or-not[bool]$palette.found-or
+                -not[bool]$palette.controlVisible-or-not[bool]$palette.rowVisible-or
+                -not[bool]$palette.triggerVisible-or-not[bool]$palette.inputFound-or
+                -not[bool]$palette.dialogVisible-or-not[bool]$palette.focused-or
+                [string]$palette.inputValue-ne$paletteProbeText-or
+                [int]$palette.optionCount-lt 1){
+                throw "Command palette interaction failed after the configured journey navigation at $formName/$($viewport.name)."
             }
         }
         if(-not[string]::IsNullOrWhiteSpace($validationClick)){
@@ -140,7 +194,10 @@ foreach($formName in $FormNames){
             $_.text -notmatch '^net::ERR_ABORTED$'
         })
         if($unexpected.Count-gt 0){throw "Unexpected browser diagnostic at $formName/$($viewport.name): $($unexpected[0].text)"}
-        $results.Add([ordered]@{form=$formName;viewport=$viewport.name;width=$viewport.width;height=$viewport.height;image=[IO.Path]::GetFileName($image);url=$result.layout.url;title=$result.layout.title;textLength=$result.layout.textLength;shellCount=$result.layout.shellCount;northstarReady=$result.layout.northstarReady;contentReady=$result.layout.contentReady;guidedJourney=($guidedControls.Count-gt 0);forwardTabBypassBlocked=$(if($guidedControls.Count-gt 0){[bool]$result.layout.guidedJourney.directAdvanceProbe.blocked}else{$null});validationClick=$(if([string]::IsNullOrWhiteSpace($validationClick)){$null}else{$validationClick});invalidCount=$(if([string]::IsNullOrWhiteSpace($validationClick)){$null}else{[int]$result.layout.validationFeedback.invalidCount});allInvalidVisiblyTreated=$(if([string]::IsNullOrWhiteSpace($validationClick)){$null}else{[int]$result.layout.validationFeedback.visibleTreatmentCount-eq[int]$result.layout.validationFeedback.invalidCount});summaryVisible=$(if([string]::IsNullOrWhiteSpace($validationClick)){$null}else{[bool]$result.layout.validationFeedback.summaryVisible});firstInvalidFocused=$(if([string]::IsNullOrWhiteSpace($validationClick)){$null}else{[bool]$result.layout.validationFeedback.firstInvalidFocused});horizontalOverflow=$false;knownK2Diagnostics=@($result.diagnostics|ForEach-Object{$_.text})})
+        $forwardBypass=if($guidedControls.Count-eq 0){$null}
+            elseif($null-eq$result.layout.guidedJourney.directAdvanceProbe){$null}
+            else{[bool]$result.layout.guidedJourney.directAdvanceProbe.blocked}
+        $results.Add([ordered]@{form=$formName;viewport=$viewport.name;width=$viewport.width;height=$viewport.height;image=[IO.Path]::GetFileName($image);url=$result.layout.url;title=$result.layout.title;textLength=$result.layout.textLength;shellCount=$result.layout.shellCount;northstarReady=$result.layout.northstarReady;contentReady=$result.layout.contentReady;guidedJourney=($guidedControls.Count-gt 0);forwardTabBypassBlocked=$forwardBypass;validationClick=$(if([string]::IsNullOrWhiteSpace($validationClick)){$null}else{$validationClick});invalidCount=$(if([string]::IsNullOrWhiteSpace($validationClick)){$null}else{[int]$result.layout.validationFeedback.invalidCount});allInvalidVisiblyTreated=$(if([string]::IsNullOrWhiteSpace($validationClick)){$null}else{[int]$result.layout.validationFeedback.visibleTreatmentCount-eq[int]$result.layout.validationFeedback.invalidCount});summaryVisible=$(if([string]::IsNullOrWhiteSpace($validationClick)){$null}else{[bool]$result.layout.validationFeedback.summaryVisible});firstInvalidFocused=$(if([string]::IsNullOrWhiteSpace($validationClick)){$null}else{[bool]$result.layout.validationFeedback.firstInvalidFocused});interactionClicks=@($interactionClicks);commandPaletteAfterNavigation=$(if([string]::IsNullOrWhiteSpace($paletteProbeText)){$null}else{[bool]$result.layout.commandPaletteProbe.dialogVisible-and[bool]$result.layout.commandPaletteProbe.focused});horizontalOverflow=$false;knownK2Diagnostics=@($result.diagnostics|ForEach-Object{$_.text})})
         Write-Output "Captured native Runtime UX: $formName / $($viewport.name)"
     }
 }
