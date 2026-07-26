@@ -60,6 +60,11 @@ namespace K2SmartFormsCli
                             continue;
                         }
                         value = source.SampleValue;
+                        if (!FieldValidationDefinitionXml.SatisfiesTextConstraint(value, validation))
+                        {
+                            result.ManualProperties.Add(view.Name + "." + property);
+                            continue;
+                        }
                     }
                     else if (new[] { "DropDown", "Picker", "RadioButtonList" }.Contains(
                         (string)control.Attribute("Type"), StringComparer.OrdinalIgnoreCase))

@@ -87,6 +87,7 @@
   "initiation": {
     "journey":"canonical-initiation",
     "guidedMode":"auto",
+    "finalActionMode":"workflow",
     "journeyTitle":"New case",
     "journeyDescription":"Describe the case, add supporting evidence, then review and submit it.",
     "formName":"{{CODE}}.New Case",

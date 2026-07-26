@@ -295,6 +295,9 @@ if ($BaseManifest) {
         $compiledTabs=[Collections.Generic.List[object]]::new()
         $guidedSteps=[Collections.Generic.List[object]]::new()
         $useGuided=Test-UseGuidedJourney $init $journey
+        $finalActionMode=([string](Get-ValueOrDefault $init.finalActionMode 'workflow')).Trim().ToLowerInvariant()
+        if(@('workflow','complete') -notcontains $finalActionMode){throw "initiation.finalActionMode must be 'workflow' or 'complete'."}
+        if($finalActionMode -eq 'complete' -and -not $useGuided){throw "initiation.finalActionMode='complete' requires a guided journey."}
         if($null -ne $init.stepTabs -and @($init.stepTabs).Count -gt 0){
             if(@($init.stepTabs).Count -lt 3 -or @($init.stepTabs).Count -gt 7){throw 'initiation.stepTabs must contain between 3 and 7 physical screens.'}
             foreach($stepTab in @($init.stepTabs)){
@@ -318,30 +321,53 @@ if ($BaseManifest) {
         } else {
             $detailsTab=Get-ValueOrDefault $init.detailsTab 'Case Details'
             $evidenceTab=Get-ValueOrDefault $init.evidenceTab 'Evidence'
-            $reviewTab=Get-ValueOrDefault $init.reviewTab 'Review & Submit'
+            $reviewTab=Get-ValueOrDefault $init.reviewTab $(if($finalActionMode -eq 'complete'){'Review & Finish'}else{'Review & Submit'})
             $compiledTabs.Add([ordered]@{name=$detailsTab;views=@($effectiveMasterView)+@($init.details|Where-Object {$_.step -eq 'details'}|ForEach-Object {$_.view})})
             $compiledTabs.Add([ordered]@{name=$evidenceTab;views=@($init.details|Where-Object {$_.step -eq 'evidence'}|ForEach-Object {$_.view})})
             $compiledTabs.Add([ordered]@{name=$reviewTab;views=@($init.reviewViewName)})
             $guidedSteps.Add([ordered]@{code='DETAILS';label=(Get-ValueOrDefault $init.detailsStepLabel 'Case details');description=(Get-ValueOrDefault $init.detailsStepDescription 'Describe what happened and provide the case context and impact.');tab=$detailsTab;advance='continue'})
             $guidedSteps.Add([ordered]@{code='EVIDENCE';label=(Get-ValueOrDefault $init.evidenceStepLabel 'Evidence');description=(Get-ValueOrDefault $init.evidenceStepDescription 'Add the supporting records needed to understand the case.');tab=$evidenceTab;advance='continue'})
-            $guidedSteps.Add([ordered]@{code='REVIEW';label=(Get-ValueOrDefault $init.reviewStepLabel 'Review');description=(Get-ValueOrDefault $init.reviewStepDescription 'Check the complete case before submitting it.');tab=$reviewTab;advance='continue'})
+            $defaultReviewDescription=if($finalActionMode -eq 'complete'){'Check the saved draft and finish this design iteration.'}else{'Check the complete case before submitting it.'}
+            $guidedSteps.Add([ordered]@{code='REVIEW';label=(Get-ValueOrDefault $init.reviewStepLabel 'Review');description=(Get-ValueOrDefault $init.reviewStepDescription $defaultReviewDescription);tab=$reviewTab;advance='continue'})
+        }
+        if($finalActionMode -eq 'complete'){
+            $completeReviewTab=Get-ValueOrDefault $init.completeReviewTab 'Review & Finish'
+            $compiledTabs[$compiledTabs.Count-1].name=$completeReviewTab
+            $guidedSteps[$guidedSteps.Count-1].tab=$completeReviewTab
+            $guidedSteps[$guidedSteps.Count-1].label=Get-ValueOrDefault $init.completeReviewStepLabel 'Review'
+            $guidedSteps[$guidedSteps.Count-1].description=Get-ValueOrDefault $init.completeReviewStepDescription 'Check the saved draft and finish this design iteration.'
         }
         $guidedSteps[$guidedSteps.Count-2].advance='save'
-        $guidedSteps[$guidedSteps.Count-1].advance='submit'
+        $guidedSteps[$guidedSteps.Count-1].advance=if($finalActionMode -eq 'complete'){'complete'}else{'submit'}
         $reviewTabName=[string]$compiledTabs[$compiledTabs.Count-1].name
-        $initForm=[ordered]@{name=$init.formName;useLegacyTheme=$false;useStyleProfile=$usesStyleProfile;useCommonHeader=$false;useCommonFooter=$false;views=$initViews;behaviors=@('refresh-list-form-submit','refresh-list-form-load');viewTitles=[ordered]@{};tabs=@($compiledTabs);listClickTabNavigation=@();masterDetail=[ordered]@{masterView=$effectiveMasterView;masterKeyProperty=$init.masterKeyProperty;masterCreateMethod=(Get-ValueOrDefault $init.createMethod 'Create');masterUpdateMethod=(Get-ValueOrDefault $init.updateMethod 'Update');masterReadMethod=(Get-ValueOrDefault $init.readMethod 'Read');saveButtonText=(Get-ValueOrDefault $init.saveButtonText 'Save draft and review');successMessageTitle=(Get-ValueOrDefault $init.successTitle 'Draft saved');successMessageBody=(Get-ValueOrDefault $init.successBody 'Your draft was saved and is ready to review.');details=$detailContracts;review=[ordered]@{view=$init.reviewViewName;keyProperty=$init.masterKeyProperty;readMethod=(Get-ValueOrDefault $init.readMethod 'Read');tab=$reviewTabName}};workflowStartButton=[ordered]@{name=(Get-ValueOrDefault $init.submitButtonName 'btnSubmitCase');text=(Get-ValueOrDefault $init.submitButtonText 'Submit case');tab=$reviewTabName}}
+        $initForm=[ordered]@{name=$init.formName;useLegacyTheme=$false;useStyleProfile=$usesStyleProfile;useCommonHeader=$false;useCommonFooter=$false;views=$initViews;behaviors=@('refresh-list-form-submit','refresh-list-form-load');viewTitles=[ordered]@{};tabs=@($compiledTabs);listClickTabNavigation=@();masterDetail=[ordered]@{masterView=$effectiveMasterView;masterKeyProperty=$init.masterKeyProperty;masterCreateMethod=(Get-ValueOrDefault $init.createMethod 'Create');masterUpdateMethod=(Get-ValueOrDefault $init.updateMethod 'Update');masterReadMethod=(Get-ValueOrDefault $init.readMethod 'Read');saveButtonText=(Get-ValueOrDefault $init.saveButtonText 'Save draft and review');successMessageTitle=(Get-ValueOrDefault $init.successTitle 'Draft saved');successMessageBody=(Get-ValueOrDefault $init.successBody 'Your draft was saved and is ready to review.');details=$detailContracts;review=[ordered]@{view=$init.reviewViewName;keyProperty=$init.masterKeyProperty;readMethod=(Get-ValueOrDefault $init.readMethod 'Read');tab=$reviewTabName}}}
+        if($finalActionMode -eq 'complete'){
+            $initForm['completionButton']=[ordered]@{
+                name=(Get-ValueOrDefault $init.completeButtonName 'btnFinishDraft')
+                text=(Get-ValueOrDefault $init.completeButtonText 'Finish')
+                tab=$reviewTabName
+                messageTitle=(Get-ValueOrDefault $init.completeTitle 'Draft complete')
+                messageBody=(Get-ValueOrDefault $init.completeBody 'Your draft is saved. It has not been submitted.')
+            }
+        } else {
+            $initForm['workflowStartButton']=[ordered]@{name=(Get-ValueOrDefault $init.submitButtonName 'btnSubmitCase');text=(Get-ValueOrDefault $init.submitButtonText 'Submit case');tab=$reviewTabName}
+        }
         if($useGuided){
             $journeyPage=@($uxDocument.pages|Where-Object {[string]$_.journey -eq [string]$init.journey})|Select-Object -First 1
             $initForm.guidedJourney=[ordered]@{
                 title=(Get-ValueOrDefault $init.journeyTitle (Get-ValueOrDefault $journeyPage.title 'New case'))
-                description=(Get-ValueOrDefault $init.journeyDescription 'Complete each screen, save the draft, then review and submit the case.')
+                description=$(if($finalActionMode -eq 'complete'){
+                    Get-ValueOrDefault $init.completeJourneyDescription 'Complete each screen, save the draft, then review and finish.'
+                }else{
+                    Get-ValueOrDefault $init.journeyDescription 'Complete each screen, save the draft, then review and submit the case.'
+                })
                 validateOnContinue=$true
                 backButtonText=(Get-ValueOrDefault $init.backButtonText 'Back')
                 continueButtonText=(Get-ValueOrDefault $init.continueButtonText 'Continue')
                 steps=@($guidedSteps)
             }
         }
-        foreach($viewName in $initViews){$initForm.viewTitles[$viewName]=if($viewName -eq $init.reviewViewName){'Review the case before submission'}elseif($viewName -eq $effectiveMasterView){'Case details'}else{($viewName -replace '^[^.]+\.','')}}
+        foreach($viewName in $initViews){$initForm.viewTitles[$viewName]=if($viewName -eq $init.reviewViewName){if($finalActionMode -eq 'complete'){'Review the saved draft'}else{'Review the case before submission'}}elseif($viewName -eq $effectiveMasterView){'Case details'}else{($viewName -replace '^[^.]+\.','')}}
         $manifest.application.forms=@($manifest.application.forms)+@($initForm)
     }
     if($null -eq $manifest.verification){$manifest|Add-Member -NotePropertyName verification -NotePropertyValue ([pscustomobject]@{})}

@@ -35,9 +35,18 @@ Use this order where it fits the case:
 2. people, item, location, and context;
 3. impact, urgency, risk, and immediate action;
 4. evidence and supporting records;
-5. read-only review and submission.
+5. read-only review and the selected final action.
 
-Use short user-language labels, not entity names. Give every screen a one-sentence description that says what completion achieves. The final screen is a read-only summary with one primary Submit action. Save Draft is distinct from Submit.
+Use short user-language labels, not entity names. Give every screen a one-sentence description that says what completion achieves. The final screen is a read-only summary with one primary action. Save Draft remains distinct from that action.
+
+Choose the final action explicitly with `initiation.finalActionMode`:
+
+- `workflow` (the default) emits a real Submit seam for `$k2-workflows`.
+- `complete` supports iterative forms-only delivery. It emits Finish and confirms that the draft is saved and has not been submitted.
+
+Never emit both actions. Never use Submit, Received, or equivalent wording for `complete`. When the parent workflow becomes ready, change the mode to `workflow` and regenerate; the journey, Save Draft persistence, and review projection remain the same.
+
+Switching only `finalActionMode` is sufficient: `complete` replaces workflow-mode review wording with the neutral defaults `Review & Finish`, `Review`, and `Check the saved draft and finish this design iteration.` Customize those with `completeReviewTab`, `completeReviewStepLabel`, `completeReviewStepDescription`, and `completeJourneyDescription`; workflow-mode `reviewTab`, `stepTabs` wording, and `journeyDescription` remain available for the later submission experience.
 
 ## Map safely to K2
 
@@ -71,7 +80,7 @@ Use `initiation.stepTabs` when the solution has enough View boundaries for a del
 ]
 ```
 
-`$master` resolves the generated reporter-facing capture View and `$review` resolves the generated read-only review View. Every initiation View must be placed exactly once. The penultimate screen must contain the final master-detail child because it owns Save Draft; the final screen must contain the review task and workflow Submit seam.
+`$master` resolves the generated reporter-facing capture View and `$review` resolves the generated read-only review View. Every initiation View must be placed exactly once. The penultimate screen must contain the final master-detail child because it owns Save Draft; the final screen must contain the review task and the configured workflow Submit or saved-draft Finish seam.
 
 When `stepTabs` is omitted, the compiler preserves the portable Details → Evidence → Review mapping. If `guidedMode` selects a journey, it adds the native stepper and navigation contract to those three screens. This is preferable to inventing five decorative tabs over four persistence artifacts.
 
@@ -81,8 +90,9 @@ When `stepTabs` is omitted, the compiler preserves the portable Details → Evid
 - Continue validates the current visible screen before focusing the next screen. It does not persist.
 - Back changes screen without validation, mutation, or data loss.
 - The penultimate Save action validates, creates or updates the aggregate, transfers the returned key, saves children, reads the review projection, reveals Review, and focuses it.
-- The final Submit action is the workflow start seam. It never shares the Save Draft rule.
+- In `workflow` mode, final Submit is the workflow start seam. It never shares the Save Draft rule.
+- In `complete` mode, final Finish only confirms the persisted draft is complete for this iteration and explicitly says it has not been submitted.
 - Preserve values when moving Back and Continue. Resume a saved draft from the normal case list/workspace.
 - Use the Northstar Style Profile to refine spacing and stepper appearance where selected, but keep rule behavior and persistence native and Designer-editable.
 
-Browser-test populated, validation-error, long-content, empty-collection, Back/Continue, Save, Review, second intentional Save, and Submit paths at every declared viewport. Confirm a failed Continue stays on the current screen and focuses or marks the offending control. Confirm Save invokes Create or Update exactly once.
+Browser-test populated, validation-error, long-content, empty-collection, Back/Continue, Save, Review, second intentional Save, and the selected final-action path at every declared viewport. Confirm a failed Continue stays on the current screen and focuses or marks the offending control. Confirm Save invokes Create or Update exactly once. In `complete` mode, confirm Finish never starts a workflow or claims submission; in `workflow` mode, confirm Submit starts the parent workflow exactly once.

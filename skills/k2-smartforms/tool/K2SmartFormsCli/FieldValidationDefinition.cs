@@ -18,6 +18,33 @@ namespace K2SmartFormsCli
                    !string.IsNullOrWhiteSpace(validation.Format);
         }
 
+        internal static bool HasTextConstraint(FieldValidationDefinition validation)
+        {
+            return validation != null && (validation.MinLength.HasValue || validation.MaxLength.HasValue ||
+                !string.IsNullOrWhiteSpace(validation.Pattern) || !string.IsNullOrWhiteSpace(validation.Format));
+        }
+
+        internal static bool IsGovernedLookup(ViewDefinition view, FieldValidationDefinition validation)
+        {
+            return view != null && validation != null && view.LookupControls.Any(x =>
+                string.Equals(x.Property, validation.Property, StringComparison.OrdinalIgnoreCase));
+        }
+
+        internal static bool RequiresNativeValidationPattern(ViewDefinition view, FieldValidationDefinition validation)
+        {
+            return RequiresValidationPattern(validation) && !IsGovernedLookup(view, validation);
+        }
+
+        internal static bool SatisfiesTextConstraint(string value, FieldValidationDefinition validation)
+        {
+            if (!HasTextConstraint(validation)) return true;
+            var candidate = value ?? string.Empty;
+            if (validation.MinLength.HasValue && candidate.Length < validation.MinLength.Value) return false;
+            if (validation.MaxLength.HasValue && candidate.Length > validation.MaxLength.Value) return false;
+            return !RequiresValidationPattern(validation) ||
+                Regex.IsMatch(candidate, BuildPattern(validation), RegexOptions.ECMAScript);
+        }
+
         internal static string BuildPattern(FieldValidationDefinition validation)
         {
             if (!RequiresValidationPattern(validation)) return null;
@@ -63,22 +90,32 @@ namespace K2SmartFormsCli
             {
                 var control = ViewPresentationDefinition.FindEditableFieldControl(document, view, validation.Property);
                 var type = (string)control.Attribute("Type") ?? string.Empty;
-                var textConstraint = validation.MinLength.HasValue || validation.MaxLength.HasValue ||
-                    !string.IsNullOrWhiteSpace(validation.Pattern) || !string.IsNullOrWhiteSpace(validation.Format);
-                if (textConstraint && !new[] { "TextBox", "TextArea" }.Contains(type, StringComparer.OrdinalIgnoreCase))
+                var governedLookup = IsGovernedLookup(view, validation);
+                var textConstraint = HasTextConstraint(validation);
+                if (textConstraint && !governedLookup &&
+                    !new[] { "TextBox", "TextArea" }.Contains(type, StringComparer.OrdinalIgnoreCase))
                     throw new CliException("View '" + view.Name + "' text validation property '" + validation.Property +
                         "' uses control type '" + type + "'; expected TextBox or TextArea.");
+                if (governedLookup && !string.Equals(type, "DropDown", StringComparison.OrdinalIgnoreCase))
+                    throw new CliException("View '" + view.Name + "' governed lookup validation property '" +
+                        validation.Property + "' uses control type '" + type + "'; expected DropDown.");
                 if (validation.MustBeTrue && !string.Equals(type, "CheckBox", StringComparison.OrdinalIgnoreCase))
                     throw new CliException("View '" + view.Name + "' mustBeTrue property '" + validation.Property +
                         "' uses control type '" + type + "'; expected CheckBox.");
 
                 var properties = EnsureProperties(control);
-                if (validation.MaxLength.HasValue)
+                if (governedLookup)
+                {
+                    RemoveProperty(properties, "MaxLength");
+                    RemoveProperty(properties, "ValidationMessage");
+                    RemoveProperty(properties, "ValidationPattern");
+                }
+                else if (validation.MaxLength.HasValue)
                     SetProperty(properties, "MaxLength", validation.MaxLength.Value.ToString(), validation.MaxLength.Value.ToString());
-                if (!string.IsNullOrWhiteSpace(validation.Message) &&
+                if (!governedLookup && !string.IsNullOrWhiteSpace(validation.Message) &&
                     new[] { "TextBox", "TextArea" }.Contains(type, StringComparer.OrdinalIgnoreCase))
                     SetProperty(properties, "ValidationMessage", validation.Message, validation.Message);
-                if (RequiresValidationPattern(validation))
+                if (RequiresNativeValidationPattern(view, validation))
                 {
                     if (validation.ValidationPatternGuid == Guid.Empty || string.IsNullOrWhiteSpace(validation.ValidationPatternName))
                         throw new CliException("View '" + view.Name + "' validation pattern was not resolved for property '" + validation.Property + "'.");
@@ -144,10 +181,19 @@ namespace K2SmartFormsCli
             foreach (var validation in view.Validations)
             {
                 var control = ViewPresentationDefinition.FindEditableFieldControl(document, view, validation.Property);
+                if (IsGovernedLookup(view, validation))
+                {
+                    if (!string.Equals((string)control.Attribute("Type"), "DropDown", StringComparison.OrdinalIgnoreCase) ||
+                        !string.IsNullOrWhiteSpace(PropertyValue(control, "MaxLength")) ||
+                        !string.IsNullOrWhiteSpace(PropertyValue(control, "ValidationPattern")))
+                        throw new CliException("View '" + view.Name + "' governed lookup validation for property '" +
+                            validation.Property + "' must rely on its verified lookup domain, not TextBox validation properties.");
+                    continue;
+                }
                 if (validation.MaxLength.HasValue &&
                     !string.Equals(PropertyValue(control, "MaxLength"), validation.MaxLength.Value.ToString(), StringComparison.Ordinal))
                     throw new CliException("View '" + view.Name + "' validation maxLength is not applied to property '" + validation.Property + "'.");
-                if (RequiresValidationPattern(validation))
+                if (RequiresNativeValidationPattern(view, validation))
                 {
                     if (!string.Equals(PropertyValue(control, "ValidationPattern"), validation.ValidationPatternGuid.ToString(), StringComparison.OrdinalIgnoreCase))
                         throw new CliException("View '" + view.Name + "' validation pattern is not applied to property '" + validation.Property + "'.");
@@ -332,6 +378,13 @@ namespace K2SmartFormsCli
             var ns = properties.Name.Namespace;
             properties.Add(new XElement(ns + "Property", new XElement(ns + "Name", name),
                 new XElement(ns + "DisplayValue", displayValue), new XElement(ns + "Value", value)));
+        }
+
+        private static void RemoveProperty(XElement properties, string name)
+        {
+            foreach (var old in properties.Elements().Where(x => x.Name.LocalName == "Property" &&
+                string.Equals(ChildValue(x, "Name"), name, StringComparison.OrdinalIgnoreCase)).ToList())
+                old.Remove();
         }
 
         private static string PropertyValue(XElement control, string name)

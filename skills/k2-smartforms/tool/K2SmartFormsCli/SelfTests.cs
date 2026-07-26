@@ -15,11 +15,13 @@ namespace K2SmartFormsCli
             TestMissingOptionalControlMappings();
             TestRequiredReadOnlyCreateInputGate();
             TestLookupAndDefaultValueRoundTrip();
+            TestGovernedLookupValidationComposition();
             TestMasterButtonSuppression();
             TestNativeChartComposition();
             TestMetricCardComposition();
             TestLifecycleComposition();
             TestGuidedJourneyComposition();
+            TestGuidedJourneyCompletionComposition();
             TestModernWebComponentComposition();
             TestHiddenPropertyComposition();
             TestLabelAboveHiddenCellComposition();
@@ -33,7 +35,7 @@ namespace K2SmartFormsCli
             TestRedundantFormFrameworkRemoval();
             TestFormPreFillRules();
             TestMultiTableWorkflowStateReconciliation();
-            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams, mutually exclusive native If/Else Save branching, post-Create master hydration and Form method-action rejection, master-detail field-validation composition, orphan optional control mappings, lookup/detail List classification, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, native max-length/validation-pattern contracts, must-be-true checkbox validation groups, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, native guided-journey Progress and current-screen navigation validation, modern Web Component full-body placement, capture and editable-list hidden-property composition, editable-list File edit-template validation, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, conditional per-Form framework selection, redundant profile/header/footer removal, constraint-aware test-data Pre-fill, multi-table workflow-state reconciliation");
+            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams, mutually exclusive native If/Else Save branching, post-Create master hydration and Form method-action rejection, master-detail field-validation composition, orphan optional control mappings, lookup/detail List classification, governed lookup-domain validation, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, native max-length/validation-pattern contracts, must-be-true checkbox validation groups, required controls, help popups, master-detail buttons, native chart, metric-card, lifecycle, native guided-journey Progress/current-screen navigation and workflow-free completion validation, modern Web Component full-body placement, capture and editable-list hidden-property composition, editable-list File edit-template validation, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, conditional per-Form framework selection, redundant profile/header/footer removal, constraint-aware test-data Pre-fill, multi-table workflow-state reconciliation");
         }
 
         private static void TestConditionalFormFrameworkSelection()
@@ -1000,6 +1002,86 @@ namespace K2SmartFormsCli
                 "Back navigation is non-destructive and does not validate");
         }
 
+        private static void TestGuidedJourneyCompletionComposition()
+        {
+            var form = new FormDefinition { Name = "New Draft Case" };
+            form.Tabs.Add(new FormTabDefinition { Name = "Details", Views = new List<string> { "Case Entry" } });
+            form.Tabs.Add(new FormTabDefinition { Name = "Evidence", Views = new List<string> { "Evidence" } });
+            form.Tabs.Add(new FormTabDefinition { Name = "Review & Finish", Views = new List<string> { "Case Review" } });
+            form.CompletionButton = new CompletionButtonDefinition
+            {
+                Name = "btnFinishDraft",
+                Text = "Finish",
+                Tab = "Review & Finish",
+                MessageTitle = "Draft complete",
+                MessageBody = "Your draft is saved. It has not been submitted."
+            };
+            form.MasterDetail = new MasterDetailFormDefinition
+            {
+                MasterView = "Case Entry",
+                MasterKeyProperty = "CaseId",
+                Review = new MasterDetailReviewDefinition
+                {
+                    View = "Case Review", KeyProperty = "CaseId", Tab = "Review & Finish"
+                }
+            };
+            form.MasterDetail.Details.Add(new MasterDetailChildDefinition { View = "Evidence", ForeignKeyProperty = "CaseId" });
+            form.GuidedJourney = new GuidedJourneyDefinition
+            {
+                Title = "Prepare a case",
+                Description = "Complete the screens, save the draft, and review it."
+            };
+            form.GuidedJourney.Steps.Add(new GuidedJourneyStepDefinition
+            {
+                Code = "DETAILS", Label = "Details", Description = "Describe the case.",
+                Tab = "Details", Advance = "continue"
+            });
+            form.GuidedJourney.Steps.Add(new GuidedJourneyStepDefinition
+            {
+                Code = "EVIDENCE", Label = "Evidence", Description = "Add supporting records.",
+                Tab = "Evidence", Advance = "save"
+            });
+            form.GuidedJourney.Steps.Add(new GuidedJourneyStepDefinition
+            {
+                Code = "REVIEW", Label = "Review", Description = "Review the saved draft.",
+                Tab = "Review & Finish", Advance = "complete"
+            });
+
+            var xml = "<Forms><Form ID='form-id'><Name>New Draft Case</Name><Controls>" +
+                "<Control ID='entry-area' Type='Area'/><Control ID='entry-item' Type='AreaItem'/>" +
+                "<Control ID='evidence-area' Type='Area'/><Control ID='evidence-item' Type='AreaItem'/>" +
+                "<Control ID='review-area' Type='Area'/><Control ID='review-item' Type='AreaItem'/>" +
+                "<Control ID='save-area' Type='Area'/><Control ID='save-item' Type='AreaItem'/>" +
+                "<Control ID='save' Type='Button'><Name>btnSave</Name><Properties><Property><Name>Text</Name><Value>Save draft and review</Value></Property></Properties></Control>" +
+                "</Controls><ValidationGroups><ValidationGroup ID='validation-group'><Name>ValidationGroupForEvent</Name></ValidationGroup></ValidationGroups>" +
+                "<Panels>" +
+                "<Panel ID='p1'><Name>Details</Name><Areas><Area ID='entry-area'><Items><Item ID='entry-item' ViewName='Case Entry'/></Items></Area></Areas></Panel>" +
+                "<Panel ID='p2'><Name>Evidence</Name><Areas><Area ID='evidence-area'><Items><Item ID='evidence-item' ViewName='Evidence'/></Items></Area><Area ID='save-area'><Items><Item ID='save-item'><Canvas><Control ID='save'/></Canvas></Item></Items></Area></Areas></Panel>" +
+                "<Panel ID='p3'><Name>Review &amp; Finish</Name><Areas><Area ID='review-area'><Items><Item ID='review-item' ViewName='Case Review'/></Items></Area></Areas></Panel>" +
+                "</Panels><States><State><Events/></State></States></Form></Forms>";
+            var transformed = GuidedJourneyRules.Apply(xml, form, null);
+            GuidedJourneyRules.Verify(transformed, form, null);
+            var document = XDocument.Parse(transformed);
+            var finish = document.Descendants("Control").Single(x =>
+                (string)x.Attribute("Type") == "Button" &&
+                (string)x.Element("Name") == "btnFinishDraft");
+            Assert(finish.Descendants("Property").Any(x =>
+                (string)x.Element("Name") == "ButtonStyle" &&
+                (string)x.Element("Value") == "mainaction"),
+                "workflow-free completion is the final primary action");
+            var finishRule = document.Descendants("Event").Single(x =>
+                (string)x.Attribute("Type") == "User" &&
+                (string)x.Attribute("SourceName") == "btnFinishDraft");
+            Assert(finishRule.Descendants("Action").Count() == 1 &&
+                (string)finishRule.Descendants("Action").Single().Attribute("Type") == "ShowMessage",
+                "workflow-free completion is an explicit native saved-draft confirmation");
+            Assert(document.Descendants("Event").Any(x =>
+                (string)x.Attribute("Type") == "System" &&
+                (string)x.Attribute("SourceID") == (string)finish.Attribute("ID") &&
+                (string)x.Element("Name") == "OnClick"),
+                "workflow-free completion retains the Designer-hydratable system event");
+        }
+
         private static void TestFlatFormViewOrdering()
         {
             var definition = new FormDefinition { Name = "Operations" };
@@ -1166,6 +1248,54 @@ namespace K2SmartFormsCli
             Assert(document.Descendants("Action").Any(x => (string)x.Attribute("Type") == "ShowMessage"), "NDA help popup rule created");
             Assert(document.Descendants("Control").Count(x => (string)x.Attribute("Type") == "Label" &&
                 (((string)x.Element("Name")) ?? string.Empty).EndsWith("Section Header", StringComparison.Ordinal)) == 2, "section headers created");
+        }
+
+        private static void TestGovernedLookupValidationComposition()
+        {
+            var view = NewView("Country Entry", "Country Entry", "capture", "CountryCode");
+            view.Methods.Add("Create");
+            view.LookupControls.Add(new LookupControlDefinition
+            {
+                Property = "CountryCode",
+                Lookup = "Country"
+            });
+            view.LookupRequiredProperties.Add("CountryCode");
+            view.RequiredProperties.Add("CountryCode");
+            view.Validations.Add(new FieldValidationDefinition
+            {
+                Property = "CountryCode",
+                Required = true,
+                MinLength = 2,
+                MaxLength = 2,
+                Pattern = "[A-Z]{2}",
+                Message = "Choose a valid country."
+            });
+            var document = new XDocument(new XElement("View", new XAttribute("ID", "country-view"),
+                new XElement("Name", view.Name),
+                new XElement("Fields", TestField("country-field", "CountryCode", "Text")),
+                new XElement("Controls", FieldControlDefinition("country-control", "DropDown", "country-field")),
+                new XElement("Events", TestMethodEvent("country-create-event",
+                    TestViewAction("71000000-0000-0000-0000-000000000010",
+                        Guid.Parse("71000000-0000-0000-0000-000000000001"),
+                        view.Name, "Create", null, false)))));
+            FieldValidationDefinitionXml.Apply(document, view);
+            FieldValidationDefinitionXml.Verify(document, view);
+            var control = document.Descendants("Control").Single(x =>
+                (string)x.Attribute("ID") == "country-control");
+            Assert(!control.Descendants("Property").Any(x =>
+                new[] { "MaxLength", "ValidationPattern" }.Contains(
+                    (string)x.Element("Name"), StringComparer.OrdinalIgnoreCase)),
+                "governed lookup retains its declared text contract without TextBox-only properties");
+            var group = document.Descendants("ValidationGroup").Single(x =>
+                (string)x.Element("Name") == FieldValidationDefinitionXml.GroupName);
+            Assert(group.Descendants("ValidationGroupControl").Any(x =>
+                (string)x.Attribute("ControlID") == "country-control" &&
+                (string)x.Attribute("IsRequired") == "True"),
+                "governed lookup remains required in native validation");
+            Assert(FieldValidationDefinitionXml.SatisfiesTextConstraint("AE", view.Validations[0]) &&
+                !FieldValidationDefinitionXml.SatisfiesTextConstraint("ARE", view.Validations[0]) &&
+                !FieldValidationDefinitionXml.SatisfiesTextConstraint("ae", view.Validations[0]),
+                "governed lookup domain values satisfy declared length and pattern constraints");
         }
 
         private static void TestLabelAboveHiddenCellComposition()

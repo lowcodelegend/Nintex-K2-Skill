@@ -174,7 +174,8 @@ namespace K2SmartFormsCli
                 if (form.GuidedJourney != null)
                     Console.WriteLine("      guided journey: " + form.GuidedJourney.Title + " [" +
                         string.Join(" -> ", form.GuidedJourney.Steps.Select(x => x.Label + " (" + x.Advance + ")").ToArray()) +
-                        "]; native Progress, current-screen validation, Back/Continue, Save, Review, Submit");
+                        "]; native Progress, current-screen validation, Back/Continue, Save, Review, " +
+                        (form.WorkflowStartButton != null ? "workflow Submit" : "saved-draft Finish"));
             }
             if (dependencies.Count > 0)
             {
@@ -242,7 +243,7 @@ namespace K2SmartFormsCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2forms 0.42.0");
+            Console.WriteLine("k2forms 0.43.0");
         }
 
         private static void PrintHelp()

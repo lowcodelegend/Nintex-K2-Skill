@@ -219,6 +219,41 @@ try {
 }
 Write-Output 'Case-UX second-package portability tests passed.'
 
+$completionMapping = [IO.Path]::GetTempFileName()
+$completionCompiled = [IO.Path]::GetTempFileName()
+try {
+    $mapping = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot 'portable-case-mapping.json') | ConvertFrom-Json
+    $mapping.initiation.finalActionMode = 'complete'
+    $mapping.initiation | Add-Member -NotePropertyName completeButtonName -NotePropertyValue 'btnFinishRequestDraft'
+    $mapping.initiation | Add-Member -NotePropertyName completeButtonText -NotePropertyValue 'Finish'
+    $mapping.initiation | Add-Member -NotePropertyName completeTitle -NotePropertyValue 'Request draft complete'
+    $mapping.initiation | Add-Member -NotePropertyName completeBody -NotePropertyValue 'Your request draft is saved. It has not been submitted.'
+    $mapping | ConvertTo-Json -Depth 100 | Set-Content -Encoding utf8 -LiteralPath $completionMapping
+    & $compiler -Ux $validUx -Mapping $completionMapping -BaseManifest (Join-Path $PSScriptRoot 'portable-case-base.json') -Output $completionCompiled
+    if ($LASTEXITCODE -ne 0) { throw 'Expected workflow-free guided initiation compilation to pass.' }
+    $manifest = Get-Content -Raw -LiteralPath $completionCompiled | ConvertFrom-Json
+    $initiation = @($manifest.application.forms | Where-Object name -eq 'RQT.New Request')[0]
+    if ($null -ne $initiation.workflowStartButton) { throw 'Workflow-free initiation emitted a workflowStartButton.' }
+    if ($initiation.completionButton.name -ne 'btnFinishRequestDraft' -or
+        $initiation.completionButton.tab -ne 'Review & Finish' -or
+        $initiation.completionButton.messageBody -notmatch 'not been submitted') {
+        throw 'Workflow-free initiation did not emit the explicit saved-draft completion seam.'
+    }
+    if ((@($initiation.guidedJourney.steps.advance) -join '|') -ne 'continue|save|complete') {
+        throw 'Workflow-free initiation did not end its guided journey with complete.'
+    }
+    if ($initiation.guidedJourney.description -match 'submit|received' -or
+        $initiation.guidedJourney.steps[-1].description -match 'submit|received' -or
+        $initiation.tabs[-1].name -ne 'Review & Finish') {
+        throw 'Workflow-free initiation retained submission wording from the workflow-mode mapping.'
+    }
+} finally {
+    foreach ($path in @($completionMapping, $completionCompiled)) {
+        if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Force }
+    }
+}
+Write-Output 'Case-UX workflow-free guided-initiation tests passed.'
+
 $referenceRenderer = Join-Path $PSScriptRoot '..\scripts\render-case-ux-reference-suite.ps1'
 $referenceRoot = Join-Path ([IO.Path]::GetTempPath()) ('case-ux-reference-' + [guid]::NewGuid())
 try {

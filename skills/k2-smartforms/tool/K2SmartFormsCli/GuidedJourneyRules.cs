@@ -94,6 +94,8 @@ namespace K2SmartFormsCli
                         definition.GuidedJourney.Steps[index + 1].Tab,
                         definition.GuidedJourney.ValidateOnContinue && !string.IsNullOrWhiteSpace(validationGroupId),
                         validationGroupId);
+                if (string.Equals(step.Advance, "complete", StringComparison.OrdinalIgnoreCase))
+                    VerifyCompletionButton(baseState, controls, panel, definition);
             }
 
             var saveStep = definition.GuidedJourney.Steps[definition.GuidedJourney.Steps.Count - 2];
@@ -102,11 +104,14 @@ namespace K2SmartFormsCli
             if (saveControl == null || !PanelContainsControl(savePanel, (string)saveControl.Attribute("ID")))
                 throw new CliException("K2 Form '" + definition.Name + "' guided journey Save step does not contain the generated btnSave action.");
 
-            var submitStep = definition.GuidedJourney.Steps.Last();
-            var submitPanel = panels.Single(x => string.Equals(ChildValue(x, "Name"), submitStep.Tab, StringComparison.OrdinalIgnoreCase));
-            var submitControl = FindNamedControl(controls, definition.WorkflowStartButton.Name, "Button");
-            if (submitControl == null || !PanelContainsControl(submitPanel, (string)submitControl.Attribute("ID")))
-                throw new CliException("K2 Form '" + definition.Name + "' guided journey final step does not contain its workflow Submit action.");
+            if (definition.WorkflowStartButton != null)
+            {
+                var submitStep = definition.GuidedJourney.Steps.Last();
+                var submitPanel = panels.Single(x => string.Equals(ChildValue(x, "Name"), submitStep.Tab, StringComparison.OrdinalIgnoreCase));
+                var submitControl = FindNamedControl(controls, definition.WorkflowStartButton.Name, "Button");
+                if (submitControl == null || !PanelContainsControl(submitPanel, (string)submitControl.Attribute("ID")))
+                    throw new CliException("K2 Form '" + definition.Name + "' guided journey final step does not contain its workflow Submit action.");
+            }
         }
 
         private static XElement BuildProgressArea(XElement form, XElement controls, FormDefinition definition,
@@ -184,7 +189,8 @@ namespace K2SmartFormsCli
         {
             var hasBack = index > 0;
             var hasContinue = string.Equals(step.Advance, "continue", StringComparison.OrdinalIgnoreCase);
-            if (!hasBack && !hasContinue) return null;
+            var hasComplete = string.Equals(step.Advance, "complete", StringComparison.OrdinalIgnoreCase);
+            if (!hasBack && !hasContinue && !hasComplete) return null;
             var ns = form.Name.Namespace;
             var tableId = NewId();
             var rowId = NewId();
@@ -193,7 +199,7 @@ namespace K2SmartFormsCli
             var areaId = NewId();
             var itemId = NewId();
             string backId = null;
-            string continueId = null;
+            string forwardId = null;
 
             controls.Add(Control(ns, tableId, "Table", "tblJourneyActions" + (index + 1),
                 Property(ns, "IsResponsive", "true")));
@@ -210,13 +216,21 @@ namespace K2SmartFormsCli
             }
             if (hasContinue)
             {
-                continueId = NewId();
-                controls.Add(Control(ns, continueId, "Button", ContinueName(index),
+                forwardId = NewId();
+                controls.Add(Control(ns, forwardId, "Button", ContinueName(index),
                     Property(ns, "Text", definition.GuidedJourney.ContinueButtonText),
                     Property(ns, "ButtonStyle", "mainaction")));
-                AddNavigationRule(form, definition, continueId, ContinueName(index),
+                AddNavigationRule(form, definition, forwardId, ContinueName(index),
                     definition.GuidedJourney.Steps[index + 1].Tab,
                     definition.GuidedJourney.ValidateOnContinue, validationGroupId);
+            }
+            if (hasComplete)
+            {
+                forwardId = NewId();
+                controls.Add(Control(ns, forwardId, "Button", definition.CompletionButton.Name,
+                    Property(ns, "Text", definition.CompletionButton.Text),
+                    Property(ns, "ButtonStyle", "mainaction")));
+                AddCompletionRule(form, definition, forwardId);
             }
             controls.Add(Control(ns, areaId, "Area", "Journey Actions Area " + (index + 1)));
             controls.Add(Control(ns, itemId, "AreaItem", "Journey Actions Area Item " + (index + 1)));
@@ -232,7 +246,7 @@ namespace K2SmartFormsCli
                                 new XElement(ns + "Row", new XAttribute("ID", rowId),
                                     new XElement(ns + "Cells",
                                         BuildCell(ns, leftCellId, backId),
-                                        BuildCell(ns, rightCellId, continueId)))))))));
+                                        BuildCell(ns, rightCellId, forwardId)))))))));
         }
 
         private static void AddNavigationRule(XElement form, FormDefinition definition, string controlId,
@@ -298,6 +312,65 @@ namespace K2SmartFormsCli
                     "' must validate the Form validation group before changing screens.");
         }
 
+        private static void AddCompletionRule(XElement form, FormDefinition definition, string controlId)
+        {
+            var ns = form.Name.Namespace;
+            var events = RequiredChild(RequiredChild(form, "States"), "State").Elements()
+                .FirstOrDefault(x => x.Name.LocalName == "Events");
+            if (events == null)
+            {
+                events = new XElement(ns + "Events");
+                RequiredChild(RequiredChild(form, "States"), "State").Add(events);
+            }
+            var button = definition.CompletionButton;
+            events.Add(ControlRuleDefinition.BuildSystemEvent(ns, controlId, "OnClick"));
+            events.Add(new XElement(ns + "Event",
+                new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                new XAttribute("Type", "User"), new XAttribute("SourceID", controlId),
+                new XAttribute("SourceType", "Control"), new XAttribute("SourceName", button.Name),
+                new XAttribute("SourceDisplayName", button.Name),
+                new XElement(ns + "Name", "OnClick"),
+                new XElement(ns + "Properties",
+                    Property(ns, "RuleFriendlyName", "When " + button.Name + " is Clicked"),
+                    Property(ns, "Location", definition.Name)),
+                new XElement(ns + "Handlers",
+                    new XElement(ns + "Handler", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                        new XElement(ns + "Properties",
+                            Property(ns, "HandlerName", "IfLogicalHandler"),
+                            Property(ns, "Location", "form")),
+                        new XElement(ns + "Actions",
+                            BuildCompletionMessage(ns, button.MessageTitle, button.MessageBody))))));
+        }
+
+        private static void VerifyCompletionButton(XElement baseState, XElement controls, XElement panel,
+            FormDefinition definition)
+        {
+            var button = definition.CompletionButton;
+            var control = FindNamedControl(controls, button.Name, "Button");
+            if (control == null || !PanelContainsControl(panel, (string)control.Attribute("ID")))
+                throw new CliException("K2 Form '" + definition.Name +
+                    "' guided journey final step does not contain its workflow-free completion action.");
+            AssertProperty(control, "Text", button.Text, definition.Name, button.Name);
+            AssertProperty(control, "ButtonStyle", "mainaction", definition.Name, button.Name);
+            var id = (string)control.Attribute("ID");
+            ControlRuleDefinition.VerifySystemEvent(baseState, id, "OnClick",
+                "K2 Form '" + definition.Name + "' guided journey completion button '" + button.Name + "'");
+            var rules = baseState.Descendants().Where(x => x.Name.LocalName == "Event" &&
+                string.Equals((string)x.Attribute("Type"), "User", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals((string)x.Attribute("SourceID"), id, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(ChildValue(x, "Name"), "OnClick", StringComparison.OrdinalIgnoreCase)).ToList();
+            if (rules.Count != 1)
+                throw new CliException("K2 Form '" + definition.Name + "' guided journey completion button '" +
+                    button.Name + "' must have exactly one OnClick rule.");
+            var actions = rules[0].Descendants().Where(x => x.Name.LocalName == "Action").ToList();
+            if (actions.Count != 1 ||
+                !string.Equals((string)actions[0].Attribute("Type"), "ShowMessage", StringComparison.OrdinalIgnoreCase) ||
+                !HasMessageValue(actions[0], "Title", button.MessageTitle) ||
+                !HasMessageValue(actions[0], "Body", button.MessageBody))
+                throw new CliException("K2 Form '" + definition.Name + "' guided journey completion button '" +
+                    button.Name + "' must show the configured saved-draft confirmation exactly once.");
+        }
+
         private static XElement FindActionArea(XElement form, XElement areas, FormDefinition definition, GuidedJourneyStepDefinition step)
         {
             string actionName = null;
@@ -322,6 +395,39 @@ namespace K2SmartFormsCli
                     Property(ns, "IgnoreInvisibleControls", "true"),
                     Property(ns, "IgnoreDisabledControls", "true"),
                     Property(ns, "IgnoreReadOnlyControls", "true")));
+        }
+
+        private static XElement BuildCompletionMessage(XNamespace ns, string title, string body)
+        {
+            return new XElement(ns + "Action", new XAttribute("ID", NewId()), new XAttribute("DefinitionID", NewId()),
+                new XAttribute("Type", "ShowMessage"), new XAttribute("ExecutionType", "Synchronous"),
+                new XElement(ns + "Properties",
+                    Property(ns, "Location", "Form"),
+                    Property(ns, "MessageLocation", "Popup")),
+                new XElement(ns + "Parameters",
+                    MessageParameter(ns, "Size", "small"),
+                    MessageParameter(ns, "Type", "info"),
+                    MessageParameter(ns, "Title", title),
+                    MessageParameter(ns, "Body", body)));
+        }
+
+        private static XElement MessageParameter(XNamespace ns, string target, string value)
+        {
+            return new XElement(ns + "Parameter", new XAttribute("SourceID", "Sources"),
+                new XAttribute("SourceType", "Value"), new XAttribute("TargetID", target),
+                new XAttribute("TargetName", target), new XAttribute("TargetType", "MessageProperty"),
+                new XElement(ns + "SourceValue", new XAttribute(XNamespace.Xml + "space", "preserve"),
+                    new XElement(ns + "Source", new XAttribute("SourceType", "Value"), value)));
+        }
+
+        private static bool HasMessageValue(XElement action, string target, string expected)
+        {
+            return action.Descendants().Any(x => x.Name.LocalName == "Parameter" &&
+                string.Equals((string)x.Attribute("TargetID"), target, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(x.Descendants().FirstOrDefault(y => y.Name.LocalName == "Source") == null
+                    ? null
+                    : x.Descendants().First(y => y.Name.LocalName == "Source").Value,
+                    expected, StringComparison.Ordinal));
         }
 
         private static XElement BuildFocusAction(XElement form, string tabName)

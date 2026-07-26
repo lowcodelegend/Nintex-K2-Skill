@@ -111,6 +111,7 @@
   "initiation": {
     "journey":"canonical-initiation",
     "guidedMode":"auto",
+    "finalActionMode":"workflow",
     "journeyTitle":"Report a Supplier Nonconformance",
     "journeyDescription":"Describe the nonconformance, add supporting evidence, then review and submit it.",
     "formName":"SNC.New Nonconformance",

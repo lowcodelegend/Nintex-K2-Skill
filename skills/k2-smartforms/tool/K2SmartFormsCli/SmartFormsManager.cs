@@ -251,15 +251,37 @@ namespace K2SmartFormsCli
                         DisplayPropertyType = displayProperty.Type.ToString()
                         ,PropertyNames = new HashSet<string>(smartObject.Properties.Cast<SmartProperty>().Select(x => x.Name), StringComparer.OrdinalIgnoreCase)
                     };
+                    var lookupTextContracts = _manifest.Application.Views.SelectMany(view =>
+                        view.LookupControls.Where(binding =>
+                            string.Equals(binding.Lookup, source.Name, StringComparison.OrdinalIgnoreCase))
+                        .Select(binding => new KeyValuePair<string, FieldValidationDefinition>(
+                            view.Name + "." + binding.Property,
+                            view.Validations.SingleOrDefault(validation =>
+                                string.Equals(validation.Property, binding.Property, StringComparison.OrdinalIgnoreCase)))))
+                        .Where(x => FieldValidationDefinitionXml.HasTextConstraint(x.Value)).ToList();
                     System.Data.DataTable table;
                     try
                     {
                         smartObject.MethodToExecute = method.Name;
-                        table = server.ExecuteListDataTable(smartObject, 1, 1);
+                        table = server.ExecuteListDataTable(smartObject, 1,
+                            lookupTextContracts.Count == 0 ? 1 : 10001);
                     }
                     catch (Exception ex)
                     {
                         throw new CliException("Lookup '" + source.Name + "' List execution failed for " + smartObject.Name + "." + method.Name + ": " + ex.Message);
+                    }
+                    if (lookupTextContracts.Count > 0 && table.Rows.Count > 10000)
+                        throw new CliException("Lookup '" + source.Name +
+                            "' returned more than 10000 values; bounded-value validation cannot prove the complete dropdown domain.");
+                    foreach (var contract in lookupTextContracts)
+                    {
+                        for (var rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
+                        {
+                            var candidate = ReadSampleValue(table.Rows[rowIndex], valueProperty.Name);
+                            if (!FieldValidationDefinitionXml.SatisfiesTextConstraint(candidate, contract.Value))
+                                throw new CliException("Lookup '" + source.Name + "' value row " + (rowIndex + 1) +
+                                    " violates the declared text constraint for " + contract.Key + ".");
+                        }
                     }
                     if (table.Rows.Count > 0)
                     {
@@ -267,7 +289,9 @@ namespace K2SmartFormsCli
                         runtime.SampleValue = ReadSampleValue(table.Rows[0], valueProperty.Name);
                         runtime.SampleDisplayValue = ReadSampleValue(table.Rows[0], displayProperty.Name);
                     }
-                    Console.WriteLine("Lookup source: OK (" + source.Name + " <= " + smartObject.Name + "." + method.Name + ", value=" + valueProperty.Name + ", display=" + displayProperty.Name + ", sampleRows=" + table.Rows.Count + ")");
+                    Console.WriteLine("Lookup source: OK (" + source.Name + " <= " + smartObject.Name + "." + method.Name +
+                        ", value=" + valueProperty.Name + ", display=" + displayProperty.Name +
+                        (lookupTextContracts.Count == 0 ? ", sampleRows=" : ", validatedRows=") + table.Rows.Count + ")");
                 }
                 _lookupSources = result;
                 return _lookupSources;
@@ -1160,7 +1184,7 @@ namespace K2SmartFormsCli
         private IEnumerable<KeyValuePair<ViewDefinition, FieldValidationDefinition>> PatternValidations()
         {
             return _manifest.Application.Views.SelectMany(view => view.Validations
-                .Where(FieldValidationDefinitionXml.RequiresValidationPattern)
+                .Where(validation => FieldValidationDefinitionXml.RequiresNativeValidationPattern(view, validation))
                 .Select(validation => new KeyValuePair<ViewDefinition, FieldValidationDefinition>(view, validation)));
         }
 
