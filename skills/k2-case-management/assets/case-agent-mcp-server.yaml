@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "server": {
+    "name": "K2 Case Agent",
+    "host": "0.0.0.0",
+    "port": 8443,
+    "publicBaseUrl": "https://case-agent.internal.example",
+    "mcpPath": "/mcp",
+    "jsonResponse": true,
+    "statelessHttp": true,
+    "logLevel": "INFO",
+    "allowedHosts": ["case-agent.internal.example", "case-agent.internal.example:8443"],
+    "allowedOrigins": ["https://langflow.internal.example"],
+    "allowInsecureHttp": false
+  },
+  "security": {
+    "mode": "staticBearer",
+    "tokensEnvironment": "CASE_AGENT_MCP_TOKEN_RECORDS"
+  },
+  "contracts": ["case-agent-creation-contract.yaml"],
+  "runtime": {
+    "draftStore": "memory",
+    "allowEphemeralDrafts": true,
+    "mutationsEnabled": false,
+    "inlineLookups": {
+      "CONFIDENTIALITY": ["INTERNAL", "RESTRICTED"],
+      "EXCEPTION_TYPE": ["PROCESS", "EVIDENCE"]
+    },
+    "factory": null,
+    "settings": {}
+  }
+}

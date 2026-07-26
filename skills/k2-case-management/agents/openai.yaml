@@ -1,4 +1,4 @@
 interface:
   display_name: "K2 Case Management"
-  short_description: "Design governed K2 case and agent foundations"
-  default_prompt: "Use $k2-case-management to design a governed K2 case solution using the canonical extensible model, reusable agentic creation contracts, lifecycle workflows, and a build-manifest handoff to $k2-builder."
+  short_description: "Design governed K2 case and MCP foundations"
+  default_prompt: "Use $k2-case-management to design a governed K2 case solution using the canonical model, agentic creation contracts, remote Langflow MCP tools, lifecycle workflows, and a handoff to $k2-builder."

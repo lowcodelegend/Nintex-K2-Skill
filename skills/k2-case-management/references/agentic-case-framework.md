@@ -43,9 +43,9 @@ Represent draft data as:
 
 Reject undeclared paths and extension entities. Never translate `extensions` into dynamic SQL. The registered case-type adapter owns mapping and one transactional creation operation. Record the contract and configuration versions used.
 
-## Future MCP boundary
+## MCP boundary
 
-Adapt the stable facade methods to MCP only after the foundation tests pass: `list_permitted_case_types`, `get_case_creation_contract`, `start_case_intake`, `update_case_intake`, `set_case_intake_files`, `get_intake_validation`, `preview_case_creation`, and `create_case`.
+The tested remote adapter in `scripts/case_agent_mcp_server.py` exposes `list_permitted_case_types`, `get_case_creation_contract`, `start_case_intake`, `update_case_intake`, `set_case_intake_files`, `get_intake_validation`, `preview_case_creation`, and `create_case` over Streamable HTTP. Follow [the remote server contract](agentic-case-mcp.md).
 
 Treat those tool schemas as a protocol adapter over this module, not as domain logic. Add policy and case-context resources separately. Do not expose `submit_case` until the reusable CaseCommand request and parent-processing mechanism is implemented and verified.
 

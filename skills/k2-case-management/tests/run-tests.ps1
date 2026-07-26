@@ -298,6 +298,22 @@ $caseAgentContract = Join-Path $PSScriptRoot '..\assets\case-agent-creation-cont
 if ($LASTEXITCODE -ne 0) { throw 'Expected the canonical case-agent creation contract to pass.' }
 & $caseAgent selftest
 if ($LASTEXITCODE -ne 0) { throw 'Expected the transport-neutral case-agent self-test to pass.' }
-& (Get-Command python -ErrorAction Stop).Source -m unittest discover -s $PSScriptRoot -p 'test_*.py' -v
+$python = (Get-Command python -ErrorAction Stop).Source
+& $python -m unittest discover -s $PSScriptRoot -p 'test_case_agent_framework.py' -v
 if ($LASTEXITCODE -ne 0) { throw 'Case-agent framework unit tests failed.' }
+& $python -m unittest discover -s $PSScriptRoot -p 'test_validate_case_model.py' -v
+if ($LASTEXITCODE -ne 0) { throw 'Case-model Python unit tests failed.' }
 Write-Output 'Case-agent creation-contract and transport-neutral framework tests passed.'
+
+$uv = (Get-Command uv -ErrorAction Stop).Source
+$caseAgentMcp = Join-Path $PSScriptRoot '..\scripts\case-agent-mcp.ps1'
+$caseAgentMcpConfig = Join-Path $PSScriptRoot '..\assets\case-agent-mcp-server.yaml'
+& $caseAgentMcp --version
+if ($LASTEXITCODE -ne 0) { throw 'Case-agent MCP version command failed.' }
+& $caseAgentMcp validate-config $caseAgentMcpConfig
+if ($LASTEXITCODE -ne 0) { throw 'Canonical case-agent MCP configuration failed validation.' }
+& $caseAgentMcp selftest
+if ($LASTEXITCODE -ne 0) { throw 'Case-agent MCP self-test failed.' }
+& $uv run --no-project --with 'mcp==1.28.1' --with 'uvicorn==0.51.0' python -m unittest discover -s $PSScriptRoot -p 'test_case_agent_mcp_server.py' -v
+if ($LASTEXITCODE -ne 0) { throw 'Case-agent remote MCP integration tests failed.' }
+Write-Output 'Case-agent Streamable HTTP MCP integration tests passed.'
