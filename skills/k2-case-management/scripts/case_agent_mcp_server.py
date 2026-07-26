@@ -53,7 +53,7 @@ from case_agent_framework import (
 )
 
 
-SERVER_VERSION = "0.1.0"
+SERVER_VERSION = "0.2.0"
 TOKEN_ENVIRONMENT_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]{2,127}$")
 SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
@@ -138,6 +138,28 @@ class StaticBearerMiddleware:
             CURRENT_IDENTITY.reset(token)
 
 
+class UnauthenticatedDevelopmentMiddleware:
+    def __init__(
+        self,
+        app: ASGIApp,
+        identity: RemoteIdentity,
+        health_path: str = "/healthz",
+    ) -> None:
+        self.app = app
+        self.identity = identity
+        self.health_path = health_path
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or scope.get("path") == self.health_path:
+            await self.app(scope, receive, send)
+            return
+        token = CURRENT_IDENTITY.set(self.identity)
+        try:
+            await self.app(scope, receive, send)
+        finally:
+            CURRENT_IDENTITY.reset(token)
+
+
 class RequestAuthorizationProvider:
     def can_create(self, principal_id: str, case_type_code: str) -> bool:
         identity = CURRENT_IDENTITY.get()
@@ -172,6 +194,7 @@ class ServerRuntime:
     framework: CaseAgentFramework
     mutations_enabled: bool
     durable_drafts: bool
+    authentication_mode: str
 
 
 def validate_server_config(
@@ -234,27 +257,62 @@ def validate_server_config(
             "server.tlsCertificateFile and server.tlsPrivateKeyFile must be supplied together"
         )
 
-    if security.get("mode") != "staticBearer":
-        errors.append("security.mode must be staticBearer in this server version")
-    token_environment = security.get("tokensEnvironment")
-    if (
-        not isinstance(token_environment, str)
-        or TOKEN_ENVIRONMENT_PATTERN.fullmatch(token_environment) is None
-    ):
-        errors.append("security.tokensEnvironment must be an uppercase environment-variable name")
-    elif require_runtime_environment:
-        token_value = (environ or os.environ).get(token_environment)
-        if not token_value:
-            errors.append(f"token environment is not set: {token_environment}")
-        else:
-            try:
-                records = json.loads(token_value)
-            except json.JSONDecodeError as exc:
-                errors.append(f"{token_environment} is not valid JSON: {exc.msg}")
+    security_mode = security.get("mode")
+    if security_mode == "staticBearer":
+        token_environment = security.get("tokensEnvironment")
+        if (
+            not isinstance(token_environment, str)
+            or TOKEN_ENVIRONMENT_PATTERN.fullmatch(token_environment) is None
+        ):
+            errors.append(
+                "security.tokensEnvironment must be an uppercase environment-variable name"
+            )
+        elif require_runtime_environment:
+            token_value = (environ or os.environ).get(token_environment)
+            if not token_value:
+                errors.append(f"token environment is not set: {token_environment}")
             else:
-                errors.extend(validate_token_records(records))
-    if "tokens" in security or "token" in security:
-        errors.append("raw or inline tokens are forbidden; use security.tokensEnvironment")
+                try:
+                    records = json.loads(token_value)
+                except json.JSONDecodeError as exc:
+                    errors.append(f"{token_environment} is not valid JSON: {exc.msg}")
+                else:
+                    errors.extend(validate_token_records(records))
+        if "tokens" in security or "token" in security:
+            errors.append(
+                "raw or inline tokens are forbidden; use security.tokensEnvironment"
+            )
+    elif security_mode == "none":
+        if security.get("allowUnauthenticated") is not True:
+            errors.append(
+                "security.mode none requires security.allowUnauthenticated=true"
+            )
+        development_principal = security.get("developmentPrincipalId")
+        if not isinstance(development_principal, str) or not development_principal.strip():
+            errors.append(
+                "security.developmentPrincipalId is required for unauthenticated mode"
+            )
+        development_case_types = security.get("caseTypes")
+        if (
+            not isinstance(development_case_types, list)
+            or not development_case_types
+            or any(
+                not isinstance(value, str) or not value.strip()
+                for value in development_case_types
+            )
+        ):
+            errors.append(
+                "security.caseTypes must be a non-empty list for unauthenticated mode"
+            )
+        if any(
+            key in security
+            for key in ("token", "tokens", "tokensEnvironment", "scopes")
+        ):
+            errors.append(
+                "unauthenticated mode forbids token settings and configurable scopes"
+            )
+    else:
+        errors.append("security.mode must be staticBearer or none")
 
     seen_contracts: set[Tuple[str, int]] = set()
     for index, configured_path in enumerate(contracts):
@@ -311,6 +369,15 @@ def validate_server_config(
             "runtime.mutationsEnabled requires a case-type runtime factory with durable drafts "
             "and registered adapters"
         )
+    if security_mode == "none":
+        if runtime.get("mutationsEnabled") is not False:
+            errors.append(
+                "unauthenticated mode requires runtime.mutationsEnabled=false"
+            )
+        if factory is not None:
+            errors.append(
+                "unauthenticated mode forbids runtime.factory and external data providers"
+            )
     return errors
 
 
@@ -393,7 +460,7 @@ def load_server_config(
 def create_application(
     config: Mapping[str, Any],
     base_directory: Path,
-    token_records: Sequence[Mapping[str, Any]],
+    token_records: Sequence[Mapping[str, Any]] = (),
 ) -> Tuple[ASGIApp, ServerRuntime]:
     registry = ContractRegistry()
     for configured_path in config["contracts"]:
@@ -460,10 +527,12 @@ def create_application(
             allowed_origins=[str(value) for value in server_config["allowedOrigins"]],
         ),
     )
+    authentication_mode = str(config["security"]["mode"])
     runtime = ServerRuntime(
         framework=framework,
         mutations_enabled=mutations_enabled,
         durable_drafts=durable_drafts,
+        authentication_mode=authentication_mode,
     )
     _register_tools(mcp, runtime)
 
@@ -474,17 +543,34 @@ def create_application(
                 "status": "ok",
                 "service": "k2-case-agent-mcp",
                 "version": SERVER_VERSION,
+                "authenticationMode": authentication_mode,
+                "unauthenticated": authentication_mode == "none",
                 "mutationsEnabled": mutations_enabled,
                 "durableDrafts": durable_drafts,
             }
         )
 
     app = mcp.streamable_http_app()
-    app.add_middleware(
-        StaticBearerMiddleware,
-        token_directory=StaticTokenDirectory(token_records),
-        health_path="/healthz",
-    )
+    if authentication_mode == "staticBearer":
+        app.add_middleware(
+            StaticBearerMiddleware,
+            token_directory=StaticTokenDirectory(token_records),
+            health_path="/healthz",
+        )
+    else:
+        security_config = config["security"]
+        app.add_middleware(
+            UnauthenticatedDevelopmentMiddleware,
+            identity=RemoteIdentity(
+                principal_id=str(security_config["developmentPrincipalId"]),
+                scopes=frozenset({"case:create"}),
+                case_types=frozenset(
+                    str(value) for value in security_config["caseTypes"]
+                ),
+                token_id="unauthenticated-development",
+            ),
+            health_path="/healthz",
+        )
     return app, runtime
 
 
@@ -668,13 +754,13 @@ def _require_identity(
 ) -> RemoteIdentity:
     identity = CURRENT_IDENTITY.get()
     if identity is None:
-        raise ToolError("Authenticated request context is unavailable.")
+        raise ToolError("Request identity context is unavailable.")
     if required_scope not in identity.scopes:
-        raise ToolError(f"Bearer token lacks required scope: {required_scope}")
+        raise ToolError(f"Request identity lacks required scope: {required_scope}")
     if case_type_code and (
         "*" not in identity.case_types and case_type_code not in identity.case_types
     ):
-        raise ToolError("Bearer token is not permitted for this case type.")
+        raise ToolError("Request identity is not permitted for this case type.")
     return identity
 
 
@@ -861,13 +947,18 @@ def _serve(config_path: Path) -> int:
         require_runtime_environment=True,
         environ=os.environ,
     )
-    token_records = _read_token_records(config, os.environ)
+    token_records = (
+        _read_token_records(config, os.environ)
+        if config["security"]["mode"] == "staticBearer"
+        else []
+    )
     app, runtime = create_application(config, resolved.parent, token_records)
     server = config["server"]
     LOG.warning(
-        "Starting case-agent MCP server at %s%s; mutations=%s durableDrafts=%s",
+        "Starting case-agent MCP server at %s%s; auth=%s mutations=%s durableDrafts=%s",
         server["publicBaseUrl"],
         server["mcpPath"],
+        runtime.authentication_mode,
         runtime.mutations_enabled,
         runtime.durable_drafts,
     )
@@ -907,7 +998,8 @@ def _selftest() -> int:
         return 1
     print(
         "SELFTEST SUCCEEDED: Streamable HTTP configuration, principal-bound static "
-        "bearer authentication, and stable case tool adapter"
+        "bearer authentication, explicit unauthenticated-development gating, and stable "
+        "case tool adapter"
     )
     return 0
 
@@ -938,7 +1030,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             return 1
         print(
             f"Valid case-agent MCP config: {args.config.resolve()} "
-            f"({config['server']['publicBaseUrl']}{config['server']['mcpPath']})"
+            f"({config['server']['publicBaseUrl']}{config['server']['mcpPath']}, "
+            f"auth={config['security']['mode']})"
         )
         return 0
     if args.command == "serve":

@@ -67,6 +67,17 @@ def config_for(port):
     }
 
 
+def unauthenticated_config_for(port):
+    config = config_for(port)
+    config["security"] = {
+        "mode": "none",
+        "allowUnauthenticated": True,
+        "developmentPrincipalId": r"DEVELOPMENT\anonymous-langflow",
+        "caseTypes": ["EVIDENCE_EXCEPTION"],
+    }
+    return config
+
+
 class RunningServer:
     def __init__(self, app, port):
         self.server = uvicorn.Server(
@@ -113,9 +124,10 @@ def result_value(result):
     raise AssertionError("Tool result did not contain structured or JSON text output.")
 
 
-async def connect(url, token):
+async def connect(url, token=None):
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
     http_client = httpx.AsyncClient(
-        headers={"Authorization": f"Bearer {token}"},
+        headers=headers,
         timeout=10,
     )
     transport = streamable_http_client(url, http_client=http_client)
@@ -145,6 +157,23 @@ class CaseAgentMcpServerTests(unittest.TestCase):
         self.assertTrue(any("inline tokens are forbidden" in error for error in errors))
         self.assertTrue(any("requires a case-type runtime factory" in error for error in errors))
 
+    def test_unauthenticated_mode_requires_explicit_read_only_development_boundary(self):
+        config = unauthenticated_config_for(8443)
+        self.assertEqual([], validate_server_config(config, ROOT / "assets"))
+
+        config["security"]["allowUnauthenticated"] = False
+        config["security"]["tokensEnvironment"] = "UNSAFE_TOKEN_SETTING"
+        config["runtime"]["mutationsEnabled"] = True
+        config["runtime"]["factory"] = {
+            "modulePath": "case-agent-runtime-plugin.py",
+            "function": "create_runtime",
+        }
+        errors = validate_server_config(config, ROOT / "assets")
+        self.assertTrue(any("allowUnauthenticated=true" in error for error in errors))
+        self.assertTrue(any("forbids token settings" in error for error in errors))
+        self.assertTrue(any("mutationsEnabled=false" in error for error in errors))
+        self.assertTrue(any("forbids runtime.factory" in error for error in errors))
+
     def test_token_records_are_hashed_scoped_and_expirable(self):
         token, record = generate_token_record(
             r"EXAMPLE\alice",
@@ -161,6 +190,54 @@ class CaseAgentMcpServerTests(unittest.TestCase):
 
     def test_remote_streamable_http_tools_and_authorization(self):
         asyncio.run(self._remote_streamable_http_tools_and_authorization())
+
+    def test_remote_unauthenticated_development_tools(self):
+        asyncio.run(self._remote_unauthenticated_development_tools())
+
+    async def _remote_unauthenticated_development_tools(self):
+        port = free_port()
+        config = unauthenticated_config_for(port)
+        app, runtime = create_application(config, ROOT / "assets")
+        self.assertEqual("none", runtime.authentication_mode)
+        self.assertFalse(runtime.mutations_enabled)
+        self.assertFalse(runtime.durable_drafts)
+
+        with RunningServer(app, port) as server:
+            health = httpx.get(server.base_url + "/healthz")
+            self.assertEqual(200, health.status_code)
+            self.assertEqual("none", health.json()["authenticationMode"])
+            self.assertTrue(health.json()["unauthenticated"])
+            self.assertFalse(health.json()["mutationsEnabled"])
+
+            client, transport, session = await connect(server.base_url + "/mcp")
+            try:
+                permitted = result_value(
+                    await session.call_tool("list_permitted_case_types", {})
+                )
+                self.assertEqual(
+                    "EVIDENCE_EXCEPTION",
+                    permitted["caseTypes"][0]["caseTypeCode"],
+                )
+                draft = result_value(
+                    await session.call_tool(
+                        "start_case_intake",
+                        {"case_type_code": "EVIDENCE_EXCEPTION"},
+                    )
+                )
+                self.assertTrue(draft["draftId"])
+
+                create = await session.call_tool(
+                    "create_case",
+                    {
+                        "draft_id": draft["draftId"],
+                        "confirmation_token": "not-used",
+                        "idempotency_key": "unauthenticated-test",
+                    },
+                )
+                self.assertTrue(create.isError)
+                self.assertIn("lacks required scope", create.content[0].text)
+            finally:
+                await disconnect(client, transport, session)
 
     async def _remote_streamable_http_tools_and_authorization(self):
         port = free_port()
@@ -185,6 +262,8 @@ class CaseAgentMcpServerTests(unittest.TestCase):
         with RunningServer(app, port) as server:
             health = httpx.get(server.base_url + "/healthz")
             self.assertEqual(200, health.status_code)
+            self.assertEqual("staticBearer", health.json()["authenticationMode"])
+            self.assertFalse(health.json()["unauthenticated"])
             self.assertFalse(health.json()["mutationsEnabled"])
 
             unauthorized = httpx.post(server.base_url + "/mcp", json={})

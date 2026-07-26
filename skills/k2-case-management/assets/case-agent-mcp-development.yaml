@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "server": {
+    "name": "K2 Case Agent Development",
+    "host": "0.0.0.0",
+    "port": 8443,
+    "publicBaseUrl": "http://case-agent-development.internal:8443",
+    "mcpPath": "/mcp",
+    "jsonResponse": true,
+    "statelessHttp": true,
+    "logLevel": "INFO",
+    "allowedHosts": ["case-agent-development.internal:8443"],
+    "allowedOrigins": [],
+    "allowInsecureHttp": true
+  },
+  "security": {
+    "mode": "none",
+    "allowUnauthenticated": true,
+    "developmentPrincipalId": "DEVELOPMENT\\anonymous-langflow",
+    "caseTypes": ["EVIDENCE_EXCEPTION"]
+  },
+  "contracts": ["case-agent-creation-contract.yaml"],
+  "runtime": {
+    "draftStore": "memory",
+    "allowEphemeralDrafts": true,
+    "mutationsEnabled": false,
+    "inlineLookups": {
+      "CONFIDENTIALITY": ["INTERNAL", "RESTRICTED"],
+      "EXCEPTION_TYPE": ["PROCESS", "EVIDENCE"]
+    },
+    "factory": null,
+    "settings": {}
+  }
+}

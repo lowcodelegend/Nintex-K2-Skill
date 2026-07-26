@@ -1,6 +1,6 @@
 # Remote case-agent MCP server
 
-Use `scripts/case-agent-mcp.ps1` to host the transport-neutral case framework for Langflow or another remote MCP client. The server uses the official Python MCP SDK, one Streamable HTTP endpoint, structured tools, strict Host/Origin validation, scoped bearer identities, and JSON audit events. It does not call a model.
+Use `scripts/case-agent-mcp.ps1` to host the transport-neutral case framework for Langflow or another remote MCP client. The server uses the official Python MCP SDK, one Streamable HTTP endpoint, structured tools, strict Host/Origin validation, scoped bearer identities for normal operation, an explicitly gated unauthenticated development mode, and JSON audit events. It does not call a model.
 
 ## Prepare
 
@@ -26,6 +26,19 @@ Give the displayed bearer token only to the Langflow secret store. Put the emitt
 
 The endpoint is `<publicBaseUrl><mcpPath>`, normally `https://case-agent.example/mcp`. `/healthz` reports only service readiness and whether mutations/durable drafts are enabled.
 
+### Temporary unauthenticated development
+
+Use `assets/case-agent-mcp-development.yaml` only when the user explicitly asks to defer authentication for an internal Langflow connectivity test. Set the real development DNS name or IP in `publicBaseUrl` and `allowedHosts`. This mode requires all of the following gates:
+
+- `security.mode` is `none` and `allowUnauthenticated` is explicitly `true`.
+- Every request receives one visibly non-production `developmentPrincipalId`.
+- The only granted scope is `case:create`; commit scope cannot be configured.
+- `runtime.mutationsEnabled` is `false`.
+- `runtime.factory` is absent, so no durable store, file provider, external lookup provider, or K2 adapter is reachable.
+- Drafts are memory-only and disappear when the server restarts.
+
+The health response reports `"authenticationMode":"none"` and `"unauthenticated":true`. Bind only to an isolated development network, keep the port inaccessible from untrusted segments, and replace this mode before connecting real case data or enabling any mutation.
+
 ## Langflow
 
 Register an HTTP/SSE MCP server in Langflow with:
@@ -33,6 +46,8 @@ Register an HTTP/SSE MCP server in Langflow with:
 - URL: the HTTPS `/mcp` endpoint.
 - Header: `Authorization` = `Bearer <client-token>`.
 - SSL verification: enabled.
+
+For the explicitly gated unauthenticated development mode, use its HTTP `/mcp` URL without an authorization header. Do not reuse that connection after authentication is enabled.
 
 Use the MCP Tools component as the Agent component's toolset. Keep tool caching disabled during contract iteration. Langflow 1.7 or later supports Streamable HTTP; do not configure the retired standalone SSE transport for this server.
 
