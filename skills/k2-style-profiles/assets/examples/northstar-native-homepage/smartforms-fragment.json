@@ -37,16 +37,16 @@
           "APP.Command Palette",
           "APP.Operations KPIs",
           "APP.Cases by Stage",
-          "APP.Cases by Stage Data",
           "APP.Urgent Work"
         ],
-        "options": [ "no-tabs" ],
+        "options": [
+          "no-tabs"
+        ],
         "viewTitles": {
           "APP.Application Navigation": "Application navigation",
           "APP.Command Palette": "Command palette",
           "APP.Operations KPIs": "Operations overview",
           "APP.Cases by Stage": "Open cases by stage",
-          "APP.Cases by Stage Data": "Open cases by stage data",
           "APP.Urgent Work": "Urgent work"
         }
       }

@@ -8,7 +8,7 @@ Deployed layers:
 - Parent `SNC.Case Lifecycle` plus Capture, Validate, Classify, Assign, Investigate, Decide, Resolve, and Close child workflows.
 - `SNC.Supplier Nonconformance` workspace with Cases, Overview, Investigation, Collaboration, Decisions & Actions, Activity & History, Analytics, Reports, and native My Tasks navigation. Governed commands stay beside the case context; all eleven child collections remain filtered and transactionally coordinated.
 - `SNC.New Nonconformance` guided initiation with Case Details, Evidence, saved-key Review & Submit, a dedicated final Submit case action, and native start-only integration to the parent lifecycle.
-- `SNC.Quality Operations` with native KPI cards plus bounded Northstar trend, attention, stage, and supplier-signal Web Components over governed SmartObject projections. Every visual has an adjacent native List View as its accessible data alternative. `SNC.Reports` has six accessible chart/table reports, and `SNC.My Work` combines the user's native K2 Worklist with the reused attention queue.
+- `SNC.Quality Operations` with native KPI cards plus bounded Northstar trend, attention, stage, and supplier-signal Web Components over governed SmartObject projections. Visuals use their owning capture Views directly and do not generate redundant companion List Views. `SNC.Reports` has six governed visual reports, and `SNC.My Work` combines the user's native K2 Worklist with the reused attention widget.
 - `SNC.Stage Task` with eight native SmartForms Start/Task integrations.
 - Administration Forms for lookup values, SLAs, case types, stage definitions, allowed transitions, and business rules.
 

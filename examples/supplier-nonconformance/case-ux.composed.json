@@ -311,7 +311,6 @@
       "measure": "open_case_count",
       "dimension": "current_stage",
       "drilldown": "all-cases",
-      "table_alternative": true,
       "empty_state": "No open cases."
     },
     {
@@ -321,7 +320,6 @@
       "measure": "created_case_count",
       "dimension": "opened_month",
       "drilldown": "all-cases",
-      "table_alternative": true,
       "empty_state": "No cases in this period."
     },
     {
@@ -331,7 +329,6 @@
       "measure": "open_case_count",
       "dimension": "aging_bucket",
       "drilldown": "all-cases",
-      "table_alternative": true,
       "empty_state": "No open cases."
     },
     {
@@ -432,7 +429,6 @@
       "measure": "supplier_case_count",
       "dimension": "opened_month",
       "drilldown": "all-cases",
-      "table_alternative": true,
       "empty_state": "No supplier cases in this period."
     }
   ],
@@ -528,8 +524,7 @@
       "no-horizontal-overflow",
       "visible-focus",
       "semantic-status",
-      "single-primary-action",
-      "chart-table-alternative"
+      "single-primary-action"
     ]
   }
 }

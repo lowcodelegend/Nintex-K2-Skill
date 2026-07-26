@@ -17,6 +17,14 @@ function ConvertTo-ControlName {
     }) -join '')
 }
 
+function Test-IncludeDataAlternative {
+    param($Binding)
+    $property=$Binding.PSObject.Properties['includeDataAlternative']
+    if($null -eq $property){return $false}
+    if($Binding.includeDataAlternative -isnot [bool]){throw "includeDataAlternative must be a JSON boolean on mapping '$($Binding.viewName)'."}
+    return $Binding.includeDataAlternative
+}
+
 $uxDocument=Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $Ux)|ConvertFrom-Json
 $mappingDocument=Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $Mapping)|ConvertFrom-Json
 $usesStyleProfile=-not [string]::IsNullOrWhiteSpace([string]$mappingDocument.application.styleProfile)
@@ -83,7 +91,6 @@ if($null -ne $mappingDocument.dashboard.widgets -and @($mappingDocument.dashboar
         if($validVariants -notcontains $variant){throw "Dashboard widget '$($binding.viewName)' has unsupported variant '$variant'."}
         if($null -eq $binding.properties -or @($binding.properties).Count -eq 0){throw "Dashboard widget '$($binding.viewName)' must select governed projection properties."}
         $listMethod=Get-ValueOrDefault $binding.listMethod 'List'
-        $dataViewName=Get-ValueOrDefault $binding.tableViewName ([string]$binding.viewName+' Data')
         $controlProperties=[ordered]@{
             Value=''
             Data='[]'
@@ -120,12 +127,28 @@ if($null -ne $mappingDocument.dashboard.widgets -and @($mappingDocument.dashboar
                 events=@([ordered]@{name='Navigate';action='navigate';sourceProperty='Value';target='_self'})
             })
         }
-        $dataView=[ordered]@{name=$dataViewName;smartObject=[string]$binding.smartObject;type='list';properties=@($binding.properties);readOnlyProperties=@($binding.properties);methods=@();defaultListMethod=$listMethod;options=@('toolbar')}
-        $views.Add($widgetView);$views.Add($dataView);$formViews.Add([string]$binding.viewName);$formViews.Add([string]$dataViewName)
-        $titles[[string]$binding.viewName]=(Get-ValueOrDefault $binding.title $binding.heading);$titles[[string]$dataViewName]=((Get-ValueOrDefault $binding.title $binding.heading)+' data')
+        $views.Add($widgetView);$formViews.Add([string]$binding.viewName)
+        $titles[[string]$binding.viewName]=(Get-ValueOrDefault $binding.title $binding.heading)
+        if(Test-IncludeDataAlternative $binding){
+            $dataViewName=Get-ValueOrDefault $binding.tableViewName ([string]$binding.viewName+' Data')
+            $dataView=[ordered]@{name=$dataViewName;smartObject=[string]$binding.smartObject;type='list';properties=@($binding.properties);readOnlyProperties=@($binding.properties);methods=@();defaultListMethod=$listMethod;options=@('toolbar')}
+            $views.Add($dataView);$formViews.Add([string]$dataViewName);$titles[[string]$dataViewName]=((Get-ValueOrDefault $binding.title $binding.heading)+' data')
+        }
     }
 } else {
-    foreach($binding in @($mappingDocument.dashboard.charts)){if(-not $components.ContainsKey([string]$binding.component)){throw "Unknown UX chart mapping: $($binding.component)"};$c=$components[[string]$binding.component];$chartType=if($binding.type){$binding.type}elseif($c.chart_type -eq 'horizontal-bar'){'bar'}else{$c.chart_type};$chart=[ordered]@{name=(ConvertTo-ControlName 'cht' ([string]$binding.component));title=(Get-ValueOrDefault $binding.title $binding.component);type=$chartType;categoryProperty=$binding.categoryProperty;valueProperty=$binding.valueProperty;height=(Get-ValueOrDefault $binding.height 260);showLegend=[bool](Get-ValueOrDefault $binding.showLegend $false);showLabels=[bool](Get-ValueOrDefault $binding.showLabels $true);emptyState=(Get-ValueOrDefault $c.empty_state 'No data to display.')};$dataViewName=Get-ValueOrDefault $binding.tableViewName ([string]$binding.viewName+' Data');$views.Add([ordered]@{name=$binding.viewName;smartObject=$binding.smartObject;type='capture';properties=@($binding.categoryProperty,$binding.valueProperty);methods=@();defaultListMethod='List';options=@();charts=@($chart)});$views.Add([ordered]@{name=$dataViewName;smartObject=$binding.smartObject;type='list';properties=@($binding.categoryProperty,$binding.valueProperty);methods=@();defaultListMethod='List';options=@('toolbar')});$formViews.Add($binding.viewName);$formViews.Add($dataViewName);$titles[$binding.viewName]=$chart.title;$titles[$dataViewName]=($chart.title+' data')}
+    foreach($binding in @($mappingDocument.dashboard.charts)){
+        if(-not $components.ContainsKey([string]$binding.component)){throw "Unknown UX chart mapping: $($binding.component)"}
+        $c=$components[[string]$binding.component]
+        $chartType=if($binding.type){$binding.type}elseif($c.chart_type -eq 'horizontal-bar'){'bar'}else{$c.chart_type}
+        $chart=[ordered]@{name=(ConvertTo-ControlName 'cht' ([string]$binding.component));title=(Get-ValueOrDefault $binding.title $binding.component);type=$chartType;categoryProperty=$binding.categoryProperty;valueProperty=$binding.valueProperty;height=(Get-ValueOrDefault $binding.height 260);showLegend=[bool](Get-ValueOrDefault $binding.showLegend $false);showLabels=[bool](Get-ValueOrDefault $binding.showLabels $true);emptyState=(Get-ValueOrDefault $c.empty_state 'No data to display.')}
+        $views.Add([ordered]@{name=$binding.viewName;smartObject=$binding.smartObject;type='capture';properties=@($binding.categoryProperty,$binding.valueProperty);methods=@();defaultListMethod='List';options=@();charts=@($chart)})
+        $formViews.Add($binding.viewName);$titles[$binding.viewName]=$chart.title
+        if(Test-IncludeDataAlternative $binding){
+            $dataViewName=Get-ValueOrDefault $binding.tableViewName ([string]$binding.viewName+' Data')
+            $views.Add([ordered]@{name=$dataViewName;smartObject=$binding.smartObject;type='list';properties=@($binding.categoryProperty,$binding.valueProperty);methods=@();defaultListMethod='List';options=@('toolbar')})
+            $formViews.Add($dataViewName);$titles[$dataViewName]=($chart.title+' data')
+        }
+    }
     foreach($binding in @($mappingDocument.dashboard.queues)){if(-not $components.ContainsKey([string]$binding.component)){throw "Unknown UX queue mapping: $($binding.component)"};$views.Add([ordered]@{name=$binding.viewName;smartObject=$binding.smartObject;type='list';properties=@($binding.properties);methods=@();defaultListMethod='List';options=@('toolbar')});$formViews.Add($binding.viewName);$titles[$binding.viewName]=(Get-ValueOrDefault $binding.title $binding.component)}
 }
 $dashboardForm=[ordered]@{name=$mappingDocument.dashboard.formName;useLegacyTheme=$false;useStyleProfile=$usesStyleProfile;useCommonHeader=$false;useCommonFooter=$false;views=@($formViews);options=@('no-tabs');viewTitles=$titles;preFill=[ordered]@{enabled=$false;disabledReason='The native Northstar homepage is read-only; test data is supplied by governed SmartObject projections.'}}
@@ -134,9 +157,15 @@ if($null -ne $mappingDocument.reports){
     $reports=$mappingDocument.reports;$reportTitles=[ordered]@{};$reportViewsByGroup=[ordered]@{}
     foreach($binding in @($reports.views)){
         $chart=[ordered]@{name=(ConvertTo-ControlName 'cht' ([string]$binding.viewName));title=[string]$binding.title;type=(Get-ValueOrDefault $binding.type 'bar');categoryProperty=$binding.categoryProperty;valueProperty=$binding.valueProperty;height=(Get-ValueOrDefault $binding.height 250);showLegend=[bool](Get-ValueOrDefault $binding.showLegend $false);showLabels=[bool](Get-ValueOrDefault $binding.showLabels $true);emptyState=(Get-ValueOrDefault $binding.emptyState 'No report data to display.')}
-        $dataViewName=Get-ValueOrDefault $binding.tableViewName ([string]$binding.viewName+' Data');$reportView=[ordered]@{name=$binding.viewName;smartObject=$binding.smartObject;type='capture';properties=@($binding.categoryProperty,$binding.valueProperty);methods=@();defaultListMethod='List';options=@();charts=@($chart)};$reportDataView=[ordered]@{name=$dataViewName;smartObject=$binding.smartObject;type='list';properties=@($binding.categoryProperty,$binding.valueProperty);methods=@();defaultListMethod='List';options=@('toolbar')}
-        $views.Add($reportView);$views.Add($reportDataView);$reportViewNames+=([string]$binding.viewName);$reportViewNames+=([string]$dataViewName);$reportTitles[[string]$binding.viewName]=[string]$binding.title;$reportTitles[[string]$dataViewName]=([string]$binding.title+' data');$group=Get-ValueOrDefault $binding.group 'Reports'
-        if(-not $reportViewsByGroup.Contains($group)){$reportViewsByGroup[$group]=[Collections.Generic.List[string]]::new()};$reportViewsByGroup[$group].Add([string]$binding.viewName);$reportViewsByGroup[$group].Add([string]$dataViewName)
+        $reportView=[ordered]@{name=$binding.viewName;smartObject=$binding.smartObject;type='capture';properties=@($binding.categoryProperty,$binding.valueProperty);methods=@();defaultListMethod='List';options=@();charts=@($chart)}
+        $views.Add($reportView);$reportViewNames+=([string]$binding.viewName);$reportTitles[[string]$binding.viewName]=[string]$binding.title;$group=Get-ValueOrDefault $binding.group 'Reports'
+        if(-not $reportViewsByGroup.Contains($group)){$reportViewsByGroup[$group]=[Collections.Generic.List[string]]::new()}
+        $reportViewsByGroup[$group].Add([string]$binding.viewName)
+        if(Test-IncludeDataAlternative $binding){
+            $dataViewName=Get-ValueOrDefault $binding.tableViewName ([string]$binding.viewName+' Data')
+            $reportDataView=[ordered]@{name=$dataViewName;smartObject=$binding.smartObject;type='list';properties=@($binding.categoryProperty,$binding.valueProperty);methods=@();defaultListMethod='List';options=@('toolbar')}
+            $views.Add($reportDataView);$reportViewNames+=([string]$dataViewName);$reportTitles[[string]$dataViewName]=([string]$binding.title+' data');$reportViewsByGroup[$group].Add([string]$dataViewName)
+        }
     }
     $reportTabs=@($reportViewsByGroup.GetEnumerator()|ForEach-Object {[ordered]@{name=[string]$_.Key;views=@($_.Value)}})
     $generatedForms.Add([ordered]@{name=$reports.formName;useLegacyTheme=$false;useStyleProfile=$usesStyleProfile;useCommonHeader=$false;useCommonFooter=$false;views=@($reportViewNames);viewTitles=$reportTitles;tabs=$reportTabs})

@@ -25,7 +25,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Expected canonical case UX fixture to pass.' }
 $uxOutput = & $uxValidator -Manifest $invalidUx 2>&1
 if ($LASTEXITCODE -ne 1) { throw "Expected invalid UX fixture to fail with exit 1; got $LASTEXITCODE." }
 $uxText = $uxOutput -join "`n"
-foreach ($expected in @('navigation target does not exist', 'requires table_alternative', 'requires mobile viewport', 'requires a summary step')) {
+foreach ($expected in @('navigation target does not exist', 'requires mobile viewport', 'requires a summary step')) {
     if ($uxText -notmatch [regex]::Escape($expected)) { throw "Invalid UX fixture did not report: $expected" }
 }
 Write-Output 'Case-UX validator tests passed.'
@@ -81,7 +81,8 @@ try {
     & $compiler -Ux $validUx -Mapping $compilerMapping -Output $compiled
     if ($LASTEXITCODE -ne 0) { throw 'Expected canonical UX compilation to pass.' }
     $manifest = Get-Content -Raw -LiteralPath $compiled | ConvertFrom-Json
-    if (@($manifest.application.views).Count -ne 6) { throw 'Compiled UX did not emit navigation, command palette, summary, chart, queue, and accessible chart-data Views.' }
+    if (@($manifest.application.views).Count -ne 5) { throw 'Compiled UX did not emit only navigation, command palette, summary, chart, and queue Views.' }
+    if (@($manifest.application.views | Where-Object name -eq 'TST.Cases by Stage Data').Count -ne 0) { throw 'Compiled UX emitted a visualization data alternative without explicit opt-in.' }
     if (@($manifest.application.views | Where-Object { $null -ne $_.webComponents -and @($_.webComponents | Where-Object controlType -eq 'northstar-case-homepage').Count -gt 0 }).Count -ne 0) { throw 'Compiled UX retained the retired full-page Northstar Web Component.' }
     $navigationView = @($manifest.application.views | Where-Object { $_.name -eq 'TST.Application Navigation' })[0]
     if (($navigationView.properties -join '|') -ne 'NavigationCode|SectionLabel|Label|IconToken|TargetFormName|SortOrder|IsActive|ConfigurationVersion') { throw 'Compiled UX did not preserve the canonical navigation projection.' }
@@ -99,7 +100,7 @@ try {
     if ($chartView.charts[0].type -ne 'bar') { throw 'Compiled UX did not translate horizontal-bar to native bar.' }
     if ($chartView.charts[0].showLabels -ne $true) { throw 'Compiled UX did not apply the chart label default.' }
     $dashboardForm = @($manifest.application.forms | Where-Object { $_.name -eq 'TST.Quality Operations' })[0]
-    if ($dashboardForm.views.Count -ne 6 -or $dashboardForm.views[0] -ne 'TST.Application Navigation' -or $dashboardForm.views[1] -ne 'TST.Command Palette') { throw 'Compiled native homepage did not compose navigation first, palette second, and every native dashboard View.' }
+    if ($dashboardForm.views.Count -ne 5 -or $dashboardForm.views[0] -ne 'TST.Application Navigation' -or $dashboardForm.views[1] -ne 'TST.Command Palette') { throw 'Compiled native homepage did not compose navigation first, palette second, and every native dashboard View.' }
     if ($dashboardForm.useLegacyTheme -ne $false -or $dashboardForm.useStyleProfile -ne $true -or
         $dashboardForm.useCommonHeader -ne $false -or $dashboardForm.useCommonFooter -ne $false -or
         $dashboardForm.preFill.enabled -ne $false) { throw 'Native homepage Form must use only its selected modern Style Profile, decline the environment header/footer, and declare an explicit Pre-fill opt-out.' }
@@ -109,6 +110,25 @@ try {
 }
 Write-Output 'Case-UX SmartForms compiler tests passed.'
 
+$optInMapping = [IO.Path]::GetTempFileName()
+$optInCompiled = [IO.Path]::GetTempFileName()
+try {
+    $mapping = Get-Content -Raw -LiteralPath $compilerMapping | ConvertFrom-Json
+    $mapping.dashboard.charts[0] | Add-Member -NotePropertyName includeDataAlternative -NotePropertyValue $true -Force
+    $mapping.dashboard.charts[0] | Add-Member -NotePropertyName tableViewName -NotePropertyValue 'TST.Stage Data Export' -Force
+    $mapping | ConvertTo-Json -Depth 100 | Set-Content -Encoding utf8 -LiteralPath $optInMapping
+    & $compiler -Ux $validUx -Mapping $optInMapping -Output $optInCompiled
+    if ($LASTEXITCODE -ne 0) { throw 'Expected explicit visualization data-alternative compilation to pass.' }
+    $manifest = Get-Content -Raw -LiteralPath $optInCompiled | ConvertFrom-Json
+    if (@($manifest.application.views | Where-Object name -eq 'TST.Stage Data Export').Count -ne 1 -or @($manifest.application.forms[0].views) -notcontains 'TST.Stage Data Export') {
+        throw 'Compiler did not honor includeDataAlternative: true and tableViewName.'
+    }
+} finally {
+    if (Test-Path -LiteralPath $optInMapping) { Remove-Item -LiteralPath $optInMapping -Force }
+    if (Test-Path -LiteralPath $optInCompiled) { Remove-Item -LiteralPath $optInCompiled -Force }
+}
+Write-Output 'Case-UX visualization data-alternative opt-in tests passed.'
+
 $baseManifest = Join-Path $PSScriptRoot 'smartforms-base.json'
 $combined = [IO.Path]::GetTempFileName()
 try {
@@ -116,20 +136,22 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Expected base-manifest UX embellishment to pass.' }
     $manifest = Get-Content -Raw -LiteralPath $combined | ConvertFrom-Json
     if ($manifest.name -ne 'TST.Case Workspace') { throw 'UX embellishment did not preserve the base application identity.' }
-    if (@($manifest.application.views).Count -ne 7 -or @($manifest.application.forms).Count -ne 2) { throw 'UX embellishment did not preserve base artifacts and append the native homepage/dashboard artifacts.' }
+    if (@($manifest.application.views).Count -ne 6 -or @($manifest.application.forms).Count -ne 2) { throw 'UX embellishment did not preserve base artifacts and append the native homepage/dashboard artifacts.' }
     $workspace = @($manifest.application.views | Where-Object { $_.name -eq 'TST.Case Workspace' })[0]
     if ($workspace.lifecycleTrackers[0].property -ne 'CurrentStageCode' -or @($workspace.lifecycleTrackers[0].stages).Count -ne 3) { throw 'UX embellishment did not apply the reusable lifecycle tracker.' }
     $shell = @($manifest.application.forms | Where-Object { $_.name -eq 'TST.Case Management' })[0]
-    if (@($shell.tabs).Count -ne 3 -or $shell.tabs[1].name -ne 'Analytics' -or @($shell.tabs[1].views).Count -ne 6) { throw 'UX embellishment did not insert the complete native homepage/dashboard before My Tasks.' }
-    if (@($shell.views).Count -ne 7) { throw 'UX embellishment did not compose generated native homepage Views into the shell Form.' }
+    if (@($shell.tabs).Count -ne 3 -or $shell.tabs[1].name -ne 'Analytics' -or @($shell.tabs[1].views).Count -ne 5) { throw 'UX embellishment did not insert the complete native homepage/dashboard before My Tasks.' }
+    if (@($shell.views).Count -ne 6) { throw 'UX embellishment did not compose generated native homepage Views into the shell Form.' }
 } finally {
     if (Test-Path -LiteralPath $combined) { Remove-Item -LiteralPath $combined -Force }
 }
 Write-Output 'Case-UX base-manifest embellishment tests passed.'
 
 $exampleRoot = Join-Path $PSScriptRoot '..\..\..\examples\supplier-nonconformance'
-$initiationCompiled = [IO.Path]::GetTempFileName()
-try {
+$exampleUx = Join-Path $exampleRoot 'case-ux.composed.json'
+if (Test-Path -LiteralPath $exampleUx) {
+  $initiationCompiled = [IO.Path]::GetTempFileName()
+  try {
     & $compiler -Ux (Join-Path $exampleRoot 'case-ux.composed.json') -Mapping (Join-Path $exampleRoot 'case-ux-k2-mapping.yaml') -BaseManifest (Join-Path $exampleRoot 'smartforms-manifest.json') -Output $initiationCompiled
     if ($LASTEXITCODE -ne 0) { throw 'Expected canonical initiation compilation to pass.' }
     $manifest = Get-Content -Raw -LiteralPath $initiationCompiled | ConvertFrom-Json
@@ -148,24 +170,27 @@ try {
     if ($shell.listClickTabNavigation[0].targetTab -ne 'Overview') { throw 'Workspace compiler did not retarget list drill-in to the first section.' }
     if (@($shell.tabs | Where-Object name -eq 'Overview')[0].views[1] -ne 'SNC.Commands') { throw 'Workspace compiler did not keep governed next actions in the primary case context.' }
     $reports = @($manifest.application.forms | Where-Object { $_.name -eq 'SNC.Reports' })[0]
-    if (@($reports.tabs.name) -join '|' -ne 'Operations|Performance|Quality' -or @($reports.views).Count -ne 12) { throw 'Reports compiler did not emit the reusable governed report collection with accessible data alternatives.' }
+    if (@($reports.tabs.name) -join '|' -ne 'Operations|Performance|Quality' -or @($reports.views).Count -ne 6) { throw 'Reports compiler did not emit the reusable governed visual report collection without unrequested companion Views.' }
     $dashboard = @($manifest.application.forms | Where-Object { $_.name -eq 'SNC.Quality Operations' })[0]
     if ($dashboard.useLegacyTheme -ne $false -or $dashboard.useStyleProfile -ne $true -or
         $dashboard.useCommonHeader -ne $false -or $dashboard.useCommonFooter -ne $false -or
-        $dashboard.preFill.enabled -ne $false -or @($dashboard.views).Count -ne 11) { throw 'Northstar dashboard compiler did not emit the explicit modern shell dependency contract and complete bounded-widget composition.' }
+        $dashboard.preFill.enabled -ne $false -or @($dashboard.views).Count -ne 7) { throw 'Northstar dashboard compiler did not emit the explicit modern shell dependency contract and complete bounded-widget composition.' }
     $widgetViews = @($manifest.application.views | Where-Object { @($_.webComponents | Where-Object controlType -eq 'northstar-dashboard-widget').Count -eq 1 })
     if ($widgetViews.Count -ne 4 -or (@($widgetViews.webComponents.properties.Variant | Sort-Object) -join '|') -ne 'attention|stage|supplier|trend') { throw 'Northstar dashboard compiler did not emit the four bounded widget variants.' }
     foreach ($widgetView in $widgetViews) {
         $widget = $widgetView.webComponents[0]
         if ($widget.dataBinding.property -ne 'Data' -or $widget.dataBinding.method -ne 'List' -or $widget.dataBinding.serverUserScoped -ne $true) { throw "Dashboard widget '$($widgetView.name)' lacks the governed View-init list binding." }
-        if (@($manifest.application.views | Where-Object name -eq ($widgetView.name + ' Data')).Count -ne 1) { throw "Dashboard widget '$($widgetView.name)' lacks its native accessible data alternative." }
+        if (@($manifest.application.views | Where-Object name -eq ($widgetView.name + ' Data')).Count -ne 0) { throw "Dashboard widget '$($widgetView.name)' emitted an unrequested companion data View." }
     }
     $myWork = @($manifest.application.forms | Where-Object { $_.name -eq 'SNC.My Work' })[0]
-    if (@($myWork.tabs.name) -join '|' -ne 'My Tasks|Urgent Team Work' -or $myWork.tabs[0].worklist.rows -ne 20 -or @($myWork.views) -notcontains 'SNC.Attention Now Data') { throw 'My Work compiler did not reuse the native Worklist and mapped operational queue.' }
-} finally {
-    if (Test-Path -LiteralPath $initiationCompiled) { Remove-Item -LiteralPath $initiationCompiled -Force }
+    if (@($myWork.tabs.name) -join '|' -ne 'My Tasks|Urgent Team Work' -or $myWork.tabs[0].worklist.rows -ne 20 -or @($myWork.views) -notcontains 'SNC.Attention Now') { throw 'My Work compiler did not reuse the native Worklist and mapped operational queue.' }
+  } finally {
+      if (Test-Path -LiteralPath $initiationCompiled) { Remove-Item -LiteralPath $initiationCompiled -Force }
+  }
+  Write-Output 'Case-UX guided-initiation compiler tests passed.'
+} else {
+  Write-Output 'Case-UX guided-initiation example test skipped because repository examples are not included in the installed skill package.'
 }
-Write-Output 'Case-UX guided-initiation compiler tests passed.'
 
 $portableCompiled = [IO.Path]::GetTempFileName()
 try {

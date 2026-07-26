@@ -62,7 +62,7 @@
 
 ## Native charts
 
-Add `charts` to a dedicated `capture` View. Category and value properties must also be selected in `properties`; a parameterless `defaultListMethod` supplies the chart data. The chart transformer removes the generated source-property rows. Declare a separate `list` View over the same SmartObject/properties beside it as the accessible, sortable, exportable data alternative.
+Add `charts` to a dedicated `capture` View. Category and value properties must also be selected in `properties`; a parameterless `defaultListMethod` supplies the chart data. The chart transformer removes the generated source-property rows. Do not declare a companion `list` View unless the customer explicitly requests a sortable/exportable or accessible data alternative; the chart View already owns the governed projection and List call.
 
 ```json
 "charts": [{

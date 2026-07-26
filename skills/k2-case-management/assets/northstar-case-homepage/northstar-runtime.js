@@ -424,7 +424,6 @@
                           <text class="axis-label" x="650" y="232">Jul 25</text><circle class="trend-dot" cx="500" cy="100" r="5"/>
                         </svg>
                       </div>
-                      <button class="link-button" type="button" data-route="trend-table">View accessible data table →</button>
                     </article>
                     <aside class="panel">
                       <div class="panel-head"><div><h2>Attention now</h2><p>Ranked by risk, impact and SLA</p></div><button class="link-button" type="button" data-route="my-work">View all</button></div>

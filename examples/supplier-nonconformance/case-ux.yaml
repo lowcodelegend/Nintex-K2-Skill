@@ -42,7 +42,7 @@
     {"id": "supplier-open-cases", "kind": "kpi", "measure": "supplier_open_case_count", "drilldown": "all-cases", "explanation": "Open nonconformances for the selected supplier."},
     {"id": "supplier-repeat-rate", "kind": "kpi", "measure": "supplier_repeat_nonconformance_rate", "drilldown": "all-cases", "explanation": "Share of supplier cases matching a prior part, lot, or defect pattern."},
     {"id": "supplier-response-time", "kind": "kpi", "measure": "supplier_median_response_hours", "drilldown": "all-cases", "explanation": "Median elapsed business hours to the supplier's first response."},
-    {"id": "supplier-defect-trend", "kind": "chart", "chart_type": "line", "measure": "supplier_case_count", "dimension": "opened_month", "drilldown": "all-cases", "table_alternative": true, "empty_state": "No supplier cases in this period."}
+    {"id": "supplier-defect-trend", "kind": "chart", "chart_type": "line", "measure": "supplier_case_count", "dimension": "opened_month", "drilldown": "all-cases", "empty_state": "No supplier cases in this period."}
   ],
   "journeys": [
     {

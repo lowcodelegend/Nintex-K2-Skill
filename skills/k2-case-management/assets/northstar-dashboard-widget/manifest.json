@@ -1,7 +1,7 @@
 {
   "displayName": "Northstar Dashboard Widget",
   "tagName": "northstar-dashboard-widget",
-  "description": "Bounded Northstar visualizer for governed K2 dashboard projections. K2 retains data, rules, actions, navigation and accessible list alternatives.",
+  "description": "Bounded Northstar visualizer for governed K2 dashboard projections. K2 retains data, rules, actions, and navigation.",
   "icon": "control-icon.svg",
   "designtimeScriptFileNames": ["control-designtime.js"],
   "runtimeScriptFileNames": ["control-runtime.js"],

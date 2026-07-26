@@ -162,20 +162,6 @@
         ]
       },
       {
-        "name": "SNC.Open Cases by Stage Data",
-        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardCasesByStage",
-        "type": "list",
-        "properties": [
-          "StageLabel",
-          "CaseCount"
-        ],
-        "methods": [],
-        "defaultListMethod": "List",
-        "options": [
-          "toolbar"
-        ]
-      },
-      {
         "name": "SNC.Case Intake Trend",
         "smartObject": "SNC_SupplierNonconformance_SNC_DashboardIntakeTrend",
         "type": "capture",
@@ -198,20 +184,6 @@
             "showLabels": true,
             "emptyState": "No cases in this period."
           }
-        ]
-      },
-      {
-        "name": "SNC.Case Intake Trend Data",
-        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardIntakeTrend",
-        "type": "list",
-        "properties": [
-          "PeriodLabel",
-          "CaseCount"
-        ],
-        "methods": [],
-        "defaultListMethod": "List",
-        "options": [
-          "toolbar"
         ]
       },
       {
@@ -260,20 +232,6 @@
         ]
       },
       {
-        "name": "SNC.Backlog Aging Data",
-        "smartObject": "SNC_SupplierNonconformance_SNC_ReportBacklogAging",
-        "type": "list",
-        "properties": [
-          "AgingBucket",
-          "CaseCount"
-        ],
-        "methods": [],
-        "defaultListMethod": "List",
-        "options": [
-          "toolbar"
-        ]
-      },
-      {
         "name": "SNC.SLA Performance",
         "smartObject": "SNC_SupplierNonconformance_SNC_ReportSLAStatus",
         "type": "capture",
@@ -296,20 +254,6 @@
             "showLabels": true,
             "emptyState": "No report data to display."
           }
-        ]
-      },
-      {
-        "name": "SNC.SLA Performance Data",
-        "smartObject": "SNC_SupplierNonconformance_SNC_ReportSLAStatus",
-        "type": "list",
-        "properties": [
-          "SLAStatus",
-          "CaseCount"
-        ],
-        "methods": [],
-        "defaultListMethod": "List",
-        "options": [
-          "toolbar"
         ]
       },
       {
@@ -338,20 +282,6 @@
         ]
       },
       {
-        "name": "SNC.Closure Throughput Data",
-        "smartObject": "SNC_SupplierNonconformance_SNC_ReportClosureThroughput",
-        "type": "list",
-        "properties": [
-          "PeriodLabel",
-          "ClosedCaseCount"
-        ],
-        "methods": [],
-        "defaultListMethod": "List",
-        "options": [
-          "toolbar"
-        ]
-      },
-      {
         "name": "SNC.CAPA Effectiveness",
         "smartObject": "SNC_SupplierNonconformance_SNC_ReportCorrectiveActionStatus",
         "type": "capture",
@@ -374,20 +304,6 @@
             "showLabels": true,
             "emptyState": "No report data to display."
           }
-        ]
-      },
-      {
-        "name": "SNC.CAPA Effectiveness Data",
-        "smartObject": "SNC_SupplierNonconformance_SNC_ReportCorrectiveActionStatus",
-        "type": "list",
-        "properties": [
-          "ActionStatus",
-          "ActionCount"
-        ],
-        "methods": [],
-        "defaultListMethod": "List",
-        "options": [
-          "toolbar"
         ]
       },
       {
@@ -416,20 +332,6 @@
         ]
       },
       {
-        "name": "SNC.Case Outcomes Data",
-        "smartObject": "SNC_SupplierNonconformance_SNC_ReportCaseOutcomes",
-        "type": "list",
-        "properties": [
-          "OutcomeLabel",
-          "CaseCount"
-        ],
-        "methods": [],
-        "defaultListMethod": "List",
-        "options": [
-          "toolbar"
-        ]
-      },
-      {
         "name": "SNC.Supplier Recurrence",
         "smartObject": "SNC_SupplierNonconformance_SNC_ReportSupplierRecurrence",
         "type": "capture",
@@ -453,20 +355,6 @@
             "emptyState": "No report data to display."
           }
         ]
-      },
-      {
-        "name": "SNC.Supplier Recurrence Data",
-        "smartObject": "SNC_SupplierNonconformance_SNC_ReportSupplierRecurrence",
-        "type": "list",
-        "properties": [
-          "SupplierName",
-          "CaseCount"
-        ],
-        "methods": [],
-        "defaultListMethod": "List",
-        "options": [
-          "toolbar"
-        ]
       }
     ],
     "forms": [
@@ -481,9 +369,7 @@
           "SNC.Command Palette",
           "SNC.Operations KPIs",
           "SNC.Open Cases by Stage",
-          "SNC.Open Cases by Stage Data",
           "SNC.Case Intake Trend",
-          "SNC.Case Intake Trend Data",
           "SNC.Urgent Work"
         ],
         "options": [
@@ -494,9 +380,7 @@
           "SNC.Command Palette": "Command palette",
           "SNC.Operations KPIs": "Operational position",
           "SNC.Open Cases by Stage": "Open cases by stage",
-          "SNC.Open Cases by Stage Data": "Open cases by stage data",
           "SNC.Case Intake Trend": "Case intake trend",
-          "SNC.Case Intake Trend Data": "Case intake trend data",
           "SNC.Urgent Work": "Urgent work"
         },
         "preFill": {
@@ -512,58 +396,40 @@
         "useCommonFooter": false,
         "views": [
           "SNC.Backlog Aging",
-          "SNC.Backlog Aging Data",
           "SNC.SLA Performance",
-          "SNC.SLA Performance Data",
           "SNC.Closure Throughput",
-          "SNC.Closure Throughput Data",
           "SNC.CAPA Effectiveness",
-          "SNC.CAPA Effectiveness Data",
           "SNC.Case Outcomes",
-          "SNC.Case Outcomes Data",
-          "SNC.Supplier Recurrence",
-          "SNC.Supplier Recurrence Data"
+          "SNC.Supplier Recurrence"
         ],
         "viewTitles": {
           "SNC.Backlog Aging": "Backlog and aging",
-          "SNC.Backlog Aging Data": "Backlog and aging data",
           "SNC.SLA Performance": "SLA performance",
-          "SNC.SLA Performance Data": "SLA performance data",
           "SNC.Closure Throughput": "Closure throughput",
-          "SNC.Closure Throughput Data": "Closure throughput data",
           "SNC.CAPA Effectiveness": "Corrective action status",
-          "SNC.CAPA Effectiveness Data": "Corrective action status data",
           "SNC.Case Outcomes": "Case outcomes",
-          "SNC.Case Outcomes Data": "Case outcomes data",
-          "SNC.Supplier Recurrence": "Supplier recurrence",
-          "SNC.Supplier Recurrence Data": "Supplier recurrence data"
+          "SNC.Supplier Recurrence": "Supplier recurrence"
         },
         "tabs": [
           {
             "name": "Operations",
             "views": [
               "SNC.Backlog Aging",
-              "SNC.Backlog Aging Data",
-              "SNC.SLA Performance",
-              "SNC.SLA Performance Data"
+              "SNC.SLA Performance"
             ]
           },
           {
             "name": "Performance",
             "views": [
               "SNC.Closure Throughput",
-              "SNC.Closure Throughput Data",
-              "SNC.CAPA Effectiveness",
-              "SNC.CAPA Effectiveness Data"
+              "SNC.CAPA Effectiveness"
             ]
           },
           {
             "name": "Quality",
             "views": [
               "SNC.Case Outcomes",
-              "SNC.Case Outcomes Data",
-              "SNC.Supplier Recurrence",
-              "SNC.Supplier Recurrence Data"
+              "SNC.Supplier Recurrence"
             ]
           }
         ]
@@ -617,22 +483,14 @@
       "SNC.Command Palette",
       "SNC.Operations KPIs",
       "SNC.Open Cases by Stage",
-      "SNC.Open Cases by Stage Data",
       "SNC.Case Intake Trend",
-      "SNC.Case Intake Trend Data",
       "SNC.Urgent Work",
       "SNC.Backlog Aging",
-      "SNC.Backlog Aging Data",
       "SNC.SLA Performance",
-      "SNC.SLA Performance Data",
       "SNC.Closure Throughput",
-      "SNC.Closure Throughput Data",
       "SNC.CAPA Effectiveness",
-      "SNC.CAPA Effectiveness Data",
       "SNC.Case Outcomes",
-      "SNC.Case Outcomes Data",
-      "SNC.Supplier Recurrence",
-      "SNC.Supplier Recurrence Data"
+      "SNC.Supplier Recurrence"
     ],
     "expectedForms": [
       "SNC.Quality Operations",

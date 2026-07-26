@@ -123,8 +123,6 @@ def validate(doc: dict[str, Any]) -> list[str]:
         if kind in {"kpi", "chart"}:
             for field in ("measure", "drilldown"):
                 if not component.get(field): errors.append(f"{kind} {component_id} requires {field}")
-        if kind == "chart" and component.get("table_alternative") is not True:
-            errors.append(f"chart {component_id} requires table_alternative: true")
         if kind in {"chart", "queue", "timeline"} and not component.get("empty_state"):
             errors.append(f"{kind} {component_id} requires empty_state")
         drilldown = component.get("drilldown")

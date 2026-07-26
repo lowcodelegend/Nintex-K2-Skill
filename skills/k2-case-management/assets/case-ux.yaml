@@ -92,9 +92,9 @@
     {"id": "overdue-actions", "kind": "kpi", "measure": "overdue_corrective_action_count", "drilldown": "corrective-action-queue", "explanation": "Incomplete corrective actions beyond their due date."},
     {"id": "high-risk-cases", "kind": "kpi", "measure": "high_risk_open_case_count", "drilldown": "all-cases", "explanation": "Open cases at or above the configured high-risk threshold."},
     {"id": "first-pass-yield", "kind": "kpi", "measure": "first_pass_yield_percent", "drilldown": "reports", "explanation": "Cases resolved without rework or recurrence in the governed reporting period."},
-    {"id": "cases-by-stage", "kind": "chart", "chart_type": "horizontal-bar", "measure": "open_case_count", "dimension": "current_stage", "drilldown": "all-cases", "table_alternative": true, "empty_state": "No open cases."},
-    {"id": "intake-trend", "kind": "chart", "chart_type": "line", "measure": "created_case_count", "dimension": "opened_month", "drilldown": "all-cases", "table_alternative": true, "empty_state": "No cases in this period."},
-    {"id": "aging-distribution", "kind": "chart", "chart_type": "column", "measure": "open_case_count", "dimension": "aging_bucket", "drilldown": "all-cases", "table_alternative": true, "empty_state": "No open cases."},
+    {"id": "cases-by-stage", "kind": "chart", "chart_type": "horizontal-bar", "measure": "open_case_count", "dimension": "current_stage", "drilldown": "all-cases", "empty_state": "No open cases."},
+    {"id": "intake-trend", "kind": "chart", "chart_type": "line", "measure": "created_case_count", "dimension": "opened_month", "drilldown": "all-cases", "empty_state": "No cases in this period."},
+    {"id": "aging-distribution", "kind": "chart", "chart_type": "column", "measure": "open_case_count", "dimension": "aging_bucket", "drilldown": "all-cases", "empty_state": "No open cases."},
     {"id": "urgent-work", "kind": "queue", "empty_state": "No urgent work.", "drilldown": "case-workspace"},
     {"id": "attention-now", "kind": "queue", "empty_state": "No urgent work.", "drilldown": "case-workspace"},
     {"id": "supplier-signal", "kind": "signal-list", "empty_state": "No supplier or party signals.", "drilldown": "all-cases"},
@@ -125,6 +125,6 @@
       {"name": "mobile", "width": 390, "height": 844}
     ],
     "states": ["populated", "empty", "validation-error", "long-content", "sla-breached", "read-only"],
-    "checks": ["no-overlap", "no-clipping", "no-horizontal-overflow", "visible-focus", "semantic-status", "single-primary-action", "chart-table-alternative"]
+    "checks": ["no-overlap", "no-clipping", "no-horizontal-overflow", "visible-focus", "semantic-status", "single-primary-action"]
   }
 }

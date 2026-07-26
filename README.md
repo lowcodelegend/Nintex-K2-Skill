@@ -164,7 +164,7 @@ and authenticated Runtime validation.
 - Build tabs, list/details navigation, native My Tasks Worklist tabs, lookup and cascading dropdowns with verified View-initialization population rules, and lookup/approval-matrix Admin UX.
 - Build polished master-detail forms with one Form Save action, returned-key transfer, item-state batches, filtered child loads, success feedback, hidden bypass buttons, bold labels, and control-friendly layouts.
 - Generate read-only controls, responsive four-column capture layouts, hidden bound technical properties, business-facing property labels, and hidden `tblDebug` Data Label variables.
-- Generate native responsive KPI cards, SmartObject-backed charts with paired accessible data Views, and read-only lifecycle Progress controls.
+- Generate native responsive KPI cards, SmartObject-backed charts, and read-only lifecycle Progress controls; add companion data Views only for explicitly requested customer use cases.
 - Apply discovered shared headers/footers, view titles, initialization/server-load rules, combined control transfers, and footer ordering.
 - Preserve exact manifest order on flat dashboard/report Forms and expose supported live Form-definition diagnostics.
 - Plan, deploy, inspect, verify Runtime definitions/routes, check in exact forms, and dependency-safe cleanup/replace.

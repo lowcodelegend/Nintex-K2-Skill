@@ -163,7 +163,7 @@
               "Variant": "trend",
               "Heading": "Nonconformance trend",
               "Subtitle": "Opened and resolved cases · 30 days",
-              "ActionLabel": "View accessible data table →",
+              "ActionLabel": "",
               "ActionTarget": "",
               "EmptyMessage": "No cases in this period.",
               "Width": "100%",
@@ -189,21 +189,6 @@
               }
             ]
           }
-        ]
-      },
-      {
-        "name": "NTH.Case Intake Trend Data",
-        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardIntakeTrend",
-        "type": "list",
-        "properties": [
-          "PeriodLabel",
-          "OpenedCount",
-          "ResolvedCount"
-        ],
-        "methods": [],
-        "defaultListMethod": "List",
-        "options": [
-          "toolbar"
         ]
       },
       {
@@ -265,24 +250,6 @@
         ]
       },
       {
-        "name": "NTH.Attention Now Data",
-        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardAttentionNow",
-        "type": "list",
-        "properties": [
-          "CaseNumber",
-          "Title",
-          "SupplierName",
-          "DueLabel",
-          "SLAStatus",
-          "TargetDate"
-        ],
-        "methods": [],
-        "defaultListMethod": "List",
-        "options": [
-          "toolbar"
-        ]
-      },
-      {
         "name": "NTH.Work Accumulation",
         "smartObject": "SNC_SupplierNonconformance_SNC_DashboardCasesByStage",
         "type": "capture",
@@ -331,21 +298,6 @@
               }
             ]
           }
-        ]
-      },
-      {
-        "name": "NTH.Work Accumulation Data",
-        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardCasesByStage",
-        "type": "list",
-        "properties": [
-          "StageLabel",
-          "CaseCount",
-          "SortOrder"
-        ],
-        "methods": [],
-        "defaultListMethod": "List",
-        "options": [
-          "toolbar"
         ]
       },
       {
@@ -403,22 +355,6 @@
             ]
           }
         ]
-      },
-      {
-        "name": "NTH.Supplier Signal Data",
-        "smartObject": "SNC_SupplierNonconformance_SNC_DashboardSupplierSignal",
-        "type": "list",
-        "properties": [
-          "SupplierName",
-          "SignalLabel",
-          "Score",
-          "Tone"
-        ],
-        "methods": [],
-        "defaultListMethod": "List",
-        "options": [
-          "toolbar"
-        ]
       }
     ],
     "forms": [
@@ -433,13 +369,9 @@
           "NTH.Command Palette",
           "NTH.Operations KPIs",
           "NTH.Case Intake Trend",
-          "NTH.Case Intake Trend Data",
           "NTH.Attention Now",
-          "NTH.Attention Now Data",
           "NTH.Work Accumulation",
-          "NTH.Work Accumulation Data",
-          "NTH.Supplier Signal",
-          "NTH.Supplier Signal Data"
+          "NTH.Supplier Signal"
         ],
         "options": [
           "no-tabs"
@@ -449,13 +381,9 @@
           "NTH.Command Palette": "Command palette",
           "NTH.Operations KPIs": "Operational position",
           "NTH.Case Intake Trend": "Nonconformance trend",
-          "NTH.Case Intake Trend Data": "Nonconformance trend data",
           "NTH.Attention Now": "Attention now",
-          "NTH.Attention Now Data": "Attention now data",
           "NTH.Work Accumulation": "Where work is accumulating",
-          "NTH.Work Accumulation Data": "Where work is accumulating data",
-          "NTH.Supplier Signal": "Supplier signal",
-          "NTH.Supplier Signal Data": "Supplier signal data"
+          "NTH.Supplier Signal": "Supplier signal"
         },
         "preFill": {
           "enabled": false,
@@ -470,13 +398,9 @@
       "NTH.Command Palette",
       "NTH.Operations KPIs",
       "NTH.Case Intake Trend",
-      "NTH.Case Intake Trend Data",
       "NTH.Attention Now",
-      "NTH.Attention Now Data",
       "NTH.Work Accumulation",
-      "NTH.Work Accumulation Data",
-      "NTH.Supplier Signal",
-      "NTH.Supplier Signal Data"
+      "NTH.Supplier Signal"
     ],
     "expectedForms": [
       "NTH.Quality Operations"

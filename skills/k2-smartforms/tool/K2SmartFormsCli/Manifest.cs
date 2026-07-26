@@ -216,7 +216,7 @@ namespace K2SmartFormsCli
                     Require(chart.CategoryProperty, "view.charts.categoryProperty"); Require(chart.ValueProperty, "view.charts.valueProperty");
                     chart.Type = (chart.Type ?? "column").Trim().ToLowerInvariant();
                     if (!AllowedChartTypes.Contains(chart.Type)) throw new CliException("Unsupported chart type '" + chart.Type + "' for " + view.Name + ".");
-                    if (view.Type != "capture") throw new CliException("View '" + view.Name + "' charts require a capture View; pair it with a list View for the accessible data-table alternative.");
+                    if (view.Type != "capture") throw new CliException("View '" + view.Name + "' charts require a capture View.");
                     if (!view.Properties.Contains(chart.CategoryProperty, StringComparer.OrdinalIgnoreCase) || !view.Properties.Contains(chart.ValueProperty, StringComparer.OrdinalIgnoreCase))
                         throw new CliException("View '" + view.Name + "' chart properties must be selected in view.properties: " + chart.CategoryProperty + ", " + chart.ValueProperty);
                     if (chart.Height < 180 || chart.Height > 800) throw new CliException("View '" + view.Name + "' chart height must be between 180 and 800 pixels.");
