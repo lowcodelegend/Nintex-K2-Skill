@@ -1627,13 +1627,12 @@ namespace K2SmartFormsCli
             resolved.ManualProperties.Add("Probe View.FileContent");
             var xml = "<Forms><Form ID='form-id'><Name>Pre-fill Probe</Name><Controls>" +
                 "<Control ID='visible-panel' Type='Panel'><Name>Entry</Name><Properties/></Control>" +
-                "<Control ID='hidden-panel' Type='Panel'><Name>Review</Name><Properties>" +
-                "<Property><Name>IsVisible</Name><Value>false</Value></Property></Properties></Control>" +
+                "<Control ID='review-panel' Type='Panel'><Name>Review</Name><Properties/></Control>" +
                 "<Control ID='probe-instance' Type='AreaItem'><Name>Probe View</Name><Properties/></Control>" +
                 "</Controls><Panels>" +
                 "<Panel ID='visible-panel'><Name>Entry</Name><Areas><Area ID='view-area'><Items>" +
                 "<Item ID='probe-instance' ViewID='" + viewGuid + "' ViewName='Probe View'/></Items></Area></Areas></Panel>" +
-                "<Panel ID='hidden-panel'><Name>Review</Name><Areas/></Panel>" +
+                "<Panel ID='review-panel'><Name>Review</Name><Areas/></Panel>" +
                 "</Panels><States><State><Events/></State></States></Form></Forms>";
             var transformed = FormPreFillRules.Apply(xml, form, resolved);
             FormPreFillRules.Verify(transformed, form, resolved);
@@ -1644,10 +1643,29 @@ namespace K2SmartFormsCli
             Assert((string)button.Descendants("Property").Single(x =>
                 (string)x.Element("Name") == "Text").Element("Value") == "Pre-fill",
                 "Pre-fill button has the required user-facing text");
-            Assert(document.Descendants("Panel").Single(x => (string)x.Attribute("ID") == "visible-panel")
+            Assert(document.Descendants("Panel").Single(x => (string)x.Attribute("ID") == "review-panel")
                 .Element("Areas").Elements("Area").Last().Descendants("Control")
                 .Any(x => (string)x.Attribute("ID") == (string)button.Attribute("ID")),
                 "Pre-fill button is last on the last visible panel");
+
+            var guidedForm = new FormDefinition
+            {
+                Name = "Guided Pre-fill Probe",
+                GuidedJourney = new GuidedJourneyDefinition()
+            };
+            guidedForm.Views.Add("Probe View");
+            guidedForm.PreFill.Enabled = true;
+            var guided = FormPreFillRules.Apply(xml, guidedForm, resolved);
+            FormPreFillRules.Verify(guided, guidedForm, resolved);
+            var guidedDocument = XDocument.Parse(guided);
+            var guidedButton = guidedDocument.Descendants("Control").Single(x =>
+                (string)x.Element("Name") == FormPreFillRules.ButtonName &&
+                x.Attribute("Type") != null);
+            Assert(guidedDocument.Descendants("Panel").Single(x =>
+                    (string)x.Attribute("ID") == "visible-panel")
+                .Element("Areas").Elements("Area").Last().Descendants("Control")
+                .Any(x => (string)x.Attribute("ID") == (string)guidedButton.Attribute("ID")),
+                "Pre-fill button is last on the first guided-journey panel");
             var transfer = document.Descendants("Action").Single(x => (string)x.Attribute("Type") == "Transfer");
             Assert(transfer.Descendants("Parameter").Count() == 2 &&
                 transfer.Descendants("Parameter").All(x =>

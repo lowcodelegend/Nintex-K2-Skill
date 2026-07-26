@@ -312,7 +312,7 @@ namespace K2SmartFormsCli
                             new XElement(ns + "Rows", new XElement(ns + "Row", new XAttribute("ID", rowId),
                                 new XElement(ns + "Cells", new XElement(ns + "Cell", new XAttribute("ID", cellId),
                                     new XElement(ns + "Control", new XAttribute("ID", buttonId)))))))))));
-            RequiredChild(SelectTargetPanel(form), "Areas").Add(area);
+            RequiredChild(SelectTargetPanel(form, definition), "Areas").Add(area);
             AddRule(form, definition, resolved, buttonId);
             var result = document.ToString(SaveOptions.DisableFormatting);
             Verify(result, definition, resolved);
@@ -342,12 +342,13 @@ namespace K2SmartFormsCli
                 !string.Equals(ReadProperty(button, "Text"), ButtonText, StringComparison.Ordinal))
                 throw new CliException("K2 Form '" + definition.Name + "' test-only Pre-fill button is malformed.");
             var buttonId = (string)button.Attribute("ID");
-            var targetPanel = SelectTargetPanel(form);
+            var targetPanel = SelectTargetPanel(form, definition);
             var areas = RequiredChild(targetPanel, "Areas").Elements().Where(x => x.Name.LocalName == "Area").ToList();
             if (areas.Count == 0 || !areas[areas.Count - 1].Descendants().Any(x => x.Name.LocalName == "Control" &&
                 string.Equals((string)x.Attribute("ID"), buttonId, StringComparison.OrdinalIgnoreCase)))
                 throw new CliException("K2 Form '" + definition.Name +
-                    "' test-only Pre-fill button is not at the bottom of the last visible panel.");
+                    "' test-only Pre-fill button is not at the bottom of the " +
+                    (definition.GuidedJourney == null ? "last visible panel." : "first guided-journey panel."));
 
             var baseState = RequiredChild(RequiredChild(form, "States"), "State");
             ControlRuleDefinition.VerifySystemEvent(baseState, buttonId, "OnClick",
@@ -477,7 +478,7 @@ namespace K2SmartFormsCli
                     new XElement(ns + "Source", new XAttribute("SourceType", "Value"), value)));
         }
 
-        private static XElement SelectTargetPanel(XElement form)
+        private static XElement SelectTargetPanel(XElement form, FormDefinition definition)
         {
             var controls = RequiredChild(form, "Controls");
             var panels = RequiredChild(form, "Panels").Elements()
@@ -492,7 +493,8 @@ namespace K2SmartFormsCli
                 return control == null || !string.Equals(ReadProperty(control, "IsVisible"), "false",
                     StringComparison.OrdinalIgnoreCase);
             }).ToList();
-            return visible.Count == 0 ? panels[0] : visible[visible.Count - 1];
+            if (visible.Count == 0) return panels[0];
+            return definition.GuidedJourney == null ? visible[visible.Count - 1] : visible[0];
         }
 
         private static string FindInstance(XElement form, ResolvedPreFillTarget target)

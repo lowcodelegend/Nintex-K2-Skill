@@ -18,17 +18,17 @@
       {
         "type": "css",
         "source": "northstar-critical.css",
-        "target": "northstar-critical.v13.css"
+        "target": "northstar-critical.v14.css"
       },
       {
         "type": "js",
         "source": "northstar-config.js",
-        "target": "northstar-config.v13.js"
+        "target": "northstar-config.v14.js"
       },
       {
         "type": "js",
         "source": "northstar-shell.js",
-        "target": "northstar-shell.v13.js"
+        "target": "northstar-shell.v14.js"
       }
     ]
   },
@@ -44,7 +44,7 @@
       {
         "type": "css",
         "source": "northstar-homepage.css",
-        "target": "northstar-homepage.v13.css"
+        "target": "northstar-homepage.v14.css"
       }
     ]
   },

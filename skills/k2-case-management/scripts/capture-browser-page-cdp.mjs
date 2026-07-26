@@ -15,6 +15,7 @@ const height = Number(argument("height", "1000"));
 const port = Number(argument("port", "9333"));
 const settleMilliseconds = Number(argument("settle", "3000"));
 const trustedAuthHost = argument("trusted-auth-host", "");
+const clickName = argument("click-name", "");
 const noScreenshot = process.argv.includes("--no-screenshot");
 const edge = argument(
   "edge",
@@ -197,6 +198,46 @@ try {
   }
   await delay(settleMilliseconds);
 
+  let clickProbe = null;
+  if (clickName) {
+    const beforeClick = await session.send("Runtime.evaluate", {
+      expression: `(() => {
+        const requestedName = ${JSON.stringify(clickName)};
+        const root = document.querySelector('[name="' +
+          (window.CSS && CSS.escape ? CSS.escape(requestedName) : requestedName.replace(/"/g, '\\\\"')) +
+          '"]');
+        const target = root && (
+          root.matches('button,input,a') ? root :
+          root.querySelector('button,input,a') || root
+        );
+        const tabs = Array.from(document.querySelectorAll('ul.tab-box-tabs a.tab'));
+        const selectedTab = tabs.findIndex((tab) => tab.classList.contains('selected'));
+        if (!root || !target) return {
+          requestedName, found: false, selectedTabBefore: selectedTab
+        };
+        const rectangle = target.getBoundingClientRect();
+        const allowed = target.dispatchEvent(new MouseEvent('click', {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+          clientX: rectangle.left + rectangle.width / 2,
+          clientY: rectangle.top + rectangle.height / 2
+        }));
+        return {
+          requestedName,
+          found: true,
+          targetTag: target.tagName,
+          targetName: target.getAttribute('name') || root.getAttribute('name') || '',
+          selectedTabBefore: selectedTab,
+          dispatchCanceled: !allowed
+        };
+      })()`,
+      returnByValue: true
+    }, 5000);
+    clickProbe = beforeClick.result.value;
+    await delay(1200);
+  }
+
   if (!noScreenshot) {
     const capture = await session.send("Page.captureScreenshot", {
       format: "png",
@@ -208,6 +249,7 @@ try {
 
   const evaluated = await session.send("Runtime.evaluate", {
     expression: `({
+      clickProbe: ${JSON.stringify(clickProbe)},
       clientWidth: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth,
       horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
@@ -247,6 +289,91 @@ try {
             backgroundColor: getComputedStyle(item).backgroundColor
           };
         }),
+      validationFeedback: (() => {
+        const visible = (node) => {
+          if (!node || !node.isConnected) return false;
+          const style = getComputedStyle(node);
+          return style.display !== "none" && style.visibility !== "hidden" &&
+            !!(node.offsetWidth || node.offsetHeight || node.getClientRects().length);
+        };
+        const activePanel = Array.from(document.querySelectorAll(
+          ".k2sp-guided-journey .formpanel"
+        )).find(visible) || null;
+        const selector = [
+          "input.invalid", "textarea.invalid", "select.invalid",
+          ".input-control.invalid", ".file-wrapper.invalid",
+          ".SourceCode-Forms-Controls-Web-Label.invalid",
+          ".SourceCode-Forms-Controls-Web-DataLabel.invalid"
+        ].join(",");
+        const focusTarget = (node) => node && (
+          node.matches("input,textarea,select,button,a,[tabindex]") ? node :
+          node.querySelector("input,textarea,select,button,a,[tabindex]")
+        );
+        const seen = new Set();
+        const invalid = Array.from(activePanel ? activePanel.querySelectorAll(selector) : [])
+          .filter((node) => {
+            if (!visible(node) || node.closest(".tooltip.validation")) return false;
+            const nested = node.querySelector && node.querySelector(selector);
+            if (nested && visible(nested)) return false;
+            const target = focusTarget(node);
+            const rectangle = (target || node).getBoundingClientRect();
+            const key = target?.id || target?.getAttribute("name") || node.id ||
+              node.getAttribute("name") ||
+              Math.round(rectangle.top) + ":" + Math.round(rectangle.left);
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+        const summaries = Array.from(document.querySelectorAll(".k2sp-validation-summary"))
+          .filter(visible);
+        const details = invalid.map((node) => {
+          const target = focusTarget(node);
+          const treatment = node.matches(".input-control,.file-wrapper") ? node :
+            node.closest(".input-control,.file-wrapper") || node;
+          const style = getComputedStyle(treatment);
+          const targetStyle = getComputedStyle(target || node);
+          const visibleTreatment =
+            (style.outlineStyle !== "none" && parseFloat(style.outlineWidth) > 0) ||
+            style.boxShadow !== "none" ||
+            targetStyle.boxShadow !== "none" ||
+            /rgb\\((?:180|185|217|240),\\s*(?:35|45|38),\\s*(?:24|32|38)\\)/.test(
+              style.borderColor + " " + targetStyle.borderColor
+            );
+          const rectangle = (target || node).getBoundingClientRect();
+          return {
+            name: target?.getAttribute("name") || node.getAttribute("name") || "",
+            id: target?.id || node.id || "",
+            tag: (target || node).tagName,
+            ariaInvalid: target?.getAttribute("aria-invalid") || "",
+            visibleTreatment,
+            borderColor: style.borderColor,
+            backgroundColor: style.backgroundColor,
+            outline: style.outline,
+            boxShadow: style.boxShadow,
+            top: Math.round(rectangle.top),
+            left: Math.round(rectangle.left)
+          };
+        });
+        const tabs = Array.from(document.querySelectorAll("ul.tab-box-tabs a.tab"));
+        const firstTarget = focusTarget(invalid[0]);
+        return {
+          requestedClick: ${JSON.stringify(clickName)},
+          invalidCount: invalid.length,
+          visibleTreatmentCount: details.filter((item) => item.visibleTreatment).length,
+          ariaInvalidCount: details.filter((item) => item.ariaInvalid === "true").length,
+          summaryVisible: summaries.length === 1,
+          summaryText: summaries[0] ?
+            (summaries[0].textContent || "").replace(/\\s+/g, " ").trim() : "",
+          summaryInvalidCount: summaries[0] ?
+            Number(summaries[0].getAttribute("data-invalid-count") || 0) : 0,
+          focusedName: document.activeElement?.getAttribute("name") || "",
+          firstInvalidFocused: !!firstTarget && document.activeElement === firstTarget,
+          selectedTabAfter: tabs.findIndex((tab) => tab.classList.contains("selected")),
+          compatibility: window.__k2spNorthstar?.validationCompatibility || null,
+          feedbackState: window.__k2spNorthstar?.validationFeedback || null,
+          controls: details
+        };
+      })(),
       customControls: Array.from(document.querySelectorAll("northstar-command-palette,northstar-dashboard-widget"))
         .map((control) => ({
           tag: control.tagName.toLowerCase(),
@@ -344,6 +471,42 @@ try {
             parent: describe(control.parentElement),
             grandparent: describe(control.parentElement?.parentElement)
           })),
+          actionRows: Array.from(document.querySelectorAll(
+            '[name^="tblJourneyActions"],[name="tblMasterDetailSave"],' +
+            '[name="tblWorkflowStart"],[name="tblPreFillActions"]'
+          )).map((table) => {
+            const cells = Array.from(table.querySelectorAll(".editor-cell"));
+            const buttons = Array.from(table.querySelectorAll(
+              '[name^="btnJourneyBack"],[name^="btnJourneyContinue"],' +
+              '[name="btnSave"],[name="btnFinishDraft"],[name^="btnSubmit"],' +
+              '[name="btnPreFill"]'
+            ));
+            return {
+              ...describe(table),
+              cells: cells.map((cell) => ({
+                ...describe(cell),
+                textAlign: getComputedStyle(cell).textAlign
+              })),
+              buttons: buttons.map((button) => ({
+                ...describe(button),
+                backgroundColor: getComputedStyle(button).backgroundColor,
+                color: getComputedStyle(button).color,
+                borderColor: getComputedStyle(button).borderColor,
+                cellTextAlign: button.closest(".editor-cell") ?
+                  getComputedStyle(button.closest(".editor-cell")).textAlign : ""
+              }))
+            };
+          }),
+          preFill: (() => {
+            const control = document.querySelector('[name="btnPreFill"]');
+            const panels = Array.from(document.querySelectorAll(
+              ".k2sp-guided-journey > .formpanel"
+            ));
+            return control ? {
+              ...describe(control),
+              panelIndex: panels.indexOf(control.closest(".formpanel"))
+            } : null;
+          })(),
           tabBox: describe(tabBox),
           form: describe(document.querySelector(".runtime-form .form") || document.querySelector(".form"))
         };

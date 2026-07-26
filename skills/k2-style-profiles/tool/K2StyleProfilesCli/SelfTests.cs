@@ -50,7 +50,37 @@ namespace K2StyleProfilesCli
             manifest.NormalizeAndValidate();
             Assert(manifest.GetHostedAssets().Count() == 3, "Additional hosted asset contract");
             Assert(manifest.StyleProfile.Files.Count == 2, "Additional hosted asset excluded from K2 file order");
+            CssValidationContract.Validate(
+                ".journey input { border:1px solid #ddd !important; background:#fff !important; }" +
+                ".journey input.invalid { border-color:#c00 !important; background:#fee !important; }",
+                "good.css");
+            AssertThrows(delegate
+            {
+                CssValidationContract.Validate(
+                    ".journey input { border:1px solid #ddd !important; background:#fff !important; }" +
+                    ".journey .invalid { color:#c00 !important; }",
+                    "bad.css");
+            }, "no later .invalid");
+            AssertThrows(delegate
+            {
+                CssValidationContract.Validate(
+                    ".journey .card input { border:1px solid #ddd; }" +
+                    "input.invalid { border-color:#c00; }",
+                    "weak-invalid.css");
+            }, "equal or greater specificity");
             Console.WriteLine("SELFTEST SUCCEEDED");
+        }
+
+        private static void AssertThrows(Action action, string messagePart)
+        {
+            try { action(); }
+            catch (CliException ex)
+            {
+                if (ex.Message.IndexOf(messagePart, StringComparison.OrdinalIgnoreCase) >= 0) return;
+                throw new CliException("Self-test expected error containing '" + messagePart +
+                    "' but received: " + ex.Message);
+            }
+            throw new CliException("Self-test expected an error containing '" + messagePart + "'.");
         }
 
         private static void Assert(bool condition, string name)

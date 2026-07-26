@@ -132,6 +132,16 @@ namespace K2StyleProfilesCli
             }
             if (Verification.HttpTimeoutSeconds < 1 || Verification.HttpTimeoutSeconds > 300)
                 throw new CliException("verification.httpTimeoutSeconds must be between 1 and 300.");
+
+            foreach (var file in GetHostedAssets().Where(x =>
+                !string.IsNullOrWhiteSpace(ManifestPath) &&
+                string.Equals(x.Type, "css", StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrWhiteSpace(x.Source)))
+            {
+                var source = ResolveSource(file);
+                if (File.Exists(source))
+                    CssValidationContract.Validate(File.ReadAllText(source), source);
+            }
         }
 
         public string ResolveSource(StyleFileOptions file)

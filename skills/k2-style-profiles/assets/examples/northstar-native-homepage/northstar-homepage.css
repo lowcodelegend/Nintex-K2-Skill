@@ -1428,6 +1428,72 @@ body.k2sp-page-initiation .k2sp-guided-journey .input-control-wrapper {
   box-shadow: none !important;
 }
 
+/* Every neutral input override above has a later, equally strong invalid state. */
+body.k2sp-page-initiation .k2sp-guided-journey input.SFC.SourceCode-Forms-Controls-Web-TextBox.invalid,
+body.k2sp-page-initiation .k2sp-guided-journey textarea.invalid,
+body.k2sp-page-initiation .k2sp-guided-journey select.invalid,
+body.k2sp-page-initiation .k2sp-guided-journey .input-control.text-input.invalid .input-control-m-c,
+body.k2sp-page-initiation .k2sp-guided-journey .input-control.textarea.invalid .input-control-m-c,
+body.k2sp-page-initiation .k2sp-guided-journey .input-control.select-box.invalid .input-control-wrapper,
+body.k2sp-page-initiation .k2sp-guided-journey .input-control.select-box.invalid .input-control-buttons,
+body.k2sp-page-initiation .k2sp-guided-journey .input-control.calendar.invalid .input-control-m-c,
+body.k2sp-page-initiation .k2sp-guided-journey .input-control.calendar.invalid .input-control-buttons,
+body.k2sp-page-initiation .k2sp-guided-journey .file-wrapper.invalid {
+  border-color: #d92d20 !important;
+  background-color: #fff6f5 !important;
+  box-shadow: 0 0 0 3px rgba(217, 45, 32, .16) !important;
+}
+
+body.k2sp-page-initiation .k2sp-guided-journey .input-control.invalid {
+  border-radius: 8px;
+  outline: 2px solid #d92d20 !important;
+  outline-offset: 2px;
+}
+
+body.k2sp-page-initiation .k2sp-guided-journey label.input-control.checkbox.invalid .input-control-img {
+  border-radius: 3px;
+  outline: 2px solid #d92d20 !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(217, 45, 32, .12) !important;
+}
+
+body.k2sp-page-initiation .k2sp-guided-journey .SourceCode-Forms-Controls-Web-Label.invalid,
+body.k2sp-page-initiation .k2sp-guided-journey .SourceCode-Forms-Controls-Web-DataLabel.invalid {
+  color: #b42318 !important;
+}
+
+body.k2sp-page-initiation .k2sp-validation-summary {
+  grid-column: 1 / -1;
+  margin: 6px 0 12px;
+  padding: 12px 14px;
+  border: 1px solid #f04438;
+  border-left-width: 4px;
+  border-radius: 10px;
+  background: #fff6f5;
+  color: #7a271a;
+  box-shadow: 0 4px 14px rgba(180, 35, 24, .08);
+}
+
+body.k2sp-page-initiation .k2sp-validation-summary strong,
+body.k2sp-page-initiation .k2sp-validation-summary span {
+  display: block;
+}
+
+body.k2sp-page-initiation .k2sp-validation-summary strong {
+  margin-bottom: 3px;
+  font: 700 12px/1.4 var(--k2sp-font-display);
+}
+
+body.k2sp-page-initiation .k2sp-validation-summary span {
+  font: 500 11px/1.45 var(--k2sp-font-text);
+}
+
+body.k2sp-page-initiation .tooltip.validation {
+  border-color: #b42318 !important;
+  background: #fff6f5 !important;
+  color: #7a271a !important;
+}
+
 body.k2sp-page-initiation .k2sp-guided-journey .k2sp-journey-primary-view > .innerpanel > .panel > .panel-header,
 body.k2sp-page-initiation .k2sp-guided-journey .k2sp-journey-primary-view .panel-header,
 body.k2sp-page-initiation .k2sp-guided-journey .k2sp-journey-primary-view .panel-header-wrapper {
@@ -1436,7 +1502,9 @@ body.k2sp-page-initiation .k2sp-guided-journey .k2sp-journey-primary-view .panel
 
 body.k2sp-page-initiation [name^='tblJourneyActions'],
 body.k2sp-page-initiation [name='tblMasterDetailSave'],
-body.k2sp-page-initiation [name='tblWorkflowStart'] {
+body.k2sp-page-initiation [name='tblWorkflowStart'],
+body.k2sp-page-initiation [name='tblPreFillActions'] {
+  width: 100% !important;
   margin-top: 12px !important;
   padding-top: 14px !important;
   border-top: 1px solid var(--k2sp-line) !important;
@@ -1444,19 +1512,78 @@ body.k2sp-page-initiation [name='tblWorkflowStart'] {
 
 body.k2sp-page-initiation [name^='tblJourneyActions'] .editor-cell,
 body.k2sp-page-initiation [name='tblMasterDetailSave'] .editor-cell,
-body.k2sp-page-initiation [name='tblWorkflowStart'] .editor-cell {
+body.k2sp-page-initiation [name='tblWorkflowStart'] .editor-cell,
+body.k2sp-page-initiation [name='tblPreFillActions'] .editor-cell {
   padding: 0 10px 10px !important;
+}
+
+body.k2sp-page-initiation [name^='tblJourneyActions'] .editor-cell:first-child {
+  text-align: left !important;
+}
+
+body.k2sp-page-initiation [name^='tblJourneyActions'] .editor-cell:last-child,
+body.k2sp-page-initiation [name='tblMasterDetailSave'] .editor-cell:last-child,
+body.k2sp-page-initiation [name='tblWorkflowStart'] .editor-cell:last-child {
+  text-align: right !important;
+}
+
+body.k2sp-page-initiation [name='tblPreFillActions'] .editor-cell {
+  text-align: left !important;
 }
 
 body.k2sp-page-initiation [name^='btnJourneyBack'],
 body.k2sp-page-initiation [name^='btnJourneyContinue'],
 body.k2sp-page-initiation [name='btnSave'],
 body.k2sp-page-initiation [name='btnFinishDraft'],
-body.k2sp-page-initiation [name='btnSubmitCase'] {
+body.k2sp-page-initiation [name^='btnSubmit'],
+body.k2sp-page-initiation [name='btnPreFill'] {
   min-width: 92px;
   min-height: 38px;
   padding: 9px 15px !important;
+  border: 1px solid transparent !important;
   border-radius: 9px !important;
+  font: 700 11px/1.4 var(--k2sp-font-text) !important;
+  cursor: pointer;
+}
+
+body.k2sp-page-initiation [name^='btnJourneyBack'],
+body.k2sp-page-initiation [name='btnPreFill'] {
+  border-color: #d0d5dd !important;
+  background: #fff !important;
+  color: #344054 !important;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .06) !important;
+}
+
+body.k2sp-page-initiation [name^='btnJourneyContinue'],
+body.k2sp-page-initiation [name='btnSave'],
+body.k2sp-page-initiation [name='btnFinishDraft'],
+body.k2sp-page-initiation [name^='btnSubmit'] {
+  border-color: #5b4de3 !important;
+  background: #5b4de3 !important;
+  color: #fff !important;
+  box-shadow: 0 3px 8px rgba(91, 77, 227, .24) !important;
+}
+
+body.k2sp-page-initiation [name^='btnJourneyBack']:hover,
+body.k2sp-page-initiation [name='btnPreFill']:hover {
+  background: #f9fafb !important;
+}
+
+body.k2sp-page-initiation [name^='btnJourneyContinue']:hover,
+body.k2sp-page-initiation [name='btnSave']:hover,
+body.k2sp-page-initiation [name='btnFinishDraft']:hover,
+body.k2sp-page-initiation [name^='btnSubmit']:hover {
+  background: #4938cf !important;
+}
+
+body.k2sp-page-initiation [name^='btnJourneyBack']:focus-visible,
+body.k2sp-page-initiation [name^='btnJourneyContinue']:focus-visible,
+body.k2sp-page-initiation [name='btnSave']:focus-visible,
+body.k2sp-page-initiation [name='btnFinishDraft']:focus-visible,
+body.k2sp-page-initiation [name^='btnSubmit']:focus-visible,
+body.k2sp-page-initiation [name='btnPreFill']:focus-visible {
+  outline: 3px solid #a9a1ff !important;
+  outline-offset: 2px;
 }
 
 body.k2sp-page-initiation .k2sp-journey-guidance {
@@ -1792,6 +1919,24 @@ body.k2sp-page-initiation .k2sp-journey-guidance ul {
 
   .k2sp-kpi-native-grid > .k2sp-kpi-label-cell {
     margin-top: 10px;
+  }
+
+  body.k2sp-page-initiation [name^='tblJourneyActions'] .editor-cell,
+  body.k2sp-page-initiation [name='tblMasterDetailSave'] .editor-cell,
+  body.k2sp-page-initiation [name='tblWorkflowStart'] .editor-cell,
+  body.k2sp-page-initiation [name='tblPreFillActions'] .editor-cell {
+    padding-right: 4px !important;
+    padding-left: 4px !important;
+  }
+
+  body.k2sp-page-initiation [name^='btnJourneyBack'],
+  body.k2sp-page-initiation [name^='btnJourneyContinue'],
+  body.k2sp-page-initiation [name='btnSave'],
+  body.k2sp-page-initiation [name='btnFinishDraft'],
+  body.k2sp-page-initiation [name^='btnSubmit'],
+  body.k2sp-page-initiation [name='btnPreFill'] {
+    min-width: 84px;
+    max-width: 100%;
   }
 }
 

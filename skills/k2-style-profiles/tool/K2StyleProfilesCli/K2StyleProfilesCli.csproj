@@ -56,6 +56,7 @@
   <ItemGroup>
     <Compile Include="AssetHost.cs" />
     <Compile Include="Cli.cs" />
+    <Compile Include="CssValidationContract.cs" />
     <Compile Include="DesignerStyleProfileGateway.cs" />
     <Compile Include="Manifest.cs" />
     <Compile Include="Program.cs" />

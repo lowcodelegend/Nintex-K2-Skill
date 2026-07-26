@@ -10,6 +10,18 @@
   }
   root.classList.add('k2sp-runtime');
 
+  /*
+   * Compatibility probe for K2 5.10 Runtime validation. Some builds reference
+   * this misspelled localization global without declaring it. Never replace a
+   * value supplied by K2 or by the customer; install only the absent fallback.
+   */
+  var expressionValidationMessageWasAbsent =
+    typeof window.locValidationExpresssionsFailed === 'undefined';
+  if (expressionValidationMessageWasAbsent) {
+    window.locValidationExpresssionsFailed =
+      'The value does not meet the validation requirements.';
+  }
+
   if (window.__k2spNorthstar) return;
   var config = window.K2SP_NORTHSTAR_CONFIG || {};
   if (config.disabled === true) return;
@@ -18,7 +30,16 @@
     dirty: false,
     navigationSource: 'fallback',
     stylesReady: false,
-    stylesLoaded: false
+    stylesLoaded: false,
+    validationCompatibility: {
+      expressionMessageGlobalPresent: !expressionValidationMessageWasAbsent,
+      fallbackInstalled: expressionValidationMessageWasAbsent
+    },
+    validationFeedback: {
+      installed: false,
+      invalidCount: 0,
+      summaryVisible: false
+    }
   };
 
   var state = window.__k2spNorthstar;
@@ -941,6 +962,189 @@
     });
   }
 
+  function installValidationFeedback() {
+    if (state.validationFeedback.installed) return;
+    state.validationFeedback.installed = true;
+    var invalidSelector = [
+      'input.invalid',
+      'textarea.invalid',
+      'select.invalid',
+      '.input-control.invalid',
+      '.file-wrapper.invalid',
+      '.SourceCode-Forms-Controls-Web-Label.invalid',
+      '.SourceCode-Forms-Controls-Web-DataLabel.invalid'
+    ].join(',');
+    var actionSelector = [
+      '[name^="btnJourneyContinue"]',
+      '[name^="btnJourneyComplete"]',
+      '[name="btnSave"]',
+      '[name^="btnSubmit"]',
+      '[name^="btnFinish"]'
+    ].join(',');
+
+    function visible(node) {
+      if (!node || !node.isConnected) return false;
+      var style = getComputedStyle(node);
+      return style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        !!(node.offsetWidth || node.offsetHeight || node.getClientRects().length);
+    }
+
+    function activePanel() {
+      return Array.prototype.find.call(
+        document.querySelectorAll('.k2sp-guided-journey .formpanel'),
+        visible
+      ) || null;
+    }
+
+    function focusTarget(node) {
+      return node && (
+        node.matches('input,textarea,select,button,a,[tabindex]') ?
+          node : node.querySelector('input,textarea,select,button,a,[tabindex]')
+      );
+    }
+
+    function uniqueInvalidControls(panel) {
+      var seen = {};
+      return Array.prototype.filter.call(
+        panel ? panel.querySelectorAll(invalidSelector) : [],
+        function (node) {
+          if (!visible(node) || node.closest('.tooltip.validation')) return false;
+          var nestedInvalid = node.querySelector && node.querySelector(invalidSelector);
+          if (nestedInvalid && visible(nestedInvalid)) return false;
+          var target = focusTarget(node);
+          var rectangle = (target || node).getBoundingClientRect();
+          var key = (target && (target.id || target.getAttribute('name'))) ||
+            node.id || node.getAttribute('name') ||
+            String(Math.round(rectangle.top)) + ':' + String(Math.round(rectangle.left));
+          if (seen[key]) return false;
+          seen[key] = true;
+          return true;
+        }
+      );
+    }
+
+    function removeStaleAria() {
+      Array.prototype.forEach.call(
+        document.querySelectorAll('[data-k2sp-validation-invalid]'),
+        function (node) {
+          var wrapper = node.closest('.input-control,.file-wrapper');
+          if (!node.classList.contains('invalid') &&
+              !(wrapper && wrapper.classList.contains('invalid'))) {
+            node.removeAttribute('aria-invalid');
+            node.removeAttribute('aria-describedby');
+            node.removeAttribute('data-k2sp-validation-invalid');
+          }
+        }
+      );
+    }
+
+    function syncValidationSummary(moveFocus) {
+      removeStaleAria();
+      var panel = activePanel();
+      if (!panel) return;
+      var invalidControls = uniqueInvalidControls(panel);
+      var summary = panel.querySelector(':scope > .k2sp-validation-summary');
+      state.validationFeedback.invalidCount = invalidControls.length;
+
+      if (!invalidControls.length) {
+        if (summary) summary.remove();
+        state.validationFeedback.summaryVisible = false;
+        return;
+      }
+
+      if (!summary) {
+        summary = create('div', 'k2sp-validation-summary');
+        summary.id = 'k2sp-validation-summary-' + Date.now();
+        summary.setAttribute('role', 'alert');
+        summary.setAttribute('aria-live', 'assertive');
+        summary.setAttribute('tabindex', '-1');
+        var primaryView = panel.querySelector('.k2sp-journey-primary-view');
+        var primaryRow = primaryView && primaryView.closest('.row');
+        panel.insertBefore(summary, primaryRow && primaryRow.parentNode === panel ?
+          primaryRow : panel.firstChild);
+      }
+
+      summary.textContent = '';
+      summary.setAttribute('data-invalid-count', String(invalidControls.length));
+      summary.appendChild(create('strong', '', 'Review the highlighted fields'));
+      summary.appendChild(create(
+        'span',
+        '',
+        invalidControls.length === 1 ?
+          '1 field needs attention before you can continue.' :
+          String(invalidControls.length) + ' fields need attention before you can continue.'
+      ));
+      state.validationFeedback.summaryVisible = true;
+
+      invalidControls.forEach(function (node) {
+        var target = focusTarget(node);
+        if (!target) return;
+        target.setAttribute('aria-invalid', 'true');
+        target.setAttribute('aria-describedby', summary.id);
+        target.setAttribute('data-k2sp-validation-invalid', 'true');
+      });
+
+      if (!moveFocus) return;
+      var first = invalidControls[0];
+      var firstFocusTarget = focusTarget(first);
+      var scrollTarget = firstFocusTarget || first;
+      window.setTimeout(function () {
+        if (firstFocusTarget && firstFocusTarget.focus) {
+          try {
+            firstFocusTarget.focus({ preventScroll: true });
+          } catch (_) {
+            firstFocusTarget.focus();
+          }
+        }
+        if (scrollTarget && scrollTarget.scrollIntoView) {
+          scrollTarget.scrollIntoView({
+            behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ?
+              'auto' : 'smooth',
+            block: 'center'
+          });
+        }
+      }, 0);
+    }
+
+    document.addEventListener('click', function (event) {
+      var target = event.target && event.target.closest &&
+        event.target.closest(actionSelector);
+      if (!target || !target.closest('.k2sp-guided-journey')) return;
+      [40, 120, 300].forEach(function (delay, index) {
+        window.setTimeout(function () {
+          syncValidationSummary(index === 0);
+        }, delay);
+      });
+    }, true);
+
+    ['input', 'change'].forEach(function (eventName) {
+      document.addEventListener(eventName, function (event) {
+        if (!event.target || !event.target.closest('.k2sp-guided-journey')) return;
+        window.setTimeout(function () {
+          syncValidationSummary(false);
+        }, 20);
+      }, true);
+    });
+
+    new MutationObserver(function (mutations) {
+      if (!mutations.some(function (mutation) {
+        return mutation.type === 'attributes' &&
+          mutation.attributeName === 'class' &&
+          (mutation.target.classList.contains('invalid') ||
+           mutation.oldValue && mutation.oldValue.indexOf('invalid') >= 0);
+      })) return;
+      window.setTimeout(function () {
+        syncValidationSummary(false);
+      }, 0);
+    }).observe(document.body, {
+      subtree: true,
+      attributes: true,
+      attributeOldValue: true,
+      attributeFilter: ['class']
+    });
+  }
+
   function revealWhenReady(page) {
     var revealed = false;
     var started = Date.now();
@@ -1009,6 +1213,7 @@
     buildShell(formName, page, initialNavigation);
     bindRouteNavigation(formName);
     bindDirtyTracking();
+    if (page.key === 'initiation') installValidationFeedback();
     reconcileNavigation(formName);
     revealWhenReady(page);
   }

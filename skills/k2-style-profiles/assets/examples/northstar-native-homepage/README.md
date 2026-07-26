@@ -13,6 +13,8 @@ The shell never moves a live K2 View out of its Form ownership tree. It marks th
 
 On a `$k2-smartforms` guided journey, the shell detects the stable generated journey controls, keeps the original `ul.tab-box-tabs` in its native Form tab box, and restyles that exact strip as the Northstar stepper. It does not clone tab anchors or panels. The generated journey title and description become the page introduction, each active panel becomes the central form card, and an injected guidance aside remains presentation-only. Future tabs reject direct pointer activation until native Continue/Save/Focus reaches them, preventing the styled tab surface from bypassing K2 validation. On mobile, the same native strip becomes a horizontally scrollable compact stepper.
 
+The test-only `Pre-fill` action belongs at the bottom of the first physical journey screen. Back remains a left-aligned neutral action; Continue, Save, Finish, and Submit are right-aligned primary actions. The shell preserves native K2 validation and adds a live summary, invalid count, ARIA state, and first-error focus/scroll. Its K2 5.10 localization fallback is installed only when `locValidationExpresssionsFailed` is absent.
+
 Metric cards follow the same rule: the shell adds classes and presentation metadata to the existing K2 Table cells, and CSS lays those cells out as cards. It never reparents a bound Label/Data Label or copies its value into a replacement dashboard. Accessible chart-data Views also remain native; add any reveal/export interaction as a native SmartForms control and View-owned rule, not as injected Style Profile markup.
 
 Application-navigation labels use the Northstar prototype's neutral grey and turn white only for hover, keyboard focus, and the active route. Keep those shell-scoped selectors more specific than the general K2 link-accent rule; otherwise K2's violet hyperlink colour bleeds into every sidebar route.
@@ -36,3 +38,5 @@ Keep `Application navigation` and `Command palette` as the exact visible View ti
 Deploy the profile and native Form, then capture the authenticated Runtime at 1440×1000, 1280×800, 768×1024, and 390×844. Use the case-management capture script, compare every image to the supplier-nonconformance gold-standard prototype, correct unexplained structural or visual regions, and repeat until the acceptance gate passes.
 
 The browser driver uses one disposable Edge profile per run and Node's built-in DevTools WebSocket (`node --experimental-websocket`). A screenshot is accepted only when the native Runtime has released its loading lifecycle and the Northstar shell reports both styles and content ready.
+
+For validation proof, pass `--click-name btnJourneyContinue1` to the generic driver, or map the Form/action through `-ValidationClickNames` in `capture-k2-runtime-ux-evidence.ps1`. Assert the exact expected invalid count where it is known.

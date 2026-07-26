@@ -4,6 +4,8 @@ param(
     [Parameter(Mandatory=$true)][string[]]$FormNames,
     [Parameter(Mandatory=$true)][string]$OutputDirectory,
     [string]$TrustedAuthHost,
+    [hashtable]$ValidationClickNames=@{},
+    [hashtable]$ExpectedInvalidCounts=@{},
     [ValidateRange(0,30000)][int]$SettleMilliseconds=5000,
     [ValidateRange(1024,65500)][int]$StartingPort=9500
 )
@@ -40,6 +42,12 @@ foreach($formName in $FormNames){
         if(-not[string]::IsNullOrWhiteSpace($TrustedAuthHost)){
             $arguments+=@('--trusted-auth-host',$TrustedAuthHost)
         }
+        $validationClick=if($ValidationClickNames.ContainsKey($formName)){
+            [string]$ValidationClickNames[$formName]
+        }else{''}
+        if(-not[string]::IsNullOrWhiteSpace($validationClick)){
+            $arguments+=@('--click-name',$validationClick)
+        }
         $raw=@(& $node @arguments)
         if($LASTEXITCODE-ne 0){throw "Browser capture failed for '$formName' at $($viewport.name) with exit code $LASTEXITCODE."}
         $port++
@@ -73,6 +81,53 @@ foreach($formName in $FormNames){
                 @($tabs|Select-Object -Skip 1|Where-Object stepLocked -ne 'true').Count-gt 0){
                 throw "Northstar guided-journey ownership/forward-navigation gate failed at $formName/$($viewport.name)."
             }
+            $preFill=$result.layout.guidedJourney.preFill
+            if($null-ne$preFill-and[int]$preFill.panelIndex-ne 0){
+                throw "The test-only Pre-fill action is not on the first guided screen at $formName/$($viewport.name)."
+            }
+            $visibleJourneyButtons=@($result.layout.guidedJourney.actionRows|
+                Where-Object visible|
+                ForEach-Object{$_.buttons}|
+                Where-Object visible)
+            $misaligned=@($visibleJourneyButtons|Where-Object{
+                $secondary=([string]$_.name-match '^btnJourneyBack' -or [string]$_.name-eq'btnPreFill')
+                if($secondary){[string]$_.cellTextAlign-ne'left'}else{[string]$_.cellTextAlign-ne'right'}
+            })
+            if($misaligned.Count-gt 0){
+                throw "Guided action '$($misaligned[0].name)' is not aligned to its Northstar action edge at $formName/$($viewport.name)."
+            }
+        }
+        if(-not[string]::IsNullOrWhiteSpace($validationClick)){
+            $probe=$result.layout.clickProbe
+            $feedback=$result.layout.validationFeedback
+            $expected=if($ExpectedInvalidCounts.ContainsKey($formName)){
+                [int]$ExpectedInvalidCounts[$formName]
+            }else{0}
+            if($null-eq$probe-or-not[bool]$probe.found){
+                throw "Validation action '$validationClick' was not found at $formName/$($viewport.name)."
+            }
+            if([int]$feedback.invalidCount-lt 1-or
+                ($expected-gt 0-and[int]$feedback.invalidCount-ne$expected)){
+                throw "Validation action '$validationClick' produced $($feedback.invalidCount) invalid controls at $formName/$($viewport.name); expected $(if($expected-gt 0){$expected}else{'at least one'})."
+            }
+            if([int]$feedback.visibleTreatmentCount-ne[int]$feedback.invalidCount){
+                throw "Only $($feedback.visibleTreatmentCount) of $($feedback.invalidCount) invalid controls have visible error treatment at $formName/$($viewport.name)."
+            }
+            if([int]$feedback.ariaInvalidCount-ne[int]$feedback.invalidCount-or
+                -not[bool]$feedback.summaryVisible-or
+                [int]$feedback.summaryInvalidCount-ne[int]$feedback.invalidCount){
+                throw "Accessible validation feedback is incomplete at $formName/$($viewport.name)."
+            }
+            if(-not[bool]$feedback.firstInvalidFocused){
+                throw "Validation did not return focus to the first invalid control at $formName/$($viewport.name)."
+            }
+            if($null-ne$probe.selectedTabBefore-and
+                [int]$probe.selectedTabBefore-ne[int]$feedback.selectedTabAfter){
+                throw "Validation did not block navigation at $formName/$($viewport.name)."
+            }
+            if($null-eq$feedback.compatibility){
+                throw "The K2 Runtime validation compatibility probe did not report state at $formName/$($viewport.name)."
+            }
         }
         if([int]$viewport.width -le 480 -and @($result.layout.kpiCells).Count -gt 0){
             $rows=@($result.layout.kpiCells|ForEach-Object{[int]$_.gridRow}|Sort-Object)
@@ -80,12 +135,15 @@ foreach($formName in $FormNames){
                 throw "Northstar KPI label/value cells are not paired into deterministic mobile rows at $formName/$($viewport.name)."
             }
         }
-        $unexpected=@($result.diagnostics|Where-Object{$_.text -notmatch "^TypeError: Cannot read properties of null \(reading '0'\)"})
+        $unexpected=@($result.diagnostics|Where-Object{
+            $_.text -notmatch "^TypeError: Cannot read properties of null \(reading '0'\)" -and
+            $_.text -notmatch '^net::ERR_ABORTED$'
+        })
         if($unexpected.Count-gt 0){throw "Unexpected browser diagnostic at $formName/$($viewport.name): $($unexpected[0].text)"}
-        $results.Add([ordered]@{form=$formName;viewport=$viewport.name;width=$viewport.width;height=$viewport.height;image=[IO.Path]::GetFileName($image);url=$result.layout.url;title=$result.layout.title;textLength=$result.layout.textLength;shellCount=$result.layout.shellCount;northstarReady=$result.layout.northstarReady;contentReady=$result.layout.contentReady;guidedJourney=($guidedControls.Count-gt 0);forwardTabBypassBlocked=$(if($guidedControls.Count-gt 0){[bool]$result.layout.guidedJourney.directAdvanceProbe.blocked}else{$null});horizontalOverflow=$false;knownK2Diagnostics=@($result.diagnostics|ForEach-Object{$_.text})})
+        $results.Add([ordered]@{form=$formName;viewport=$viewport.name;width=$viewport.width;height=$viewport.height;image=[IO.Path]::GetFileName($image);url=$result.layout.url;title=$result.layout.title;textLength=$result.layout.textLength;shellCount=$result.layout.shellCount;northstarReady=$result.layout.northstarReady;contentReady=$result.layout.contentReady;guidedJourney=($guidedControls.Count-gt 0);forwardTabBypassBlocked=$(if($guidedControls.Count-gt 0){[bool]$result.layout.guidedJourney.directAdvanceProbe.blocked}else{$null});validationClick=$(if([string]::IsNullOrWhiteSpace($validationClick)){$null}else{$validationClick});invalidCount=$(if([string]::IsNullOrWhiteSpace($validationClick)){$null}else{[int]$result.layout.validationFeedback.invalidCount});allInvalidVisiblyTreated=$(if([string]::IsNullOrWhiteSpace($validationClick)){$null}else{[int]$result.layout.validationFeedback.visibleTreatmentCount-eq[int]$result.layout.validationFeedback.invalidCount});summaryVisible=$(if([string]::IsNullOrWhiteSpace($validationClick)){$null}else{[bool]$result.layout.validationFeedback.summaryVisible});firstInvalidFocused=$(if([string]::IsNullOrWhiteSpace($validationClick)){$null}else{[bool]$result.layout.validationFeedback.firstInvalidFocused});horizontalOverflow=$false;knownK2Diagnostics=@($result.diagnostics|ForEach-Object{$_.text})})
         Write-Output "Captured native Runtime UX: $formName / $($viewport.name)"
     }
 }
-$report=[ordered]@{capturedUtc=[DateTime]::UtcNow.ToString('o');runtimeBaseUrl=$RuntimeBaseUrl;forms=@($FormNames);viewports=$viewports;captures=@($results);knownDiagnosticPolicy="K2 5.10 emits a non-blocking DataLabel setValue null-index diagnostic on generated capture Views; any other browser diagnostic fails evidence capture."}
+$report=[ordered]@{capturedUtc=[DateTime]::UtcNow.ToString('o');runtimeBaseUrl=$RuntimeBaseUrl;forms=@($FormNames);viewports=$viewports;captures=@($results);knownDiagnosticPolicy="K2 5.10 can emit a non-blocking DataLabel setValue null-index diagnostic and Edge can report canceled resource requests as net::ERR_ABORTED; actionable JavaScript exceptions, log errors, and other network failures fail evidence capture."}
 $reportPath=Join-Path $output 'runtime-ux-evidence.json';$report|ConvertTo-Json -Depth 12|Set-Content -LiteralPath $reportPath -Encoding utf8
 Write-Output "Native Runtime UX evidence: $reportPath"

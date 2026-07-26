@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "suiteName": "k2-skills",
-  "suiteVersion": "0.63.1",
+  "suiteVersion": "0.64.0",
   "skills": [
     {
       "name": "k2-sql-smartobjects",
@@ -24,7 +24,7 @@
     },
     {
       "name": "k2-smartforms",
-      "version": "0.44.0",
+      "version": "0.45.0",
       "platform": "win-x64",
       "buildScript": "skills/k2-smartforms/scripts/build.ps1",
       "buildParameters": {
@@ -38,12 +38,12 @@
       "versionCommand": {
         "path": "skills/k2-smartforms/tool/K2SmartFormsCli/bin/Release/k2forms.exe",
         "arguments": ["version"],
-        "expectedOutput": "k2forms 0.44.0"
+        "expectedOutput": "k2forms 0.45.0"
       }
     },
     {
       "name": "k2-style-profiles",
-      "version": "0.10.1",
+      "version": "0.11.0",
       "platform": "win-x64",
       "buildScript": "skills/k2-style-profiles/scripts/build.ps1",
       "buildParameters": {
@@ -57,7 +57,7 @@
       "versionCommand": {
         "path": "skills/k2-style-profiles/tool/K2StyleProfilesCli/bin/Release/k2style.exe",
         "arguments": ["version"],
-        "expectedOutput": "k2style 0.10.1"
+        "expectedOutput": "k2style 0.11.0"
       }
     },
     {
@@ -99,7 +99,7 @@
     },
     {
       "name": "k2-case-management",
-      "version": "0.13.1",
+      "version": "0.14.0",
       "platform": "win-x64",
       "buildScript": null,
       "builtFiles": [],

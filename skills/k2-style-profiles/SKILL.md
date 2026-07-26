@@ -36,6 +36,8 @@ Create checked-in K2 Style Profiles from declarative manifests, host their CSS/J
 - Defer expensive work until the DOM exists. Avoid synchronous network calls, broad mutation observers, layout thrashing, and full-document rescans.
 - Fail open on both JavaScript and CSS paths. Gate reveal on actual readiness, use two animation frames before reveal, and test flashes only after first contentful paint.
 - Build accessible focus, keyboard, reduced-motion, contrast, error, empty, loading, and read-only states. Style Profile polish must not hide native validation or task controls.
+- Any CSS contract that restyles native input borders or backgrounds must include a later, equally or more specific invalid-state contract for TextBox/TextArea and memo wrappers, dropdown/select buttons, calendars, checkboxes, and File controls. If the neutral rule uses `!important`, the invalid treatment must too; `k2style doctor` rejects an unprotected important override.
+- Guided-journey enhancement may add a runtime-only, non-authoritative validation summary around native K2 validation. It must count the active screen's invalid controls, set `aria-invalid`, update as fields recover, and focus/scroll the first failure. Probe the K2 5.10 misspelled `locValidationExpresssionsFailed` global and install a fallback only when it is absent; never overwrite an installed value or edit K2 product resources.
 - Keep `replaceExisting=false` initially. Enable replacement only for the exact intended profile after reviewing `plan`.
 - Use unique development names. Do not replace system/internal profiles.
 

@@ -55,4 +55,6 @@ For application shells and DOM enhancement, the separate browser validator exerc
   -Output '.\runtime-validation-results.json'
 ```
 
-It validates delivery headers, Designer isolation, cold-load flashing after first contentful paint, cached warm transitions, synchronous transition cover, readiness fail-open, overflow, and browser diagnostics. Start from `assets/examples/smartobject-sidebar/runtime-validation.json`; see [smartobject-sidebar.md](smartobject-sidebar.md) for its contract.
+It validates delivery headers, Designer isolation, cold-load flashing after first contentful paint, cached warm transitions, synchronous transition cover, readiness fail-open, overflow, and browser diagnostics. `k2style` manifest validation also rejects an important native-input border/background override that has no later invalid treatment with equal or greater specificity.
+
+For a Northstar case solution, `capture-browser-page-cdp.mjs --click-name <native-control-name>` clicks the real named K2 action before capture and records invalid controls, visible treatment, summary, ARIA state, focus, selected-screen state, compatibility-probe state, overflow, and diagnostics. `capture-k2-runtime-ux-evidence.ps1` exposes this as `-ValidationClickNames` and exact optional `-ExpectedInvalidCounts`; run the validation path at desktop and mobile widths at minimum.

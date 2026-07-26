@@ -60,6 +60,14 @@ Choose the navigation source deliberately:
 
 Never clone native tab anchors into a second menu. Moving the original node preserves K2 click handlers, IDs, rule-driven selection, tab panels, and Worklist behavior.
 
+## Validation presentation
+
+Native K2 validation remains authoritative. A Style Profile that changes an input border, background, or shadow must explicitly cover invalid TextBox/TextArea and memo wrappers, dropdown/select-box buttons, calendars, checkboxes, and File controls. Put the invalid contract after the neutral contract with equal or greater selector specificity. Important neutral declarations require important invalid declarations; manifest loading, `doctor`, and every mutating command reject important overrides without that later protection.
+
+For a guided journey, the Northstar shell adds only feedback around native validation: one live summary for the active screen, the native invalid count, `aria-invalid`/`aria-describedby`, and focus plus scroll to the first failure. It observes K2's classes and removes or updates the summary as K2 clears them. It does not decide validity, navigate, persist, or replace validation messages.
+
+Some K2 5.10 Runtime builds reference the misspelled localization global `locValidationExpresssionsFailed` without declaring it. Probe after the Runtime/Designer guard. Supply a narrowly scoped default only when `typeof window.locValidationExpresssionsFailed === "undefined"`; preserve every existing value and never patch installed K2 JavaScript.
+
 ## Verification checklist
 
 - New profile has a unique GUID, expected category, version, and checked-in state.
@@ -67,6 +75,7 @@ Never clone native tab anchors into a second menu. Moving the original node pres
 - Every URL returns 2xx over HTTPS with the expected MIME type.
 - Served bytes equal source bytes.
 - Runtime works with empty, long, invalid, slow, mobile, keyboard-only, and reduced-motion states.
+- Clicking an empty guided Continue/Save action invokes its real K2 event, blocks navigation/persistence, visibly treats every expected invalid control, exposes the matching summary count, and focuses/reveals the first failure without browser exceptions or horizontal overflow.
 - Designer opens without runtime classes, overlays, observers, sidebar transforms, or loading screens.
 - Existing forms using other Style Profiles are unchanged.
 - Generated and minified colour adapters both cover every colour-bearing K2 variable in every declared K2 context on the target version.
