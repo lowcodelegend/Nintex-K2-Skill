@@ -10,7 +10,7 @@
   "styleProfile": {
     "systemName": "Northstar Native Homepage",
     "displayName": "Northstar Native Homepage",
-    "description": "Runtime-only Northstar shell for native K2 navigation, command palette, KPI, chart, data-alternative, and queue Views.",
+    "description": "Runtime-only Northstar shell for native K2 navigation, guided initiation, command palette, KPI, chart, and queue Views.",
     "categoryPath": "K2 Skills\\UX",
     "previewFormId": null,
     "replaceExisting": true,
@@ -18,17 +18,17 @@
       {
         "type": "css",
         "source": "northstar-critical.css",
-        "target": "northstar-critical.v11.css"
+        "target": "northstar-critical.v12.css"
       },
       {
         "type": "js",
         "source": "northstar-config.js",
-        "target": "northstar-config.v11.js"
+        "target": "northstar-config.v12.js"
       },
       {
         "type": "js",
         "source": "northstar-shell.js",
-        "target": "northstar-shell.v11.js"
+        "target": "northstar-shell.v12.js"
       }
     ]
   },
@@ -44,7 +44,7 @@
       {
         "type": "css",
         "source": "northstar-homepage.css",
-        "target": "northstar-homepage.v11.css"
+        "target": "northstar-homepage.v12.css"
       }
     ]
   },

@@ -11,6 +11,8 @@ This example reproduces the Northstar case-operations homepage while keeping K2 
 
 The shell never moves a live K2 View out of its Form ownership tree. It marks the command-palette row and positions it visually in the top bar; K2 bindings, events, lifecycle, and Designer hydration remain intact.
 
+On a `$k2-smartforms` guided journey, the shell detects the stable generated journey controls, keeps the original `ul.tab-box-tabs` in its native Form tab box, and restyles that exact strip as the Northstar stepper. It does not clone tab anchors or panels. The generated journey title and description become the page introduction, each active panel becomes the central form card, and an injected guidance aside remains presentation-only. Future tabs reject direct pointer activation until native Continue/Save/Focus reaches them, preventing the styled tab surface from bypassing K2 validation. On mobile, the same native strip becomes a horizontally scrollable compact stepper.
+
 Metric cards follow the same rule: the shell adds classes and presentation metadata to the existing K2 Table cells, and CSS lays those cells out as cards. It never reparents a bound Label/Data Label or copies its value into a replacement dashboard. Accessible chart-data Views also remain native; add any reveal/export interaction as a native SmartForms control and View-owned rule, not as injected Style Profile markup.
 
 ## Adaptation
@@ -23,6 +25,7 @@ Copy this directory into a solution workspace and edit `northstar-config.js`:
 - replace the example `pages` entry with the solution's Form name and approved page/insight copy;
 - preserve the environment common framework by default because its Views may own required server-load transfers and completion rules. Use `suppressedFrameworkViews` for stable control names or `suppressedFrameworkPanelNames` for stable native panel names only after inspecting the authenticated Runtime DOM; do not use generated GUIDs or remove lifecycle Views merely to change page chrome.
 - keep `enableDashboardComposition` enabled in accepted builds; set it to `false` only during a documented browser-isolation pass.
+- keep the governed `Application navigation` List View on the first screen of every guided Northstar Form so cold direct links can reconcile the complete authorised shell; the case-management compiler does this automatically.
 
 Keep `Application navigation` and `Command palette` as the exact visible View titles. Do not put SQL calls, credentials, authorization filtering, lifecycle decisions, persistence, or workflow actions in the Style Profile.
 

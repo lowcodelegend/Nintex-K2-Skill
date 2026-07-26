@@ -1218,6 +1218,7 @@ namespace K2SmartFormsCli
     {
         public string Code { get; set; }
         public string Label { get; set; }
+        public string Title { get; set; }
         public string Description { get; set; }
         public string Tab { get; set; }
         public string Advance { get; set; }

@@ -244,7 +244,7 @@ if ($BaseManifest) {
                 $regrouped=[Collections.Generic.List[object]]::new()
                 foreach($tab in @($shellForm.tabs)){if([string]$tab.name -eq [string]$workspaceTabName){foreach($section in @($workspace.sectionTabs)){$regrouped.Add([ordered]@{name=[string]$section.name;views=@($section.views)})}}else{$regrouped.Add($tab)}}
                 $shellForm.tabs=@($regrouped);$firstSection=[string]$workspace.sectionTabs[0].name
-                foreach($navigation in @($shellForm.listClickTabNavigation)){if([string]$navigation.targetTab -eq [string]$workspaceTabName){$navigation.targetTab=$firstSection}}
+                foreach($tabNavigation in @($shellForm.listClickTabNavigation)){if([string]$tabNavigation.targetTab -eq [string]$workspaceTabName){$tabNavigation.targetTab=$firstSection}}
             }
             $analyticsTabName=Get-ValueOrDefault $workspace.analyticsTab 'Analytics'
             if(@($shellForm.tabs|Where-Object {[string]$_.name -eq [string]$analyticsTabName}).Count -gt 0){throw "Workspace shell Form already contains tab '$analyticsTabName'."}
@@ -282,14 +282,16 @@ if ($BaseManifest) {
             $entryView|Add-Member -NotePropertyName hiddenProperties -NotePropertyValue @($sourceMaster.properties|Where-Object {@($init.entryProperties) -notcontains [string]$_}) -Force
             if($null -ne $init.propertyLabels){$entryView|Add-Member -NotePropertyName propertyLabels -NotePropertyValue $init.propertyLabels -Force}
             $entryView|Add-Member -NotePropertyName lifecycleTrackers -NotePropertyValue @() -Force
-            $entryView.options=@($entryView.options|Where-Object {[string]$_ -ne 'toolbar'})
+            $entryView.layoutColumns=2
+            $entryView.options=@($entryView.options|Where-Object {[string]$_ -notin @('toolbar','labels-left')})
             $manifest.application.views=@($manifest.application.views)+@($entryView);$effectiveMasterView=[string]$init.captureViewName
         }
         $reviewReadMethod=Get-ValueOrDefault $init.readMethod 'Read'
-        $reviewView=[ordered]@{name=$init.reviewViewName;smartObject=$init.smartObject;type='capture';properties=@($init.reviewProperties);readOnlyProperties=@($init.reviewProperties);methods=@($reviewReadMethod);layoutColumns=2;options=@('labels-left','colon-labels')}
+        $reviewView=[ordered]@{name=$init.reviewViewName;smartObject=$init.smartObject;type='capture';properties=@($init.reviewProperties);readOnlyProperties=@($init.reviewProperties);methods=@($reviewReadMethod);layoutColumns=2;options=@('colon-labels')}
         if(@($manifest.application.views|Where-Object {[string]$_.name -eq [string]$reviewView.name}).Count -gt 0){throw "Initiation review View collides with an existing View: $($reviewView.name)"}
         $manifest.application.views=@($manifest.application.views)+@($reviewView)
-        $initViews=@($effectiveMasterView)+@($init.details|ForEach-Object {$_.view})+@($init.reviewViewName)
+        $initBusinessViews=@($effectiveMasterView)+@($init.details|ForEach-Object {$_.view})+@($init.reviewViewName)
+        $initViews=if($usesStyleProfile){@(([string]$navigation.viewName))+@($initBusinessViews)}else{@($initBusinessViews)}
         foreach($requiredView in $initViews){if(@($manifest.application.views|Where-Object {[string]$_.name -eq [string]$requiredView}).Count -eq 0){throw "Initiation references unknown View: $requiredView"}}
         $detailContracts=@($init.details|ForEach-Object {[ordered]@{view=$_.view;foreignKeyProperty=$_.foreignKeyProperty;createMethod=(Get-ValueOrDefault $_.createMethod 'Create');updateMethod=(Get-ValueOrDefault $_.updateMethod 'Update');deleteMethod=(Get-ValueOrDefault $_.deleteMethod 'Delete');listMethod=(Get-ValueOrDefault $_.listMethod 'List')}})
         $compiledTabs=[Collections.Generic.List[object]]::new()
@@ -309,11 +311,13 @@ if ($BaseManifest) {
                 $guidedSteps.Add([ordered]@{
                     code=([string]$stepTab.id).ToUpperInvariant().Replace('-','_')
                     label=(Get-ValueOrDefault $stepTab.label $journeyStep.title)
+                    title=(Get-ValueOrDefault $stepTab.title $journeyStep.title)
                     description=(Get-ValueOrDefault $stepTab.description ("Complete "+([string]$journeyStep.title).ToLowerInvariant()+"."))
                     tab=$tabName
                     advance='continue'
                 })
             }
+            if($usesStyleProfile){$compiledTabs[0].views=@(([string]$navigation.viewName))+@($compiledTabs[0].views)}
             $placed=@($compiledTabs|ForEach-Object {@($_.views)})
             if($placed.Count -ne $initViews.Count -or @($placed|Select-Object -Unique).Count -ne $placed.Count -or @($initViews|Where-Object {$placed -notcontains $_}).Count -gt 0){
                 throw 'initiation.stepTabs must place every initiation View exactly once. Use $master and $review for the generated capture and review Views.'
@@ -325,16 +329,18 @@ if ($BaseManifest) {
             $compiledTabs.Add([ordered]@{name=$detailsTab;views=@($effectiveMasterView)+@($init.details|Where-Object {$_.step -eq 'details'}|ForEach-Object {$_.view})})
             $compiledTabs.Add([ordered]@{name=$evidenceTab;views=@($init.details|Where-Object {$_.step -eq 'evidence'}|ForEach-Object {$_.view})})
             $compiledTabs.Add([ordered]@{name=$reviewTab;views=@($init.reviewViewName)})
-            $guidedSteps.Add([ordered]@{code='DETAILS';label=(Get-ValueOrDefault $init.detailsStepLabel 'Case details');description=(Get-ValueOrDefault $init.detailsStepDescription 'Describe what happened and provide the case context and impact.');tab=$detailsTab;advance='continue'})
-            $guidedSteps.Add([ordered]@{code='EVIDENCE';label=(Get-ValueOrDefault $init.evidenceStepLabel 'Evidence');description=(Get-ValueOrDefault $init.evidenceStepDescription 'Add the supporting records needed to understand the case.');tab=$evidenceTab;advance='continue'})
+            if($usesStyleProfile){$compiledTabs[0].views=@(([string]$navigation.viewName))+@($compiledTabs[0].views)}
+            $guidedSteps.Add([ordered]@{code='DETAILS';label=(Get-ValueOrDefault $init.detailsStepLabel 'Describe');title=(Get-ValueOrDefault $init.detailsStepTitle 'What happened?');description=(Get-ValueOrDefault $init.detailsStepDescription 'Describe what happened and provide the case context and impact.');tab=$detailsTab;advance='continue'})
+            $guidedSteps.Add([ordered]@{code='EVIDENCE';label=(Get-ValueOrDefault $init.evidenceStepLabel 'Evidence');title=(Get-ValueOrDefault $init.evidenceStepTitle 'Add supporting evidence');description=(Get-ValueOrDefault $init.evidenceStepDescription 'Add the supporting records needed to understand the case.');tab=$evidenceTab;advance='continue'})
             $defaultReviewDescription=if($finalActionMode -eq 'complete'){'Check the saved draft and finish this design iteration.'}else{'Check the complete case before submitting it.'}
-            $guidedSteps.Add([ordered]@{code='REVIEW';label=(Get-ValueOrDefault $init.reviewStepLabel 'Review');description=(Get-ValueOrDefault $init.reviewStepDescription $defaultReviewDescription);tab=$reviewTab;advance='continue'})
+            $guidedSteps.Add([ordered]@{code='REVIEW';label=(Get-ValueOrDefault $init.reviewStepLabel 'Review');title=(Get-ValueOrDefault $init.reviewStepTitle $(if($finalActionMode -eq 'complete'){'Review and finish'}else{'Review and submit'}));description=(Get-ValueOrDefault $init.reviewStepDescription $defaultReviewDescription);tab=$reviewTab;advance='continue'})
         }
         if($finalActionMode -eq 'complete'){
             $completeReviewTab=Get-ValueOrDefault $init.completeReviewTab 'Review & Finish'
             $compiledTabs[$compiledTabs.Count-1].name=$completeReviewTab
             $guidedSteps[$guidedSteps.Count-1].tab=$completeReviewTab
             $guidedSteps[$guidedSteps.Count-1].label=Get-ValueOrDefault $init.completeReviewStepLabel 'Review'
+            $guidedSteps[$guidedSteps.Count-1].title=Get-ValueOrDefault $init.completeReviewStepTitle 'Review and finish'
             $guidedSteps[$guidedSteps.Count-1].description=Get-ValueOrDefault $init.completeReviewStepDescription 'Check the saved draft and finish this design iteration.'
         }
         $guidedSteps[$guidedSteps.Count-2].advance='save'
@@ -367,7 +373,7 @@ if ($BaseManifest) {
                 steps=@($guidedSteps)
             }
         }
-        foreach($viewName in $initViews){$initForm.viewTitles[$viewName]=if($viewName -eq $init.reviewViewName){if($finalActionMode -eq 'complete'){'Review the saved draft'}else{'Review the case before submission'}}elseif($viewName -eq $effectiveMasterView){'Case details'}else{($viewName -replace '^[^.]+\.','')}}
+        foreach($viewName in $initViews){$initForm.viewTitles[$viewName]=if($viewName -eq ([string]$navigation.viewName)){'Application navigation'}elseif($viewName -eq $init.reviewViewName){if($finalActionMode -eq 'complete'){'Review the saved draft'}else{'Review the case before submission'}}elseif($viewName -eq $effectiveMasterView){'Case details'}else{($viewName -replace '^[^.]+\.','')}}
         $manifest.application.forms=@($manifest.application.forms)+@($initForm)
     }
     if($null -eq $manifest.verification){$manifest|Add-Member -NotePropertyName verification -NotePropertyValue ([pscustomobject]@{})}

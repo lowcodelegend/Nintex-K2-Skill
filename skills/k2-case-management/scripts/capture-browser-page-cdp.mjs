@@ -268,6 +268,74 @@ try {
       viewTitles: Array.from(document.querySelectorAll("[data-sf-title]"))
         .map((node) => node.getAttribute("data-sf-title"))
         .filter(Boolean),
+      guidedJourney: (() => {
+        const named = Array.from(document.querySelectorAll(
+          '[name^="prgJourneyStep"],[name^="lblJourneyStepHeading"],[name^="dlbJourneyStepDescription"],[name^="btnJourney"],[name^="tblJourney"]'
+        ));
+        const tabs = document.querySelector("ul.tab-box-tabs");
+        const tabBox = document.querySelector(".tab-box.form-tabs");
+        const describe = (node) => {
+          if (!node) return null;
+          const rectangle = node.getBoundingClientRect();
+          return {
+            tag: node.tagName,
+            id: node.id || "",
+            name: node.getAttribute("name") || "",
+            className: typeof node.className === "string" ? node.className : "",
+            style: node.getAttribute("style") || "",
+            text: (node.textContent || "").replace(/\s+/g, " ").trim().slice(0, 240),
+            visible: !!(node.offsetWidth || node.offsetHeight || node.getClientRects().length),
+            left: Math.round(rectangle.left),
+            top: Math.round(rectangle.top),
+            width: Math.round(rectangle.width),
+            height: Math.round(rectangle.height)
+          };
+        };
+        return {
+          controls: named.map((node) => ({
+            ...describe(node),
+            ancestors: [node.parentElement, node.parentElement?.parentElement,
+              node.closest(".editor-cell"), node.closest(".row"), node.closest(".formpanel")]
+              .map(describe)
+          })),
+          tabs: describe(tabs),
+          tabAnchors: tabs ? Array.from(tabs.querySelectorAll("a")).map((anchor) => ({
+            ...describe(anchor),
+            stepState: anchor.getAttribute("data-k2sp-step-state") || "",
+            stepLocked: anchor.getAttribute("data-k2sp-step-locked") || "",
+            ariaDisabled: anchor.getAttribute("aria-disabled") || "",
+            parent: describe(anchor.parentElement)
+          })) : [],
+          directAdvanceProbe: (() => {
+            const anchors = tabs ? Array.from(tabs.querySelectorAll("a.tab")) : [];
+            if (anchors.length < 2 || !anchors[0].classList.contains("selected")) return null;
+            const selectedBefore = anchors.findIndex((anchor) => anchor.classList.contains("selected"));
+            const dispatchAllowed = anchors[1].dispatchEvent(new MouseEvent("click", {
+              bubbles: true,
+              cancelable: true,
+              view: window
+            }));
+            const selectedAfter = anchors.findIndex((anchor) => anchor.classList.contains("selected"));
+            return {
+              selectedBefore,
+              selectedAfter,
+              dispatchCanceled: !dispatchAllowed,
+              blocked: selectedBefore === 0 && selectedAfter === 0 && !dispatchAllowed
+            };
+          })(),
+          fieldControls: Array.from(document.querySelectorAll(
+            '.formpanel input,.formpanel textarea,.formpanel select,.formpanel [contenteditable="true"]'
+          )).slice(0, 20).map((control) => ({
+            ...describe(control),
+            type: control.getAttribute("type") || "",
+            placeholder: control.getAttribute("placeholder") || "",
+            parent: describe(control.parentElement),
+            grandparent: describe(control.parentElement?.parentElement)
+          })),
+          tabBox: describe(tabBox),
+          form: describe(document.querySelector(".runtime-form .form") || document.querySelector(".form"))
+        };
+      })(),
       frameworkProbe: (() => {
         const label = Array.from(document.querySelectorAll("label, span, div"))
           .find((node) => node.children.length === 0 && node.textContent.trim() === "User:");

@@ -131,9 +131,9 @@
     "evidenceTab":"Evidence",
     "reviewTab":"Review & Submit",
     "stepTabs":[
-      {"id":"incident","name":"Case Details","label":"Case details","description":"Describe the nonconformance and provide its supplier and impact context.","views":["$master","SNC.Nonconformance Details"]},
-      {"id":"evidence","name":"Evidence","label":"Evidence","description":"Add the records needed to investigate and verify the nonconformance.","views":["SNC.Evidence"]},
-      {"id":"review","name":"Review & Submit","label":"Review","description":"Check the complete case before submitting it.","views":["$review"]}
+      {"id":"incident","name":"Case Details","label":"Describe","title":"What happened?","description":"Describe the nonconformance and provide its supplier and impact context.","views":["$master","SNC.Nonconformance Details"]},
+      {"id":"evidence","name":"Evidence","label":"Evidence","title":"Add supporting evidence","description":"Add the records needed to investigate and verify the nonconformance.","views":["SNC.Evidence"]},
+      {"id":"review","name":"Review & Submit","label":"Review","title":"Review and submit","description":"Check the complete case before submitting it.","views":["$review"]}
     ],
     "submitButtonName":"btnSubmitCase",
     "submitButtonText":"Submit case",

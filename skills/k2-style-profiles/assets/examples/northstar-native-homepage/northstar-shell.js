@@ -134,6 +134,194 @@
     };
   }
 
+  function controlText(name) {
+    var control = document.querySelector('[name="' + CSS.escape(name) + '"]');
+    return control ? String(control.textContent || '').replace(/\s+/g, ' ').trim() : '';
+  }
+
+  function journeyControlIndex(control, prefix) {
+    var name = control && control.getAttribute('name') || '';
+    var match = name.match(new RegExp('^' + prefix + '(\\d+)$', 'i'));
+    return match ? Number(match[1]) - 1 : -1;
+  }
+
+  function guidedJourneyControls() {
+    var progress = Array.prototype.slice.call(
+      document.querySelectorAll('[name^="prgJourneyStep"]')
+    ).filter(function (control) {
+      return journeyControlIndex(control, 'prgJourneyStep') >= 0;
+    }).sort(function (left, right) {
+      return journeyControlIndex(left, 'prgJourneyStep') -
+        journeyControlIndex(right, 'prgJourneyStep');
+    });
+    if (progress.length < 3) return null;
+    var tabBox = document.querySelector('.tab-box.form-tabs');
+    var tabs = tabBox && tabBox.querySelector(':scope > ul.tab-box-tabs');
+    var anchors = tabs ? Array.prototype.slice.call(tabs.querySelectorAll('a.tab')) : [];
+    if (!tabBox || !tabs || anchors.length !== progress.length) return null;
+    return {
+      tabBox: tabBox,
+      tabs: tabs,
+      anchors: anchors,
+      progress: progress
+    };
+  }
+
+  function updateJourneySelection(journey) {
+    var selectedIndex = journey.anchors.findIndex(function (anchor) {
+      return anchor.classList.contains('selected');
+    });
+    if (selectedIndex < 0) selectedIndex = 0;
+    var storedHighest = Number(
+      journey.tabBox.getAttribute('data-k2sp-highest-visited') || 0
+    );
+    journey.highestVisited = Math.max(storedHighest, selectedIndex);
+    journey.tabBox.setAttribute(
+      'data-k2sp-highest-visited',
+      String(journey.highestVisited)
+    );
+
+    journey.anchors.forEach(function (anchor, index) {
+      var stateName = index < selectedIndex ? 'done' :
+        index === selectedIndex ? 'current' : 'upcoming';
+      anchor.setAttribute('data-k2sp-step-state', stateName);
+      anchor.setAttribute('aria-current', index === selectedIndex ? 'step' : 'false');
+      var nativeHidden = anchor.style.display === 'none';
+      var locked = index > journey.highestVisited || nativeHidden;
+      anchor.setAttribute('data-k2sp-step-locked', locked ? 'true' : 'false');
+      anchor.setAttribute('aria-disabled', locked ? 'true' : 'false');
+    });
+
+    var guidance = journey.tabBox.querySelector(':scope > .k2sp-journey-guidance');
+    var guidanceBody = guidance && guidance.querySelector('.k2sp-journey-guidance-body');
+    if (guidanceBody) {
+      guidanceBody.textContent =
+        controlText('dlbJourneyStepDescription' + (selectedIndex + 1)) ||
+        'Complete this screen with the clearest information currently available.';
+    }
+  }
+
+  function enhanceGuidedJourney(page) {
+    var journey = guidedJourneyControls();
+    if (!journey) return false;
+    if (journey.tabBox.classList.contains('k2sp-guided-journey')) {
+      updateJourneySelection(journey);
+      return true;
+    }
+
+    var wasDeclaredInitiation = page.key === 'initiation';
+    page.key = 'initiation';
+    document.body.classList.remove('k2sp-page-command', 'k2sp-page-workspace');
+    document.body.classList.add('k2sp-page-initiation');
+    journey.tabBox.classList.add('k2sp-guided-journey');
+    journey.tabs.classList.add('k2sp-journey-stepper');
+    journey.tabBox.setAttribute('data-k2sp-highest-visited', '0');
+
+    var title = controlText('lblJourneyTitle1') ||
+      String(document.title || '').replace(/^[A-Z0-9]{2,4}\./, '').trim();
+    var description = controlText('dlbJourneyDescription1') ||
+      controlText('dlbJourneyStepDescription1');
+    var intro = document.querySelector('#k2sp-shell .k2sp-page-intro');
+    var eyebrow = intro && intro.querySelector('.k2sp-eyebrow');
+    var heading = intro && intro.querySelector('h1');
+    var subtitle = intro && intro.querySelector('p');
+    if (eyebrow) eyebrow.textContent = wasDeclaredInitiation && page.eyebrow ?
+      page.eyebrow : 'Guided intake';
+    if (heading && title) heading.textContent = title;
+    if (subtitle && description) subtitle.textContent = description;
+
+    journey.progress.forEach(function (progress, index) {
+      var progressCell = progress.closest('.editor-cell');
+      var table = progress.closest('[name^="tblJourneyProgress"]');
+      var headingControl = document.querySelector(
+        '[name="lblJourneyStepHeading' + (index + 1) + '"]'
+      );
+      var descriptionControl = document.querySelector(
+        '[name="dlbJourneyStepDescription' + (index + 1) + '"]'
+      );
+      var journeyTitleControl = document.querySelector(
+        '[name="lblJourneyTitle' + (index + 1) + '"]'
+      );
+      var journeyDescriptionControl = document.querySelector(
+        '[name="dlbJourneyDescription' + (index + 1) + '"]'
+      );
+      if (table) table.classList.add('k2sp-journey-screen-copy');
+      if (progressCell) progressCell.classList.add('k2sp-native-progress-source');
+      if (journeyTitleControl && journeyTitleControl.closest('.editor-cell')) {
+        journeyTitleControl.closest('.editor-cell').classList.add('k2sp-journey-shell-copy');
+      }
+      if (journeyDescriptionControl && journeyDescriptionControl.closest('.editor-cell')) {
+        journeyDescriptionControl.closest('.editor-cell').classList.add('k2sp-journey-shell-copy');
+      }
+      if (headingControl && headingControl.closest('.editor-cell')) {
+        headingControl.closest('.editor-cell').classList.add('k2sp-journey-screen-title');
+      }
+      if (descriptionControl && descriptionControl.closest('.editor-cell')) {
+        descriptionControl.closest('.editor-cell').classList.add('k2sp-journey-screen-description');
+      }
+      var panel = progress.closest('.formpanel');
+      var primaryView = null;
+      if (panel) {
+        var panelViews = Array.prototype.slice.call(panel.querySelectorAll('.view'));
+        primaryView = panelViews.find(function (view) {
+          return panelTitle(view).toLowerCase() !==
+            String(config.navigationViewTitle || 'Application navigation').toLowerCase();
+        }) || null;
+      }
+      if (primaryView) primaryView.classList.add('k2sp-journey-primary-view');
+    });
+
+    journey.anchors.forEach(function (anchor, index) {
+      var labelText = String(anchor.innerText || anchor.textContent || '')
+        .replace(/\s+/g, ' ').trim();
+      anchor.setAttribute('data-k2sp-step-number', String(index + 1));
+      anchor.setAttribute(
+        'data-k2sp-step-summary',
+        controlText('dlbJourneyStepDescription' + (index + 1))
+      );
+      anchor.textContent = '';
+      anchor.appendChild(create('span', 'k2sp-step-number', String(index + 1)));
+      var stepCopy = create('span', 'k2sp-step-copy');
+      stepCopy.appendChild(create('b', 'k2sp-step-label', labelText));
+      stepCopy.appendChild(create(
+        'small',
+        'k2sp-step-summary',
+        controlText('dlbJourneyStepDescription' + (index + 1))
+      ));
+      anchor.appendChild(stepCopy);
+      anchor.addEventListener('click', function (event) {
+        if (anchor.getAttribute('data-k2sp-step-locked') !== 'true') return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }, true);
+    });
+
+    var guidance = create('aside', 'k2sp-journey-guidance');
+    guidance.setAttribute('aria-label', 'Screen guidance');
+    guidance.appendChild(create('h2', '', 'Why we ask this'));
+    guidance.appendChild(create('p', 'k2sp-journey-guidance-body', ''));
+    var guidanceList = create('ul', '');
+    [
+      'Use clear, observable facts.',
+      'Add reference identifiers where known.',
+      'Save the draft before leaving the journey.'
+    ].forEach(function (item) {
+      guidanceList.appendChild(create('li', '', item));
+    });
+    guidance.appendChild(guidanceList);
+    journey.tabBox.appendChild(guidance);
+
+    var observer = new MutationObserver(function () {
+      updateJourneySelection(journey);
+    });
+    journey.anchors.forEach(function (anchor) {
+      observer.observe(anchor, { attributes: true, attributeFilter: ['class', 'style'] });
+    });
+    updateJourneySelection(journey);
+    mark('k2sp:guided-journey-ready');
+    return true;
+  }
+
   function readNavigationCache() {
     try {
       var version = sessionStorage.getItem(CACHE_VERSION_KEY);
@@ -236,6 +424,12 @@
     topbar.setAttribute('data-k2sp-shell-region', 'topbar');
     var paletteHost = create('div', 'k2sp-command-palette-host');
     paletteHost.setAttribute('data-k2sp-shell-region', 'command-palette');
+    var fallbackSearch = create('div', 'k2sp-search k2sp-search-fallback');
+    fallbackSearch.setAttribute('aria-label', 'Search is available from the command centre');
+    fallbackSearch.appendChild(create('span', '', '⌕'));
+    fallbackSearch.appendChild(create('span', '', 'Search or jump to…'));
+    fallbackSearch.appendChild(create('kbd', '', 'Ctrl K'));
+    paletteHost.appendChild(fallbackSearch);
     var actions = create('div', 'k2sp-top-actions');
     var notifications = create('button', 'k2sp-icon-button k2sp-notifications', '◇');
     notifications.type = 'button';
@@ -527,6 +721,13 @@
     if (!form) return;
     form.classList.add('k2sp-application-content');
     suppressConfiguredFrameworkViews();
+
+    if (enhanceGuidedJourney(page)) {
+      form.classList.add('k2sp-initiation-workspace');
+      alignNarrowNativeForm(form);
+      return;
+    }
+
     alignNarrowNativeForm(form);
 
     if (page.key === 'command') {
@@ -589,14 +790,14 @@
       document.body.style.setProperty('--k2sp-narrow-form-shift', '0px');
       return;
     }
-    var insight = document.querySelector('#k2sp-shell .k2sp-insight');
-    if (!insight) return;
-    var minimumTop = insight.getBoundingClientRect().bottom + 16;
-    var formTop = form.getBoundingClientRect().top;
-    var current = parseFloat(
-      document.body.style.getPropertyValue('--k2sp-narrow-form-shift')
-    ) || 0;
-    var adjusted = Math.max(0, current + Math.ceil(minimumTop - formTop));
+    var boundary = document.body.classList.contains('k2sp-page-initiation')
+      ? document.querySelector('#k2sp-shell .k2sp-page-intro')
+      : document.querySelector('#k2sp-shell .k2sp-insight');
+    if (!boundary) return;
+    var minimumTop = boundary.getBoundingClientRect().bottom + 16;
+    var runtime = document.querySelector('.runtime-form') || form;
+    var formTop = runtime.getBoundingClientRect().top;
+    var adjusted = Math.max(0, Math.ceil(minimumTop - formTop));
     document.body.style.setProperty('--k2sp-narrow-form-shift', adjusted + 'px');
   }
 
@@ -609,6 +810,7 @@
     var row = view && (view.closest('.row') || view);
     if (!row) return false;
     row.classList.add('k2sp-command-palette-row');
+    host.classList.add('k2sp-command-palette-native');
     return true;
   }
 
@@ -762,6 +964,10 @@
 
     function ready() {
       classifyNativeContent(page);
+      if (page.key === 'initiation') {
+        return !!document.querySelector('.k2sp-guided-journey') &&
+          !!document.querySelector('.k2sp-journey-guidance');
+      }
       if (page.key === 'command') {
         if (config.enableDashboardComposition === false) {
           return !!document.querySelector('[name="dlbOpenCaseCount"]');

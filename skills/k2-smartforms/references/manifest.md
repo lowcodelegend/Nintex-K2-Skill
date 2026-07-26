@@ -435,6 +435,7 @@ Add `guidedJourney` when the tabs are deliberate screens in one initiation task:
     {
       "code": "DETAILS",
       "label": "Case details",
+      "title": "What happened?",
       "description": "Describe what happened and provide the relevant context.",
       "tab": "Case Details",
       "advance": "continue"
@@ -457,9 +458,9 @@ Add `guidedJourney` when the tabs are deliberate screens in one initiation task:
 }
 ```
 
-A guided journey has 3–7 steps, maps every Form tab exactly once in the same order, and cannot contain a Worklist. Codes, tabs, and labels are unique; descriptions are mandatory. Every step before the final two uses `advance: "continue"`, the penultimate step uses `save`, and the final step uses `submit` for workflow mode or `complete` for workflow-free mode. The Save step must contain the final declared master-detail child so the generated `btnSave` is physically on that screen.
+A guided journey has 3–7 steps, maps every Form tab exactly once in the same order, and cannot contain a Worklist. Codes, tabs, and labels are unique; descriptions are mandatory. Optional `title` separates the content-card question/action heading from the shorter stepper `label`; when omitted the plain fallback retains `Step N of M: <label>`. Every step before the final two uses `advance: "continue"`, the penultimate step uses `save`, and the final step uses `submit` for workflow mode or `complete` for workflow-free mode. The Save step must contain the final declared master-detail child so the generated `btnSave` is physically on that screen.
 
-The CLI adds one enabled/read-only native `Progress` control plus the screen description to every tab. A generated Back button performs only a native Form `Focus` action. A generated Continue button first runs `ValidationGroupForEvent` when it exists, with invisible, disabled, and read-only controls ignored, then focuses the next tab. Save and the selected final action retain their owned rules rather than receiving duplicate Continue actions. Verification checks the progress item contract, exact button placement, K2 system/user event hydration, validation-before-focus ordering, Save placement, and final-action placement.
+The CLI adds the journey title/description, one enabled/read-only native `Progress` control, the screen title, and the screen description to every tab. This keeps the Form understandable if a selected Style Profile fails open. A generated Back button performs only a native Form `Focus` action. A generated Continue button first runs `ValidationGroupForEvent` when it exists, with invisible, disabled, and read-only controls ignored, then focuses the next tab. Save and the selected final action retain their owned rules rather than receiving duplicate Continue actions. Verification checks the title/description and progress contracts, exact button placement, K2 system/user event hydration, validation-before-focus ordering, Save placement, and final-action placement.
 
 For a workflow-free iteration, replace the final step's tab/description as appropriate, set its advance to `complete`, omit `workflowStartButton`, and add:
 

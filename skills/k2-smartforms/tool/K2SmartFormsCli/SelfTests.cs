@@ -956,7 +956,8 @@ namespace K2SmartFormsCli
             };
             form.GuidedJourney.Steps.Add(new GuidedJourneyStepDefinition
             {
-                Code = "INCIDENT", Label = "What happened?", Description = "Describe the concern in your own words.",
+                Code = "INCIDENT", Label = "Describe", Title = "What happened?",
+                Description = "Describe the concern in your own words.",
                 Tab = "What happened", Advance = "continue"
             });
             form.GuidedJourney.Steps.Add(new GuidedJourneyStepDefinition
@@ -989,6 +990,17 @@ namespace K2SmartFormsCli
             var document = XDocument.Parse(transformed);
             Assert(document.Descendants("Control").Count(x => (string)x.Attribute("Type") == "Progress") == 3,
                 "guided journey emits one native Progress control per screen");
+            Assert(document.Descendants("Control").Count(x =>
+                    ((string)x.Element("Name") ?? string.Empty).StartsWith("lblJourneyTitle", StringComparison.Ordinal)) == 3 &&
+                document.Descendants("Control").Count(x =>
+                    ((string)x.Element("Name") ?? string.Empty).StartsWith("dlbJourneyDescription", StringComparison.Ordinal)) == 3,
+                "guided journey emits its native title and description on every screen");
+            var firstScreenHeading = document.Descendants("Control").Single(x =>
+                (string)x.Element("Name") == "lblJourneyStepHeading1");
+            Assert(firstScreenHeading.Descendants("Property").Any(x =>
+                    (string)x.Element("Name") == "Text" &&
+                    (string)x.Element("Value") == "What happened?"),
+                "guided journey separates the short step label from the content-card title");
             var continueRule = document.Descendants("Event").Single(x => (string)x.Attribute("Type") == "User" &&
                 (string)x.Attribute("SourceName") == "btnJourneyContinue1");
             var actions = continueRule.Descendants("Action").ToList();

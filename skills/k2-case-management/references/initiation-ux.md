@@ -37,7 +37,7 @@ Use this order where it fits the case:
 4. evidence and supporting records;
 5. read-only review and the selected final action.
 
-Use short user-language labels, not entity names. Give every screen a one-sentence description that says what completion achieves. The final screen is a read-only summary with one primary action. Save Draft remains distinct from that action.
+Use a short user-language `label` for the stepper and a question/action-oriented `title` for the content card, such as `Describe` / `What happened?`. Give every screen a one-sentence `description` that says what completion achieves. The final screen is a read-only summary with one primary action. Save Draft remains distinct from that action.
 
 Choose the final action explicitly with `initiation.finalActionMode`:
 
@@ -59,7 +59,8 @@ Use `initiation.stepTabs` when the solution has enough View boundaries for a del
   {
     "id": "incident",
     "name": "What happened?",
-    "label": "What happened?",
+    "label": "Describe",
+    "title": "What happened?",
     "description": "Describe the event and when it was discovered.",
     "views": ["$master"]
   },
@@ -67,6 +68,7 @@ Use `initiation.stepTabs` when the solution has enough View boundaries for a del
     "id": "evidence",
     "name": "Evidence",
     "label": "Evidence",
+    "title": "Add supporting evidence",
     "description": "Add records that help the case team understand the concern.",
     "views": ["ABC.Case Context", "ABC.Evidence"]
   },
@@ -74,6 +76,7 @@ Use `initiation.stepTabs` when the solution has enough View boundaries for a del
     "id": "review",
     "name": "Review & Submit",
     "label": "Review",
+    "title": "Review and submit",
     "description": "Check the complete case before submitting it.",
     "views": ["$review"]
   }
@@ -86,13 +89,13 @@ When `stepTabs` is omitted, the compiler preserves the portable Details → Evid
 
 ## Interaction contract
 
-- Show one native read-only Progress control on every screen.
+- Show the journey title/description and one native read-only Progress control on every screen so the plain modern K2 fallback remains understandable.
 - Continue validates the current visible screen before focusing the next screen. It does not persist.
 - Back changes screen without validation, mutation, or data loss.
 - The penultimate Save action validates, creates or updates the aggregate, transfers the returned key, saves children, reads the review projection, reveals Review, and focuses it.
 - In `workflow` mode, final Submit is the workflow start seam. It never shares the Save Draft rule.
 - In `complete` mode, final Finish only confirms the persisted draft is complete for this iteration and explicitly says it has not been submitted.
 - Preserve values when moving Back and Continue. Resume a saved draft from the normal case list/workspace.
-- Use the Northstar Style Profile to refine spacing and stepper appearance where selected, but keep rule behavior and persistence native and Designer-editable.
+- When a Northstar Style Profile is selected, include the governed `Application navigation` List View on the first screen. The reusable profile hides that native source after loading it, preserves the application shell on a cold direct link, converts the original K2 tab strip into the desktop/mobile stepper, merges the active native screen into one content card, and adds contextual guidance. It must not clone tabs or Views. Upcoming tabs remain non-clickable until a native Continue/Save/Focus path reaches them, so the tab strip cannot bypass current-screen validation. Rule behavior and persistence remain native and Designer-editable.
 
 Browser-test populated, validation-error, long-content, empty-collection, Back/Continue, Save, Review, second intentional Save, and the selected final-action path at every declared viewport. Confirm a failed Continue stays on the current screen and focuses or marks the offending control. Confirm Save invokes Create or Update exactly once. In `complete` mode, confirm Finish never starts a workflow or claims submission; in `workflow` mode, confirm Submit starts the parent workflow exactly once.

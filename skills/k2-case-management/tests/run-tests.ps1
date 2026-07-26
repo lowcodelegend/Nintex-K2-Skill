@@ -51,6 +51,11 @@ if ($northstarShell -notmatch 'alignNarrowNativeForm' -or $northstarShell -notma
 if ($northstarShell -notmatch 'layoutKpiCells' -or $northstarShell -notmatch 'grid-row' -or $northstarShell -notmatch 'grid-column') {
     throw 'Northstar presentation must coordinate the existing K2 KPI cells at responsive breakpoints without reparenting controls.'
 }
+if ($northstarShell -notmatch 'enhanceGuidedJourney' -or
+    $northstarShell -notmatch 'data-k2sp-step-locked' -or
+    $northstarCss -notmatch '\.k2sp-guided-journey') {
+    throw 'Northstar presentation must enhance the original K2 guided-journey tab strip in place and prevent forward tab-click validation bypass.'
+}
 & (Get-Command node -ErrorAction Stop).Source --check (Join-Path $styleExample 'northstar-shell.js')
 if ($LASTEXITCODE -ne 0) { throw 'Northstar runtime shell JavaScript did not parse.' }
 & (Get-Command node -ErrorAction Stop).Source --check (Join-Path $PSScriptRoot '..\scripts\capture-browser-page-cdp.mjs')
@@ -160,18 +165,24 @@ if (Test-Path -LiteralPath $exampleUx) {
     if (@($form.tabs.name) -join '|' -ne 'Case Details|Evidence|Review & Submit') { throw 'Initiation compiler emitted the wrong journey steps.' }
     if ($form.guidedJourney.title -ne 'Report a Supplier Nonconformance' -or
         (@($form.guidedJourney.steps.advance) -join '|') -ne 'continue|save|submit' -or
-        (@($form.guidedJourney.steps.label) -join '|') -ne 'Case details|Evidence|Review') {
+        (@($form.guidedJourney.steps.label) -join '|') -ne 'Describe|Evidence|Review') {
         throw 'Initiation compiler did not emit the intelligent native guided-journey contract.'
     }
     if ($form.guidedJourney.steps[0].description -notmatch 'supplier' -or
+        $form.guidedJourney.steps[0].title -ne 'What happened?' -or
         $form.guidedJourney.steps[1].tab -ne 'Evidence' -or
         $form.guidedJourney.steps[2].tab -ne $form.workflowStartButton.tab) {
         throw 'Initiation compiler did not preserve the task-oriented physical screen mapping.'
     }
     if ($form.masterDetail.review.view -ne 'SNC.New Case Review' -or $form.masterDetail.review.tab -ne 'Review & Submit') { throw 'Initiation compiler did not emit saved-key review navigation.' }
-    if ($form.masterDetail.masterView -ne 'SNC.New Case Details' -or $form.tabs[0].views[0] -ne 'SNC.New Case Details') { throw 'Initiation compiler did not use the dedicated reporter-facing entry View.' }
+    if ($form.masterDetail.masterView -ne 'SNC.New Case Details' -or
+        $form.tabs[0].views[0] -ne 'SNC.Application Navigation' -or
+        $form.tabs[0].views[1] -ne 'SNC.New Case Details') {
+        throw 'Initiation compiler did not compose the governed Northstar navigation source before the dedicated reporter-facing entry View.'
+    }
     $entry = @($manifest.application.views | Where-Object { $_.name -eq 'SNC.New Case Details' })[0]
     if ($null -eq $entry -or @($entry.hiddenProperties) -notcontains 'CaseId' -or @($entry.hiddenProperties) -contains 'Title') { throw 'Initiation compiler did not retain hidden method-bound fields while exposing mapped entry fields.' }
+    if (@($entry.options) -contains 'labels-left' -or $entry.layoutColumns -ne 2) { throw 'Initiation compiler did not normalize the entry View to the Northstar label-above field-card layout.' }
     if ($entry.propertyLabels.PriorityCode -ne 'Priority' -or $entry.propertyLabels.ConfidentialityCode -ne 'Confidentiality') { throw 'Initiation compiler did not emit reporter-facing property labels.' }
     if ($form.workflowStartButton.name -ne 'btnSubmitCase' -or $form.workflowStartButton.tab -ne 'Review & Submit') { throw 'Initiation compiler did not emit the dedicated final submit seam.' }
     if (@($form.masterDetail.details).Count -ne 2) { throw 'Initiation compiler did not preserve both mapped child collections.' }

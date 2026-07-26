@@ -4,9 +4,9 @@
   "designerUrl": "https://spk2.trials.demome.tech/Designer/",
   "trustedAuthHost": "spk2.trials.demome.tech",
   "assetUrls": {
-    "criticalCss": "https://spk2.trials.demome.tech/NorthstarAssets/northstar-critical.v11.css",
-    "applicationCss": "https://spk2.trials.demome.tech/NorthstarAssets/northstar-homepage.v11.css",
-    "bootJavaScript": "https://spk2.trials.demome.tech/NorthstarAssets/northstar-shell.v11.js"
+    "criticalCss": "https://spk2.trials.demome.tech/NorthstarAssets/northstar-critical.v12.css",
+    "applicationCss": "https://spk2.trials.demome.tech/NorthstarAssets/northstar-homepage.v12.css",
+    "bootJavaScript": "https://spk2.trials.demome.tech/NorthstarAssets/northstar-shell.v12.js"
   },
   "startForm": {
     "name": "APP.Quality Operations",

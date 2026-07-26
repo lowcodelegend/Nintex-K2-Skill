@@ -51,13 +51,30 @@ foreach($formName in $FormNames){
             throw "Northstar Runtime composition was not ready at $formName/$($viewport.name) (shellCount=$($result.layout.shellCount), stylesReady=$($result.layout.northstarReady), contentReady=$($result.layout.contentReady), documentReadyState=$($result.layout.readyState))."
         }
         if([int]$viewport.width-le 800){
-            $introEnd=@($result.layout.regions|Where-Object selector -eq '.k2sp-insight')[0]
+            $isGuided=@($result.layout.guidedJourney.controls).Count -gt 0
+            $introEnd=if($isGuided){
+                @($result.layout.regions|Where-Object selector -eq '.k2sp-page-intro')[0]
+            }else{
+                @($result.layout.regions|Where-Object selector -eq '.k2sp-insight')[0]
+            }
             $nativeStart=@($result.layout.regions|Where-Object selector -eq '.k2sp-application-content')[0]
             if($null-eq$introEnd-or$null-eq$nativeStart-or[double]$nativeStart.top-lt[double]$introEnd.bottom){
                 throw "Northstar native content overlaps the responsive shell at $formName/$($viewport.name)."
             }
         }
-        if([int]$viewport.width-le 480){
+        $guidedControls=@($result.layout.guidedJourney.controls)
+        if($guidedControls.Count-gt 0){
+            $tabs=@($result.layout.guidedJourney.tabAnchors)
+            if($result.layout.bodyClass-notmatch 'k2sp-page-initiation' -or
+                $null-eq$result.layout.guidedJourney.directAdvanceProbe -or
+                -not[bool]$result.layout.guidedJourney.directAdvanceProbe.blocked -or
+                $tabs.Count-lt 3 -or
+                [string]$tabs[0].stepState-ne'current' -or
+                @($tabs|Select-Object -Skip 1|Where-Object stepLocked -ne 'true').Count-gt 0){
+                throw "Northstar guided-journey ownership/forward-navigation gate failed at $formName/$($viewport.name)."
+            }
+        }
+        if([int]$viewport.width -le 480 -and @($result.layout.kpiCells).Count -gt 0){
             $rows=@($result.layout.kpiCells|ForEach-Object{[int]$_.gridRow}|Sort-Object)
             if($rows.Count-ne 8-or($rows-join ',')-ne '1,2,3,4,5,6,7,8'){
                 throw "Northstar KPI label/value cells are not paired into deterministic mobile rows at $formName/$($viewport.name)."
@@ -65,7 +82,7 @@ foreach($formName in $FormNames){
         }
         $unexpected=@($result.diagnostics|Where-Object{$_.text -notmatch "^TypeError: Cannot read properties of null \(reading '0'\)"})
         if($unexpected.Count-gt 0){throw "Unexpected browser diagnostic at $formName/$($viewport.name): $($unexpected[0].text)"}
-        $results.Add([ordered]@{form=$formName;viewport=$viewport.name;width=$viewport.width;height=$viewport.height;image=[IO.Path]::GetFileName($image);url=$result.layout.url;title=$result.layout.title;textLength=$result.layout.textLength;shellCount=$result.layout.shellCount;northstarReady=$result.layout.northstarReady;contentReady=$result.layout.contentReady;horizontalOverflow=$false;knownK2Diagnostics=@($result.diagnostics|ForEach-Object{$_.text})})
+        $results.Add([ordered]@{form=$formName;viewport=$viewport.name;width=$viewport.width;height=$viewport.height;image=[IO.Path]::GetFileName($image);url=$result.layout.url;title=$result.layout.title;textLength=$result.layout.textLength;shellCount=$result.layout.shellCount;northstarReady=$result.layout.northstarReady;contentReady=$result.layout.contentReady;guidedJourney=($guidedControls.Count-gt 0);forwardTabBypassBlocked=$(if($guidedControls.Count-gt 0){[bool]$result.layout.guidedJourney.directAdvanceProbe.blocked}else{$null});horizontalOverflow=$false;knownK2Diagnostics=@($result.diagnostics|ForEach-Object{$_.text})})
         Write-Output "Captured native Runtime UX: $formName / $($viewport.name)"
     }
 }
