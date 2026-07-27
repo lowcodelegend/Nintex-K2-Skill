@@ -58,6 +58,7 @@ CANONICAL_CREATION_FIELDS = {
 }
 CODE_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]{1,63}$")
 ENTITY_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_]{1,63}$")
+GUIDANCE_LIST_FIELDS = ("useWhen", "doNotUseWhen")
 
 
 class CaseAgentFrameworkError(Exception):
@@ -268,6 +269,10 @@ class CaseAgentFramework:
                     {
                         "caseTypeCode": case_type_code,
                         "name": contract["name"],
+                        "description": contract["description"],
+                        "useWhen": copy.deepcopy(contract["useWhen"]),
+                        "doNotUseWhen": copy.deepcopy(contract["doNotUseWhen"]),
+                        "expectedOutcome": contract["expectedOutcome"],
                         "contractVersion": contract["contractVersion"],
                     }
                 )
@@ -541,13 +546,14 @@ def load_document(path: Path) -> Dict[str, Any]:
 
 def validate_creation_contract(contract: Mapping[str, Any]) -> List[str]:
     errors: List[str] = []
-    if contract.get("schemaVersion") != 1:
-        errors.append("schemaVersion must be 1")
+    if contract.get("schemaVersion") != 2:
+        errors.append("schemaVersion must be 2")
     case_type_code = contract.get("caseTypeCode")
     if not isinstance(case_type_code, str) or not CODE_PATTERN.fullmatch(case_type_code):
         errors.append("caseTypeCode must be an uppercase stable code")
     if not isinstance(contract.get("name"), str) or not str(contract.get("name")).strip():
         errors.append("name is required")
+    _validate_case_type_guidance(contract, errors)
     version = contract.get("contractVersion")
     if not isinstance(version, int) or isinstance(version, bool) or version < 1:
         errors.append("contractVersion must be a positive integer")
@@ -697,6 +703,57 @@ def validate_creation_contract(contract: Mapping[str, Any]) -> List[str]:
         if not submission.get("readinessRule"):
             errors.append("submission.readinessRule is required when submission is enabled")
     return errors
+
+
+def _validate_case_type_guidance(
+    contract: Mapping[str, Any], errors: List[str]
+) -> None:
+    description = contract.get("description")
+    if (
+        not isinstance(description, str)
+        or len(description.strip()) < 40
+        or len(description.strip()) > 1200
+    ):
+        errors.append("description must be plain text between 40 and 1200 characters")
+
+    expected_outcome = contract.get("expectedOutcome")
+    if (
+        not isinstance(expected_outcome, str)
+        or len(expected_outcome.strip()) < 20
+        or len(expected_outcome.strip()) > 600
+    ):
+        errors.append(
+            "expectedOutcome must be plain text between 20 and 600 characters"
+        )
+
+    normalized_lists: Dict[str, set[str]] = {}
+    for field_name in GUIDANCE_LIST_FIELDS:
+        values = contract.get(field_name)
+        if (
+            not isinstance(values, list)
+            or not 1 <= len(values) <= 10
+            or any(
+                not isinstance(value, str)
+                or len(value.strip()) < 10
+                or len(value.strip()) > 300
+                for value in values
+            )
+        ):
+            errors.append(
+                f"{field_name} must contain 1-10 plain-text criteria, "
+                "each between 10 and 300 characters"
+            )
+            continue
+        normalized = {value.strip().casefold() for value in values}
+        if len(normalized) != len(values):
+            errors.append(f"{field_name} must not contain duplicate criteria")
+        normalized_lists[field_name] = normalized
+
+    overlap = normalized_lists.get("useWhen", set()) & normalized_lists.get(
+        "doNotUseWhen", set()
+    )
+    if overlap:
+        errors.append("useWhen and doNotUseWhen must not contain the same criterion")
 
 
 def _validate_field_contract(
@@ -1348,9 +1405,22 @@ def _print_issues(issues: Sequence[ValidationIssue]) -> None:
 
 def _selftest() -> int:
     contract = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "caseTypeCode": "SELFTEST",
         "name": "Self-test case",
+        "description": (
+            "Use this governed self-test case to verify that the reusable intake "
+            "contract accepts a clearly defined case purpose."
+        ),
+        "useWhen": [
+            "Use it when validating the transport-neutral case-agent framework."
+        ],
+        "doNotUseWhen": [
+            "Do not use it to represent a production business case or live record."
+        ],
+        "expectedOutcome": (
+            "The framework validates and creates a controlled synthetic case snapshot."
+        ),
         "contractVersion": 1,
         "creationMode": "deferredMaterialization",
         "creationAdapter": "SELFTEST.Create",

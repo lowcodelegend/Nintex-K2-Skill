@@ -2,6 +2,9 @@
 
 This cross-sector pattern reviews an exception to a policy, control, specification, or expected outcome. Adapt it; do not deploy it blindly.
 
+- Use it when facts are incomplete or disputed, evidence needs structured review, and an accountable decision with a defensible closure record is required.
+- Do not use it for routine service fulfilment, a confirmed supplier-quality nonconformance/CAPA, or an emergency that belongs in dedicated incident response.
+- Expected outcome: validate and investigate the exception, record an accountable decision and rationale, complete resulting actions, and close it with a traceable record.
 - Case type `EXCEPTION_REVIEW`, initial Capture, versioned configuration, quality-record retention, and optional governed summarisation.
 - Stages: Capture → Validate → Classify → Assign → Investigate → Decide → Resolve → Close. More-information returns create new Capture/Investigate iterations; correction and reopen paths are explicitly marked re-entry.
 - Evidence: originating record, governing requirement, impact assessment, supporting documents, investigation notes, and decision record. Files remain in the approved repository.

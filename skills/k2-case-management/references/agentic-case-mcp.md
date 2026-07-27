@@ -55,11 +55,13 @@ For the explicitly gated unauthenticated development mode, use its HTTP `/mcp` U
 
 Use the MCP Tools component as the Agent component's toolset. Keep tool caching disabled during contract iteration. Langflow 1.7 or later supports Streamable HTTP; do not configure the retired standalone SSE transport for this server.
 
+Instruct the agent to call `list_permitted_case_types` before selecting a case type and to use `description`, `useWhen`, `doNotUseWhen`, and `expectedOutcome` when explaining or routing the request. It must not choose from `name` alone. Call `get_case_creation_contract` only after the case type is selected to collect its governed fields.
+
 ## Tools and scopes
 
 `case:create` permits:
 
-- `list_permitted_case_types`
+- `list_permitted_case_types` — returns code, name, immutable contract version, description, positive and negative routing criteria, and expected outcome.
 - `get_case_creation_contract`
 - `start_case_intake`
 - `update_case_intake`

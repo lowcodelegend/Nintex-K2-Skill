@@ -56,7 +56,7 @@ from case_agent_framework import (
 )
 
 
-SERVER_VERSION = "0.3.0"
+SERVER_VERSION = "0.4.0"
 TOKEN_ENVIRONMENT_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]{2,127}$")
 SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
 CASE_NUMBER_PREFIX_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9_-]{0,19}$")
@@ -741,9 +741,12 @@ def create_application(
     mcp = FastMCP(
         name=str(server_config["name"]),
         instructions=(
-            "Governed K2 case creation. Discover a versioned contract, collect and validate "
-            "a principal-owned draft, preview it, and require explicit confirmation before "
-            "creation. Creation never submits a case. "
+            "Governed K2 case creation. Use each case type's description, useWhen, "
+            "doNotUseWhen, and expectedOutcome guidance to explain and select the correct "
+            "case type before starting intake; do not infer suitability from its name alone. "
+            "Discover a versioned contract, collect and validate a principal-owned draft, "
+            "preview it, and require explicit confirmation before creation. Creation never "
+            "submits a case. "
             + (
                 "This development server persists confirmed cases to a local alpha store in "
                 "CAPTURE; it does not invoke K2 SmartObjects or workflows."
@@ -841,7 +844,7 @@ def _register_tools(mcp: FastMCP, runtime: ServerRuntime) -> None:
         structured_output=True,
     )
     def list_permitted_case_types() -> Dict[str, Any]:
-        """List case types the current caller may start."""
+        """List permitted case types with purpose, routing criteria, and expected outcome."""
         identity = _require_identity("case:create")
         return _invoke(
             "list_permitted_case_types",

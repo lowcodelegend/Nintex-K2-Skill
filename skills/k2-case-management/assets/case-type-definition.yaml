@@ -3,6 +3,18 @@
   "case_type": {
     "code": "EVIDENCE_EXCEPTION",
     "name": "Evidence-Driven Exception Review",
+    "description": "Use this case type to investigate a reported exception from an expected process, policy, control, or outcome when evidence must be gathered and a governed decision recorded.",
+    "use_when": [
+      "A process, policy, control, or expected outcome may have been breached or bypassed.",
+      "The facts are incomplete or disputed and supporting evidence needs structured review.",
+      "A traceable decision, accountable owner, and defensible closure record are required."
+    ],
+    "do_not_use_when": [
+      "The request is routine service fulfilment with no exception, investigation, or adjudication.",
+      "A confirmed quality defect should instead follow the organisation's nonconformance or CAPA case type.",
+      "An immediate safety, security, or operational emergency requires the dedicated incident response route."
+    ],
+    "expected_outcome": "The exception is validated, investigated against the available evidence, decided by an accountable person, and closed with the rationale and resulting actions recorded.",
     "initial_stage": "CAPTURE",
     "retention_code": "QUALITY_RECORD",
     "configuration_version": "1",
@@ -26,7 +38,7 @@
   "agentic_creation": {
     "enabled": true,
     "contract": "case-agent-creation-contract.yaml",
-    "contract_version": 1,
+    "contract_version": 2,
     "creation_mode": "deferredMaterialization"
   },
   "extensions": {"entities": [], "notes": "Add solution-specific data; retain the canonical model in case-model.yaml."}

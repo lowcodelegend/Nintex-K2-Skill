@@ -294,6 +294,15 @@ class CaseAgentMcpServerTests(unittest.TestCase):
                     "EVIDENCE_EXCEPTION",
                     permitted["caseTypes"][0]["caseTypeCode"],
                 )
+                self.assertEqual(2, permitted["caseTypes"][0]["contractVersion"])
+                self.assertGreaterEqual(
+                    len(permitted["caseTypes"][0]["description"]), 40
+                )
+                self.assertTrue(permitted["caseTypes"][0]["useWhen"])
+                self.assertTrue(permitted["caseTypes"][0]["doNotUseWhen"])
+                self.assertGreaterEqual(
+                    len(permitted["caseTypes"][0]["expectedOutcome"]), 20
+                )
                 draft = result_value(
                     await session.call_tool(
                         "start_case_intake",
@@ -469,6 +478,14 @@ class CaseAgentMcpServerTests(unittest.TestCase):
                     "EVIDENCE_EXCEPTION",
                     permitted["caseTypes"][0]["caseTypeCode"],
                 )
+                self.assertEqual(2, permitted["caseTypes"][0]["contractVersion"])
+                self.assertIn(
+                    "reported exception from an expected process",
+                    permitted["caseTypes"][0]["description"],
+                )
+                self.assertTrue(permitted["caseTypes"][0]["useWhen"])
+                self.assertTrue(permitted["caseTypes"][0]["doNotUseWhen"])
+                self.assertTrue(permitted["caseTypes"][0]["expectedOutcome"])
                 contract = result_value(
                     await session_a.call_tool(
                         "get_case_creation_contract",
@@ -477,6 +494,10 @@ class CaseAgentMcpServerTests(unittest.TestCase):
                 )
                 self.assertNotIn("creationAdapter", contract)
                 self.assertNotIn("writeTarget", contract["extensionEntities"][0])
+                self.assertEqual(
+                    permitted["caseTypes"][0]["description"],
+                    contract["description"],
+                )
 
                 draft = result_value(
                     await session_a.call_tool(

@@ -44,6 +44,21 @@ class CaseModelValidatorTests(unittest.TestCase):
         self.assertTrue(any("positive integer" in error for error in errors))
         self.assertTrue(any("must be deferredMaterialization" in error for error in errors))
 
+    def test_rejects_missing_or_ambiguous_human_guidance(self):
+        value = copy.deepcopy(self.valid)
+        value["case_type"]["description"] = ""
+        value["case_type"]["use_when"] = []
+        value["case_type"]["do_not_use_when"] = [
+            "This routing criterion is duplicated.",
+            "This routing criterion is duplicated.",
+        ]
+        value["case_type"]["expected_outcome"] = "Too short"
+        errors = validate(value)
+        self.assertTrue(any("description must be plain text" in error for error in errors))
+        self.assertTrue(any("use_when must contain" in error for error in errors))
+        self.assertTrue(any("do_not_use_when must not contain duplicate" in error for error in errors))
+        self.assertTrue(any("expected_outcome must be plain text" in error for error in errors))
+
 
 if __name__ == "__main__":
     unittest.main()

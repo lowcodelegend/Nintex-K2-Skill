@@ -3,6 +3,16 @@
   "case_type": {
     "code": "SUPPLIER_NONCONFORMANCE",
     "name": "Supplier Nonconformance",
+    "description": "Use this case type to investigate supplied materials, components, or services that do not meet an agreed specification or quality requirement.",
+    "use_when": [
+      "A supplier deliverable has a confirmed or suspected quality nonconformance.",
+      "Containment, root-cause investigation, supplier response, and disposition must be governed."
+    ],
+    "do_not_use_when": [
+      "The issue is an internal process exception with no supplier quality involvement.",
+      "The request is routine supplier onboarding, purchasing, or commercial correspondence."
+    ],
+    "expected_outcome": "The nonconformance is contained, investigated, dispositioned, and closed with supplier accountability and corrective actions recorded.",
     "initial_stage": "CAPTURE",
     "retention_code": "QUALITY_RECORD",
     "configuration_version": "1",

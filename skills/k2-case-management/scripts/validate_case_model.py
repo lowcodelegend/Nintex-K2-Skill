@@ -43,6 +43,57 @@ def validate(document: dict[str, Any]) -> list[str]:
     for field in ("code", "name", "initial_stage", "retention_code", "configuration_version"):
         if not case_type.get(field):
             errors.append(f"case_type.{field} is required")
+    description = case_type.get("description")
+    if (
+        not isinstance(description, str)
+        or len(description.strip()) < 40
+        or len(description.strip()) > 1200
+    ):
+        errors.append(
+            "case_type.description must be plain text between 40 and 1200 characters"
+        )
+    expected_outcome = case_type.get("expected_outcome")
+    if (
+        not isinstance(expected_outcome, str)
+        or len(expected_outcome.strip()) < 20
+        or len(expected_outcome.strip()) > 600
+    ):
+        errors.append(
+            "case_type.expected_outcome must be plain text between 20 and 600 characters"
+        )
+    for field in ("use_when", "do_not_use_when"):
+        values = case_type.get(field)
+        if (
+            not isinstance(values, list)
+            or not 1 <= len(values) <= 10
+            or any(
+                not isinstance(value, str)
+                or len(value.strip()) < 10
+                or len(value.strip()) > 300
+                for value in values
+            )
+        ):
+            errors.append(
+                f"case_type.{field} must contain 1-10 plain-text criteria, "
+                "each between 10 and 300 characters"
+            )
+        elif len({value.strip().casefold() for value in values}) != len(values):
+            errors.append(f"case_type.{field} must not contain duplicate criteria")
+    use_when = case_type.get("use_when")
+    do_not_use_when = case_type.get("do_not_use_when")
+    if isinstance(use_when, list) and isinstance(do_not_use_when, list):
+        positive = {
+            value.strip().casefold() for value in use_when if isinstance(value, str)
+        }
+        negative = {
+            value.strip().casefold()
+            for value in do_not_use_when
+            if isinstance(value, str)
+        }
+        if positive & negative:
+            errors.append(
+                "case_type.use_when and case_type.do_not_use_when must not overlap"
+            )
     if not isinstance(stages, list) or not stages:
         errors.append("stages must be a non-empty list")
         stages = []

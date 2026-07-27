@@ -4,15 +4,15 @@ Use one transport-neutral framework and one future MCP adapter for all case type
 
 ## Creation contract
 
-Copy `assets/case-agent-creation-contract.yaml` for every agent-creatable case type. The versioned contract declares canonical fields, namespaced extension entities, prompts, types, constraints, governed lookups, conditional requiredness, sensitivity, evidence requirements, the single allowlisted creation adapter, and the optional submission command.
+Copy `assets/case-agent-creation-contract.yaml` for every agent-creatable case type. Schema version 2 requires `description`, `useWhen`, `doNotUseWhen`, and `expectedOutcome` in addition to canonical fields, namespaced extension entities, prompts, types, constraints, governed lookups, conditional requiredness, sensitivity, evidence requirements, the single allowlisted creation adapter, and the optional submission command. Make the guidance substantive enough for a person or agent to distinguish adjacent case types without inspecting implementation fields. Increment `contractVersion` whenever guidance changes; published versions are immutable.
 
 Keep physical SQL types and constraints authoritative in the SQL manifest. Reconcile them into the creation contract and SmartForms validation so all three surfaces agree. Put conversational meaning and collection order in the creation contract; do not infer those from column names.
 
-The public contract may expose collection metadata but must not expose `creationAdapter` or extension `writeTarget` values. The framework supplies the authenticated principal and rejects caller-supplied identities, case keys, row versions, workflow identifiers, or other server-owned fields.
+Case-type discovery returns the guidance with the code, name, and contract version. The public contract may expose guidance and collection metadata but must not expose `creationAdapter` or extension `writeTarget` values. The framework supplies the authenticated principal and rejects caller-supplied identities, case keys, row versions, workflow identifiers, or other server-owned fields.
 
 ## Stable framework flow
 
-1. List only case types the principal may create.
+1. List only case types the principal may create, including their purpose, positive and negative routing criteria, expected outcome, and immutable contract version.
 2. Resolve an immutable contract version.
 3. Start a principal-owned intake draft.
 4. Set only declared user-source fields using their complete contract paths.

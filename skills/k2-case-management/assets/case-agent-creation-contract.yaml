@@ -1,8 +1,20 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "caseTypeCode": "EVIDENCE_EXCEPTION",
   "name": "Evidence-Driven Exception Review",
-  "contractVersion": 1,
+  "description": "Use this case type to investigate a reported exception from an expected process, policy, control, or outcome when evidence must be gathered and a governed decision recorded.",
+  "useWhen": [
+    "A process, policy, control, or expected outcome may have been breached or bypassed.",
+    "The facts are incomplete or disputed and supporting evidence needs structured review.",
+    "A traceable decision, accountable owner, and defensible closure record are required."
+  ],
+  "doNotUseWhen": [
+    "The request is routine service fulfilment with no exception, investigation, or adjudication.",
+    "A confirmed quality defect should instead follow the organisation's nonconformance or CAPA case type.",
+    "An immediate safety, security, or operational emergency requires the dedicated incident response route."
+  ],
+  "expectedOutcome": "The exception is validated, investigated against the available evidence, decided by an accountable person, and closed with the rationale and resulting actions recorded.",
+  "contractVersion": 2,
   "creationMode": "deferredMaterialization",
   "creationAdapter": "CM.EvidenceException.CreateFromIntake",
   "canonicalFields": [

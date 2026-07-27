@@ -116,10 +116,22 @@ class CaseAgentFrameworkTests(unittest.TestCase):
         self.assertTrue(any("creationMode must be deferredMaterialization" in error for error in errors))
         self.assertTrue(any("references unknown field" in error for error in errors))
 
+    def test_contract_requires_substantive_case_type_guidance(self):
+        value = copy.deepcopy(self.contract)
+        value["description"] = "Too short"
+        value["useWhen"] = []
+        value["doNotUseWhen"] = ["The same routing criterion.", "The same routing criterion."]
+        value["expectedOutcome"] = ""
+        errors = validate_creation_contract(value)
+        self.assertTrue(any("description must be plain text" in error for error in errors))
+        self.assertTrue(any("useWhen must contain" in error for error in errors))
+        self.assertTrue(any("doNotUseWhen must not contain duplicate" in error for error in errors))
+        self.assertTrue(any("expectedOutcome must be plain text" in error for error in errors))
+
     def test_validation_enforces_extensions_conditions_lookups_and_unknown_fields(self):
         draft = {
             "caseTypeCode": "EVIDENCE_EXCEPTION",
-            "contractVersion": 1,
+            "contractVersion": self.contract["contractVersion"],
             "canonical": {
                 "Title": "Bad",
                 "Description": "short",
@@ -169,7 +181,7 @@ class CaseAgentFrameworkTests(unittest.TestCase):
         self.assertEqual([], validate_creation_contract(contract))
         draft = {
             "caseTypeCode": "EVIDENCE_EXCEPTION",
-            "contractVersion": 1,
+            "contractVersion": self.contract["contractVersion"],
             "canonical": {
                 "Title": "A complete exception case",
                 "Description": (
@@ -201,7 +213,7 @@ class CaseAgentFrameworkTests(unittest.TestCase):
     def test_file_handles_are_opaque_owned_and_scan_checked(self):
         draft = {
             "caseTypeCode": "EVIDENCE_EXCEPTION",
-            "contractVersion": 1,
+            "contractVersion": self.contract["contractVersion"],
             "canonical": {
                 "Title": "A complete exception case",
                 "Description": (
@@ -245,6 +257,11 @@ class CaseAgentFrameworkTests(unittest.TestCase):
         framework, _ = self.framework()
         permitted = framework.list_permitted_case_types(r"EXAMPLE\alice")
         self.assertEqual(["EVIDENCE_EXCEPTION"], [value["caseTypeCode"] for value in permitted])
+        self.assertGreaterEqual(len(permitted[0]["description"]), 40)
+        self.assertTrue(permitted[0]["useWhen"])
+        self.assertTrue(permitted[0]["doNotUseWhen"])
+        self.assertGreaterEqual(len(permitted[0]["expectedOutcome"]), 20)
+        self.assertEqual(self.contract["contractVersion"], permitted[0]["contractVersion"])
         public_contract = framework.get_case_creation_contract(
             r"EXAMPLE\alice", "EVIDENCE_EXCEPTION"
         )
