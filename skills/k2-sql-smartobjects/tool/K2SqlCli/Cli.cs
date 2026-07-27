@@ -74,6 +74,7 @@ namespace K2SqlCli
                 case "cleanup":
                     RequireConfirmation(options, "cleanup");
                     k2.DeleteGeneratedSmartObjectsAndServiceInstance();
+                    k2.CleanupOwnedCategories(HasFlag(options, "delete-root-category"));
                     if (HasFlag(options, "drop-database"))
                     {
                         sql.DropDatabase();
@@ -189,7 +190,7 @@ namespace K2SqlCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2sql 0.7.1");
+            Console.WriteLine("k2sql 0.8.0");
         }
 
         private static void PrintHelp()
@@ -202,7 +203,7 @@ namespace K2SqlCli
             Console.WriteLine("  k2sql deploy  --manifest <path> --confirm");
             Console.WriteLine("  k2sql verify  --manifest <path>");
             Console.WriteLine("  k2sql inspect --manifest <path>");
-            Console.WriteLine("  k2sql cleanup --manifest <path> --confirm [--drop-database]");
+            Console.WriteLine("  k2sql cleanup --manifest <path> --confirm [--drop-database] [--delete-root-category]");
             Console.WriteLine("  k2sql version");
             Console.WriteLine();
             Console.WriteLine("Set K2SQL_DEBUG=1 to print exception details. Passwords must be supplied through manifest-named environment variables.");

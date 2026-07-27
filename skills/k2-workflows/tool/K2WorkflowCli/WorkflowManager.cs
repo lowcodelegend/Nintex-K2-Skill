@@ -7,6 +7,8 @@ using System.Reflection;
 using System.Security.Principal;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using SourceCode.Categories.Client;
+using SourceCode.Hosting.Client.BaseAPI;
 
 namespace K2WorkflowCli
 {
@@ -539,7 +541,7 @@ namespace K2WorkflowCli
             Console.WriteLine("Verified approval matrix resolver mappings and multi-stage loop: " + _manifest.Workflow.ApprovalMatrix.MatrixCode);
         }
 
-        public void Cleanup(bool deleteDeployed, bool deferSmartFormsIntegration)
+        public void Cleanup(bool deleteDeployed, bool deferSmartFormsIntegration, bool deleteRootCategory)
         {
             var id = GetProcessId();
             if (!deleteDeployed && _manifest.Workflow.Publish)
@@ -568,20 +570,112 @@ namespace K2WorkflowCli
             }
             else if (deleteDeployed && deferSmartFormsIntegration)
                 Console.WriteLine("Deferred SmartForm integration removal to manifest-owned Form deletion: " + _manifest.Workflow.SmartForms.Form);
-            if (!id.HasValue && !runtimeExists) { Console.WriteLine("Workflow definitions are already absent: " + _manifest.Workflow.ProcessFullName); return; }
-            if (runtimeExists)
+            if (!id.HasValue && !runtimeExists)
             {
-                using (var runtime = new RuntimeWorkflowManager()) runtime.DeleteAllDefinitions(_manifest.Workflow.ProcessFullName);
+                Console.WriteLine("Workflow definitions are already absent: " + _manifest.Workflow.ProcessFullName);
             }
-            if (id.HasValue)
+            else
             {
-                var category = FindCategory(_manifest.Application.WorkflowCategoryPath);
-                var categoryId = category == null ? GetProcessCategoryId(id.Value) : (int?)category["id"];
-                if (!categoryId.HasValue) throw new CliException("Workflow category was not found and the process has no recoverable category ID: " + _manifest.Application.WorkflowCategoryPath);
-                if (category == null) Console.WriteLine("Workflow category link is already absent; using process category ID " + categoryId.Value + " for deletion.");
-                Invoke("DeleteProcessById", _manifest.K2.DesignerHost, id.Value, _userName, categoryId.Value);
+                if (runtimeExists)
+                {
+                    using (var runtime = new RuntimeWorkflowManager()) runtime.DeleteAllDefinitions(_manifest.Workflow.ProcessFullName);
+                }
+                if (id.HasValue)
+                {
+                    var category = FindCategory(_manifest.Application.WorkflowCategoryPath);
+                    var categoryId = category == null ? GetProcessCategoryId(id.Value) : (int?)category["id"];
+                    if (!categoryId.HasValue) throw new CliException("Workflow category was not found and the process has no recoverable category ID: " + _manifest.Application.WorkflowCategoryPath);
+                    if (category == null) Console.WriteLine("Workflow category link is already absent; using process category ID " + categoryId.Value + " for deletion.");
+                    Invoke("DeleteProcessById", _manifest.K2.DesignerHost, id.Value, _userName, categoryId.Value);
+                }
+                Console.WriteLine("Deleted workflow: " + _manifest.Workflow.ProcessFullName);
             }
-            Console.WriteLine("Deleted workflow: " + _manifest.Workflow.ProcessFullName);
+            CleanupOwnedCategories(deleteRootCategory);
+        }
+
+        private void CleanupOwnedCategories(bool deleteRootCategory)
+        {
+            WithCategoryServer(delegate(CategoryServer server)
+            {
+                foreach (var path in CleanupCategoryPaths(_manifest.Application, deleteRootCategory))
+                    DeleteCategoryIfEmpty(server, path);
+                return 0;
+            });
+        }
+
+        internal static IList<string> CleanupCategoryPaths(ApplicationSettings application, bool deleteRootCategory)
+        {
+            var root = application.RootCategoryPath.Trim().TrimEnd('\\', '/');
+            var paths = new List<string> { application.WorkflowCategoryPath };
+            if (deleteRootCategory) paths.Add(root);
+            return paths;
+        }
+
+        private static void DeleteCategoryIfEmpty(CategoryServer server, string path)
+        {
+            var manager = server.GetCategoryManager(CategorySystemId, true, true);
+            var category = manager.Categories.Cast<Category>()
+                .FirstOrDefault(x => x != null &&
+                    string.Equals(GetCategoryFullPath(x), path, StringComparison.OrdinalIgnoreCase));
+            if (category == null)
+            {
+                Console.WriteLine("K2 category: already absent (" + path + ")");
+                return;
+            }
+            if (category.IsRoot)
+                throw new CliException("Refusing to delete a K2 category-system root: " + path);
+
+            if (!category.HasLoadedData) server.LoadCategoryData(category);
+            var childCount = category.ChildCategoryIds == null ? 0 : category.ChildCategoryIds.Count;
+            var dataCount = category.DataList == null ? 0 : category.DataList.Count;
+            if (childCount != 0 || dataCount != 0)
+            {
+                Console.WriteLine("K2 category: retained (not empty: " + childCount + " child category(s), " + dataCount + " artifact link(s): " + path + ")");
+                return;
+            }
+
+            server.DeleteCategory(category);
+            manager = server.GetCategoryManager(CategorySystemId, true, true);
+            if (manager.Categories.Cast<Category>().Any(x => x != null &&
+                string.Equals(GetCategoryFullPath(x), path, StringComparison.OrdinalIgnoreCase)))
+                throw new CliException("K2 category remains after deletion: " + path);
+            Console.WriteLine("K2 category: deleted (" + path + ")");
+        }
+
+        private static string GetCategoryFullPath(Category category)
+        {
+            if (category == null) return null;
+            if (string.IsNullOrWhiteSpace(category.Path)) return category.Name;
+            if (string.IsNullOrWhiteSpace(category.Name)) return category.Path;
+            return category.Path.TrimEnd('\\', '/') + "\\" + category.Name;
+        }
+
+        private T WithCategoryServer<T>(Func<CategoryServer, T> action)
+        {
+            var server = new CategoryServer();
+            try
+            {
+                server.CreateConnection();
+                var builder = new SCConnectionStringBuilder
+                {
+                    Authenticate = true,
+                    Host = _manifest.K2.Host,
+                    Port = (uint)_manifest.K2.Port,
+                    Integrated = _manifest.K2.Integrated,
+                    IsPrimaryLogin = true,
+                    SecurityLabelName = _manifest.K2.SecurityLabel
+                };
+                server.Connection.Open(builder.ConnectionString);
+                return action(server);
+            }
+            finally
+            {
+                if (server.Connection != null)
+                {
+                    server.Connection.Close();
+                    server.DeleteConnection();
+                }
+            }
         }
 
         private int EnsureWorkflowCategory()

@@ -30,6 +30,9 @@
     <Reference Include="SourceCode.Forms.Management">
       <HintPath>$(K2InstallDir)\Bin\SourceCode.Forms.Management.dll</HintPath><Private>False</Private>
     </Reference>
+    <Reference Include="SourceCode.Categories.Client">
+      <HintPath>$(K2InstallDir)\Bin\SourceCode.Categories.Client.dll</HintPath><Private>False</Private>
+    </Reference>
     <Reference Include="SourceCode.Framework">
       <HintPath>$(K2InstallDir)\Bin\SourceCode.Framework.dll</HintPath><Private>False</Private>
     </Reference>

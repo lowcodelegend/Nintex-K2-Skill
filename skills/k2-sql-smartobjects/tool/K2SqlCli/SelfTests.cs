@@ -37,7 +37,15 @@ namespace K2SqlCli
                 "service parameter receives ConnectedUserFQN");
             Assert(K2Manager.ApplySystemValueMapping(transformed, mapping) == transformed,
                 "system-value transformation is idempotent");
-            Console.WriteLine("SELFTEST SUCCEEDED: server-side ConnectedUserFQN SmartObject method mapping");
+            var leafOnly = K2Manager.CleanupCategoryPaths(@"K2 Skills\APP.Application", false);
+            Assert(leafOnly.SequenceEqual(new[] { @"K2 Skills\APP.Application\Data" }),
+                "standalone cleanup owns only the Data leaf");
+            var complete = K2Manager.CleanupCategoryPaths(@"K2 Skills\APP.Application\\", true);
+            Assert(complete.SequenceEqual(new[] { @"K2 Skills\APP.Application\Data", @"K2 Skills\APP.Application" }),
+                "builder cleanup deletes Data before the application root");
+            Assert(K2Manager.CleanupCategoryPaths(null, true).Count == 0,
+                "category cleanup is disabled without a configured application root");
+            Console.WriteLine("SELFTEST SUCCEEDED: server-side ConnectedUserFQN SmartObject method mapping and bounded category cleanup paths");
         }
 
         private static void Assert(bool condition, string description)

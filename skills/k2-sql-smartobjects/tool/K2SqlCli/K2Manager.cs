@@ -480,6 +480,62 @@ namespace K2SqlCli
             Console.WriteLine("K2 service instance: deleted (" + instance.Guid + ")");
         }
 
+        public void CleanupOwnedCategories(bool deleteRootCategory)
+        {
+            var paths = CleanupCategoryPaths(_manifest.Application.RootCategoryPath, deleteRootCategory);
+            if (paths.Count == 0)
+            {
+                Console.WriteLine("K2 category cleanup: skipped (application.rootCategoryPath not configured)");
+                return;
+            }
+
+            WithCategoryServer(delegate(CategoryServer server)
+            {
+                foreach (var path in paths) DeleteCategoryIfEmpty(server, path);
+                return 0;
+            });
+        }
+
+        internal static IList<string> CleanupCategoryPaths(string rootCategoryPath, bool deleteRootCategory)
+        {
+            var paths = new List<string>();
+            if (string.IsNullOrWhiteSpace(rootCategoryPath)) return paths;
+            var root = rootCategoryPath.Trim().TrimEnd('\\', '/');
+            if (root.Length == 0) return paths;
+            paths.Add(root + "\\Data");
+            if (deleteRootCategory) paths.Add(root);
+            return paths;
+        }
+
+        private static void DeleteCategoryIfEmpty(CategoryServer server, string path)
+        {
+            var manager = server.GetCategoryManager(1, true, true);
+            var category = manager.Categories.Cast<Category>()
+                .FirstOrDefault(x => x != null && PathsEqual(GetCategoryFullPath(x), path));
+            if (category == null)
+            {
+                Console.WriteLine("K2 category: already absent (" + path + ")");
+                return;
+            }
+            if (category.IsRoot)
+                throw new CliException("Refusing to delete a K2 category-system root: " + path);
+
+            if (!category.HasLoadedData) server.LoadCategoryData(category);
+            var childCount = category.ChildCategoryIds == null ? 0 : category.ChildCategoryIds.Count;
+            var dataCount = category.DataList == null ? 0 : category.DataList.Count;
+            if (childCount != 0 || dataCount != 0)
+            {
+                Console.WriteLine("K2 category: retained (not empty: " + childCount + " child category(s), " + dataCount + " artifact link(s): " + path + ")");
+                return;
+            }
+
+            server.DeleteCategory(category);
+            manager = server.GetCategoryManager(1, true, true);
+            if (manager.Categories.Cast<Category>().Any(x => x != null && PathsEqual(GetCategoryFullPath(x), path)))
+                throw new CliException("K2 category remains after deletion: " + path);
+            Console.WriteLine("K2 category: deleted (" + path + ")");
+        }
+
         private void SmokeTestListMethods(IList<SmartObjectState> states)
         {
             var server = new SmartObjectClientServer();

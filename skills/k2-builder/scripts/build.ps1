@@ -110,6 +110,11 @@ $skillContent = Get-Content -LiteralPath (Join-Path $skillRoot 'SKILL.md') -Raw
 if ($skillContent -notmatch '(?s)^---\r?\nname: k2-builder\r?\ndescription: .+?\r?\n---(?:\r?\n|$)') {
     throw 'SKILL.md frontmatter is invalid.'
 }
+$builderContent = Get-Content -LiteralPath $entryPoint -Raw
+if ($builderContent -notmatch "--delete-root-category" -or
+    $builderContent -notmatch 'cleanupIndex -eq \$cleanupItems\.Count - 1') {
+    throw 'k2build cleanup must delegate root-category deletion only to the final specialist checkpoint.'
+}
 
 $agentContent = Get-Content -LiteralPath (Join-Path $skillRoot 'agents\openai.yaml') -Raw
 if ($agentContent -notmatch '(?m)^\s*default_prompt:\s*"Use \$k2-builder .+"\s*$') {
@@ -117,7 +122,7 @@ if ($agentContent -notmatch '(?m)^\s*default_prompt:\s*"Use \$k2-builder .+"\s*$
 }
 
 $actualVersion = (& $entryPoint version | Out-String).Trim()
-if ($actualVersion -cne 'k2build 0.25.1') {
+if ($actualVersion -cne 'k2build 0.26.0') {
     throw "Unexpected k2build version output: $actualVersion"
 }
 $environmentExecutable = Join-Path $skillRoot "tool\K2EnvironmentCli\bin\$Configuration\k2env.exe"
@@ -126,4 +131,4 @@ if ($environmentVersion -cne 'k2env 0.8.1') {
     throw "Unexpected k2env version output: $environmentVersion"
 }
 
-Write-Output "k2-builder 0.25.1 validation passed ($Configuration); k2env 0.8.1 built at $environmentExecutable."
+Write-Output "k2-builder 0.26.0 validation passed ($Configuration); k2env 0.8.1 built at $environmentExecutable."

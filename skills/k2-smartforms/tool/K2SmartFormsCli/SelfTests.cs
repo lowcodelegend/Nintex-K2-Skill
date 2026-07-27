@@ -10,6 +10,7 @@ namespace K2SmartFormsCli
         public static void Run()
         {
             TestIdentityNormalization();
+            TestCategoryCleanupPaths();
             TestViewOwnedMasterDetailRules();
             TestMasterDetailValidationComposition();
             TestReusableViewValidationPatternOwnership();
@@ -40,7 +41,24 @@ namespace K2SmartFormsCli
             TestFormPreFillRules();
             TestReplacementRecoveryClassifier();
             TestMultiTableWorkflowStateReconciliation();
-            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams, mutually exclusive native If/Else Save branching, post-Create master hydration and Form method-action rejection, master-detail field-validation composition, reusable-View validation-pattern cleanup ownership, orphan optional control mappings, lookup/detail List classification, governed lookup-domain validation, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, native max-length/validation-pattern contracts, must-be-true checkbox validation groups, required controls, help popups, semantic native action-cell alignment, master-detail buttons, native chart, metric-card, lifecycle, Form-supported guided-journey progress/current-screen navigation and workflow-free completion validation, Form-level control-metadata availability and browser Boolean property triples, modern Web Component full-body placement, capture and editable-list hidden-property composition, editable-list File edit-template validation, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, conditional per-Form framework selection, redundant profile/header/footer removal, constraint-aware test-data Pre-fill, multi-table workflow-state reconciliation");
+            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, bounded bottom-up category cleanup paths, View-owned master-detail event seams, mutually exclusive native If/Else Save branching, post-Create master hydration and Form method-action rejection, master-detail field-validation composition, reusable-View validation-pattern cleanup ownership, orphan optional control mappings, lookup/detail List classification, governed lookup-domain validation, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, native max-length/validation-pattern contracts, must-be-true checkbox validation groups, required controls, help popups, semantic native action-cell alignment, master-detail buttons, native chart, metric-card, lifecycle, Form-supported guided-journey progress/current-screen navigation and workflow-free completion validation, Form-level control-metadata availability and browser Boolean property triples, modern Web Component full-body placement, capture and editable-list hidden-property composition, editable-list File edit-template validation, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, conditional per-Form framework selection, redundant profile/header/footer removal, constraint-aware test-data Pre-fill, multi-table workflow-state reconciliation");
+        }
+
+        private static void TestCategoryCleanupPaths()
+        {
+            var application = new ApplicationOptions { RootCategoryPath = @"K2 Skills\APP.Application\\" };
+            var leafOnly = SmartFormsManager.CleanupCategoryPaths(application, false);
+            Assert(leafOnly.SequenceEqual(new[]
+            {
+                @"K2 Skills\APP.Application\Admin\Forms",
+                @"K2 Skills\APP.Application\Admin\Views",
+                @"K2 Skills\APP.Application\Admin",
+                @"K2 Skills\APP.Application\Forms",
+                @"K2 Skills\APP.Application\Views"
+            }), "standalone cleanup owns only fixed SmartForms category descendants");
+            var complete = SmartFormsManager.CleanupCategoryPaths(application, true);
+            Assert(complete.Last() == @"K2 Skills\APP.Application" && complete.Count == 6,
+                "builder cleanup deletes the application root last");
         }
 
         private static void TestReplacementRecoveryClassifier()

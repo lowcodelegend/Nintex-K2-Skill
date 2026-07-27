@@ -17,8 +17,9 @@
 | `view-control-definition --manifest --view <name> --type <control>` | No | Return one selected control and its related rule fragments for generator development. |
 | `form-definition --manifest --form <exact-name>` | No | Return one live Form definition through the supported management API for layout, rule, state, and integration diagnosis. |
 | `checkin --manifest --form <exact-name> --confirm` | Yes | Check in one exact manifest-declared form without regenerating or replacing it; report its checkout owner and resulting version. |
-| `cleanup --manifest --confirm` | Destructive | Delete exact declared forms then non-reusable views and their owned validation patterns after environment-wide external dependency checks. |
-| `cleanup --manifest --confirm --manifest-only` | Destructive | Fast builder path: skip broad dependency discovery and delete exact declared Forms/non-reusable Views from their owned category or strict-ancestor orphan category; preserve reusable View dependencies and their validation patterns. |
+| `cleanup --manifest --confirm` | Destructive | Delete exact declared forms then non-reusable views and their owned validation patterns after environment-wide external dependency checks; remove exact empty fixed SmartForms descendant categories bottom-up. |
+| `cleanup --manifest --confirm --manifest-only` | Destructive | Fast builder path: skip broad dependency discovery and delete exact declared Forms/non-reusable Views from their owned category or strict-ancestor orphan category; preserve reusable View dependencies and their validation patterns; remove exact empty fixed descendants. |
+| `cleanup --manifest --confirm --delete-root-category` | Destructive | Additionally delete the exact application root after fixed descendants, but only when it has no remaining child categories or artifact links. Reserved for the final builder checkpoint or explicit standalone ownership. |
 | `version` | No | Print the CLI version. |
 | `selftest` | No | Verify identity-key normalization, required/read-only inputs, two-column label-above grouping/colon/hidden-cell behavior, control-scoped lookup sources/population/defaults, valid Button help events, bypass-button suppression, native chart composition, editable-list structural rejection, and idempotent multi-child workflow-state reconciliation without connecting to K2. |
 

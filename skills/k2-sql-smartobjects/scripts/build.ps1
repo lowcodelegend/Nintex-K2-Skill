@@ -29,6 +29,8 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $output = Join-Path $skillRoot "tool\K2SqlCli\bin\$Configuration\k2sql.exe"
+& $output selftest | Out-Host
+if ($LASTEXITCODE -ne 0) { throw "k2sql self-test failed with exit code $LASTEXITCODE." }
 
 $copyReferenceData = Join-Path $skillRoot 'scripts\copy-reference-data.ps1'
 $parseTokens = $null

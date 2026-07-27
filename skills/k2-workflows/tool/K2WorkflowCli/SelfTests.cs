@@ -27,7 +27,18 @@ namespace K2WorkflowCli
             Assert((int)call["configuration"]["selectedWorkflowId"] == 42, "Call Sub Workflow deployed target ID");
             var send = (JObject)call["configuration"]["processSendFields"]["CaseStageInstanceId"];
             Assert((string)send["value"]["smartFields"][0]["customTitle"] == "CaseStageInstanceId", "Call Sub Workflow scalar input mapping");
-            Console.WriteLine("SELFTEST SUCCEEDED: destinations, matrix routing, and synchronous Call Sub Workflow generation and data mapping");
+            var application = new ApplicationSettings
+            {
+                RootCategoryPath = @"K2 Skills\APP.Application\\",
+                WorkflowCategoryName = "APP.Application WFs"
+            };
+            var leafOnly = WorkflowManager.CleanupCategoryPaths(application, false);
+            Assert(leafOnly.Count == 1 && leafOnly[0] == @"K2 Skills\APP.Application\APP.Application WFs",
+                "standalone cleanup owns only the workflow category");
+            var complete = WorkflowManager.CleanupCategoryPaths(application, true);
+            Assert(complete.Count == 2 && complete[1] == @"K2 Skills\APP.Application",
+                "builder cleanup deletes the application root last");
+            Console.WriteLine("SELFTEST SUCCEEDED: destinations, matrix routing, synchronous Call Sub Workflow generation/data mapping, and bounded category cleanup paths");
         }
 
         private static void Assert(bool condition, string name)

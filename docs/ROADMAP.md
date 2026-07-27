@@ -14,7 +14,7 @@ The SQL SmartObjects, SmartForms, and workflow skills should evolve from repeata
 
 ## K2 solution builder — v0.22 manifest-led orchestration implemented
 
-The `k2-builder` meta-skill defines the complete solution contract. `k2build deploy/verify` orchestrates specialist checkpoints and resumes interrupted solutions. `k2build cleanup` now consumes the same manifest and tears down workflow → forms → SmartObjects directly. SmartForms manifest-only cleanup skips broad dependency scans while enforcing exact category ownership, and workflow cleanup performs one runtime query and returns immediately when already absent.
+The `k2-builder` meta-skill defines the complete solution contract. `k2build deploy/verify` orchestrates specialist checkpoints and resumes interrupted solutions. `k2build cleanup` consumes the same manifest and tears down workflow → forms → SmartObjects directly. SmartForms manifest-only cleanup skips broad dependency scans while enforcing exact category ownership, and every category-owning specialist removes only its exact empty descendants. The final builder checkpoint removes the shared root only when the complete category tree is empty.
 
 Next increments should aggregate structured deployment results into the ledger, add manifest-declared approval-matrix test cases, and provide an assisted authenticated browser evidence workflow. Full semantic iterative reconciliation remains the mid-horizon goal shared with the three specialist skills.
 

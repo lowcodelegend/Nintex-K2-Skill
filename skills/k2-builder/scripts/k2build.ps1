@@ -17,7 +17,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if ($Command -eq 'version') {
-    Write-Output 'k2build 0.25.1'
+    Write-Output 'k2build 0.26.0'
     return
 }
 
@@ -779,7 +779,7 @@ if ($Command -in @('deploy', 'verify', 'cleanup')) {
     if ($DropDatabase -and $Command -ne 'cleanup') { throw '-DropDatabase is valid only with cleanup.' }
 
     function Invoke-Specialist {
-        param($Item, [string]$Action, [switch]$ResumeForms, [switch]$DropApplicationDatabase)
+        param($Item, [string]$Action, [switch]$ResumeForms, [switch]$DropApplicationDatabase, [switch]$DeleteRootCategory)
 
         $skillsRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
         $scriptPath = Join-Path $skillsRoot (Join-Path $Item.skill ('scripts\' + $(
@@ -806,6 +806,7 @@ if ($Command -in @('deploy', 'verify', 'cleanup')) {
             if ($Action -eq 'cleanup' -and $Item.skill -eq 'k2-smartforms') { $arguments += '--manifest-only' }
             if ($Action -eq 'cleanup' -and $Item.skill -eq 'k2-sql-smartobjects' -and $DropApplicationDatabase) { $arguments += '--drop-database' }
         }
+        if ($Action -eq 'cleanup' -and $DeleteRootCategory) { $arguments += '--delete-root-category' }
 
         & $scriptPath @arguments
         $code = $LASTEXITCODE
@@ -814,12 +815,17 @@ if ($Command -in @('deploy', 'verify', 'cleanup')) {
 
     $ordered = @($result.plan | Sort-Object order, component)
     if ($Command -eq 'cleanup') {
-        foreach ($item in @($ordered | Sort-Object order, component -Descending)) {
+        $cleanupItems = @($ordered | Sort-Object order, component -Descending)
+        for ($cleanupIndex = 0; $cleanupIndex -lt $cleanupItems.Count; $cleanupIndex++) {
+            $item = $cleanupItems[$cleanupIndex]
             Write-Output "Cleaning checkpoint: $($item.component)"
-            Invoke-Specialist $item 'cleanup' -DropApplicationDatabase:($DropDatabase -and $item.skill -eq 'k2-sql-smartobjects')
+            Invoke-Specialist $item 'cleanup' `
+                -DropApplicationDatabase:($DropDatabase -and $item.skill -eq 'k2-sql-smartobjects') `
+                -DeleteRootCategory:($cleanupIndex -eq $cleanupItems.Count - 1)
         }
         Write-Output "K2 solution cleanup succeeded: $solutionName"
         Write-Output "Database: $(if ($DropDatabase) { 'dropped as requested' } else { 'preserved; use -DropDatabase only for disposable application data' })"
+        Write-Output 'K2 categories: empty solution-owned descendants and root removed; non-empty categories preserved'
         Write-Output 'Solution short-code reservation: preserved'
         return
     }

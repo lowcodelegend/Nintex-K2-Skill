@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Security.Principal;
 using System.Xml.Linq;
+using SourceCode.Categories.Client;
 using SourceCode.Forms.Authoring;
 using SourceCode.Forms.Management;
 using SourceCode.Forms.Utilities;
@@ -1088,7 +1089,7 @@ namespace K2SmartFormsCli
             Console.WriteLine("K2 SmartForms verification: OK (" + _manifest.Verification.ExpectedViews.Count + " view(s), " + _manifest.Verification.ExpectedForms.Count + " form(s))");
         }
 
-        public void Cleanup(bool manifestOnly)
+        public void Cleanup(bool manifestOnly, bool deleteRootCategory)
         {
             if (!manifestOnly)
             {
@@ -1161,6 +1162,73 @@ namespace K2SmartFormsCli
                 DeleteOwnedValidationPatterns(manager);
                 return 0;
             });
+            CleanupOwnedCategories(deleteRootCategory);
+        }
+
+        private void CleanupOwnedCategories(bool deleteRootCategory)
+        {
+            WithCategoryServer(delegate(CategoryServer server)
+            {
+                foreach (var path in CleanupCategoryPaths(_manifest.Application, deleteRootCategory))
+                    DeleteCategoryIfEmpty(server, path);
+                return 0;
+            });
+        }
+
+        internal static IList<string> CleanupCategoryPaths(ApplicationOptions application, bool deleteRootCategory)
+        {
+            if (application == null || string.IsNullOrWhiteSpace(application.RootCategoryPath))
+                return new List<string>();
+            var root = application.RootCategoryPath.Trim().TrimEnd('\\', '/');
+            var paths = new List<string>
+            {
+                root + "\\Admin\\Forms",
+                root + "\\Admin\\Views",
+                root + "\\Admin",
+                root + "\\Forms",
+                root + "\\Views"
+            };
+            if (deleteRootCategory) paths.Add(root);
+            return paths;
+        }
+
+        private static void DeleteCategoryIfEmpty(CategoryServer server, string path)
+        {
+            var manager = server.GetCategoryManager(1, true, true);
+            var category = manager.Categories.Cast<Category>()
+                .FirstOrDefault(x => x != null &&
+                    string.Equals(GetCategoryFullPath(x), path, StringComparison.OrdinalIgnoreCase));
+            if (category == null)
+            {
+                Console.WriteLine("K2 category: already absent (" + path + ")");
+                return;
+            }
+            if (category.IsRoot)
+                throw new CliException("Refusing to delete a K2 category-system root: " + path);
+
+            if (!category.HasLoadedData) server.LoadCategoryData(category);
+            var childCount = category.ChildCategoryIds == null ? 0 : category.ChildCategoryIds.Count;
+            var dataCount = category.DataList == null ? 0 : category.DataList.Count;
+            if (childCount != 0 || dataCount != 0)
+            {
+                Console.WriteLine("K2 category: retained (not empty: " + childCount + " child category(s), " + dataCount + " artifact link(s): " + path + ")");
+                return;
+            }
+
+            server.DeleteCategory(category);
+            manager = server.GetCategoryManager(1, true, true);
+            if (manager.Categories.Cast<Category>().Any(x => x != null &&
+                string.Equals(GetCategoryFullPath(x), path, StringComparison.OrdinalIgnoreCase)))
+                throw new CliException("K2 category remains after deletion: " + path);
+            Console.WriteLine("K2 category: deleted (" + path + ")");
+        }
+
+        private static string GetCategoryFullPath(Category category)
+        {
+            if (category == null) return null;
+            if (string.IsNullOrWhiteSpace(category.Path)) return category.Name;
+            if (string.IsNullOrWhiteSpace(category.Name)) return category.Path;
+            return category.Path.TrimEnd('\\', '/') + "\\" + category.Name;
         }
 
         private static bool HasSpecializedBodyLayout(ViewDefinition view)
@@ -1600,6 +1668,25 @@ namespace K2SmartFormsCli
             if (configured == null)
                 throw new CliException("At least one Form requests the common header, but no application or environment common-header contract is selected.");
             return ResolveCommonHeader(manager, configured);
+        }
+
+        private T WithCategoryServer<T>(Func<CategoryServer, T> action)
+        {
+            var server = new CategoryServer();
+            try
+            {
+                server.CreateConnection();
+                server.Connection.Open(BuildConnectionString());
+                return action(server);
+            }
+            finally
+            {
+                if (server.Connection != null)
+                {
+                    server.Connection.Close();
+                    server.DeleteConnection();
+                }
+            }
         }
 
         private ResolvedCommonHeader ResolveCommonHeader(FormsManager manager, CommonHeaderDefinition configured)

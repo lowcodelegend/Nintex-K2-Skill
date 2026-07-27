@@ -43,6 +43,10 @@
       <HintPath>$(K2InstallDir)\Bin\SourceCode.Framework.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="SourceCode.Categories.Client">
+      <HintPath>$(K2InstallDir)\Bin\SourceCode.Categories.Client.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="SourceCode.HostClientAPI">
       <HintPath>$(K2InstallDir)\Bin\SourceCode.HostClientAPI.dll</HintPath>
       <Private>False</Private>

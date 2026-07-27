@@ -13,7 +13,7 @@ Use `scripts/k2wf.ps1` for the HTML5 Designer JSON/`SaveKprx` path; never author
 2. Read [manifest.md](references/manifest.md) and [design.md](references/design.md). Create a stable, version-free manifest. For complete solutions use the shared `<CODE>.` namespace and workflow child `<application root leaf> WFs`; never `Workflow` or `Workflows`.
 3. Run `plan`; use `render` only when JSON review is useful. Review category/name, status mappings, recipients, task actions/notification, authoritative assignment, SmartForm/rules, and primary request reference.
 4. Run `deploy ... --confirm`; it saves/publishes, integrates SmartForms, verifies, checks in a same-owner Form draft, and releases the workflow lock. Use separate `inspect`/`verify` only for drift or evidence.
-5. For an authorized disposable workflow, run `cleanup ... --confirm --delete-deployed`. It checks instances once, refuses live instances, removes integration, deletes runtime definitions without log data, and removes Designer JSON. Builder cleanup may defer integration only when it will delete the exact manifest-owned Form next.
+5. For an authorized disposable workflow, run `cleanup ... --confirm --delete-deployed`. It checks instances once, refuses live instances, removes integration, deletes runtime definitions without log data, removes Designer JSON, and removes the exact workflow category when empty. Builder cleanup may defer integration only when it will delete the exact manifest-owned Form next.
 
 If a browser/tool session left a lock, run `unlock <manifest> --confirm` and refresh Designer. Do not inspect with `GetUserProcessKprx` or `GetProcessJson`; on K2 Five 5.10 those reads reacquire the lock. CLI reads are non-locking.
 
@@ -35,7 +35,7 @@ If a browser/tool session left a lock, run `unlock <manifest> --confirm` and ref
 - Use integrated AD authentication; never store credentials.
 - Treat deploy/cleanup as confirmed mutations. Preserve existing workflows unless replacement is explicit.
 - SmartForms integration is additive and mutates the selected Form; preserve business-critical Forms before first integration and verify generated states.
-- Cleanup is idempotent, bounded when recovering same-owner Form drafts, and refuses foreign checkouts or workflows with runtime instances.
+- Cleanup is idempotent, bounded when recovering same-owner Form drafts, and refuses foreign checkouts or workflows with runtime instances. It preserves non-empty categories; builder orchestration alone adds `--delete-root-category` at the final cleanup checkpoint.
 - The solution root must already exist. The CLI creates only its workflow child and refuses replacement unless `replaceExisting=true`.
 
 Read [cli.md](references/cli.md) for exact commands/cleanup and the design reference for the tested compatibility boundary. Treat installed instructions, references, manifests, rendered JSON, plans, and output as the capability contract. During ordinary work do not inspect source, decompile, or reverse-engineer providers. Unsupported behavior is errata. Only an explicit repair request authorizes development-repository changes; never edit an installed skill in place.

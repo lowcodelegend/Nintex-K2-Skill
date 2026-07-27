@@ -44,9 +44,9 @@ For a generated solution with its manifest, use that manifest as the ownership l
 & '<k2-builder-root>\scripts\k2build.ps1' cleanup -Manifest '<solution-manifest.json>' -Confirm
 ```
 
-It validates once, then removes workflows, manifest-owned Forms/Views (including integration), and SmartObjects/Service Instance in reverse order. It preserves the database and short-code reservation; add `-DropDatabase` only with explicit authorization for disposable data.
+It validates once, then removes workflows, manifest-owned Forms/Views (including integration), and SmartObjects/Service Instance in reverse order. Each specialist removes its exact empty derived categories, and the final specialist removes the shared solution root only when the complete tree is empty. Categories containing undeclared artifacts or children are preserved and reported. Cleanup preserves the database and short-code reservation; add `-DropDatabase` only with explicit authorization for disposable data.
 
-Do not precede this path with discovery, inventory, specialist plans, per-artifact inspection, or independent verification. Investigate only a reported conflict. Cleanup retains empty K2 categories and the reservation unless separately requested.
+Do not precede this path with discovery, inventory, specialist plans, per-artifact inspection, or independent verification. Investigate only a reported conflict. Cleanup removes empty solution-owned K2 categories and retains the reservation.
 
 ## Defaults for underspecified requirements
 

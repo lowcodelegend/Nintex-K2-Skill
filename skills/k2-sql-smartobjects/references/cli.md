@@ -17,8 +17,9 @@ The release includes the compiled CLI. Set `K2_INSTALL_DIR` only if K2 is instal
 | `deploy --confirm` | Yes | Deploy SQL and approval matrices, register/update/refresh the Service Instance, generate SmartObjects, place them in the configured solution's Data category, and verify. |
 | `verify` | No | Assert SQL objects/queries, matrix happy-path and terminal sentinel behavior, generated SmartObjects and category placement, then run eligible List methods. |
 | `inspect` | No | Print the Service Instance GUID and generated SmartObject-to-service-object mappings with method and category names. |
-| `cleanup --confirm` | Yes | Force-delete SmartObjects generated for the named Service Instance, then delete that Service Instance. |
+| `cleanup --confirm` | Yes | Force-delete SmartObjects generated for the named Service Instance, delete that Service Instance, then delete the exact empty `<root>\Data` category. |
 | `cleanup --confirm --drop-database` | Destructive | Perform K2 cleanup and drop the named application database. Use only for disposable or explicitly retired data. |
+| `cleanup --confirm --delete-root-category` | Destructive | Additionally delete the exact application root after `Data`, but only when it has no remaining child categories or artifact links. Reserved for the final builder checkpoint or explicit standalone ownership. |
 | `version` | No | Print the CLI version. |
 
 Exit code `0` means success, `2` means manifest/usage/safety validation failed, and `1` means an unexpected SQL, K2, or runtime error occurred.
