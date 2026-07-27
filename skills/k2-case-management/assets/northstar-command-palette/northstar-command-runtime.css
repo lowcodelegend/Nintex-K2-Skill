@@ -194,6 +194,17 @@ kbd {
   padding: 9px 16px 10px;
 }
 
+.northstar-command__assistant-status {
+  color: #475467;
+  font-size: 12px;
+  margin: 8px 2px 0;
+}
+
+.northstar-command__assistant-status[role="alert"] {
+  color: #b42318;
+  font-weight: 700;
+}
+
 @media (max-width: 560px) {
   .northstar-command__trigger {
     min-width: 0;

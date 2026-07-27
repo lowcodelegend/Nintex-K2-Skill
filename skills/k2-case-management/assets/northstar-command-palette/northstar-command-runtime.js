@@ -72,6 +72,67 @@
     });
   }
 
+  const APPROVED_LANGFLOW_SCRIPT =
+    "https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@v1.0.8/dist/build/static/js/bundle.min.js";
+
+  function loadLangflow(scriptUrl) {
+    if (scriptUrl !== APPROVED_LANGFLOW_SCRIPT) {
+      return Promise.reject(new Error("The case assistant script is not the approved pinned Langflow bundle."));
+    }
+    if (window.customElements.get("langflow-chat")) return Promise.resolve();
+    if (!window.__northstarLangflowLoads) window.__northstarLangflowLoads = Object.create(null);
+    if (window.__northstarLangflowLoads[scriptUrl]) return window.__northstarLangflowLoads[scriptUrl];
+    window.__northstarLangflowLoads[scriptUrl] = new Promise(function (resolve, reject) {
+      let settled = false;
+      let timeout = null;
+      const finish = function (error) {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeout);
+        if (error) {
+          delete window.__northstarLangflowLoads[scriptUrl];
+          reject(error);
+        } else {
+          resolve();
+        }
+      };
+      const waitForControl = function () {
+        if (window.customElements.get("langflow-chat")) finish();
+        else window.customElements.whenDefined("langflow-chat").then(function () { finish(); }, function () {
+          finish(new Error("The Langflow chat element did not register."));
+        });
+      };
+      const existing = document.querySelector("script[data-northstar-langflow-chat]");
+      if (existing) {
+        if (window.customElements.get("langflow-chat")) finish();
+        else {
+          existing.addEventListener("load", waitForControl, {once: true});
+          existing.addEventListener("error", function () {
+            finish(new Error("The Langflow chat bundle could not be loaded."));
+          }, {once: true});
+        }
+        timeout = window.setTimeout(function () {
+          finish(new Error("The Langflow chat bundle did not become ready within 20 seconds."));
+        }, 20000);
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = scriptUrl;
+      script.async = true;
+      script.crossOrigin = "anonymous";
+      script.dataset.northstarLangflowChat = "true";
+      script.addEventListener("load", waitForControl, {once: true});
+      script.addEventListener("error", function () {
+        finish(new Error("The Langflow chat bundle could not be loaded. Check CSP and network access."));
+      }, {once: true});
+      document.head.append(script);
+      timeout = window.setTimeout(function () {
+        finish(new Error("The Langflow chat bundle did not become ready within 20 seconds."));
+      }, 20000);
+    });
+    return window.__northstarLangflowLoads[scriptUrl];
+  }
+
   if (!window.customElements.get("northstar-command-palette")) {
     window.customElements.define("northstar-command-palette", class NorthstarCommandPalette extends K2BaseControl {
       constructor() {
@@ -80,6 +141,19 @@
         this._suggestions = [];
         this._searchUrlTemplate = "/Runtime/Runtime/Form/All%20Cases?q={query}";
         this._placeholder = "Search cases, work and reports";
+        this._assistantEnabled = false;
+        this._assistantLabel = "Ask Case Assistant";
+        this._assistantDescription = "Ask questions and take supported case actions";
+        this._langflowHostUrl = "";
+        this._langflowFlowId = "";
+        this._langflowScriptUrl = APPROVED_LANGFLOW_SCRIPT;
+        this._langflowWindowTitle = "Case Assistant";
+        this._langflowChatPosition = "bottom-right";
+        this._langflowWidth = 420;
+        this._langflowHeight = 640;
+        this._assistantState = "idle";
+        this._assistantMessage = "";
+        this._langflowElement = null;
         this._width = "100%";
         this._height = "48px";
         this._isVisible = true;
@@ -111,6 +185,26 @@
       set SearchUrlTemplate(value) { this._searchUrlTemplate = text(value) || this._searchUrlTemplate; changed(this, "SearchUrlTemplate"); }
       get Placeholder() { return this._placeholder; }
       set Placeholder(value) { this._placeholder = text(value) || "Search cases, work and reports"; this.render(); changed(this, "Placeholder"); }
+      get AssistantEnabled() { return this._assistantEnabled; }
+      set AssistantEnabled(value) { this._assistantEnabled = asBoolean(value); this.render(); changed(this, "AssistantEnabled"); }
+      get AssistantLabel() { return this._assistantLabel; }
+      set AssistantLabel(value) { this._assistantLabel = text(value) || "Ask Case Assistant"; this.render(); changed(this, "AssistantLabel"); }
+      get AssistantDescription() { return this._assistantDescription; }
+      set AssistantDescription(value) { this._assistantDescription = text(value) || "Ask questions and take supported case actions"; this.render(); changed(this, "AssistantDescription"); }
+      get LangflowHostUrl() { return this._langflowHostUrl; }
+      set LangflowHostUrl(value) { this._langflowHostUrl = text(value); changed(this, "LangflowHostUrl"); }
+      get LangflowFlowId() { return this._langflowFlowId; }
+      set LangflowFlowId(value) { this._langflowFlowId = text(value); changed(this, "LangflowFlowId"); }
+      get LangflowScriptUrl() { return this._langflowScriptUrl; }
+      set LangflowScriptUrl(value) { this._langflowScriptUrl = text(value) || APPROVED_LANGFLOW_SCRIPT; changed(this, "LangflowScriptUrl"); }
+      get LangflowWindowTitle() { return this._langflowWindowTitle; }
+      set LangflowWindowTitle(value) { this._langflowWindowTitle = text(value) || "Case Assistant"; changed(this, "LangflowWindowTitle"); }
+      get LangflowChatPosition() { return this._langflowChatPosition; }
+      set LangflowChatPosition(value) { this._langflowChatPosition = text(value) || "bottom-right"; changed(this, "LangflowChatPosition"); }
+      get LangflowWidth() { return this._langflowWidth; }
+      set LangflowWidth(value) { this._langflowWidth = Math.max(320, Math.min(1200, Number(value) || 420)); changed(this, "LangflowWidth"); }
+      get LangflowHeight() { return this._langflowHeight; }
+      set LangflowHeight(value) { this._langflowHeight = Math.max(420, Math.min(1200, Number(value) || 640)); changed(this, "LangflowHeight"); }
       get Width() { return this._width; }
       set Width(value) { this._width = value || "100%"; this.style.width = this._width; changed(this, "Width"); }
       get Height() { return this._height; }
@@ -132,6 +226,8 @@
 
       disconnectedCallback() {
         document.removeEventListener("keydown", this._onDocumentKeyDown);
+        if (this._langflowElement) this._langflowElement.remove();
+        this._langflowElement = null;
         super.disconnectedCallback();
       }
 
@@ -181,6 +277,14 @@
         this._shadow.append(trigger);
 
         if (this._open) this._drawDialog();
+        if (this._assistantMessage) {
+          const assistantStatus = document.createElement("p");
+          assistantStatus.className = "northstar-command__assistant-status";
+          assistantStatus.setAttribute("role", this._assistantState === "error" ? "alert" : "status");
+          assistantStatus.setAttribute("aria-live", this._assistantState === "error" ? "assertive" : "polite");
+          assistantStatus.textContent = this._assistantMessage;
+          this._shadow.append(assistantStatus);
+        }
         this._hasRendered = true;
         this._rendering = false;
         this.dispatchEvent(new Event("Rendered"));
@@ -273,6 +377,22 @@
         const query = this._query.trim().toLocaleLowerCase();
         let matches = this._suggestions.filter((item) => !query ||
           (item.title + " " + item.subtitle + " " + item.kind).toLocaleLowerCase().includes(query)).slice(0, 8);
+        if (this._assistantEnabled) {
+          const assistant = {
+            code: "case-assistant",
+            kind: "Assistant",
+            title: this._assistantLabel,
+            subtitle: this._assistantDescription,
+            icon: "spark",
+            action: "assistant",
+            target: "",
+            order: -1
+          };
+          if (!query || (assistant.title + " " + assistant.subtitle + " " + assistant.kind).toLocaleLowerCase().includes(query)) {
+            matches.unshift(assistant);
+            matches = matches.slice(0, 8);
+          }
+        }
         if (query && matches.length === 0) {
           const target = safeTarget(this._searchUrlTemplate.replace("{query}", encodeURIComponent(this._query.trim())));
           if (target) {
@@ -339,12 +459,73 @@
       }
 
       _select(item) {
+        if (item && item.action === "assistant") {
+          this._open = false;
+          this.render();
+          this.dispatchEvent(new Event("OpenAssistant"));
+          this._openAssistant();
+          return;
+        }
         const target = safeTarget(item && item.target);
         if (!target) return;
         this.Value = target;
         this._open = false;
         this.render();
         this.dispatchEvent(new Event("Navigate"));
+      }
+
+      _openAssistant() {
+        if (!this._assistantEnabled || !this._isEnabled || this._isReadOnly) return;
+        this._assistantState = "loading";
+        this._assistantMessage = "Opening " + this._assistantLabel + "…";
+        this.render();
+        loadLangflow(this._langflowScriptUrl).then(() => {
+          if (!this.isConnected) return;
+          if (this._langflowElement) this._langflowElement.remove();
+          const chat = document.createElement("langflow-chat");
+          chat.setAttribute("host_url", this._langflowHostUrl);
+          chat.setAttribute("flow_id", this._langflowFlowId);
+          chat.setAttribute("window_title", this._langflowWindowTitle);
+          chat.setAttribute("chat_position", this._langflowChatPosition);
+          chat.setAttribute("width", String(this._langflowWidth));
+          chat.setAttribute("height", String(this._langflowHeight));
+          chat.setAttribute("session_id", this._assistantSessionId());
+          chat.setAttribute("start_open", "true");
+          chat.dataset.northstarOwner = this.getAttribute("name") || "northstar-command-palette";
+          document.body.append(chat);
+          this._langflowElement = chat;
+          this._assistantState = "ready";
+          this._assistantMessage = this._assistantLabel + " opened.";
+          this.render();
+        }).catch((error) => {
+          this._assistantState = "error";
+          this._assistantMessage = error && error.message
+            ? error.message
+            : "The case assistant could not be opened.";
+          this.render();
+        });
+      }
+
+      _assistantSessionId() {
+        const key = "northstar.langflow." + this._langflowFlowId;
+        try {
+          let value = window.sessionStorage.getItem(key);
+          if (!value) {
+            value = this._newSessionId();
+            window.sessionStorage.setItem(key, value);
+          }
+          return value;
+        } catch (_) {
+          if (!this._fallbackSessionId) this._fallbackSessionId = this._newSessionId();
+          return this._fallbackSessionId;
+        }
+      }
+
+      _newSessionId() {
+        if (window.crypto && typeof window.crypto.randomUUID === "function") {
+          return window.crypto.randomUUID();
+        }
+        return "northstar-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2);
       }
     });
   }

@@ -73,6 +73,22 @@ if ($browserDriverText -notmatch 'navigationItems' -or
 }
 Write-Output 'Northstar K2-ownership and browser-driver tests passed.'
 
+$paletteRoot = Join-Path $PSScriptRoot '..\assets\northstar-command-palette'
+$paletteManifest = Get-Content -Raw -LiteralPath (Join-Path $paletteRoot 'manifest.json') | ConvertFrom-Json
+$paletteRuntime = Get-Content -Raw -LiteralPath (Join-Path $paletteRoot 'northstar-command-runtime.js')
+if (@($paletteManifest.events.id) -notcontains 'OpenAssistant' -or
+    @($paletteManifest.properties.id) -notcontains 'AssistantEnabled' -or
+    @($paletteManifest.properties.id) -notcontains 'LangflowHostUrl') {
+    throw 'Northstar command palette does not declare the bounded case-assistant contract.'
+}
+if ($paletteRuntime -notmatch 'start_open' -or
+    $paletteRuntime -notmatch 'window\.sessionStorage' -or
+    $paletteRuntime -notmatch [regex]::Escape('langflow-ai/langflow-embedded-chat@v1.0.8') -or
+    $paletteRuntime -match '\bapi_key\b|\badditional_headers\b') {
+    throw 'Northstar command palette must open the pinned Langflow widget with an isolated browser-tab session and no embedded credentials or headers.'
+}
+Write-Output 'Northstar command-palette assistant contract tests passed.'
+
 $composer = Join-Path $PSScriptRoot '..\scripts\compose-case-ux.ps1'
 $overlay = Join-Path $PSScriptRoot '..\assets\case-ux-overlay.yaml'
 $composed = [IO.Path]::GetTempFileName()
@@ -240,6 +256,79 @@ try {
     if (Test-Path -LiteralPath $portableCompiled) { Remove-Item -LiteralPath $portableCompiled -Force }
 }
 Write-Output 'Case-UX second-package portability tests passed.'
+
+$agenticMapping = [IO.Path]::GetTempFileName()
+$agenticCompiled = [IO.Path]::GetTempFileName()
+$agenticInvalid = [IO.Path]::GetTempFileName()
+try {
+    $mapping = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot 'portable-case-mapping.json') | ConvertFrom-Json
+    $mapping | Add-Member -NotePropertyName agenticChat -NotePropertyValue ([pscustomobject]@{
+        enabled = $true
+        integration = 'command-palette'
+        viewName = 'RQT.Case Assistant Palette'
+        sourcePaletteViewName = 'RQT.Command Palette'
+        controlName = 'Northstar Case Assistant'
+        controlPackage = 'assets/northstar-command-palette'
+        hostUrl = 'https://langflow.example.test'
+        flowId = '72e9cd5a-4b3e-415c-9b3a-76f222c9c160'
+        scriptUrl = 'https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@v1.0.8/dist/build/static/js/bundle.min.js'
+        windowTitle = 'Request Assistant'
+        label = 'Ask Request Assistant'
+        description = 'Ask questions and take supported request actions'
+        chatPosition = 'bottom-right'
+        width = 420
+        height = 640
+        placement = [pscustomobject]@{formName='RQT.Case Management';tab='Cases'}
+    })
+    $mapping | ConvertTo-Json -Depth 100 | Set-Content -Encoding utf8 -LiteralPath $agenticMapping
+    & $compiler -Ux $validUx -Mapping $agenticMapping -BaseManifest (Join-Path $PSScriptRoot 'portable-case-base.json') -Output $agenticCompiled
+    if ($LASTEXITCODE -ne 0) { throw 'Expected command-palette Langflow assistant compilation to pass.' }
+    $manifest = Get-Content -Raw -LiteralPath $agenticCompiled | ConvertFrom-Json
+    $sourcePalette = @($manifest.application.views | Where-Object name -eq 'RQT.Command Palette')[0]
+    $assistantPalette = @($manifest.application.views | Where-Object name -eq 'RQT.Case Assistant Palette')[0]
+    if ($null -eq $sourcePalette -or $null -eq $assistantPalette) { throw 'Agentic chat compiler did not preserve the source palette and emit its Form-scoped clone.' }
+    $sourceControl = $sourcePalette.webComponents[0]
+    $assistantControl = $assistantPalette.webComponents[0]
+    if ($null -ne $sourceControl.properties.PSObject.Properties['AssistantEnabled'] -or
+        $assistantControl.properties.AssistantEnabled -ne $true -or
+        $assistantControl.properties.LangflowFlowId -ne '72e9cd5a-4b3e-415c-9b3a-76f222c9c160' -or
+        $assistantControl.properties.LangflowHostUrl -ne 'https://langflow.example.test') {
+        throw 'Agentic chat compiler leaked configuration into the shared palette or omitted the cloned palette configuration.'
+    }
+    if ($null -ne $assistantControl.properties.PSObject.Properties['apiKey'] -or
+        $null -ne $assistantControl.properties.PSObject.Properties['additionalHeaders']) {
+        throw 'Agentic chat compiler emitted browser credentials or arbitrary headers.'
+    }
+    $shell = @($manifest.application.forms | Where-Object name -eq 'RQT.Case Management')[0]
+    $casesTab = @($shell.tabs | Where-Object name -eq 'Cases')[0]
+    $insightsTab = @($shell.tabs | Where-Object name -eq 'Insights')[0]
+    if ($casesTab.views[0] -ne 'RQT.Case Assistant Palette' -or
+        @($shell.views) -contains 'RQT.Command Palette' -or
+        @($insightsTab.views) -contains 'RQT.Command Palette') {
+        throw 'Agentic chat compiler did not replace the plain Form palette with the assistant clone on the mapped case-context tab.'
+    }
+    if (@($manifest.verification.expectedViews) -notcontains 'RQT.Case Assistant Palette') {
+        throw 'Agentic chat compiler did not reconcile verification expectations after adding the cloned View.'
+    }
+
+    $mapping.agenticChat | Add-Member -NotePropertyName apiKey -NotePropertyValue 'forbidden-browser-secret'
+    $mapping | ConvertTo-Json -Depth 100 | Set-Content -Encoding utf8 -LiteralPath $agenticInvalid
+    $invalidFailed = $false
+    $invalidOutput = try {
+        & $compiler -Ux $validUx -Mapping $agenticInvalid -BaseManifest (Join-Path $PSScriptRoot 'portable-case-base.json') -Output $agenticCompiled 2>&1
+    } catch {
+        $invalidFailed = $true
+        $_.Exception.Message
+    }
+    if (-not $invalidFailed -or ($invalidOutput -join "`n") -notmatch 'secret-bearing properties') {
+        throw 'Agentic chat compiler did not reject a browser API key.'
+    }
+} finally {
+    foreach ($path in @($agenticMapping, $agenticCompiled, $agenticInvalid)) {
+        if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Force }
+    }
+}
+Write-Output 'Case-UX command-palette Langflow assistant tests passed.'
 
 $completionMapping = [IO.Path]::GetTempFileName()
 $completionCompiled = [IO.Path]::GetTempFileName()

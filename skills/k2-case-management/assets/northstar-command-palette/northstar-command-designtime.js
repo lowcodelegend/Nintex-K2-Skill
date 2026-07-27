@@ -29,6 +29,16 @@
         this._suggestions = [];
         this._searchUrlTemplate = "";
         this._placeholder = "Search cases, work and reports";
+        this._assistantEnabled = false;
+        this._assistantLabel = "Ask Case Assistant";
+        this._assistantDescription = "Ask questions and take supported case actions";
+        this._langflowHostUrl = "";
+        this._langflowFlowId = "";
+        this._langflowScriptUrl = "https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@v1.0.8/dist/build/static/js/bundle.min.js";
+        this._langflowWindowTitle = "Case Assistant";
+        this._langflowChatPosition = "bottom-right";
+        this._langflowWidth = 420;
+        this._langflowHeight = 640;
         this._width = "100%";
         this._height = "48px";
         this._isVisible = true;
@@ -48,6 +58,26 @@
       set SearchUrlTemplate(value) { this._searchUrlTemplate = value == null ? "" : String(value); changed(this, "SearchUrlTemplate"); }
       get Placeholder() { return this._placeholder; }
       set Placeholder(value) { this._placeholder = value || "Search cases, work and reports"; this.render(); changed(this, "Placeholder"); }
+      get AssistantEnabled() { return this._assistantEnabled; }
+      set AssistantEnabled(value) { this._assistantEnabled = value === true || value === "true"; this.render(); changed(this, "AssistantEnabled"); }
+      get AssistantLabel() { return this._assistantLabel; }
+      set AssistantLabel(value) { this._assistantLabel = value || "Ask Case Assistant"; this.render(); changed(this, "AssistantLabel"); }
+      get AssistantDescription() { return this._assistantDescription; }
+      set AssistantDescription(value) { this._assistantDescription = value || "Ask questions and take supported case actions"; changed(this, "AssistantDescription"); }
+      get LangflowHostUrl() { return this._langflowHostUrl; }
+      set LangflowHostUrl(value) { this._langflowHostUrl = value == null ? "" : String(value); changed(this, "LangflowHostUrl"); }
+      get LangflowFlowId() { return this._langflowFlowId; }
+      set LangflowFlowId(value) { this._langflowFlowId = value == null ? "" : String(value); changed(this, "LangflowFlowId"); }
+      get LangflowScriptUrl() { return this._langflowScriptUrl; }
+      set LangflowScriptUrl(value) { this._langflowScriptUrl = value == null ? "" : String(value); changed(this, "LangflowScriptUrl"); }
+      get LangflowWindowTitle() { return this._langflowWindowTitle; }
+      set LangflowWindowTitle(value) { this._langflowWindowTitle = value || "Case Assistant"; changed(this, "LangflowWindowTitle"); }
+      get LangflowChatPosition() { return this._langflowChatPosition; }
+      set LangflowChatPosition(value) { this._langflowChatPosition = value || "bottom-right"; changed(this, "LangflowChatPosition"); }
+      get LangflowWidth() { return this._langflowWidth; }
+      set LangflowWidth(value) { this._langflowWidth = Number(value) || 420; changed(this, "LangflowWidth"); }
+      get LangflowHeight() { return this._langflowHeight; }
+      set LangflowHeight(value) { this._langflowHeight = Number(value) || 640; changed(this, "LangflowHeight"); }
       get Width() { return this._width; }
       set Width(value) { this._width = value || "100%"; this.style.width = this._width; changed(this, "Width"); }
       get Height() { return this._height; }
@@ -85,7 +115,7 @@
           const label = document.createElement("span");
           label.textContent = this._placeholder;
           const shortcut = document.createElement("kbd");
-          shortcut.textContent = "Ctrl K";
+          shortcut.textContent = this._assistantEnabled ? "Ctrl K · Assistant" : "Ctrl K";
           preview.append(label, shortcut);
           this._shadow.append(preview);
           this._hasRendered = true;

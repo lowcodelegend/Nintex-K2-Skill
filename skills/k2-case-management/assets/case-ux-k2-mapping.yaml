@@ -72,6 +72,27 @@
       {"code":"CLOSE","label":"Close & Learn"}
     ]
   },
+  "agenticChat": {
+    "enabled": false,
+    "integration": "command-palette",
+    "viewName": "{{CODE}}.Case Assistant Palette",
+    "sourcePaletteViewName": "{{CODE}}.Command Palette",
+    "controlName": "Northstar Case Assistant",
+    "controlPackage": "assets/northstar-command-palette",
+    "hostUrl": "https://{{LANGFLOW_HOST}}",
+    "flowId": "{{LANGFLOW_FLOW_ID}}",
+    "scriptUrl": "https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@v1.0.8/dist/build/static/js/bundle.min.js",
+    "windowTitle": "Case Assistant",
+    "label": "Ask Case Assistant",
+    "description": "Ask questions and take supported case actions",
+    "chatPosition": "bottom-right",
+    "width": 420,
+    "height": 640,
+    "placement": {
+      "formName": "{{CODE}}.Case Management",
+      "tab": "Overview"
+    }
+  },
   "reports": {
     "formName":"{{CODE}}.Reports",
     "shellTab":"Reports",

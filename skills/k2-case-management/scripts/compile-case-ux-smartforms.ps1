@@ -56,6 +56,89 @@ function Resolve-InitiationStepViews {
     return $resolved
 }
 
+function Set-ObjectProperty {
+    param([Parameter(Mandatory=$true)]$Object,[Parameter(Mandatory=$true)][string]$Name,$Value)
+    $Object|Add-Member -NotePropertyName $Name -NotePropertyValue $Value -Force
+}
+
+function Add-AgenticChat {
+    param([Parameter(Mandatory=$true)]$Manifest,[Parameter(Mandatory=$true)]$MappingDocument)
+    $chat=$MappingDocument.agenticChat
+    if($null -eq $chat){return}
+    $enabledProperty=$chat.PSObject.Properties['enabled']
+    if($null -eq $enabledProperty -or $chat.enabled -isnot [bool]){throw 'agenticChat.enabled must be a JSON boolean.'}
+    if(-not $chat.enabled){return}
+
+    $allowedKeys=@('enabled','integration','viewName','sourcePaletteViewName','controlName','controlPackage','hostUrl','flowId','scriptUrl','windowTitle','label','description','chatPosition','width','height','placement')
+    $unknownKeys=@($chat.PSObject.Properties.Name|Where-Object {$allowedKeys -notcontains [string]$_})
+    if($unknownKeys.Count -gt 0){throw "agenticChat contains unsupported or potentially secret-bearing properties: $($unknownKeys -join ', '). Browser API keys, headers, tokens, tweaks, and secrets are forbidden."}
+    if([string]$chat.integration -ne 'command-palette'){throw "agenticChat.integration must be 'command-palette'."}
+    if([string]$chat.controlPackage -ne 'assets/northstar-command-palette'){throw "agenticChat.controlPackage must be 'assets/northstar-command-palette'."}
+    foreach($required in @('viewName','hostUrl','flowId','scriptUrl','windowTitle','label','description')){
+        if([string]::IsNullOrWhiteSpace([string]$chat.$required)){throw "agenticChat.$required is required when agentic chat is enabled."}
+    }
+    $approvedScript='https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@v1.0.8/dist/build/static/js/bundle.min.js'
+    if([string]$chat.scriptUrl -cne $approvedScript){throw "agenticChat.scriptUrl must use the approved pinned Langflow v1.0.8 bundle: $approvedScript"}
+    $hostUri=$null
+    if(-not [Uri]::TryCreate([string]$chat.hostUrl,[UriKind]::Absolute,[ref]$hostUri) -or $hostUri.Scheme -ne 'https' -or -not [string]::IsNullOrEmpty($hostUri.Query) -or -not [string]::IsNullOrEmpty($hostUri.Fragment) -or ([string]$chat.hostUrl).EndsWith('/')){
+        throw 'agenticChat.hostUrl must be an absolute HTTPS origin with no query, fragment, or trailing slash.'
+    }
+    $flowGuid=[guid]::Empty
+    if(-not [guid]::TryParse([string]$chat.flowId,[ref]$flowGuid)){throw 'agenticChat.flowId must be a GUID.'}
+    $positions=@('top-left','top-center','top-right','center-left','center-right','bottom-right','bottom-center','bottom-left')
+    $position=[string](Get-ValueOrDefault $chat.chatPosition 'bottom-right')
+    if($positions -notcontains $position){throw "agenticChat.chatPosition must be one of: $($positions -join ', ')."}
+    $chatWidth=[int](Get-ValueOrDefault $chat.width 420)
+    $chatHeight=[int](Get-ValueOrDefault $chat.height 640)
+    if($chatWidth -lt 320 -or $chatWidth -gt 1200){throw 'agenticChat.width must be between 320 and 1200 pixels.'}
+    if($chatHeight -lt 420 -or $chatHeight -gt 1200){throw 'agenticChat.height must be between 420 and 1200 pixels.'}
+    if($null -eq $chat.placement -or [string]::IsNullOrWhiteSpace([string]$chat.placement.formName) -or [string]::IsNullOrWhiteSpace([string]$chat.placement.tab)){
+        throw 'agenticChat.placement.formName and agenticChat.placement.tab are required.'
+    }
+
+    $sourceViewName=[string](Get-ValueOrDefault $chat.sourcePaletteViewName $MappingDocument.homepage.commandPalette.viewName)
+    $sourceView=@($Manifest.application.views|Where-Object {[string]$_.name -eq $sourceViewName})|Select-Object -First 1
+    if($null -eq $sourceView){throw "agenticChat source command-palette View '$sourceViewName' was not found."}
+    $sourceControl=@($sourceView.webComponents|Where-Object {[string]$_.controlType -eq 'northstar-command-palette'})|Select-Object -First 1
+    if($null -eq $sourceControl){throw "agenticChat source View '$sourceViewName' does not host northstar-command-palette."}
+    if(@($Manifest.application.views|Where-Object {[string]$_.name -eq [string]$chat.viewName}).Count -gt 0){throw "agenticChat.viewName collides with an existing View: $($chat.viewName)"}
+
+    $assistantView=$sourceView|ConvertTo-Json -Depth 100|ConvertFrom-Json
+    $assistantView.name=[string]$chat.viewName
+    $assistantControl=@($assistantView.webComponents|Where-Object {[string]$_.controlType -eq 'northstar-command-palette'})|Select-Object -First 1
+    $assistantControl.name=[string](Get-ValueOrDefault $chat.controlName 'Northstar Case Assistant')
+    foreach($property in ([ordered]@{
+        AssistantEnabled=$true
+        AssistantLabel=[string]$chat.label
+        AssistantDescription=[string]$chat.description
+        LangflowHostUrl=[string]$chat.hostUrl
+        LangflowFlowId=[string]$flowGuid
+        LangflowScriptUrl=$approvedScript
+        LangflowWindowTitle=[string]$chat.windowTitle
+        LangflowChatPosition=$position
+        LangflowWidth=$chatWidth
+        LangflowHeight=$chatHeight
+    }).GetEnumerator()){Set-ObjectProperty $assistantControl.properties ([string]$property.Key) $property.Value}
+    $Manifest.application.views=@($Manifest.application.views)+@($assistantView)
+
+    $targetForm=@($Manifest.application.forms|Where-Object {[string]$_.name -eq [string]$chat.placement.formName})|Select-Object -First 1
+    if($null -eq $targetForm){throw "agenticChat target Form '$($chat.placement.formName)' was not found."}
+    if($null -eq $targetForm.tabs -or @($targetForm.tabs).Count -eq 0){throw "agenticChat target Form '$($chat.placement.formName)' must use tabs."}
+    $targetTab=@($targetForm.tabs|Where-Object {[string]$_.name -eq [string]$chat.placement.tab})|Select-Object -First 1
+    if($null -eq $targetTab){throw "agenticChat target Form '$($chat.placement.formName)' has no tab '$($chat.placement.tab)'."}
+
+    # A K2 View has one placement per Form. Replace any plain palette placement in this Form
+    # with the assistant-enabled clone and place it first on the chosen case-context tab.
+    $targetForm.views=@($targetForm.views|Where-Object {[string]$_ -ne $sourceViewName -and [string]$_ -ne [string]$chat.viewName})+@([string]$chat.viewName)
+    foreach($tab in @($targetForm.tabs)){
+        if($null -ne $tab.views){$tab.views=@($tab.views|Where-Object {[string]$_ -ne $sourceViewName -and [string]$_ -ne [string]$chat.viewName})}
+    }
+    $targetTab.views=@([string]$chat.viewName)+@($targetTab.views)
+    if($null -eq $targetForm.viewTitles){Set-ObjectProperty $targetForm 'viewTitles' ([pscustomobject]@{})}
+    Set-ObjectProperty $targetForm.viewTitles ([string]$chat.viewName) 'Case assistant and commands'
+    Write-Warning "ERRATA: '$($chat.viewName)' loads the pinned Langflow widget from jsDelivr at Runtime. Verify K2 CSP/CORS and remove or authenticate this alpha integration before production; no API key or trusted K2 user/case context is embedded."
+}
+
 $uxDocument=Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $Ux)|ConvertFrom-Json
 $mappingDocument=Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $Mapping)|ConvertFrom-Json
 $usesStyleProfile=-not [string]::IsNullOrWhiteSpace([string]$mappingDocument.application.styleProfile)
@@ -376,6 +459,7 @@ if ($BaseManifest) {
         foreach($viewName in $initViews){$initForm.viewTitles[$viewName]=if($viewName -eq ([string]$navigation.viewName)){'Application navigation'}elseif($viewName -eq $init.reviewViewName){if($finalActionMode -eq 'complete'){'Review the saved draft'}else{'Review the case before submission'}}elseif($viewName -eq $effectiveMasterView){'Case details'}else{($viewName -replace '^[^.]+\.','')}}
         $manifest.application.forms=@($manifest.application.forms)+@($initForm)
     }
+    Add-AgenticChat $manifest $mappingDocument
     if($null -eq $manifest.verification){$manifest|Add-Member -NotePropertyName verification -NotePropertyValue ([pscustomobject]@{})}
     $manifest.verification|Add-Member -NotePropertyName expectedViews -NotePropertyValue @($manifest.application.views|ForEach-Object {$_.name}) -Force
     $manifest.verification|Add-Member -NotePropertyName expectedForms -NotePropertyValue @($manifest.application.forms|ForEach-Object {$_.name}) -Force
@@ -383,5 +467,8 @@ if ($BaseManifest) {
     $manifest.verification|Add-Member -NotePropertyName runtimeBaseUrl -NotePropertyValue ([string]$mappingDocument.runtimeBaseUrl) -Force
 } else {
     $manifest=[ordered]@{name=$mappingDocument.application.name;k2=[ordered]@{host='localhost';port=5555;integrated=$true;securityLabel='K2'};application=[ordered]@{rootCategoryPath=$mappingDocument.application.rootCategoryPath;theme=$mappingDocument.application.theme;styleProfile=$mappingDocument.application.styleProfile;solutionCode=$mappingDocument.application.solutionCode;replaceExisting=$true;checkIn=$true;views=@($views);forms=@($generatedForms)};verification=[ordered]@{expectedViews=@($views|ForEach-Object {$_.name});expectedForms=@($generatedForms|ForEach-Object {$_.name});smokeTestRuntime=$true;runtimeBaseUrl=$mappingDocument.runtimeBaseUrl}}
+    Add-AgenticChat $manifest $mappingDocument
+    $manifest.verification.expectedViews=@($manifest.application.views|ForEach-Object {$_.name})
+    $manifest.verification.expectedForms=@($manifest.application.forms|ForEach-Object {$_.name})
 }
 $destination=[IO.Path]::GetFullPath($Output);$parent=Split-Path -Parent $destination;if($parent -and -not(Test-Path $parent)){New-Item -ItemType Directory -Path $parent|Out-Null};$manifest|ConvertTo-Json -Depth 100|Set-Content -Encoding utf8 -LiteralPath $destination;"Compiled SmartForms dashboard manifest: $destination";exit 0
