@@ -26,7 +26,7 @@ namespace K2WebComponentCli
 
     internal static class Program
     {
-        private const string Version = "0.4.0";
+        private const string Version = "0.4.1";
 
         public static int Main(string[] args)
         {

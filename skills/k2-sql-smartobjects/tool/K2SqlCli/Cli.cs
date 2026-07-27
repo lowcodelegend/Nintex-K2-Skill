@@ -189,7 +189,7 @@ namespace K2SqlCli
 
         private static void PrintVersion()
         {
-            Console.WriteLine("k2sql 0.7.0");
+            Console.WriteLine("k2sql 0.7.1");
         }
 
         private static void PrintHelp()

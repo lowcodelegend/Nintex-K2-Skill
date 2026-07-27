@@ -2,7 +2,7 @@
 
 Build self-hosted K2 Five applications from manifests, not clicks. Seven portable Agent Skills and six CLI tools design governed case-management solutions and create SQL-backed SmartObjects, modern Web Component controls, custom Style Profiles, modern SmartForms, HTML5 workflows, and complete verified solutions through K2 management and Designer services.
 
-Windows x64 only. Requires K2 Five installed locally, PowerShell 5.1+, .NET Framework, SQL Server access, and normally integrated AD authentication. It does not target Nintex Automation Cloud or legacy K2 Studio workflows.
+Windows x64 only. Requires K2 Five installed locally, PowerShell 5.1+, .NET Framework 4.8, SQL Server access, and normally integrated AD authentication. Building the CLIs from source additionally requires the .NET Framework 4.8 Developer Pack. It does not target Nintex Automation Cloud or legacy K2 Studio workflows.
 
 > [!WARNING]
 > Use this toolkit only in a K2 development environment, preferably a dedicated single-user VM. Generation, replacement, workflow publication, and cleanup can make broad changes to K2 and application databases; it is not intended to run directly against shared test, staging, or production environments. Install and run Codex or Claude Code on the K2 VM itself so the agent can use the locally installed K2 assemblies, Windows identity, registry configuration, IIS metadata, and management endpoints.

@@ -1,5 +1,7 @@
 # Packaging and installing K2 skills
 
+Source builds require the .NET Framework 4.8 Developer Pack so MSBuild resolves reference assemblies instead of falling back to the GAC. The operational packages require only the .NET Framework 4.8 runtime already required by the supported K2 Five installation.
+
 ## Release configuration
 
 Maintain suite and skill versions in `release/skills.json`. Each skill entry declares:

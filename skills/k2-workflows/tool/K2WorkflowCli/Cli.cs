@@ -10,7 +10,7 @@ namespace K2WorkflowCli
         {
             if (args.Length == 0 || Has(args, "--help") || Has(args, "-h")) { Help(); return 0; }
             var command = args[0].ToLowerInvariant();
-            if (command == "version") { Console.WriteLine("k2wf 0.13.0"); return 0; }
+            if (command == "version") { Console.WriteLine("k2wf 0.13.1"); return 0; }
             if (command == "selftest") { SelfTests.Run(); return 0; }
             if (command == "doctor") { WorkflowManager.Doctor(); return 0; }
             if (args.Length < 2) throw new CliException("A manifest path is required.");
@@ -76,7 +76,7 @@ namespace K2WorkflowCli
         }
         private static void Help()
         {
-            Console.WriteLine("k2wf 0.13.0 - K2 Five HTML5 Workflow Designer JSON CLI");
+            Console.WriteLine("k2wf 0.13.1 - K2 Five HTML5 Workflow Designer JSON CLI");
             Console.WriteLine("Commands:");
             Console.WriteLine("  doctor");
             Console.WriteLine("  plan <manifest.json>");
