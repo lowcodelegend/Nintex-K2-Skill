@@ -24,20 +24,24 @@ Give the displayed bearer token only to the Langflow secret store. Put the emitt
 & scripts/case-agent-mcp.ps1 serve .\case-agent-mcp-server.yaml
 ```
 
-The endpoint is `<publicBaseUrl><mcpPath>`, normally `https://case-agent.example/mcp`. `/healthz` reports only service readiness and whether mutations/durable drafts are enabled.
+The endpoint is `<publicBaseUrl><mcpPath>`, normally `https://case-agent.example/mcp`. `/healthz` reports service readiness, authentication mode, mutation state, draft durability, and `creationMode` (`disabled`, `alpha`, or `adapter`).
 
 ### Temporary unauthenticated development
 
-Use `assets/case-agent-mcp-development.yaml` only when the user explicitly asks to defer authentication for an internal Langflow connectivity test. Set the real development DNS name or IP in `publicBaseUrl` and `allowedHosts`. This mode requires all of the following gates:
+Use `assets/case-agent-mcp-development.yaml` only when the user explicitly asks to defer authentication and permit alpha case creation for an internal Langflow development test. Set the real development DNS name or IP in `publicBaseUrl` and `allowedHosts`. This mode requires all of the following gates:
 
 - `security.mode` is `none` and `allowUnauthenticated` is explicitly `true`.
 - Every request receives one visibly non-production `developmentPrincipalId`.
-- The only granted scope is `case:create`; commit scope cannot be configured.
-- `runtime.mutationsEnabled` is `false`.
-- `runtime.factory` is absent, so no durable store, file provider, external lookup provider, or K2 adapter is reachable.
+- `security.allowUnauthenticatedMutations` is explicitly `true`.
+- `runtime.mutationsEnabled` is `true`.
+- `runtime.alphaCaseStore.enabled` and `acknowledgeNonProduction` are explicitly `true`.
+- `runtime.alphaCaseStore.path` names the local SQLite case store and `caseNumberPrefix` visibly identifies its records.
+- Commit scope is granted internally only while all alpha gates are satisfied; it cannot be supplied as an arbitrary configuration scope.
+- `runtime.factory` remains absent, so no external data provider or K2 adapter is reachable.
 - Drafts are memory-only and disappear when the server restarts.
+- Confirmed cases survive restarts in the alpha SQLite store, retain the exact canonical/extension/file-handle snapshot, receive a stable case ID and number, and start in `CAPTURE` with `submitted:false`.
 
-The health response reports `"authenticationMode":"none"` and `"unauthenticated":true`. Bind only to an isolated development network, keep the port inaccessible from untrusted segments, and replace this mode before connecting real case data or enabling any mutation.
+The health response reports `"authenticationMode":"none"`, `"unauthenticated":true`, and `"creationMode":"alpha"`. The alpha record is useful for conversation, contract, confirmation, and idempotency testing; it is not a K2 Case, does not call a SmartObject, and does not start a workflow. Bind only to an isolated development network, keep the port inaccessible from untrusted segments, use synthetic data, and replace this mode before production or security testing.
 
 ## Langflow
 
@@ -63,11 +67,16 @@ Use the MCP Tools component as the Agent component's toolset. Keep tool caching 
 - `get_intake_validation`
 - `preview_case_creation`
 
-`case:create:commit` additionally permits `create_case`, but the tool still refuses execution unless `runtime.mutationsEnabled` is true and the runtime factory supplies durable drafts plus every registered case-type adapter.
+`case:create:commit` additionally permits `create_case`, but the tool still refuses execution unless `runtime.mutationsEnabled` is true and either:
+
+- the runtime factory supplies durable drafts plus every registered case-type adapter; or
+- the explicitly acknowledged alpha store is enabled for non-production development.
+
+Both modes preserve confirmation and idempotency. Creation returns `submitted:false`; submission or workflow start remains a separate governed command.
 
 ## Runtime plugin
 
-The built-in runtime is intentionally non-production: its drafts are in memory, lookups are configured inline, file handles cannot resolve, and mutations are disabled. Copy `assets/case-agent-runtime-plugin.py` into the solution repository and configure `runtime.factory.modulePath` plus `function`.
+The built-in runtime is intentionally non-production: its drafts are in memory, lookups are configured inline, and file handles cannot resolve. With no alpha store its mutations are disabled. With the explicit alpha store it may persist development Case snapshots only. Copy `assets/case-agent-runtime-plugin.py` into the solution repository and configure `runtime.factory.modulePath` plus `function` when replacing alpha persistence with a real case-type runtime.
 
 The factory may return only:
 
@@ -83,4 +92,4 @@ Do not let the plugin change bearer identity or authorization, accept arbitrary 
 
 Static bearer mode is the initial Langflow-compatible bootstrap for a controlled internal network. Use HTTPS, a firewall allowlist, one token per client identity, short expiry, rotation, minimum scopes, and separate non-commit/commit credentials. Do not expose this bootstrap directly to the public Internet. Replace it with a corporate OAuth resource-server verifier before broader or delegated access; preserve the same principal/scopes/case-type context consumed by the framework.
 
-Run `tests/run-tests.ps1` before deployment. It starts a real loopback Streamable HTTP server and verifies authentication, Origin rejection, MCP initialization and tool schemas, draft collection, validation, preview, disabled mutation, and cross-principal isolation through the official client.
+Run `tests/run-tests.ps1` before deployment. It starts real loopback Streamable HTTP servers and verifies authentication, Origin rejection, MCP initialization and tool schemas, draft collection, validation, preview, disabled mutation, cross-principal isolation, gated alpha creation, stable case numbering, non-submission, and restart-safe idempotency through the official client.

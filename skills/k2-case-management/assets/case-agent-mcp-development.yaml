@@ -16,6 +16,7 @@
   "security": {
     "mode": "none",
     "allowUnauthenticated": true,
+    "allowUnauthenticatedMutations": true,
     "developmentPrincipalId": "DEVELOPMENT\\anonymous-langflow",
     "caseTypes": ["EVIDENCE_EXCEPTION"]
   },
@@ -23,7 +24,13 @@
   "runtime": {
     "draftStore": "memory",
     "allowEphemeralDrafts": true,
-    "mutationsEnabled": false,
+    "mutationsEnabled": true,
+    "alphaCaseStore": {
+      "enabled": true,
+      "acknowledgeNonProduction": true,
+      "path": "alpha-data/cases.sqlite3",
+      "caseNumberPrefix": "ALPHA"
+    },
     "inlineLookups": {
       "CONFIDENTIALITY": ["INTERNAL", "RESTRICTED"],
       "EXCEPTION_TYPE": ["PROCESS", "EVIDENCE"]

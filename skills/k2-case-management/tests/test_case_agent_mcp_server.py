@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import socket
 import sys
+import tempfile
 import threading
 import time
 import unittest
@@ -18,12 +19,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from case_agent_mcp_server import (  # noqa: E402
+    AlphaCaseStoreAdapter,
     StaticTokenDirectory,
     create_application,
     generate_token_record,
     validate_server_config,
     validate_token_records,
 )
+from case_agent_framework import AdapterError, CreationRequest  # noqa: E402
 
 
 def free_port():
@@ -74,6 +77,19 @@ def unauthenticated_config_for(port):
         "allowUnauthenticated": True,
         "developmentPrincipalId": r"DEVELOPMENT\anonymous-langflow",
         "caseTypes": ["EVIDENCE_EXCEPTION"],
+    }
+    return config
+
+
+def unauthenticated_alpha_config_for(port, database_path):
+    config = unauthenticated_config_for(port)
+    config["security"]["allowUnauthenticatedMutations"] = True
+    config["runtime"]["mutationsEnabled"] = True
+    config["runtime"]["alphaCaseStore"] = {
+        "enabled": True,
+        "acknowledgeNonProduction": True,
+        "path": str(database_path),
+        "caseNumberPrefix": "TEST",
     }
     return config
 
@@ -157,7 +173,7 @@ class CaseAgentMcpServerTests(unittest.TestCase):
         self.assertTrue(any("inline tokens are forbidden" in error for error in errors))
         self.assertTrue(any("requires a case-type runtime factory" in error for error in errors))
 
-    def test_unauthenticated_mode_requires_explicit_read_only_development_boundary(self):
+    def test_unauthenticated_mode_requires_explicit_development_boundary(self):
         config = unauthenticated_config_for(8443)
         self.assertEqual([], validate_server_config(config, ROOT / "assets"))
 
@@ -171,8 +187,65 @@ class CaseAgentMcpServerTests(unittest.TestCase):
         errors = validate_server_config(config, ROOT / "assets")
         self.assertTrue(any("allowUnauthenticated=true" in error for error in errors))
         self.assertTrue(any("forbids token settings" in error for error in errors))
-        self.assertTrue(any("mutationsEnabled=false" in error for error in errors))
+        self.assertTrue(any("explicit alpha case store" in error for error in errors))
+        self.assertTrue(
+            any("allowUnauthenticatedMutations=true" in error for error in errors)
+        )
         self.assertTrue(any("forbids runtime.factory" in error for error in errors))
+
+    def test_alpha_mutations_require_both_explicit_acknowledgements(self):
+        config = unauthenticated_config_for(8443)
+        config["runtime"]["mutationsEnabled"] = True
+        config["runtime"]["alphaCaseStore"] = {
+            "enabled": True,
+            "path": "alpha-test/cases.sqlite3",
+        }
+        errors = validate_server_config(config, ROOT / "assets")
+        self.assertTrue(
+            any("acknowledgeNonProduction=true" in error for error in errors)
+        )
+        self.assertTrue(
+            any("allowUnauthenticatedMutations=true" in error for error in errors)
+        )
+
+        config["runtime"]["alphaCaseStore"]["acknowledgeNonProduction"] = True
+        config["security"]["allowUnauthenticatedMutations"] = True
+        self.assertEqual([], validate_server_config(config, ROOT / "assets"))
+
+    def test_alpha_adapter_is_durable_and_idempotent_across_instances(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "cases.sqlite3"
+            request = CreationRequest(
+                principal_id=r"DEVELOPMENT\agent",
+                draft_id="draft-one",
+                case_type_code="EVIDENCE_EXCEPTION",
+                contract_version=1,
+                idempotency_key="stable-key",
+                correlation_id="correlation-one",
+                canonical={"Title": "Stable alpha case"},
+                extensions={"exception": {"ExceptionTypeCode": "PROCESS"}},
+                file_handles=[],
+            )
+            first = AlphaCaseStoreAdapter(path, "TEST").create(request)
+            second = AlphaCaseStoreAdapter(path, "TEST").create(request)
+            self.assertEqual(first, second)
+            self.assertEqual("TEST-000001", first["caseNumber"])
+            self.assertEqual("CAPTURE", first["lifecycleStatus"])
+            self.assertFalse(first["submitted"])
+
+            conflicting = CreationRequest(
+                principal_id=request.principal_id,
+                draft_id="draft-two",
+                case_type_code=request.case_type_code,
+                contract_version=request.contract_version,
+                idempotency_key=request.idempotency_key,
+                correlation_id="correlation-two",
+                canonical={"Title": "Different alpha case"},
+                extensions=request.extensions,
+                file_handles=request.file_handles,
+            )
+            with self.assertRaises(AdapterError):
+                AlphaCaseStoreAdapter(path, "TEST").create(conflicting)
 
     def test_token_records_are_hashed_scoped_and_expirable(self):
         token, record = generate_token_record(
@@ -193,6 +266,9 @@ class CaseAgentMcpServerTests(unittest.TestCase):
 
     def test_remote_unauthenticated_development_tools(self):
         asyncio.run(self._remote_unauthenticated_development_tools())
+
+    def test_remote_unauthenticated_alpha_case_creation(self):
+        asyncio.run(self._remote_unauthenticated_alpha_case_creation())
 
     async def _remote_unauthenticated_development_tools(self):
         port = free_port()
@@ -238,6 +314,87 @@ class CaseAgentMcpServerTests(unittest.TestCase):
                 self.assertIn("lacks required scope", create.content[0].text)
             finally:
                 await disconnect(client, transport, session)
+
+    async def _remote_unauthenticated_alpha_case_creation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            database_path = Path(directory) / "cases.sqlite3"
+            port = free_port()
+            config = unauthenticated_alpha_config_for(port, database_path)
+            self.assertEqual([], validate_server_config(config, ROOT / "assets"))
+            app, runtime = create_application(config, ROOT / "assets")
+            self.assertTrue(runtime.mutations_enabled)
+            self.assertEqual("alpha", runtime.creation_mode)
+
+            with RunningServer(app, port) as server:
+                health = httpx.get(server.base_url + "/healthz").json()
+                self.assertTrue(health["mutationsEnabled"])
+                self.assertEqual("alpha", health["creationMode"])
+
+                client, transport, session = await connect(server.base_url + "/mcp")
+                try:
+                    tools = await session.list_tools()
+                    create_tool = next(
+                        value for value in tools.tools if value.name == "create_case"
+                    )
+                    self.assertIn("does not submit", create_tool.description)
+
+                    draft = result_value(
+                        await session.call_tool(
+                            "start_case_intake",
+                            {"case_type_code": "EVIDENCE_EXCEPTION"},
+                        )
+                    )
+                    draft = result_value(
+                        await session.call_tool(
+                            "update_case_intake",
+                            {
+                                "draft_id": draft["draftId"],
+                                "expected_revision": draft["revision"],
+                                "values": {
+                                    "canonical.Title": "Alpha network case",
+                                    "canonical.Description": (
+                                        "This alpha case is complete enough to pass validation."
+                                    ),
+                                    "canonical.ConfidentialityCode": "INTERNAL",
+                                    "extensions.exception.ExceptionTypeCode": "PROCESS",
+                                    "extensions.exception.OccurredDate": "2026-07-27",
+                                    "extensions.exception.ContainsPersonalData": False,
+                                },
+                            },
+                        )
+                    )
+                    preview = result_value(
+                        await session.call_tool(
+                            "preview_case_creation",
+                            {"draft_id": draft["draftId"]},
+                        )
+                    )
+                    arguments = {
+                        "draft_id": draft["draftId"],
+                        "confirmation_token": preview["confirmationToken"],
+                        "idempotency_key": "alpha-network-case",
+                    }
+                    created = result_value(
+                        await session.call_tool("create_case", arguments)
+                    )
+                    repeated = result_value(
+                        await session.call_tool("create_case", arguments)
+                    )
+                    self.assertEqual(created, repeated)
+                    self.assertEqual("TEST-000001", created["caseNumber"])
+                    self.assertEqual("CAPTURE", created["lifecycleStatus"])
+                    self.assertEqual("alpha-sqlite", created["persistenceMode"])
+                    self.assertFalse(created["submitted"])
+                    self.assertTrue(created["developmentOnly"])
+                finally:
+                    await disconnect(client, transport, session)
+
+            connection = AlphaCaseStoreAdapter(database_path, "TEST")._connect()
+            try:
+                count = connection.execute("SELECT COUNT(*) FROM AlphaCase").fetchone()[0]
+            finally:
+                connection.close()
+            self.assertEqual(1, count)
 
     async def _remote_streamable_http_tools_and_authorization(self):
         port = free_port()

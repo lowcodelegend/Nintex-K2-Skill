@@ -21,8 +21,10 @@ import logging
 import os
 import re
 import secrets
+import sqlite3
 import sys
 import time
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -44,6 +46,7 @@ from case_agent_framework import (
     CaseAgentFrameworkError,
     ConfirmationError,
     ContractRegistry,
+    CreationRequest,
     DraftConflictError,
     DraftNotFoundError,
     InMemoryDraftStore,
@@ -53,9 +56,10 @@ from case_agent_framework import (
 )
 
 
-SERVER_VERSION = "0.2.0"
+SERVER_VERSION = "0.3.0"
 TOKEN_ENVIRONMENT_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]{2,127}$")
 SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
+CASE_NUMBER_PREFIX_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9_-]{0,19}$")
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
 LOG = logging.getLogger("k2.case_agent_mcp")
 
@@ -189,12 +193,163 @@ class MissingFileHandleProvider:
         return None
 
 
+class AlphaCaseStoreAdapter:
+    """Durable, local development adapter; it is not a K2 production adapter."""
+
+    def __init__(self, database_path: Path, case_number_prefix: str = "ALPHA") -> None:
+        self.database_path = database_path.resolve()
+        self.case_number_prefix = case_number_prefix
+        self.database_path.parent.mkdir(parents=True, exist_ok=True)
+        connection = self._connect()
+        try:
+            connection.executescript(
+                """
+                CREATE TABLE IF NOT EXISTS AlphaCase (
+                    SequenceId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    CaseId TEXT NOT NULL UNIQUE,
+                    CaseNumber TEXT NOT NULL UNIQUE,
+                    PrincipalId TEXT NOT NULL,
+                    DraftId TEXT NOT NULL,
+                    CaseTypeCode TEXT NOT NULL,
+                    ContractVersion INTEGER NOT NULL,
+                    IdempotencyKey TEXT NOT NULL,
+                    PayloadDigest TEXT NOT NULL,
+                    CorrelationId TEXT NOT NULL,
+                    CanonicalJson TEXT NOT NULL,
+                    ExtensionsJson TEXT NOT NULL,
+                    FileHandlesJson TEXT NOT NULL,
+                    LifecycleStatus TEXT NOT NULL,
+                    Submitted INTEGER NOT NULL CHECK (Submitted = 0),
+                    CreatedDate TEXT NOT NULL,
+                    ResultJson TEXT NOT NULL,
+                    UNIQUE (PrincipalId, IdempotencyKey),
+                    UNIQUE (PrincipalId, DraftId)
+                );
+                """
+            )
+        finally:
+            connection.close()
+
+    def create(self, request: CreationRequest) -> Mapping[str, Any]:
+        payload_digest = self._payload_digest(request)
+        connection = self._connect()
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            prior = connection.execute(
+                """
+                SELECT PayloadDigest, ResultJson
+                FROM AlphaCase
+                WHERE PrincipalId = ? AND IdempotencyKey = ?
+                """,
+                (request.principal_id, request.idempotency_key),
+            ).fetchone()
+            if prior is not None:
+                if prior[0] != payload_digest:
+                    raise AdapterError(
+                        "The idempotency key was already used for a different "
+                        "alpha case snapshot."
+                    )
+                connection.commit()
+                return json.loads(prior[1])
+
+            prior_draft = connection.execute(
+                """
+                SELECT PayloadDigest, ResultJson
+                FROM AlphaCase
+                WHERE PrincipalId = ? AND DraftId = ?
+                """,
+                (request.principal_id, request.draft_id),
+            ).fetchone()
+            if prior_draft is not None:
+                if prior_draft[0] != payload_digest:
+                    raise AdapterError(
+                        "The alpha draft was already materialized from a different snapshot."
+                    )
+                connection.commit()
+                return json.loads(prior_draft[1])
+
+            case_id = str(uuid.uuid4())
+            created_date = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            cursor = connection.execute(
+                """
+                INSERT INTO AlphaCase (
+                    CaseId, CaseNumber, PrincipalId, DraftId, CaseTypeCode,
+                    ContractVersion, IdempotencyKey, PayloadDigest, CorrelationId,
+                    CanonicalJson, ExtensionsJson, FileHandlesJson,
+                    LifecycleStatus, Submitted, CreatedDate, ResultJson
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CAPTURE', 0, ?, '{}')
+                """,
+                (
+                    case_id,
+                    "PENDING-" + case_id,
+                    request.principal_id,
+                    request.draft_id,
+                    request.case_type_code,
+                    request.contract_version,
+                    request.idempotency_key,
+                    payload_digest,
+                    request.correlation_id,
+                    _json_key(request.canonical),
+                    _json_key(request.extensions),
+                    _json_key(request.file_handles),
+                    created_date,
+                ),
+            )
+            case_number = f"{self.case_number_prefix}-{int(cursor.lastrowid):06d}"
+            result = {
+                "caseId": case_id,
+                "caseNumber": case_number,
+                "caseTypeCode": request.case_type_code,
+                "contractVersion": request.contract_version,
+                "lifecycleStatus": "CAPTURE",
+                "submitted": False,
+                "createdDate": created_date,
+                "correlationId": request.correlation_id,
+                "persistenceMode": "alpha-sqlite",
+                "developmentOnly": True,
+            }
+            connection.execute(
+                """
+                UPDATE AlphaCase
+                SET CaseNumber = ?, ResultJson = ?
+                WHERE SequenceId = ?
+                """,
+                (case_number, _json_key(result), int(cursor.lastrowid)),
+            )
+            connection.commit()
+            return result
+        except sqlite3.Error as exc:
+            connection.rollback()
+            raise AdapterError("The alpha case store could not persist the case.") from exc
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+
+    def _connect(self) -> sqlite3.Connection:
+        return sqlite3.connect(str(self.database_path), timeout=30)
+
+    @staticmethod
+    def _payload_digest(request: CreationRequest) -> str:
+        payload = {
+            "caseTypeCode": request.case_type_code,
+            "contractVersion": request.contract_version,
+            "canonical": request.canonical,
+            "extensions": request.extensions,
+            "fileHandles": request.file_handles,
+        }
+        return hashlib.sha256(_json_key(payload).encode("utf-8")).hexdigest()
+
+
 @dataclass
 class ServerRuntime:
     framework: CaseAgentFramework
     mutations_enabled: bool
     durable_drafts: bool
     authentication_mode: str
+    creation_mode: str
 
 
 def validate_server_config(
@@ -352,6 +507,43 @@ def validate_server_config(
     ):
         errors.append("runtime.inlineLookups must map lookup codes to lists")
     factory = runtime.get("factory")
+    alpha_case_store = runtime.get("alphaCaseStore")
+    alpha_enabled = (
+        isinstance(alpha_case_store, Mapping)
+        and alpha_case_store.get("enabled") is True
+    )
+    if alpha_case_store is not None and not isinstance(alpha_case_store, Mapping):
+        errors.append("runtime.alphaCaseStore must be an object")
+        alpha_case_store = {}
+    if isinstance(alpha_case_store, Mapping) and alpha_case_store:
+        unexpected = set(alpha_case_store) - {
+            "enabled",
+            "acknowledgeNonProduction",
+            "path",
+            "caseNumberPrefix",
+        }
+        if unexpected:
+            errors.append(
+                "runtime.alphaCaseStore contains unsupported properties: "
+                + ", ".join(sorted(unexpected))
+            )
+        if alpha_enabled:
+            if alpha_case_store.get("acknowledgeNonProduction") is not True:
+                errors.append(
+                    "runtime.alphaCaseStore.acknowledgeNonProduction=true is required"
+                )
+            database_path = alpha_case_store.get("path")
+            if not isinstance(database_path, str) or not database_path.strip():
+                errors.append("runtime.alphaCaseStore.path is required")
+            prefix = alpha_case_store.get("caseNumberPrefix", "ALPHA")
+            if (
+                not isinstance(prefix, str)
+                or CASE_NUMBER_PREFIX_PATTERN.fullmatch(prefix) is None
+            ):
+                errors.append(
+                    "runtime.alphaCaseStore.caseNumberPrefix must be 1-20 uppercase "
+                    "letters, numbers, hyphens, or underscores"
+                )
     if factory is not None:
         if not isinstance(factory, Mapping):
             errors.append("runtime.factory must be an object")
@@ -364,19 +556,42 @@ def validate_server_config(
                 errors.append("runtime.factory.modulePath must name an existing Python file")
             if not isinstance(function, str) or not function.isidentifier():
                 errors.append("runtime.factory.function must be a Python identifier")
-    if runtime.get("mutationsEnabled") is True and factory is None:
+    if factory is not None and alpha_enabled:
+        errors.append("runtime.factory and runtime.alphaCaseStore cannot both be enabled")
+    if runtime.get("mutationsEnabled") is True and factory is None and not alpha_enabled:
         errors.append(
             "runtime.mutationsEnabled requires a case-type runtime factory with durable drafts "
-            "and registered adapters"
+            "and registered adapters, or the explicit alpha case store"
+        )
+    if alpha_enabled and runtime.get("mutationsEnabled") is not True:
+        errors.append(
+            "runtime.alphaCaseStore requires runtime.mutationsEnabled=true"
         )
     if security_mode == "none":
-        if runtime.get("mutationsEnabled") is not False:
-            errors.append(
-                "unauthenticated mode requires runtime.mutationsEnabled=false"
-            )
         if factory is not None:
             errors.append(
                 "unauthenticated mode forbids runtime.factory and external data providers"
+            )
+        if runtime.get("mutationsEnabled") is True:
+            if not alpha_enabled:
+                errors.append(
+                    "unauthenticated mutations require the explicit alpha case store"
+                )
+            if security.get("allowUnauthenticatedMutations") is not True:
+                errors.append(
+                    "unauthenticated mutations require "
+                    "security.allowUnauthenticatedMutations=true"
+                )
+        elif runtime.get("mutationsEnabled") is not False:
+            errors.append(
+                "unauthenticated mode requires runtime.mutationsEnabled to be boolean"
+            )
+        if (
+            security.get("allowUnauthenticatedMutations") is True
+            and not alpha_enabled
+        ):
+            errors.append(
+                "security.allowUnauthenticatedMutations is only valid with the alpha case store"
             )
     return errors
 
@@ -470,8 +685,9 @@ def create_application(
     lookup_provider: Any = InlineLookupProvider(runtime_config.get("inlineLookups", {}))
     file_provider: Any = MissingFileHandleProvider()
     draft_store: Any = InMemoryDraftStore()
-    adapters: Mapping[str, Any] = {}
+    adapters: Dict[str, Any] = {}
     durable_drafts = False
+    creation_mode = "disabled"
     factory_config = runtime_config.get("factory")
     if factory_config:
         bindings = _load_runtime_factory(
@@ -483,11 +699,25 @@ def create_application(
         lookup_provider = bindings.get("lookupProvider", lookup_provider)
         file_provider = bindings.get("fileHandleProvider", file_provider)
         draft_store = bindings.get("draftStore", draft_store)
-        adapters = bindings.get("adapters", {})
+        adapters = dict(bindings.get("adapters", {}))
         durable_drafts = bindings.get("durableDrafts") is True
+        creation_mode = "adapter"
 
     mutations_enabled = runtime_config.get("mutationsEnabled") is True
-    if mutations_enabled and not durable_drafts:
+    alpha_config = runtime_config.get("alphaCaseStore", {})
+    alpha_enabled = (
+        isinstance(alpha_config, Mapping) and alpha_config.get("enabled") is True
+    )
+    if alpha_enabled:
+        alpha_adapter = AlphaCaseStoreAdapter(
+            _resolve_path(base_directory, str(alpha_config["path"])),
+            str(alpha_config.get("caseNumberPrefix", "ALPHA")),
+        )
+        for case_type_code in registry.case_types():
+            contract = registry.get(case_type_code)
+            adapters[str(contract["creationAdapter"])] = alpha_adapter
+        creation_mode = "alpha"
+    if mutations_enabled and not durable_drafts and not alpha_enabled:
         raise ValueError("Mutation-enabled MCP runtime requires a durable draft store.")
     framework = CaseAgentFramework(
         registry,
@@ -513,7 +743,13 @@ def create_application(
         instructions=(
             "Governed K2 case creation. Discover a versioned contract, collect and validate "
             "a principal-owned draft, preview it, and require explicit confirmation before "
-            "creation. Creation never submits a case."
+            "creation. Creation never submits a case. "
+            + (
+                "This development server persists confirmed cases to a local alpha store in "
+                "CAPTURE; it does not invoke K2 SmartObjects or workflows."
+                if creation_mode == "alpha"
+                else "A configured case-type adapter owns persistence."
+            )
         ),
         host=str(server_config["host"]),
         port=int(server_config["port"]),
@@ -533,6 +769,7 @@ def create_application(
         mutations_enabled=mutations_enabled,
         durable_drafts=durable_drafts,
         authentication_mode=authentication_mode,
+        creation_mode=creation_mode,
     )
     _register_tools(mcp, runtime)
 
@@ -547,6 +784,7 @@ def create_application(
                 "unauthenticated": authentication_mode == "none",
                 "mutationsEnabled": mutations_enabled,
                 "durableDrafts": durable_drafts,
+                "creationMode": creation_mode,
             }
         )
 
@@ -559,11 +797,14 @@ def create_application(
         )
     else:
         security_config = config["security"]
+        development_scopes = {"case:create"}
+        if mutations_enabled and creation_mode == "alpha":
+            development_scopes.add("case:create:commit")
         app.add_middleware(
             UnauthenticatedDevelopmentMiddleware,
             identity=RemoteIdentity(
                 principal_id=str(security_config["developmentPrincipalId"]),
-                scopes=frozenset({"case:create"}),
+                scopes=frozenset(development_scopes),
                 case_types=frozenset(
                     str(value) for value in security_config["caseTypes"]
                 ),
@@ -600,6 +841,7 @@ def _register_tools(mcp: FastMCP, runtime: ServerRuntime) -> None:
         structured_output=True,
     )
     def list_permitted_case_types() -> Dict[str, Any]:
+        """List case types the current caller may start."""
         identity = _require_identity("case:create")
         return _invoke(
             "list_permitted_case_types",
@@ -619,6 +861,7 @@ def _register_tools(mcp: FastMCP, runtime: ServerRuntime) -> None:
     def get_case_creation_contract(
         case_type_code: str, contract_version: Optional[int] = None
     ) -> Dict[str, Any]:
+        """Get the governed fields, constraints, and evidence needs for a case type."""
         identity = _require_identity("case:create", case_type_code)
         return _invoke(
             "get_case_creation_contract",
@@ -636,6 +879,7 @@ def _register_tools(mcp: FastMCP, runtime: ServerRuntime) -> None:
     def start_case_intake(
         case_type_code: str, contract_version: Optional[int] = None
     ) -> Dict[str, Any]:
+        """Start a principal-owned draft for one permitted case type."""
         identity = _require_identity("case:create", case_type_code)
         return _invoke(
             "start_case_intake",
@@ -653,6 +897,7 @@ def _register_tools(mcp: FastMCP, runtime: ServerRuntime) -> None:
     def update_case_intake(
         draft_id: str, values: Dict[str, Any], expected_revision: int
     ) -> Dict[str, Any]:
+        """Update declared draft fields using dotted contract paths."""
         identity = _require_identity("case:create")
         return _invoke(
             "update_case_intake",
@@ -675,6 +920,7 @@ def _register_tools(mcp: FastMCP, runtime: ServerRuntime) -> None:
         file_handles: List[Dict[str, str]],
         expected_revision: int,
     ) -> Dict[str, Any]:
+        """Attach already-staged opaque file handles to a draft."""
         identity = _require_identity("case:create")
         return _invoke(
             "set_case_intake_files",
@@ -693,6 +939,7 @@ def _register_tools(mcp: FastMCP, runtime: ServerRuntime) -> None:
         structured_output=True,
     )
     def get_intake_validation(draft_id: str) -> Dict[str, Any]:
+        """Validate the current draft against its versioned creation contract."""
         identity = _require_identity("case:create")
         return _invoke(
             "get_intake_validation",
@@ -708,6 +955,7 @@ def _register_tools(mcp: FastMCP, runtime: ServerRuntime) -> None:
         structured_output=True,
     )
     def preview_case_creation(draft_id: str) -> Dict[str, Any]:
+        """Preview a valid draft and issue the confirmation token required to create it."""
         identity = _require_identity("case:create")
         return _invoke(
             "preview_case_creation",
@@ -728,6 +976,7 @@ def _register_tools(mcp: FastMCP, runtime: ServerRuntime) -> None:
         idempotency_key: str,
         correlation_id: Optional[str] = None,
     ) -> Dict[str, Any]:
+        """Create one confirmed case idempotently; creation does not submit or start workflow."""
         identity = _require_identity("case:create:commit")
         return _invoke(
             "create_case",
@@ -742,8 +991,8 @@ def _register_tools(mcp: FastMCP, runtime: ServerRuntime) -> None:
                 )
                 if runtime.mutations_enabled
                 else _raise_tool_error(
-                    "Case creation is disabled until a durable case-type runtime and "
-                    "registered creation adapter are configured."
+                    "Case creation is disabled until an alpha store or durable case-type "
+                    "runtime with a registered creation adapter is configured."
                 )
             ),
         )
@@ -955,12 +1204,14 @@ def _serve(config_path: Path) -> int:
     app, runtime = create_application(config, resolved.parent, token_records)
     server = config["server"]
     LOG.warning(
-        "Starting case-agent MCP server at %s%s; auth=%s mutations=%s durableDrafts=%s",
+        "Starting case-agent MCP server at %s%s; auth=%s mutations=%s "
+        "durableDrafts=%s creationMode=%s",
         server["publicBaseUrl"],
         server["mcpPath"],
         runtime.authentication_mode,
         runtime.mutations_enabled,
         runtime.durable_drafts,
+        runtime.creation_mode,
     )
     uvicorn.run(
         app,
@@ -998,8 +1249,8 @@ def _selftest() -> int:
         return 1
     print(
         "SELFTEST SUCCEEDED: Streamable HTTP configuration, principal-bound static "
-        "bearer authentication, explicit unauthenticated-development gating, and stable "
-        "case tool adapter"
+        "bearer authentication, explicit unauthenticated-development gating, durable alpha "
+        "case persistence, and stable case tool adapter"
     )
     return 0
 
