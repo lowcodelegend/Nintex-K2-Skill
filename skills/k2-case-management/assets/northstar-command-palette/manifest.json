@@ -26,9 +26,9 @@
     {"id": "LangflowFlowId", "friendlyname": "Langflow flow ID", "type": "string", "initialvalue": "", "changesdisplay": false},
     {"id": "LangflowScriptUrl", "friendlyname": "Pinned Langflow embedded-chat script URL", "type": "string", "initialvalue": "https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@v1.0.8/dist/build/static/js/bundle.min.js", "changesdisplay": false},
     {"id": "LangflowWindowTitle", "friendlyname": "Langflow window title", "type": "string", "initialvalue": "Case Assistant", "changesdisplay": true},
-    {"id": "LangflowChatPosition", "friendlyname": "Langflow chat position", "type": "drop", "initialvalue": "bottom-right", "dropitems": ["top-left","top-center","top-right","center-left","center-right","bottom-right","bottom-center","bottom-left"], "changesdisplay": true},
-    {"id": "LangflowWidth", "friendlyname": "Langflow window width", "type": "int", "initialvalue": 420, "changesdisplay": true},
-    {"id": "LangflowHeight", "friendlyname": "Langflow window height", "type": "int", "initialvalue": 640, "changesdisplay": true},
+    {"id": "LangflowChatPosition", "friendlyname": "Langflow chat position", "type": "string", "initialvalue": "bottom-right", "changesdisplay": true},
+    {"id": "LangflowWidth", "friendlyname": "Langflow window width", "type": "string", "initialvalue": "420", "changesdisplay": true},
+    {"id": "LangflowHeight", "friendlyname": "Langflow window height", "type": "string", "initialvalue": "640", "changesdisplay": true},
     {"id": "Width", "friendlyname": "Width", "type": "string", "initialvalue": "100%", "changesdisplay": true},
     {"id": "Height", "friendlyname": "Height", "type": "string", "initialvalue": "48px", "changesdisplay": true},
     {"id": "IsReadOnly", "friendlyname": "Read only", "type": "bool", "initialvalue": false, "changesdisplay": true}

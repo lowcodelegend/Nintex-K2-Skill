@@ -81,6 +81,10 @@ if (@($paletteManifest.events.id) -notcontains 'OpenAssistant' -or
     @($paletteManifest.properties.id) -notcontains 'LangflowHostUrl') {
     throw 'Northstar command palette does not declare the bounded case-assistant contract.'
 }
+$langflowPortableProperties = @($paletteManifest.properties | Where-Object id -in @('LangflowChatPosition','LangflowWidth','LangflowHeight'))
+if ($langflowPortableProperties.Count -ne 3 -or @($langflowPortableProperties | Where-Object type -ne 'string').Count -ne 0) {
+    throw 'Langflow palette configuration must use the K2 5.10-compatible string property shape.'
+}
 if ($paletteRuntime -notmatch 'start_open' -or
     $paletteRuntime -notmatch 'window\.sessionStorage' -or
     $paletteRuntime -notmatch [regex]::Escape('langflow-ai/langflow-embedded-chat@v1.0.8') -or
