@@ -12,6 +12,7 @@ namespace K2SmartFormsCli
             TestIdentityNormalization();
             TestViewOwnedMasterDetailRules();
             TestMasterDetailValidationComposition();
+            TestReusableViewValidationPatternOwnership();
             TestMissingOptionalControlMappings();
             TestRequiredReadOnlyCreateInputGate();
             TestLookupAndDefaultValueRoundTrip();
@@ -23,6 +24,8 @@ namespace K2SmartFormsCli
             TestGuidedJourneyComposition();
             TestGuidedJourneyCompletionComposition();
             TestWorkflowStartActionAlignment();
+            TestFormControlAvailability();
+            TestFormBooleanControlProperties();
             TestModernWebComponentComposition();
             TestHiddenPropertyComposition();
             TestLabelAboveHiddenCellComposition();
@@ -35,8 +38,49 @@ namespace K2SmartFormsCli
             TestConditionalFormFrameworkSelection();
             TestRedundantFormFrameworkRemoval();
             TestFormPreFillRules();
+            TestReplacementRecoveryClassifier();
             TestMultiTableWorkflowStateReconciliation();
-            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams, mutually exclusive native If/Else Save branching, post-Create master hydration and Form method-action rejection, master-detail field-validation composition, orphan optional control mappings, lookup/detail List classification, governed lookup-domain validation, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, native max-length/validation-pattern contracts, must-be-true checkbox validation groups, required controls, help popups, semantic native action-cell alignment, master-detail buttons, native chart, metric-card, lifecycle, native guided-journey Progress/current-screen navigation and workflow-free completion validation, modern Web Component full-body placement, capture and editable-list hidden-property composition, editable-list File edit-template validation, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, conditional per-Form framework selection, redundant profile/header/footer removal, constraint-aware test-data Pre-fill, multi-table workflow-state reconciliation");
+            Console.WriteLine("SELFTEST SUCCEEDED: identity normalization, View-owned master-detail event seams, mutually exclusive native If/Else Save branching, post-Create master hydration and Form method-action rejection, master-detail field-validation composition, reusable-View validation-pattern cleanup ownership, orphan optional control mappings, lookup/detail List classification, governed lookup-domain validation, required/read-only gate, live lookup placement, literal Create defaults, responsive two-column label-above sections, colon labels, semantic TextBox inputs, native max-length/validation-pattern contracts, must-be-true checkbox validation groups, required controls, help popups, semantic native action-cell alignment, master-detail buttons, native chart, metric-card, lifecycle, Form-supported guided-journey progress/current-screen navigation and workflow-free completion validation, Form-level control-metadata availability and browser Boolean property triples, modern Web Component full-body placement, capture and editable-list hidden-property composition, editable-list File edit-template validation, label-above hidden-cell preservation, editable-list add-row default, editable-list structural rejection, identity-preserving View repair rebase, flat Form ordering, conditional per-Form framework selection, redundant profile/header/footer removal, constraint-aware test-data Pre-fill, multi-table workflow-state reconciliation");
+        }
+
+        private static void TestReplacementRecoveryClassifier()
+        {
+            Assert(SmartFormsManager.IsKnownStaleReplacementFailure(
+                    new NullReferenceException()),
+                "replacement recovery recognizes a direct stale-session null reference");
+            Assert(SmartFormsManager.IsKnownStaleReplacementFailure(
+                    new InvalidOperationException("wrapped",
+                        new NullReferenceException())),
+                "replacement recovery recognizes a wrapped stale-session null reference");
+            Assert(!SmartFormsManager.IsKnownStaleReplacementFailure(
+                    new InvalidOperationException("authorization failed")),
+                "replacement recovery does not hide unrelated deployment failures");
+        }
+
+        private static void TestReusableViewValidationPatternOwnership()
+        {
+            var manifest = new SmartFormsManifest();
+            var owned = new ViewDefinition { Name = "Owned View" };
+            owned.Validations.Add(new FieldValidationDefinition
+            {
+                Property = "Email",
+                Pattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+            });
+            var reusable = new ViewDefinition { Name = "Reusable View", ReuseExisting = true };
+            reusable.Validations.Add(new FieldValidationDefinition
+            {
+                Property = "Narrative",
+                Pattern = @".+"
+            });
+            manifest.Application.Views.Add(owned);
+            manifest.Application.Views.Add(reusable);
+
+            var manager = new SmartFormsManager(manifest);
+            Assert(manager.PatternValidations().Count() == 2,
+                "verification includes validation-pattern contracts declared by reusable Views");
+            var cleanupContracts = manager.PatternValidations(false).ToList();
+            Assert(cleanupContracts.Count == 1 && cleanupContracts[0].Key == owned,
+                "cleanup owns validation patterns only for Views that the manifest owns");
         }
 
         private static void TestConditionalFormFrameworkSelection()
@@ -991,8 +1035,32 @@ namespace K2SmartFormsCli
             var transformed = GuidedJourneyRules.Apply(xml, form, null);
             GuidedJourneyRules.Verify(transformed, form, null);
             var document = XDocument.Parse(transformed);
-            Assert(document.Descendants("Control").Count(x => (string)x.Attribute("Type") == "Progress") == 3,
-                "guided journey emits one native Progress control per screen");
+            Assert(document.Descendants("Control").Count(x =>
+                    (string)x.Attribute("Type") == "DataLabel" &&
+                    ((string)x.Element("Name") ?? string.Empty).StartsWith(
+                        "prgJourneyStep", StringComparison.Ordinal)) == 3 &&
+                !document.Descendants("Control").Any(x =>
+                    (string)x.Attribute("Type") == "Progress"),
+                "guided journey emits one Form-supported textual progress indicator per screen");
+            var firstProgress = document.Descendants("Control").Single(x =>
+                (string)x.Element("Name") == "prgJourneyStep1");
+            Assert(firstProgress.Descendants("Property").Any(x =>
+                    (string)x.Element("Name") == "Text" &&
+                    (string)x.Element("Value") == "Step 1 of 3: Describe"),
+                "guided journey progress indicator states the current position and short label");
+            var journeyTextControls = document.Descendants("Control").Where(x =>
+                new[] { "Label", "DataLabel" }.Contains((string)x.Attribute("Type")) &&
+                new[] { "lblJourneyTitle", "dlbJourneyDescription", "prgJourneyStep",
+                    "lblJourneyStepHeading", "dlbJourneyStepDescription" }.Any(prefix =>
+                        ((string)x.Element("Name") ?? string.Empty).StartsWith(
+                            prefix, StringComparison.Ordinal))).ToList();
+            Assert(journeyTextControls.Count == 15 &&
+                journeyTextControls.All(control => control.Descendants("Property").Any(property =>
+                    (string)property.Element("Name") == "LiteralVal" &&
+                    (string)property.Element("DisplayValue") == "false" &&
+                    (string)property.Element("NameValue") == "false" &&
+                    (string)property.Element("Value") == "false")),
+                "guided journey Form-level Label/DataLabel controls emit complete LiteralVal Boolean triples");
             Assert(document.Descendants("Control").Count(x =>
                     ((string)x.Element("Name") ?? string.Empty).StartsWith("lblJourneyTitle", StringComparison.Ordinal)) == 3 &&
                 document.Descendants("Control").Count(x =>
@@ -1154,6 +1222,105 @@ namespace K2SmartFormsCli
                     definition, null, new Dictionary<string, string>(),
                     new Dictionary<Guid, ResolvedHeaderControlTransfer>());
             }, "native Table cell alignment");
+        }
+
+        private static void TestFormControlAvailability()
+        {
+            const string formWithProgress =
+                "<Forms><Form ID='form'><Controls>" +
+                "<Control ID='progress' Type='Progress'><Name>prgJourneyStep1</Name></Control>" +
+                "<Control ID='cell' Type='Cell'><Name>Action Cell</Name><Styles>" +
+                "<Style IsDefault='True'><Text><Align>Right</Align></Text></Style>" +
+                "</Styles></Control></Controls></Form></Forms>";
+            var flags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "Progress", "UnavailableOnFormLevel" },
+                { "Cell", "None" }
+            };
+            AssertThrows(delegate
+            {
+                SmartFormsManager.VerifyFormControlAvailability(
+                    formWithProgress, "Availability Probe", flags);
+            }, "UnavailableOnFormLevel");
+
+            const string formWithSupportedControls =
+                "<Forms><Form ID='form'><Controls>" +
+                "<Control ID='progress' Type='DataLabel'><Name>prgJourneyStep1</Name></Control>" +
+                "<Control ID='cell' Type='Cell'><Name>Action Cell</Name><Styles>" +
+                "<Style IsDefault='True'><Text><Align>Right</Align></Text></Style>" +
+                "</Styles></Control></Controls></Form></Forms>";
+            flags["DataLabel"] = "None";
+            SmartFormsManager.VerifyFormControlAvailability(
+                formWithSupportedControls, "Availability Probe", flags);
+        }
+
+        private static void TestFormBooleanControlProperties()
+        {
+            var metadata = SmartFormsManager.ReadBooleanControlProperties(
+                "<Properties><Prop ID='Title' type='string'/>" +
+                "<Prop ID='IsVisible' type='bool'><Value>true</Value></Prop></Properties>");
+            Assert(metadata.SetEquals(new[] { "IsVisible" }),
+                "installed control metadata identifies Boolean properties");
+            var booleanProperties = new Dictionary<string, ISet<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "Panel", metadata }
+            };
+            const string malformed =
+                "<Forms><Form ID='form'><Controls><Control ID='review' Type='Panel'>" +
+                "<Name>Review</Name><Properties><Property><Name>IsVisible</Name>" +
+                "<DisplayValue>false</DisplayValue><NameValue/><Value>false</Value>" +
+                "</Property></Properties></Control></Controls></Form></Forms>";
+            AssertThrows(delegate
+            {
+                SmartFormsManager.VerifyFormBooleanControlProperties(
+                    malformed, "Boolean Probe", booleanProperties);
+            }, "Boolean DisplayValue/NameValue/Value triple");
+
+            var panel = XElement.Parse(
+                "<Control ID='review' Type='Panel'><Name>Review</Name><Properties/></Control>");
+            MasterDetailRules.SetElementProperty(panel, "IsVisible", "false");
+            var valid = "<Forms><Form ID='form'><Controls>" +
+                panel.ToString(SaveOptions.DisableFormatting) +
+                "</Controls></Form></Forms>";
+            SmartFormsManager.VerifyFormBooleanControlProperties(
+                valid, "Boolean Probe", booleanProperties);
+            var property = panel.Descendants("Property").Single();
+            Assert((string)property.Element("DisplayValue") == "false" &&
+                (string)property.Element("NameValue") == "false" &&
+                (string)property.Element("Value") == "false",
+                "master-detail review visibility emits a complete Boolean property triple");
+
+            const string labelMetadata =
+                "<Properties><Prop ID='LiteralVal' type='bool'>" +
+                "<InitialValue>false</InitialValue></Prop></Properties>";
+            var initial = SmartFormsManager.ReadInitialBooleanControlProperties(labelMetadata);
+            Assert(initial.SetEquals(new[] { "LiteralVal" }),
+                "installed control metadata identifies design-time initialized Boolean properties");
+            var labelBooleans = new Dictionary<string, ISet<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "Label", SmartFormsManager.ReadBooleanControlProperties(labelMetadata) }
+            };
+            var initialLabelBooleans = new Dictionary<string, ISet<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "Label", initial }
+            };
+            const string missingInitial =
+                "<Forms><Form ID='form'><Controls><Control ID='title' Type='Label'>" +
+                "<Name>Title</Name><Properties><Property><Name>Text</Name><Value>Title</Value>" +
+                "</Property></Properties></Control></Controls></Form></Forms>";
+            AssertThrows(delegate
+            {
+                SmartFormsManager.VerifyFormBooleanControlProperties(
+                    missingInitial, "Boolean Probe", labelBooleans, initialLabelBooleans);
+            }, "metadata-initialized Boolean property");
+
+            const string completeInitial =
+                "<Forms><Form ID='form'><Controls><Control ID='title' Type='Label'>" +
+                "<Name>Title</Name><Properties><Property><Name>LiteralVal</Name>" +
+                "<DisplayValue>false</DisplayValue><NameValue>false</NameValue><Value>false</Value>" +
+                "</Property></Properties></Control></Controls></Form></Forms>";
+            SmartFormsManager.VerifyFormBooleanControlProperties(
+                completeInitial, "Boolean Probe", labelBooleans, initialLabelBooleans);
         }
 
         private static void TestFlatFormViewOrdering()

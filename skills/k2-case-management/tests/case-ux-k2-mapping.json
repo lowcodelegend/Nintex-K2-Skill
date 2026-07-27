@@ -17,6 +17,7 @@
     },
     "commandPalette": {
       "viewName": "TST.Command Palette",
+      "viewTitle": "Command palette",
       "smartObject": "TST_CommandSuggestion",
       "properties": ["SuggestionCode","Kind","Title","Subtitle","IconToken","TargetUrl","SortOrder","IsActive","ConfigurationVersion"],
       "controlName": "Northstar Command Palette",

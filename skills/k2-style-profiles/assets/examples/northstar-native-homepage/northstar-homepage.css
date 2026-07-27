@@ -285,15 +285,16 @@ body.k2sp-spike .k2sp-sidebar a.k2sp-nav-item.active .k2sp-nav-icon {
 }
 
 .k2sp-command-palette-host.k2sp-command-palette-native .k2sp-search-fallback {
-  visibility: hidden;
+  display: none !important;
+  pointer-events: none !important;
 }
 
 .k2sp-command-palette-row {
   position: fixed !important;
-  top: 14px !important;
-  left: calc(var(--k2sp-shell-width) + 32px) !important;
+  top: var(--k2sp-command-palette-top, 14px) !important;
+  left: var(--k2sp-command-palette-left, calc(var(--k2sp-shell-width) + 32px)) !important;
   z-index: 9100 !important;
-  width: min(440px, 46vw) !important;
+  width: var(--k2sp-command-palette-width, min(440px, 46vw)) !important;
   margin: 0 !important;
 }
 
@@ -1670,7 +1671,7 @@ body.k2sp-page-initiation .k2sp-journey-guidance ul {
   }
 
   .k2sp-command-palette-row {
-    left: 250px !important;
+    left: var(--k2sp-command-palette-left, 250px) !important;
   }
 
   .k2sp-dashboard-grid {
@@ -1793,9 +1794,9 @@ body.k2sp-page-initiation .k2sp-journey-guidance ul {
   }
 
   .k2sp-command-palette-row {
-    top: 10px !important;
-    left: 16px !important;
-    width: min(60vw, 360px) !important;
+    top: var(--k2sp-command-palette-top, 10px) !important;
+    left: var(--k2sp-command-palette-left, 16px) !important;
+    width: var(--k2sp-command-palette-width, min(60vw, 360px)) !important;
   }
 
   .k2sp-search kbd,

@@ -61,6 +61,13 @@ if ($northstarCss -notmatch 'body\.k2sp-spike \.k2sp-sidebar a\.k2sp-nav-item[\s
     $northstarCss -notmatch 'body\.k2sp-spike \.k2sp-sidebar a\.k2sp-nav-item\.active[\s\S]{0,250}color:\s*#fff\s*!important') {
     throw 'Northstar application navigation must preserve the prototype neutral-grey text and white active state against the broader K2 accent-link rule.'
 }
+if ($northstarShell -notmatch 'expectedTitle:\s*expectedTitle' -or
+    $northstarShell -notmatch 'visuallyHosted:' -or
+    $northstarShell -notmatch 'fallback\.hidden\s*=\s*true' -or
+    $northstarShell -notmatch 'suppressConfiguredFrameworkViews\(\);\s*moveCommandPalette\(\);\s*if \(enhanceGuidedJourney' -or
+    $northstarCss -notmatch '\.k2sp-command-palette-host\.k2sp-command-palette-native \.k2sp-search-fallback[\s\S]{0,100}display:\s*none\s*!important') {
+    throw 'Northstar command-palette shell must expose the shared title/visual-host contract and hide the inert fallback only after finding the real K2 View.'
+}
 & (Get-Command node -ErrorAction Stop).Source --check (Join-Path $styleExample 'northstar-shell.js')
 if ($LASTEXITCODE -ne 0) { throw 'Northstar runtime shell JavaScript did not parse.' }
 $browserDriver = Join-Path $PSScriptRoot '..\scripts\capture-browser-page-cdp.mjs'
@@ -78,7 +85,8 @@ $paletteManifest = Get-Content -Raw -LiteralPath (Join-Path $paletteRoot 'manife
 $paletteRuntime = Get-Content -Raw -LiteralPath (Join-Path $paletteRoot 'northstar-command-runtime.js')
 if (@($paletteManifest.events.id) -notcontains 'OpenAssistant' -or
     @($paletteManifest.properties.id) -notcontains 'AssistantEnabled' -or
-    @($paletteManifest.properties.id) -notcontains 'LangflowHostUrl') {
+    @($paletteManifest.properties.id) -notcontains 'LangflowHostUrl' -or
+    @($paletteManifest.properties.id) -notcontains 'LangflowAuthenticationMode') {
     throw 'Northstar command palette does not declare the bounded case-assistant contract.'
 }
 $langflowPortableProperties = @($paletteManifest.properties | Where-Object id -in @('LangflowChatPosition','LangflowWidth','LangflowHeight'))
@@ -87,6 +95,9 @@ if ($langflowPortableProperties.Count -ne 3 -or @($langflowPortableProperties | 
 }
 if ($paletteRuntime -notmatch 'start_open' -or
     $paletteRuntime -notmatch 'window\.sessionStorage' -or
+    $paletteRuntime -notmatch 'northstar-agent-overlay' -or
+    $paletteRuntime -notmatch 'position:\s*"fixed"' -or
+    $paletteRuntime -notmatch 'response\.status === 401' -or
     $paletteRuntime -notmatch [regex]::Escape('langflow-ai/langflow-embedded-chat@v1.0.8') -or
     $paletteRuntime -match '\bapi_key\b|\badditional_headers\b') {
     throw 'Northstar command palette must open the pinned Langflow widget with an isolated browser-tab session and no embedded credentials or headers.'
@@ -272,6 +283,7 @@ try {
         viewName = 'RQT.Case Assistant Palette'
         sourcePaletteViewName = 'RQT.Command Palette'
         controlName = 'Northstar Case Assistant'
+        controlType = 'northstar-case-assistant-palette'
         controlPackage = 'assets/northstar-command-palette'
         hostUrl = 'https://langflow.example.test'
         flowId = '72e9cd5a-4b3e-415c-9b3a-76f222c9c160'
@@ -282,6 +294,7 @@ try {
         chatPosition = 'bottom-right'
         width = 420
         height = 640
+        authentication = [pscustomobject]@{mode='server-proxy'}
         placement = [pscustomobject]@{formName='RQT.Case Management';tab='Cases'}
     })
     $mapping | ConvertTo-Json -Depth 100 | Set-Content -Encoding utf8 -LiteralPath $agenticMapping
@@ -296,7 +309,10 @@ try {
     if ($null -ne $sourceControl.properties.PSObject.Properties['AssistantEnabled'] -or
         $assistantControl.properties.AssistantEnabled -ne $true -or
         $assistantControl.properties.LangflowFlowId -ne '72e9cd5a-4b3e-415c-9b3a-76f222c9c160' -or
-        $assistantControl.properties.LangflowHostUrl -ne 'https://langflow.example.test') {
+        $assistantControl.properties.LangflowHostUrl -ne 'https://langflow.example.test' -or
+        $assistantControl.properties.LangflowAuthenticationMode -ne 'server-proxy' -or
+        $assistantControl.controlType -ne 'northstar-case-assistant-palette' -or
+        $assistantControl.properties.TagName -ne 'northstar-case-assistant-palette') {
         throw 'Agentic chat compiler leaked configuration into the shared palette or omitted the cloned palette configuration.'
     }
     if ($null -ne $assistantControl.properties.PSObject.Properties['apiKey'] -or
@@ -313,6 +329,10 @@ try {
     }
     if (@($manifest.verification.expectedViews) -notcontains 'RQT.Case Assistant Palette') {
         throw 'Agentic chat compiler did not reconcile verification expectations after adding the cloned View.'
+    }
+    if ($shell.viewTitles.'RQT.Case Assistant Palette' -ne
+        $mapping.homepage.commandPalette.viewTitle) {
+        throw 'Agentic chat replacement did not preserve the shared Northstar command-palette View title.'
     }
 
     $mapping.agenticChat | Add-Member -NotePropertyName apiKey -NotePropertyValue 'forbidden-browser-secret'

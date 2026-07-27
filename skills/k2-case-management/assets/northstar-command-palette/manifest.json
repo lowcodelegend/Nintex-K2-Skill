@@ -25,6 +25,7 @@
     {"id": "LangflowHostUrl", "friendlyname": "Langflow HTTPS host URL", "type": "string", "initialvalue": "", "changesdisplay": false},
     {"id": "LangflowFlowId", "friendlyname": "Langflow flow ID", "type": "string", "initialvalue": "", "changesdisplay": false},
     {"id": "LangflowScriptUrl", "friendlyname": "Pinned Langflow embedded-chat script URL", "type": "string", "initialvalue": "https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@v1.0.8/dist/build/static/js/bundle.min.js", "changesdisplay": false},
+    {"id": "LangflowAuthenticationMode", "friendlyname": "Langflow server authentication mode", "type": "string", "initialvalue": "server-proxy", "changesdisplay": false},
     {"id": "LangflowWindowTitle", "friendlyname": "Langflow window title", "type": "string", "initialvalue": "Case Assistant", "changesdisplay": true},
     {"id": "LangflowChatPosition", "friendlyname": "Langflow chat position", "type": "string", "initialvalue": "bottom-right", "changesdisplay": true},
     {"id": "LangflowWidth", "friendlyname": "Langflow window width", "type": "string", "initialvalue": "420", "changesdisplay": true},

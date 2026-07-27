@@ -89,7 +89,7 @@ When `stepTabs` is omitted, the compiler preserves the portable Details → Evid
 
 ## Interaction contract
 
-- Show the journey title/description and one native read-only Progress control on every screen so the plain modern K2 fallback remains understandable.
+- Show the journey title/description and one native read-only Data Label with `Step N of M: <label>` progress text on every screen so the plain modern K2 fallback remains understandable. Reserve K2's native `Progress` control for View-level lifecycle trackers; installed metadata marks it unavailable on Forms.
 - Continue validates the current visible screen before focusing the next screen. It does not persist.
 - Back changes screen without validation, mutation, or data loss.
 - Keep alignment semantic and native: Back and the test-only Pre-fill helper occupy left-aligned K2 Table cells; Continue, Save, Finish, and Submit occupy right-aligned cells. `$k2-smartforms` infers this contract, so case manifests do not repeat alignment metadata. A Style Profile may refine spacing but cannot be the sole alignment mechanism.

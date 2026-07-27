@@ -882,73 +882,90 @@ namespace K2SmartFormsCli
                         manager.DeleteView(info.Guid);
                         Console.WriteLine("View: removed for replacement (" + view.Name + ", " + info.Guid + ")");
                     }
-                    // K2 5.10 keeps deleted Form/View metadata in the current authoring session.
-                    // Reconnect before generating replacements so a normal deploy is as reliable as a later --resume.
-                    manager.Connection.Close();
-                    manager.DeleteConnection();
-                    System.Threading.Thread.Sleep(250);
-                    manager.CreateConnection();
-                    manager.Connection.Open(BuildConnectionString());
+                    // K2 5.10 keeps deleted Form/View identity metadata for the lifetime of the
+                    // current process, not merely the FormsManager/connection. Creating here can
+                    // silently allocate a suffixed internal View identity before throwing. Cross
+                    // the process boundary before any create so the wrapper's single bounded
+                    // --resume pass recreates only the canonical missing identities.
+                    throw new CliException(
+                        "REPLACEMENT RECOVERY REQUIRED: replacement deletion completed; start one fresh-process missing-artifact recovery pass before creating any Form or View.");
                 }
 
-                using (var generator = new AutoGenerator(manager.Connection))
+                Action<FormsManager, bool> deployMissingArtifacts = delegate(
+                    FormsManager deploymentManager, bool preserveExistingArtifacts)
                 {
-                    foreach (var view in _manifest.Application.Views)
+                    using (var generator = new AutoGenerator(deploymentManager.Connection))
                     {
-                        if (formsOnly) break;
+                        foreach (var view in _manifest.Application.Views)
+                        {
+                            if (formsOnly) break;
                         if (view.ReuseExisting)
                         {
-                            var existingView = manager.GetView(view.Name);
-                            Console.WriteLine("View: reused existing (" + view.Name + ", " + existingView.Guid + ", v" + existingView.Version + ")");
-                            continue;
+                                var existingView = deploymentManager.GetView(view.Name);
+                                Console.WriteLine("View: reused existing (" + view.Name + ", " + existingView.Guid + ", v" + existingView.Version + ")");
+                                continue;
+                            }
+                            if (preserveExistingArtifacts && deploymentManager.CheckViewExists(view.Name))
+                            {
+                                var existingView = deploymentManager.GetView(view.Name);
+                                Console.WriteLine("View: preserved existing (" + view.Name + ", " + existingView.Guid + ", v" + existingView.Version + ")");
+                                continue;
+                            }
+                            var definition = renderedViews[view.Name];
+                            deploymentManager.DeployViews(definition, _manifest.Application.GetViewCategoryPath(view), _manifest.Application.CheckIn);
+                            var info = deploymentManager.GetView(view.Name);
+                            Console.WriteLine("View: deployed (" + view.Name + ", " + info.Guid + ", " + info.Type + ", category " + info.CategoryPath + ", " + view.LookupControls.Count + " lookup control(s))");
                         }
-                        if (resume && manager.CheckViewExists(view.Name))
-                        {
-                            var existingView = manager.GetView(view.Name);
-                            Console.WriteLine("View: resumed existing (" + view.Name + ", " + existingView.Guid + ", v" + existingView.Version + ")");
-                            continue;
-                        }
-                        var definition = renderedViews[view.Name];
-                        manager.DeployViews(definition, _manifest.Application.GetViewCategoryPath(view), _manifest.Application.CheckIn);
-                        var info = manager.GetView(view.Name);
-                        Console.WriteLine("View: deployed (" + view.Name + ", " + info.Guid + ", " + info.Type + ", category " + info.CategoryPath + ", " + view.LookupControls.Count + " lookup control(s))");
-                    }
 
-                    foreach (var form in _manifest.Application.Forms)
-                    {
-                        if (resume && manager.CheckFormExists(form.Name))
+                        foreach (var form in _manifest.Application.Forms)
                         {
-                            var existingForm = manager.GetForm(form.Name);
-                            Console.WriteLine("Form: resumed existing (" + form.Name + ", " + existingForm.Guid + ", v" + existingForm.Version + ")");
-                            continue;
+                            if (preserveExistingArtifacts && deploymentManager.CheckFormExists(form.Name))
+                            {
+                                var existingForm = deploymentManager.GetForm(form.Name);
+                                Console.WriteLine("Form: preserved existing (" + form.Name + ", " + existingForm.Guid + ", v" + existingForm.Version + ")");
+                                continue;
+                            }
+                            var formStyleProfile = UsesStyleProfile(form) ? styleProfile : null;
+                            var formCommonHeader = SelectCommonHeader(form, commonHeader);
+                            var formGenerator = new FormGenerator(ParseFormOptions(form.Options), ParseFormBehaviors(form.Behaviors), _manifest.Application.Theme);
+                            var formViews = formCommonHeader == null ? form.Views.ToArray() :
+                                new[] { formCommonHeader.ViewName }.Concat(form.Views).Concat(formCommonHeader.Footer == null ? new string[0] : new[] { formCommonHeader.Footer.ViewName }).ToArray();
+                            var generated = generator.Generate(formGenerator, formViews, form.Name);
+                            var definition = FormThemeDefinition.SetUseLegacyTheme(generated.ToXml(), form.UseLegacyTheme);
+                            if (formStyleProfile != null) definition = FormThemeDefinition.SetStyleProfile(definition, formStyleProfile.Guid, formStyleProfile.Name);
+                            else
+                            {
+                                bool ignored;
+                                definition = FormThemeDefinition.RemoveStyleProfile(definition, out ignored);
+                            }
+                            definition = FormLayoutDefinition.Apply(definition, form, formCommonHeader, ResolveHeaderParameters(formCommonHeader, form), ResolveHeaderControlTransfers(formCommonHeader, form));
+                            var masterDetail = ResolvedMasterDetailRules.Resolve(deploymentManager, form, _manifest.Application.Views);
+                            definition = MasterDetailRules.Apply(definition, form, masterDetail);
+                            definition = GuidedJourneyRules.Apply(definition, form, formCommonHeader);
+                            var preFill = ResolvedFormPreFill.Resolve(deploymentManager, form, _manifest.Application.Views, lookupSources);
+                            definition = FormPreFillRules.Apply(definition, form, preFill);
+                            deploymentManager.DeployForms(definition, _manifest.Application.GetFormCategoryPath(form), _manifest.Application.CheckIn);
+                            var info = deploymentManager.GetForm(form.Name);
+                            Console.WriteLine("Form: deployed (" + form.Name + ", " + info.Guid + ", theme " + info.Theme.Name + ", styleProfile=" + (formStyleProfile == null ? "none" : formStyleProfile.Name) + ", legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant() + ", commonHeader=" + (formCommonHeader == null ? "none" : formCommonHeader.ViewName) + ", commonFooter=" + (formCommonHeader == null || formCommonHeader.Footer == null ? "none" : formCommonHeader.Footer.ViewName) + ", tabs=" + form.Tabs.Count + ", worklist=" + form.Tabs.Any(x => x.Worklist != null).ToString().ToLowerInvariant() + ", preFill=" + (form.PreFill.EffectiveEnabled ? "test-only" : "disabled") + ")");
+                            Console.WriteLine(FormPreFillRules.Errata(form));
                         }
-                        var formStyleProfile = UsesStyleProfile(form) ? styleProfile : null;
-                        var formCommonHeader = SelectCommonHeader(form, commonHeader);
-                        var formGenerator = new FormGenerator(ParseFormOptions(form.Options), ParseFormBehaviors(form.Behaviors), _manifest.Application.Theme);
-                        var formViews = formCommonHeader == null ? form.Views.ToArray() :
-                            new[] { formCommonHeader.ViewName }.Concat(form.Views).Concat(formCommonHeader.Footer == null ? new string[0] : new[] { formCommonHeader.Footer.ViewName }).ToArray();
-                        var generated = generator.Generate(formGenerator, formViews, form.Name);
-                        var definition = FormThemeDefinition.SetUseLegacyTheme(generated.ToXml(), form.UseLegacyTheme);
-                        if (formStyleProfile != null) definition = FormThemeDefinition.SetStyleProfile(definition, formStyleProfile.Guid, formStyleProfile.Name);
-                        else
-                        {
-                            bool ignored;
-                            definition = FormThemeDefinition.RemoveStyleProfile(definition, out ignored);
-                        }
-                        definition = FormLayoutDefinition.Apply(definition, form, formCommonHeader, ResolveHeaderParameters(formCommonHeader, form), ResolveHeaderControlTransfers(formCommonHeader, form));
-                        var masterDetail = ResolvedMasterDetailRules.Resolve(manager, form, _manifest.Application.Views);
-                        definition = MasterDetailRules.Apply(definition, form, masterDetail);
-                        definition = GuidedJourneyRules.Apply(definition, form, formCommonHeader);
-                        var preFill = ResolvedFormPreFill.Resolve(manager, form, _manifest.Application.Views, lookupSources);
-                        definition = FormPreFillRules.Apply(definition, form, preFill);
-                        manager.DeployForms(definition, _manifest.Application.GetFormCategoryPath(form), _manifest.Application.CheckIn);
-                        var info = manager.GetForm(form.Name);
-                        Console.WriteLine("Form: deployed (" + form.Name + ", " + info.Guid + ", theme " + info.Theme.Name + ", styleProfile=" + (formStyleProfile == null ? "none" : formStyleProfile.Name) + ", legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant() + ", commonHeader=" + (formCommonHeader == null ? "none" : formCommonHeader.ViewName) + ", commonFooter=" + (formCommonHeader == null || formCommonHeader.Footer == null ? "none" : formCommonHeader.Footer.ViewName) + ", tabs=" + form.Tabs.Count + ", worklist=" + form.Tabs.Any(x => x.Worklist != null).ToString().ToLowerInvariant() + ", preFill=" + (form.PreFill.EffectiveEnabled ? "test-only" : "disabled") + ")");
-                        Console.WriteLine(FormPreFillRules.Errata(form));
                     }
-                }
+                };
+
+                deployMissingArtifacts(manager, resume);
                 return 0;
             });
+        }
+
+        internal static bool IsKnownStaleReplacementFailure(Exception exception)
+        {
+            for (var current = exception; current != null; current = current.InnerException)
+            {
+                if (current is NullReferenceException) return true;
+                if (string.Equals(current.Message, "Object reference not set to an instance of an object.",
+                    StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
         }
 
         public void Verify()
@@ -961,6 +978,21 @@ namespace K2SmartFormsCli
                 EnsureValidationPatterns(manager, false);
                 var expectedStyleProfile = ResolveStyleProfile(manager);
                 var commonHeader = ResolveCommonHeader(manager);
+                var formControlTypes = manager.GetControlTypes().ControlTypes.Cast<ControlTypeInfo>().ToList();
+                var formControlFlags = formControlTypes
+                    .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(x => x.Key, x => Convert.ToString(x.First().Flags),
+                        StringComparer.OrdinalIgnoreCase);
+                var formBooleanControlProperties = formControlTypes
+                    .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(x => x.Key,
+                        x => ReadBooleanControlProperties(Convert.ToString(x.First().Properties)),
+                        StringComparer.OrdinalIgnoreCase);
+                var formInitialBooleanControlProperties = formControlTypes
+                    .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(x => x.Key,
+                        x => ReadInitialBooleanControlProperties(Convert.ToString(x.First().Properties)),
+                        StringComparer.OrdinalIgnoreCase);
                 foreach (var expected in _manifest.Verification.ExpectedViews)
                 {
                     if (!manager.CheckViewExists(expected)) throw new CliException("Expected K2 View is missing: " + expected);
@@ -1006,6 +1038,8 @@ namespace K2SmartFormsCli
                     var info = manager.GetForm(expected);
                     var definition = manager.GetFormDefinition(info.Guid);
                     if (string.IsNullOrWhiteSpace(definition)) throw new CliException("K2 Form has an empty definition: " + expected);
+                    VerifyDesignerAuthoringHydration(definition, expected, true, formControlFlags,
+                        formBooleanControlProperties, formInitialBooleanControlProperties);
                     var declaredForm = _manifest.Application.Forms.SingleOrDefault(x => string.Equals(x.Name, expected, StringComparison.OrdinalIgnoreCase));
                     if (declaredForm == null) throw new CliException("Expected K2 Form is not declared in application.forms: " + expected);
                     var expectedCategory = _manifest.Application.GetFormCategoryPath(declaredForm);
@@ -1029,7 +1063,6 @@ namespace K2SmartFormsCli
                     GuidedJourneyRules.Verify(definition, declaredForm, formCommonHeader);
                     var preFill = ResolvedFormPreFill.Resolve(manager, declaredForm, _manifest.Application.Views, lookupSources);
                     FormPreFillRules.Verify(definition, declaredForm, preFill);
-                    VerifyDesignerAuthoringHydration(definition, expected, true);
                     foreach (var viewName in declaredForm.Views)
                     {
                         var viewGuid = manager.GetView(viewName).Guid.ToString();
@@ -1138,13 +1171,184 @@ namespace K2SmartFormsCli
                 (view.LifecycleTrackers != null && view.LifecycleTrackers.Count > 0);
         }
 
-        private static void VerifyDesignerAuthoringHydration(string definition, string name, bool isForm)
+        internal static void VerifyFormControlAvailability(string definition, string name,
+            IDictionary<string, string> controlFlags)
+        {
+            if (controlFlags == null) throw new ArgumentNullException("controlFlags");
+            XDocument document;
+            try { document = XDocument.Parse(definition); }
+            catch (Exception ex)
+            {
+                throw new CliException("K2 Form '" + name +
+                    "' cannot be checked against installed control metadata: " + ex.Message);
+            }
+            var form = document.Descendants().SingleOrDefault(x =>
+                x.Name.LocalName == "Form" && x.Attribute("ID") != null);
+            if (form == null)
+                throw new CliException("K2 Form '" + name +
+                    "' cannot be checked against installed control metadata because its Form element is missing.");
+            var controls = form.Elements().FirstOrDefault(x => x.Name.LocalName == "Controls");
+            if (controls == null)
+                throw new CliException("K2 Form '" + name +
+                    "' cannot be checked against installed control metadata because its Controls element is missing.");
+
+            var unavailable = controls.Elements().Where(x => x.Name.LocalName == "Control")
+                .Select(x => new
+                {
+                    Type = (string)x.Attribute("Type"),
+                    Name = x.Elements().FirstOrDefault(y => y.Name.LocalName == "Name")
+                })
+                .Where(x => !string.IsNullOrWhiteSpace(x.Type) &&
+                    controlFlags.ContainsKey(x.Type) &&
+                    (controlFlags[x.Type] ?? string.Empty).IndexOf(
+                        "UnavailableOnFormLevel", StringComparison.OrdinalIgnoreCase) >= 0)
+                .GroupBy(x => x.Type, StringComparer.OrdinalIgnoreCase)
+                .Select(x => x.Key + " [" + string.Join(", ", x.Select(y =>
+                    y.Name == null || string.IsNullOrWhiteSpace(y.Name.Value)
+                        ? "<unnamed>" : y.Name.Value).ToArray()) + "]")
+                .ToList();
+            if (unavailable.Count > 0)
+                throw new CliException("K2 Form '" + name +
+                    "' contains control type(s) that installed K2 metadata marks UnavailableOnFormLevel: " +
+                    string.Join("; ", unavailable.ToArray()) +
+                    ". The Authoring.Form XML round trip does not enforce this Designer placement restriction.");
+        }
+
+        internal static ISet<string> ReadBooleanControlProperties(string metadata)
+        {
+            var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrWhiteSpace(metadata)) return result;
+            XDocument document;
+            try { document = XDocument.Parse(metadata); }
+            catch { return result; }
+            foreach (var property in document.Descendants().Where(x =>
+                x.Name.LocalName == "Prop" &&
+                string.Equals((string)x.Attribute("type"), "bool", StringComparison.OrdinalIgnoreCase)))
+            {
+                var id = (string)property.Attribute("ID");
+                if (!string.IsNullOrWhiteSpace(id)) result.Add(id);
+            }
+            return result;
+        }
+
+        internal static ISet<string> ReadInitialBooleanControlProperties(string metadata)
+        {
+            var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrWhiteSpace(metadata)) return result;
+            XDocument document;
+            try { document = XDocument.Parse(metadata); }
+            catch { return result; }
+            foreach (var property in document.Descendants().Where(x =>
+                x.Name.LocalName == "Prop" &&
+                string.Equals((string)x.Attribute("type"), "bool", StringComparison.OrdinalIgnoreCase)))
+            {
+                var id = (string)property.Attribute("ID");
+                var initial = property.Elements().FirstOrDefault(x => x.Name.LocalName == "InitialValue");
+                bool parsed;
+                if (!string.IsNullOrWhiteSpace(id) && initial != null &&
+                    bool.TryParse(initial.Value, out parsed))
+                    result.Add(id);
+            }
+            return result;
+        }
+
+        internal static void VerifyFormBooleanControlProperties(string definition, string name,
+            IDictionary<string, ISet<string>> booleanProperties,
+            IDictionary<string, ISet<string>> initialBooleanProperties = null)
+        {
+            if (booleanProperties == null) throw new ArgumentNullException("booleanProperties");
+            XDocument document;
+            try { document = XDocument.Parse(definition); }
+            catch (Exception ex)
+            {
+                throw new CliException("K2 Form '" + name +
+                    "' cannot be checked for Designer Boolean control properties: " + ex.Message);
+            }
+            var form = document.Descendants().SingleOrDefault(x =>
+                x.Name.LocalName == "Form" && x.Attribute("ID") != null);
+            if (form == null)
+                throw new CliException("K2 Form '" + name +
+                    "' cannot be checked for Designer Boolean control properties because its Form root is missing.");
+            var controls = form.Elements().FirstOrDefault(x => x.Name.LocalName == "Controls");
+            if (controls == null)
+                throw new CliException("K2 Form '" + name +
+                    "' cannot be checked for Designer Boolean control properties because its Controls element is missing.");
+
+            var invalid = new List<string>();
+            foreach (var control in controls.Elements().Where(x => x.Name.LocalName == "Control"))
+            {
+                var type = (string)control.Attribute("Type");
+                ISet<string> declaredBooleanProperties;
+                if (string.IsNullOrWhiteSpace(type) ||
+                    !booleanProperties.TryGetValue(type, out declaredBooleanProperties) ||
+                    declaredBooleanProperties == null || declaredBooleanProperties.Count == 0) continue;
+                var controlNameElement = control.Elements().FirstOrDefault(x => x.Name.LocalName == "Name");
+                var controlName = controlNameElement == null || string.IsNullOrWhiteSpace(controlNameElement.Value)
+                    ? "<unnamed>" : controlNameElement.Value;
+                var properties = control.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
+                var propertyElements = properties == null
+                    ? new List<XElement>()
+                    : properties.Elements().Where(x => x.Name.LocalName == "Property").ToList();
+                ISet<string> requiredInitialProperties;
+                if (initialBooleanProperties != null &&
+                    initialBooleanProperties.TryGetValue(type, out requiredInitialProperties) &&
+                    requiredInitialProperties != null)
+                {
+                    foreach (var required in requiredInitialProperties)
+                    {
+                        if (!propertyElements.Any(x =>
+                            string.Equals((string)x.Elements().FirstOrDefault(y =>
+                                y.Name.LocalName == "Name"), required, StringComparison.OrdinalIgnoreCase)))
+                            invalid.Add(type + " [" + controlName + "]." + required +
+                                " is missing its metadata-initialized Boolean property");
+                    }
+                }
+                foreach (var property in propertyElements)
+                {
+                    var propertyNameElement = property.Elements().FirstOrDefault(x => x.Name.LocalName == "Name");
+                    var propertyName = propertyNameElement == null ? null : propertyNameElement.Value;
+                    if (string.IsNullOrWhiteSpace(propertyName) ||
+                        !declaredBooleanProperties.Contains(propertyName)) continue;
+                    var values = new[] { "DisplayValue", "NameValue", "Value" }
+                        .Select(elementName => new
+                        {
+                            Name = elementName,
+                            Element = property.Elements().FirstOrDefault(x => x.Name.LocalName == elementName)
+                        }).ToList();
+                    bool parsed;
+                    if (values.Any(x => x.Element == null || string.IsNullOrWhiteSpace(x.Element.Value) ||
+                        !bool.TryParse(x.Element.Value, out parsed)))
+                    {
+                        invalid.Add(type + " [" + controlName + "]." + propertyName +
+                            " has a missing, empty, or invalid Boolean DisplayValue/NameValue/Value triple");
+                        continue;
+                    }
+                    var normalized = values.Select(x => bool.Parse(x.Element.Value)).Distinct().ToList();
+                    if (normalized.Count != 1)
+                        invalid.Add(type + " [" + controlName + "]." + propertyName +
+                            " has inconsistent Boolean DisplayValue/NameValue/Value values");
+                }
+            }
+            if (invalid.Count > 0)
+                throw new CliException("K2 Form '" + name +
+                    "' contains browser Designer-incompatible Boolean control properties: " +
+                    string.Join("; ", invalid.ToArray()) +
+                    ". The Authoring.Form XML round trip does not validate every property-editor representation.");
+        }
+
+        private static void VerifyDesignerAuthoringHydration(string definition, string name, bool isForm,
+            IDictionary<string, string> formControlFlags = null,
+            IDictionary<string, ISet<string>> formBooleanControlProperties = null,
+            IDictionary<string, ISet<string>> formInitialBooleanControlProperties = null)
         {
             try
             {
                 string roundTrip;
                 if (isForm)
                 {
+                    VerifyFormControlAvailability(definition, name, formControlFlags);
+                    VerifyFormBooleanControlProperties(definition, name, formBooleanControlProperties,
+                        formInitialBooleanControlProperties);
                     var hydrated = new SourceCode.Forms.Authoring.Form();
                     hydrated.FromXml(definition);
                     roundTrip = hydrated.ToXml();
@@ -1181,9 +1385,12 @@ namespace K2SmartFormsCli
                 : Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture);
         }
 
-        private IEnumerable<KeyValuePair<ViewDefinition, FieldValidationDefinition>> PatternValidations()
+        internal IEnumerable<KeyValuePair<ViewDefinition, FieldValidationDefinition>> PatternValidations(
+            bool includeReusableViews = true)
         {
-            return _manifest.Application.Views.SelectMany(view => view.Validations
+            return _manifest.Application.Views
+                .Where(view => includeReusableViews || !view.ReuseExisting)
+                .SelectMany(view => view.Validations
                 .Where(validation => FieldValidationDefinitionXml.RequiresNativeValidationPattern(view, validation))
                 .Select(validation => new KeyValuePair<ViewDefinition, FieldValidationDefinition>(view, validation)));
         }
@@ -1244,7 +1451,7 @@ namespace K2SmartFormsCli
 
         private void DeleteOwnedValidationPatterns(FormsManager manager)
         {
-            var contracts = PatternValidations().ToList();
+            var contracts = PatternValidations(false).ToList();
             if (contracts.Count == 0) return;
             var live = manager.GetValidationPatterns().ValidationPatterns.Cast<ManagementValidationPattern>().ToList();
             foreach (var pair in contracts)

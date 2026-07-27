@@ -4,10 +4,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Northstar command palette harness</title>
-  <style>html,body{margin:0;min-width:320px;min-height:100%;background:#f5f7fa}main{max-width:900px;margin:48px auto;padding:24px}</style>
+  <style>
+    html,body{margin:0;min-width:320px;min-height:100%;background:#f5f7fa}
+    main{max-width:900px;margin:96px auto 48px;padding:24px}
+    .k2sp-sidebar{position:fixed;inset:0 auto 0 0;width:220px}
+    .k2sp-command-palette-host,.k2sp-command-palette-row{
+      position:fixed;left:252px;top:14px;width:min(440px,46vw);height:48px
+    }
+    .k2sp-search-fallback[hidden]{display:none}
+  </style>
 </head>
 <body>
-  <main aria-label="Command palette test surface"></main>
+  <div id="k2sp-shell">
+    <aside class="k2sp-sidebar"></aside>
+    <div class="k2sp-command-palette-host">
+      <div class="k2sp-search-fallback" hidden aria-hidden="true"></div>
+    </div>
+  </div>
+  <main aria-label="Command palette test surface">
+    <div class="formpanel k2sp-command-palette-panel">
+      <div class="row k2sp-command-palette-row"></div>
+    </div>
+  </main>
   <script>
     class K2BaseControl extends HTMLElement {
       constructor() { super(); this._shadow=null; this._hasRendered=false; }
@@ -22,6 +40,25 @@
     }
     window.K2BaseControl=K2BaseControl;
     window.K2={RaisePropertyChanged(){}};
+    window.__k2spNorthstar={commandPalette:{
+      expectedTitle:"Command palette",realViewFound:true,visuallyHosted:true,
+      fallbackHidden:true,ownershipPreserved:true
+    }};
+    window.fetch=async function(){
+      const denied=new URLSearchParams(location.search).get("auth")==="403";
+      return new Response(denied ? "Forbidden" : "{}",{
+        status:denied ? 403 : 200,
+        headers:{"Content-Type":"application/json"}
+      });
+    };
+    customElements.define("langflow-chat",class LangflowChatHarness extends HTMLElement{
+      connectedCallback(){
+        this.textContent="Langflow chat harness";
+        fetch(this.getAttribute("host_url")+"/api/v1/run/"+this.getAttribute("flow_id"),{
+          method:"POST",headers:{"Content-Type":"application/json"},body:"{}"
+        });
+      }
+    });
     window.SourceCode={Forms:{ControlStyles:{loadStyleResources(control,shadowRoot){
       const style=document.createElement("style");
       style.dataset.id="northstar-command-style";
@@ -35,13 +72,19 @@
     const control=document.createElement("northstar-command-palette");
     control.setAttribute("name","NorthstarCommandPalette");
     control.setAttribute("controltype","northstar-command-palette");
+    control.AssistantEnabled=true;
+    control.AssistantLabel="Ask Case Assistant";
+    control.AssistantDescription="Test the owned overlay";
+    control.LangflowHostUrl="https://langflow.example.test";
+    control.LangflowFlowId="72e9cd5a-4b3e-415c-9b3a-76f222c9c160";
+    control.LangflowAuthenticationMode="server-proxy";
     control.Suggestions=[
       {SuggestionCode:"NAV_CASES",Kind:"Navigation",Title:"All cases",Subtitle:"Cases",IconToken:"folder",TargetUrl:"/Runtime/Runtime/Form/APP.All%20Cases",SortOrder:10,IsActive:true},
       {SuggestionCode:"CASE_42",Kind:"Case",Title:"NC-0042 — Coating defect",Subtitle:"Apex Components · Investigate",IconToken:"case",TargetUrl:"/Runtime/Runtime/Form/APP.Case%20Workspace?CaseId=42",SortOrder:20,IsActive:true},
       {SuggestionCode:"TASK_17",Kind:"Task",Title:"Review evidence · NC-0042",Subtitle:"Due today",IconToken:"inbox",TargetUrl:"/Runtime/Runtime/Form/APP.My%20Work",SortOrder:30,IsActive:true}
     ];
     control.addEventListener("Navigate",()=>{document.body.dataset.navigateTarget=control.Value;});
-    document.querySelector("main").append(control);
+    document.querySelector(".k2sp-command-palette-row").append(control);
   </script>
 </body>
 </html>

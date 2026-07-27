@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "suiteName": "k2-skills",
-  "suiteVersion": "0.68.0",
+  "suiteVersion": "0.72.0",
   "skills": [
     {
       "name": "k2-sql-smartobjects",
@@ -24,7 +24,7 @@
     },
     {
       "name": "k2-smartforms",
-      "version": "0.46.0",
+      "version": "0.50.0",
       "platform": "win-x64",
       "buildScript": "skills/k2-smartforms/scripts/build.ps1",
       "buildParameters": {
@@ -38,12 +38,12 @@
       "versionCommand": {
         "path": "skills/k2-smartforms/tool/K2SmartFormsCli/bin/Release/k2forms.exe",
         "arguments": ["version"],
-        "expectedOutput": "k2forms 0.46.0"
+        "expectedOutput": "k2forms 0.50.0"
       }
     },
     {
       "name": "k2-style-profiles",
-      "version": "0.12.0",
+      "version": "0.13.0",
       "platform": "win-x64",
       "buildScript": "skills/k2-style-profiles/scripts/build.ps1",
       "buildParameters": {
@@ -57,7 +57,7 @@
       "versionCommand": {
         "path": "skills/k2-style-profiles/tool/K2StyleProfilesCli/bin/Release/k2style.exe",
         "arguments": ["version"],
-        "expectedOutput": "k2style 0.12.0"
+        "expectedOutput": "k2style 0.13.0"
       }
     },
     {
@@ -99,7 +99,7 @@
     },
     {
       "name": "k2-case-management",
-      "version": "0.18.0",
+      "version": "0.20.0",
       "platform": "win-x64",
       "buildScript": "skills/k2-case-management/scripts/build.ps1",
       "builtFiles": [],
@@ -107,7 +107,7 @@
     },
     {
       "name": "k2-smartforms-web-components",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "platform": "win-x64",
       "buildScript": "skills/k2-smartforms-web-components/scripts/build.ps1",
       "buildParameters": {
@@ -120,7 +120,7 @@
       "versionCommand": {
         "path": "skills/k2-smartforms-web-components/tool/K2WebComponentCli/bin/Release/k2controls.exe",
         "arguments": ["version"],
-        "expectedOutput": "k2controls 0.3.0"
+        "expectedOutput": "k2controls 0.4.0"
       }
     }
   ]

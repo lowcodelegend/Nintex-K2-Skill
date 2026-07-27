@@ -146,6 +146,12 @@ foreach($formName in $FormNames){
                 -not[bool]$palette.controlVisible-or-not[bool]$palette.rowVisible-or
                 -not[bool]$palette.triggerVisible-or-not[bool]$palette.inputFound-or
                 -not[bool]$palette.dialogVisible-or-not[bool]$palette.focused-or
+                -not[bool]$palette.visuallyHosted-or-not[bool]$palette.fallbackHidden-or
+                [string]$palette.inputMethod-ne'CDP.Input.dispatchMouseEvent'-or
+                [int]$palette.pointerDialogCount-ne 1-or
+                [int]$palette.dialogCountAfterPointerEscape-ne 0-or
+                [int]$palette.keyboardDialogCount-ne 1-or
+                -not[bool]$palette.sameControl-or-not[bool]$palette.passed-or
                 [string]$palette.inputValue-ne$paletteProbeText-or
                 [int]$palette.optionCount-lt 1){
                 throw "Command palette interaction failed after the configured journey navigation at $formName/$($viewport.name)."

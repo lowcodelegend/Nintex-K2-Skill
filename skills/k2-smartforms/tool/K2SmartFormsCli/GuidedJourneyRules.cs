@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Web.Script.Serialization;
 using System.Xml.Linq;
 
 namespace K2SmartFormsCli
@@ -62,14 +61,15 @@ namespace K2SmartFormsCli
                 var panel = panels.Single(x => string.Equals(ChildValue(x, "Name"), step.Tab, StringComparison.OrdinalIgnoreCase));
                 var progressName = ProgressName(index);
                 var progress = controls.Elements().SingleOrDefault(x => x.Name.LocalName == "Control" &&
-                    string.Equals((string)x.Attribute("Type"), "Progress", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals((string)x.Attribute("Type"), "DataLabel", StringComparison.OrdinalIgnoreCase) &&
                     string.Equals(ChildValue(x, "Name"), progressName, StringComparison.OrdinalIgnoreCase));
                 if (progress == null || !PanelContainsControl(panel, (string)progress.Attribute("ID")))
-                    throw new CliException("K2 Form '" + definition.Name + "' guided journey step '" + step.Code + "' is missing its native Progress control.");
-                AssertProperty(progress, "FixedListItems", SerializeSteps(definition.GuidedJourney, step.Code), definition.Name, step.Code);
-                AssertProperty(progress, "Text", step.Code, definition.Name, step.Code);
-                AssertProperty(progress, "IsReadOnly", "true", definition.Name, step.Code);
-                AssertProperty(progress, "IsEnabled", "true", definition.Name, step.Code);
+                    throw new CliException("K2 Form '" + definition.Name + "' guided journey step '" + step.Code +
+                        "' is missing its Form-supported progress indicator.");
+                AssertProperty(progress, "Text", ProgressText(definition.GuidedJourney, step, index),
+                    definition.Name, step.Code);
+                AssertProperty(progress, "Width", "100%", definition.Name, step.Code);
+                AssertProperty(progress, "LiteralVal", "false", definition.Name, step.Code);
 
                 var journeyTitle = controls.Elements().SingleOrDefault(x => x.Name.LocalName == "Control" &&
                     string.Equals((string)x.Attribute("Type"), "Label", StringComparison.OrdinalIgnoreCase) &&
@@ -78,6 +78,7 @@ namespace K2SmartFormsCli
                     !string.Equals(ReadProperty(journeyTitle, "Text"), definition.GuidedJourney.Title, StringComparison.Ordinal))
                     throw new CliException("K2 Form '" + definition.Name + "' guided journey step '" + step.Code +
                         "' is missing its native journey title.");
+                AssertProperty(journeyTitle, "LiteralVal", "false", definition.Name, step.Code);
 
                 var journeyDescription = controls.Elements().SingleOrDefault(x => x.Name.LocalName == "Control" &&
                     string.Equals((string)x.Attribute("Type"), "DataLabel", StringComparison.OrdinalIgnoreCase) &&
@@ -86,6 +87,7 @@ namespace K2SmartFormsCli
                     !string.Equals(ReadProperty(journeyDescription, "Text"), definition.GuidedJourney.Description, StringComparison.Ordinal))
                     throw new CliException("K2 Form '" + definition.Name + "' guided journey step '" + step.Code +
                         "' is missing its native journey description.");
+                AssertProperty(journeyDescription, "LiteralVal", "false", definition.Name, step.Code);
 
                 var heading = controls.Elements().SingleOrDefault(x => x.Name.LocalName == "Control" &&
                     string.Equals((string)x.Attribute("Type"), "Label", StringComparison.OrdinalIgnoreCase) &&
@@ -93,6 +95,7 @@ namespace K2SmartFormsCli
                 if (heading == null || !PanelContainsControl(panel, (string)heading.Attribute("ID")) ||
                     !string.Equals(ReadProperty(heading, "Text"), StepHeading(definition.GuidedJourney, step, index), StringComparison.Ordinal))
                     throw new CliException("K2 Form '" + definition.Name + "' guided journey step '" + step.Code + "' is missing its current-screen heading.");
+                AssertProperty(heading, "LiteralVal", "false", definition.Name, step.Code);
 
                 var description = controls.Elements().SingleOrDefault(x => x.Name.LocalName == "Control" &&
                     string.Equals((string)x.Attribute("Type"), "DataLabel", StringComparison.OrdinalIgnoreCase) &&
@@ -100,6 +103,7 @@ namespace K2SmartFormsCli
                 if (description == null || !PanelContainsControl(panel, (string)description.Attribute("ID")) ||
                     !string.Equals(ReadProperty(description, "Text"), step.Description, StringComparison.Ordinal))
                     throw new CliException("K2 Form '" + definition.Name + "' guided journey step '" + step.Code + "' is missing its screen description.");
+                AssertProperty(description, "LiteralVal", "false", definition.Name, step.Code);
 
                 if (index > 0) VerifyNavigationButton(form, baseState, controls, panel, definition,
                     BackName(index), definition.GuidedJourney.BackButtonText,
@@ -160,6 +164,7 @@ namespace K2SmartFormsCli
                 new XElement(ns + "Name", JourneyTitleName(index)), new XElement(ns + "DisplayName", JourneyTitleName(index)),
                 new XElement(ns + "Properties",
                     Property(ns, "ControlName", JourneyTitleName(index)),
+                    Property(ns, "LiteralVal", "false"),
                     Property(ns, "Text", definition.GuidedJourney.Title),
                     Property(ns, "Width", "100%")),
                 new XElement(ns + "Styles",
@@ -169,24 +174,22 @@ namespace K2SmartFormsCli
                 new XElement(ns + "Name", JourneyDescriptionName(index)), new XElement(ns + "DisplayName", JourneyDescriptionName(index)),
                 new XElement(ns + "Properties",
                     Property(ns, "ControlName", JourneyDescriptionName(index)),
+                    Property(ns, "LiteralVal", "false"),
                     Property(ns, "Text", definition.GuidedJourney.Description),
                     Property(ns, "Width", "100%")),
                 new XElement(ns + "Styles",
                     new XElement(ns + "Style", new XAttribute("IsDefault", "True"),
                         new XElement(ns + "Font", new XElement(ns + "Color", "#667085")),
                         new XElement(ns + "Padding", new XElement(ns + "Bottom", "14px"))))));
-            controls.Add(Control(ns, progressId, "Progress", progressName,
+            controls.Add(Control(ns, progressId, "DataLabel", progressName,
+                Property(ns, "LiteralVal", "false"),
                 Property(ns, "Width", "100%"),
-                Property(ns, "DataSourceType", "Static"),
-                Property(ns, "FixedListItems", SerializeSteps(definition.GuidedJourney, step.Code),
-                    string.Join("; ", definition.GuidedJourney.Steps.Select(x => x.Label).ToArray())),
-                Property(ns, "Text", step.Code),
-                Property(ns, "IsReadOnly", "true"),
-                Property(ns, "IsEnabled", "true")));
+                Property(ns, "Text", ProgressText(definition.GuidedJourney, step, index))));
             controls.Add(new XElement(ns + "Control", new XAttribute("ID", headingId), new XAttribute("Type", "Label"),
                 new XElement(ns + "Name", headingName), new XElement(ns + "DisplayName", headingName),
                 new XElement(ns + "Properties",
                     Property(ns, "ControlName", headingName),
+                    Property(ns, "LiteralVal", "false"),
                     Property(ns, "Text", StepHeading(definition.GuidedJourney, step, index)),
                     Property(ns, "Width", "100%")),
                 new XElement(ns + "Styles",
@@ -197,6 +200,7 @@ namespace K2SmartFormsCli
                 new XElement(ns + "Name", descriptionName), new XElement(ns + "DisplayName", descriptionName),
                 new XElement(ns + "Properties",
                     Property(ns, "ControlName", descriptionName),
+                    Property(ns, "LiteralVal", "false"),
                     Property(ns, "Text", step.Description),
                     Property(ns, "Width", "100%")),
                 new XElement(ns + "Styles",
@@ -510,17 +514,6 @@ namespace K2SmartFormsCli
             return group == null ? null : (string)group.Attribute("ID");
         }
 
-        private static string SerializeSteps(GuidedJourneyDefinition journey, string currentCode)
-        {
-            var items = journey.Steps.Select(x => new
-            {
-                value = x.Code,
-                display = x.Label,
-                isDefault = string.Equals(x.Code, currentCode, StringComparison.OrdinalIgnoreCase)
-            }).ToArray();
-            return new JavaScriptSerializer().Serialize(items);
-        }
-
         private static XElement BuildRow(XNamespace ns, string rowId, string cellId, string controlId)
         {
             return new XElement(ns + "Row", new XAttribute("ID", rowId),
@@ -618,6 +611,10 @@ namespace K2SmartFormsCli
             return string.IsNullOrWhiteSpace(step.Title)
                 ? "Step " + (index + 1) + " of " + journey.Steps.Count + ": " + step.Label
                 : step.Title;
+        }
+        private static string ProgressText(GuidedJourneyDefinition journey, GuidedJourneyStepDefinition step, int index)
+        {
+            return "Step " + (index + 1) + " of " + journey.Steps.Count + ": " + step.Label;
         }
         private static string NewId() { return Guid.NewGuid().ToString(); }
     }

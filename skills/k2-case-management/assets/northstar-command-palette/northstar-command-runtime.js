@@ -133,6 +133,57 @@
     return window.__northstarLangflowLoads[scriptUrl];
   }
 
+  function observeLangflowAuthentication(control, hostUrl, flowId) {
+    if (typeof window.fetch !== "function") return function () {};
+    let monitor = window.__northstarLangflowAuthenticationMonitor;
+    if (!monitor) {
+      monitor = {
+        originalFetch: window.fetch,
+        subscribers: new Set()
+      };
+      window.__northstarLangflowAuthenticationMonitor = monitor;
+      window.fetch = function () {
+        const args = arguments;
+        return monitor.originalFetch.apply(window, args).then(function (response) {
+          let url = "";
+          try {
+            url = typeof args[0] === "string" ? args[0] :
+              args[0] && args[0].url ? args[0].url : "";
+          } catch (_) {
+            url = "";
+          }
+          if (response && (response.status === 401 || response.status === 403)) {
+            monitor.subscribers.forEach(function (subscriber) {
+              if (subscriber.matches(url)) subscriber.failed(response.status);
+            });
+          }
+          return response;
+        });
+      };
+    }
+    const expected = hostUrl + "/api/v1/run/" + flowId;
+    const subscriber = {
+      control: control,
+      matches: function (url) {
+        return typeof url === "string" &&
+          (url === expected || url.indexOf(expected + "?") === 0);
+      },
+      failed: function (status) {
+        if (control.isConnected) control._showAssistantAuthenticationError(status);
+      }
+    };
+    monitor.subscribers.add(subscriber);
+    return function () {
+      const current = window.__northstarLangflowAuthenticationMonitor;
+      if (!current) return;
+      current.subscribers.delete(subscriber);
+      if (current.subscribers.size === 0) {
+        window.fetch = current.originalFetch;
+        delete window.__northstarLangflowAuthenticationMonitor;
+      }
+    };
+  }
+
   if (!window.customElements.get("northstar-command-palette")) {
     window.customElements.define("northstar-command-palette", class NorthstarCommandPalette extends K2BaseControl {
       constructor() {
@@ -147,6 +198,7 @@
         this._langflowHostUrl = "";
         this._langflowFlowId = "";
         this._langflowScriptUrl = APPROVED_LANGFLOW_SCRIPT;
+        this._langflowAuthenticationMode = "server-proxy";
         this._langflowWindowTitle = "Case Assistant";
         this._langflowChatPosition = "bottom-right";
         this._langflowWidth = 420;
@@ -154,6 +206,11 @@
         this._assistantState = "idle";
         this._assistantMessage = "";
         this._langflowElement = null;
+        this._assistantOverlay = null;
+        this._assistantFrame = null;
+        this._assistantCloseButton = null;
+        this._assistantModalObserver = null;
+        this._assistantAuthCleanup = null;
         this._width = "100%";
         this._height = "48px";
         this._isVisible = true;
@@ -167,6 +224,7 @@
         this._activeIndex = 0;
         this._restoreFocus = null;
         this._onDocumentKeyDown = this._handleDocumentKeyDown.bind(this);
+        this._onAssistantResize = this._syncAssistantOverlay.bind(this);
       }
 
       static get observedAttributes() {
@@ -197,6 +255,11 @@
       set LangflowFlowId(value) { this._langflowFlowId = text(value); changed(this, "LangflowFlowId"); }
       get LangflowScriptUrl() { return this._langflowScriptUrl; }
       set LangflowScriptUrl(value) { this._langflowScriptUrl = text(value) || APPROVED_LANGFLOW_SCRIPT; changed(this, "LangflowScriptUrl"); }
+      get LangflowAuthenticationMode() { return this._langflowAuthenticationMode; }
+      set LangflowAuthenticationMode(value) {
+        this._langflowAuthenticationMode = value === "server-open-alpha" ? value : "server-proxy";
+        changed(this, "LangflowAuthenticationMode");
+      }
       get LangflowWindowTitle() { return this._langflowWindowTitle; }
       set LangflowWindowTitle(value) { this._langflowWindowTitle = text(value) || "Case Assistant"; changed(this, "LangflowWindowTitle"); }
       get LangflowChatPosition() { return this._langflowChatPosition; }
@@ -226,8 +289,7 @@
 
       disconnectedCallback() {
         document.removeEventListener("keydown", this._onDocumentKeyDown);
-        if (this._langflowElement) this._langflowElement.remove();
-        this._langflowElement = null;
+        this._closeAssistant(false);
         super.disconnectedCallback();
       }
 
@@ -415,6 +477,10 @@
           if (!this._isEnabled || this._isReadOnly || !this._isVisible) return;
           event.preventDefault();
           this._openDialog();
+        } else if (event.key === "Escape" && this._assistantOverlay) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._closeAssistant(true);
         } else if (event.key === "Escape" && this._open) {
           event.preventDefault();
           this._closeDialog();
@@ -476,12 +542,14 @@
 
       _openAssistant() {
         if (!this._assistantEnabled || !this._isEnabled || this._isReadOnly) return;
+        this._closeAssistant(false);
+        this._restoreFocus = this;
         this._assistantState = "loading";
         this._assistantMessage = "Opening " + this._assistantLabel + "…";
         this.render();
         loadLangflow(this._langflowScriptUrl).then(() => {
           if (!this.isConnected) return;
-          if (this._langflowElement) this._langflowElement.remove();
+          this._createAssistantOverlay();
           const chat = document.createElement("langflow-chat");
           chat.setAttribute("host_url", this._langflowHostUrl);
           chat.setAttribute("flow_id", this._langflowFlowId);
@@ -492,8 +560,18 @@
           chat.setAttribute("session_id", this._assistantSessionId());
           chat.setAttribute("start_open", "true");
           chat.dataset.northstarOwner = this.getAttribute("name") || "northstar-command-palette";
-          document.body.append(chat);
+          chat.style.setProperty("display", "block", "important");
+          chat.style.setProperty("position", "relative", "important");
+          chat.style.setProperty("width", "100%", "important");
+          chat.style.setProperty("height", "100%", "important");
+          chat.style.setProperty("max-width", "100%", "important");
+          chat.style.setProperty("max-height", "100%", "important");
+          chat.style.setProperty("pointer-events", "auto", "important");
+          this._assistantAuthCleanup = observeLangflowAuthentication(
+            this, this._langflowHostUrl, this._langflowFlowId);
+          this._assistantFrame.append(chat);
           this._langflowElement = chat;
+          this._syncAssistantOverlay();
           this._assistantState = "ready";
           this._assistantMessage = this._assistantLabel + " opened.";
           this.render();
@@ -504,6 +582,187 @@
             : "The case assistant could not be opened.";
           this.render();
         });
+      }
+
+      _createAssistantOverlay() {
+        this._closeAssistant(false);
+        const overlay = document.createElement("div");
+        overlay.className = "northstar-agent-overlay";
+        overlay.dataset.northstarOwner = this.getAttribute("name") || "northstar-command-palette";
+        overlay.dataset.authenticationMode = this._langflowAuthenticationMode;
+        overlay.setAttribute("role", "region");
+        overlay.setAttribute("aria-label", this._langflowWindowTitle);
+        Object.assign(overlay.style, {
+          position: "fixed",
+          inset: "0",
+          width: "100vw",
+          height: "100vh",
+          maxWidth: "100vw",
+          maxHeight: "100vh",
+          margin: "0",
+          padding: "0",
+          overflow: "hidden",
+          pointerEvents: "none",
+          zIndex: "9500",
+          contain: "layout style paint"
+        });
+
+        const frame = document.createElement("div");
+        frame.className = "northstar-agent-overlay__frame";
+        frame.setAttribute("role", "dialog");
+        frame.setAttribute("aria-modal", "false");
+        frame.setAttribute("aria-label", this._langflowWindowTitle);
+        Object.assign(frame.style, {
+          position: "absolute",
+          overflow: "visible",
+          pointerEvents: "none",
+          maxWidth: "calc(100vw - 24px)",
+          maxHeight: "calc(100vh - 24px)"
+        });
+
+        const close = document.createElement("button");
+        close.type = "button";
+        close.className = "northstar-agent-overlay__close";
+        close.setAttribute("aria-label", "Close " + this._langflowWindowTitle);
+        close.textContent = "Close";
+        Object.assign(close.style, {
+          position: "absolute",
+          top: "8px",
+          right: "8px",
+          zIndex: "2",
+          border: "1px solid #d0d5dd",
+          borderRadius: "8px",
+          background: "#ffffff",
+          color: "#344054",
+          font: "600 12px/1 Segoe UI, sans-serif",
+          padding: "8px 10px",
+          boxShadow: "0 2px 8px rgba(16,24,40,.14)",
+          cursor: "pointer",
+          pointerEvents: "auto"
+        });
+        close.addEventListener("click", () => this._closeAssistant(true));
+        frame.append(close);
+        overlay.append(frame);
+        document.body.append(overlay);
+
+        this._assistantOverlay = overlay;
+        this._assistantFrame = frame;
+        this._assistantCloseButton = close;
+        window.addEventListener("resize", this._onAssistantResize);
+        this._assistantModalObserver = new MutationObserver(
+          this._syncAssistantModalState.bind(this));
+        this._assistantModalObserver.observe(document.body, {
+          subtree: true, childList: true, attributes: true,
+          attributeFilter: ["class", "style", "aria-hidden"]
+        });
+        this._syncAssistantModalState();
+      }
+
+      _syncAssistantOverlay() {
+        if (!this._assistantFrame) return;
+        const safeWidth = Math.max(280, Math.min(this._langflowWidth, window.innerWidth - 24));
+        const safeHeight = Math.max(360, Math.min(this._langflowHeight, window.innerHeight - 24));
+        this._assistantFrame.style.width = safeWidth + "px";
+        this._assistantFrame.style.height = safeHeight + "px";
+        this._assistantFrame.style.removeProperty("top");
+        this._assistantFrame.style.removeProperty("right");
+        this._assistantFrame.style.removeProperty("bottom");
+        this._assistantFrame.style.removeProperty("left");
+        this._assistantFrame.style.removeProperty("transform");
+        const vertical = this._langflowChatPosition.indexOf("top") === 0 ? "top" :
+          this._langflowChatPosition.indexOf("center") === 0 ? "center" : "bottom";
+        const horizontal = this._langflowChatPosition.indexOf("left") >= 0 ? "left" :
+          this._langflowChatPosition.indexOf("center") >= 0 ? "center" : "right";
+        if (vertical === "top") this._assistantFrame.style.top = "12px";
+        else if (vertical === "bottom") this._assistantFrame.style.bottom = "12px";
+        else this._assistantFrame.style.top = "50%";
+        if (horizontal === "left") this._assistantFrame.style.left = "12px";
+        else if (horizontal === "right") this._assistantFrame.style.right = "12px";
+        else this._assistantFrame.style.left = "50%";
+        const transforms = [];
+        if (horizontal === "center") transforms.push("translateX(-50%)");
+        if (vertical === "center") transforms.push("translateY(-50%)");
+        if (transforms.length) this._assistantFrame.style.transform = transforms.join(" ");
+        if (this._langflowElement) {
+          this._langflowElement.setAttribute("width", String(safeWidth));
+          this._langflowElement.setAttribute("height", String(safeHeight));
+        }
+      }
+
+      _syncAssistantModalState() {
+        if (!this._assistantOverlay || !this._assistantFrame) return;
+        const visible = function (node) {
+          if (!node || !node.isConnected) return false;
+          const style = getComputedStyle(node);
+          return style.display !== "none" && style.visibility !== "hidden" &&
+            node.getAttribute("aria-hidden") !== "true" &&
+            !!(node.offsetWidth || node.offsetHeight || node.getClientRects().length);
+        };
+        const criticalModal = Array.from(document.querySelectorAll(
+          ".popup,.message-box,.ui-dialog,.k2-modal,[data-k2-modal]"
+        )).find(function (node) {
+          return !node.closest(".northstar-agent-overlay") && visible(node);
+        });
+        this._assistantFrame.style.visibility = criticalModal ? "hidden" : "visible";
+        this._assistantFrame.style.pointerEvents = "none";
+        const hidden = criticalModal ? "true" : "false";
+        if (this._assistantOverlay.getAttribute("aria-hidden") !== hidden) {
+          this._assistantOverlay.setAttribute("aria-hidden", hidden);
+        }
+      }
+
+      _showAssistantAuthenticationError(status) {
+        if (!this._assistantFrame) return;
+        if (this._langflowElement) this._langflowElement.remove();
+        this._langflowElement = null;
+        const prior = this._assistantFrame.querySelector(".northstar-agent-overlay__error");
+        if (prior) prior.remove();
+        const message = document.createElement("div");
+        message.className = "northstar-agent-overlay__error";
+        message.setAttribute("role", "alert");
+        message.setAttribute("aria-live", "assertive");
+        message.tabIndex = -1;
+        Object.assign(message.style, {
+          boxSizing: "border-box",
+          width: "100%",
+          maxWidth: "420px",
+          margin: "56px auto 0",
+          border: "1px solid #fda29b",
+          borderRadius: "12px",
+          background: "#fff",
+          color: "#912018",
+          padding: "18px",
+          boxShadow: "0 18px 48px rgba(16,24,40,.22)",
+          pointerEvents: "auto"
+        });
+        message.textContent = "Agent unavailable — authentication required. The Langflow server returned HTTP " +
+          status + ".";
+        this._assistantFrame.append(message);
+        this._assistantState = "error";
+        this._assistantMessage = "Agent unavailable — authentication required.";
+        this.render();
+        message.focus();
+      }
+
+      _closeAssistant(returnFocus) {
+        window.removeEventListener("resize", this._onAssistantResize);
+        if (this._assistantModalObserver) this._assistantModalObserver.disconnect();
+        if (this._assistantAuthCleanup) this._assistantAuthCleanup();
+        this._assistantModalObserver = null;
+        this._assistantAuthCleanup = null;
+        if (this._assistantOverlay) this._assistantOverlay.remove();
+        else if (this._langflowElement) this._langflowElement.remove();
+        this._assistantOverlay = null;
+        this._assistantFrame = null;
+        this._assistantCloseButton = null;
+        this._langflowElement = null;
+        if (returnFocus) {
+          requestAnimationFrame(() => {
+            const trigger = this._shadow &&
+              this._shadow.querySelector(".northstar-command__trigger");
+            if (trigger && typeof trigger.focus === "function") trigger.focus();
+          });
+        }
       }
 
       _assistantSessionId() {

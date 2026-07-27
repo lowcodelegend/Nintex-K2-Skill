@@ -1,6 +1,153 @@
 import { spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
+import net from "node:net";
 import path from "node:path";
+
+class DependencyFreeWebSocket {
+  constructor(address) {
+    this.address = new URL(address);
+    this.listeners = new Map();
+    this.buffer = Buffer.alloc(0);
+    this.handshakeComplete = false;
+    this.socket = net.createConnection({
+      host: this.address.hostname,
+      port: Number(this.address.port || 80)
+    });
+    this.socket.on("connect", () => {
+      const key = randomBytes(16).toString("base64");
+      this.socket.write([
+        `GET ${this.address.pathname}${this.address.search} HTTP/1.1`,
+        `Host: ${this.address.host}`,
+        "Upgrade: websocket",
+        "Connection: Upgrade",
+        `Sec-WebSocket-Key: ${key}`,
+        "Sec-WebSocket-Version: 13",
+        "\r\n"
+      ].join("\r\n"));
+    });
+    this.socket.on("data", (chunk) => this.receive(chunk));
+    this.socket.on("error", (error) => this.emit("error", error));
+    this.socket.on("close", () => this.emit("close", {}));
+  }
+
+  addEventListener(type, listener, options = {}) {
+    const entries = this.listeners.get(type) || [];
+    entries.push({ listener, once: options?.once === true });
+    this.listeners.set(type, entries);
+  }
+
+  emit(type, event) {
+    const entries = (this.listeners.get(type) || []).slice();
+    for (const entry of entries) {
+      entry.listener(event);
+      if (entry.once) {
+        const current = this.listeners.get(type) || [];
+        this.listeners.set(type, current.filter((candidate) => candidate !== entry));
+      }
+    }
+  }
+
+  receive(chunk) {
+    this.buffer = Buffer.concat([this.buffer, chunk]);
+    if (!this.handshakeComplete) {
+      const boundary = this.buffer.indexOf("\r\n\r\n");
+      if (boundary < 0) return;
+      const headers = this.buffer.subarray(0, boundary).toString("utf8");
+      if (!/^HTTP\/1\.1 101\b/.test(headers)) {
+        this.emit("error", new Error(`WebSocket upgrade failed: ${headers.split("\r\n")[0]}`));
+        this.socket.destroy();
+        return;
+      }
+      this.buffer = this.buffer.subarray(boundary + 4);
+      this.handshakeComplete = true;
+      this.emit("open", {});
+    }
+    this.readFrames();
+  }
+
+  readFrames() {
+    while (this.buffer.length >= 2) {
+      const first = this.buffer[0];
+      const second = this.buffer[1];
+      const opcode = first & 0x0f;
+      const masked = (second & 0x80) !== 0;
+      let length = second & 0x7f;
+      let offset = 2;
+      if (length === 126) {
+        if (this.buffer.length < 4) return;
+        length = this.buffer.readUInt16BE(2);
+        offset = 4;
+      } else if (length === 127) {
+        if (this.buffer.length < 10) return;
+        const longLength = this.buffer.readBigUInt64BE(2);
+        if (longLength > BigInt(Number.MAX_SAFE_INTEGER)) {
+          this.emit("error", new Error("WebSocket frame exceeds the safe buffer size."));
+          this.socket.destroy();
+          return;
+        }
+        length = Number(longLength);
+        offset = 10;
+      }
+      const maskLength = masked ? 4 : 0;
+      if (this.buffer.length < offset + maskLength + length) return;
+      const mask = masked ? this.buffer.subarray(offset, offset + 4) : null;
+      offset += maskLength;
+      const payload = Buffer.from(this.buffer.subarray(offset, offset + length));
+      this.buffer = this.buffer.subarray(offset + length);
+      if (mask) {
+        for (let index = 0; index < payload.length; index += 1) {
+          payload[index] ^= mask[index % 4];
+        }
+      }
+      if (opcode === 0x1) this.emit("message", { data: payload.toString("utf8") });
+      else if (opcode === 0x8) {
+        this.socket.end();
+        return;
+      } else if (opcode === 0x9) {
+        this.writeFrame(payload, 0x0a);
+      }
+    }
+  }
+
+  writeFrame(payload, opcode = 0x1) {
+    payload = Buffer.isBuffer(payload) ? payload : Buffer.from(String(payload), "utf8");
+    const mask = randomBytes(4);
+    let header;
+    if (payload.length < 126) {
+      header = Buffer.alloc(2);
+      header[1] = 0x80 | payload.length;
+    } else if (payload.length <= 0xffff) {
+      header = Buffer.alloc(4);
+      header[1] = 0x80 | 126;
+      header.writeUInt16BE(payload.length, 2);
+    } else {
+      header = Buffer.alloc(10);
+      header[1] = 0x80 | 127;
+      header.writeBigUInt64BE(BigInt(payload.length), 2);
+    }
+    header[0] = 0x80 | opcode;
+    const masked = Buffer.alloc(payload.length);
+    for (let index = 0; index < payload.length; index += 1) {
+      masked[index] = payload[index] ^ mask[index % 4];
+    }
+    this.socket.write(Buffer.concat([header, mask, masked]));
+  }
+
+  send(value) {
+    if (!this.handshakeComplete) throw new Error("WebSocket is not open.");
+    this.writeFrame(value);
+  }
+
+  close() {
+    if (!this.socket.destroyed) {
+      if (this.handshakeComplete) this.writeFrame(Buffer.alloc(0), 0x08);
+      this.socket.end();
+    }
+  }
+}
+
+const WebSocketClient = globalThis.WebSocket || DependencyFreeWebSocket;
 
 function argument(name, fallback = undefined) {
   const index = process.argv.indexOf(`--${name}`);
@@ -30,6 +177,7 @@ const clickNames = argumentsFor("click-name");
 const clickName = clickNames[0] || "";
 const dismissDialogs = process.argv.includes("--dismiss-dialogs");
 const paletteProbeText = argument("palette-probe-text", "");
+const assistantProbeRequested = process.argv.includes("--assistant-probe");
 const noScreenshot = process.argv.includes("--no-screenshot");
 const edge = argument(
   "edge",
@@ -67,7 +215,7 @@ class CdpSession {
     this.pending = new Map();
     this.diagnostics = [];
     this.networkPending = new Map();
-    this.socket = new WebSocket(webSocketUrl);
+    this.socket = new WebSocketClient(webSocketUrl);
   }
 
   async connect() {
@@ -231,26 +379,36 @@ try {
           requestedName, found: false, selectedTabBefore: selectedTab
         };
         const rectangle = target.getBoundingClientRect();
-        const allowed = target.dispatchEvent(new MouseEvent('click', {
-          bubbles: true,
-          cancelable: true,
-          view: window,
-          clientX: rectangle.left + rectangle.width / 2,
-          clientY: rectangle.top + rectangle.height / 2
-        }));
         return {
           requestedName,
           found: true,
           targetTag: target.tagName,
           targetName: target.getAttribute('name') || root.getAttribute('name') || '',
           selectedTabBefore: selectedTab,
-          dispatchCanceled: !allowed
+          x: rectangle.left + rectangle.width / 2,
+          y: rectangle.top + rectangle.height / 2,
+          width: rectangle.width,
+          height: rectangle.height
         };
       })()`,
       returnByValue: true
     }, 5000);
     clickProbe = beforeClick.result.value;
     clickProbes.push(clickProbe);
+    if (clickProbe.found && clickProbe.width > 0 && clickProbe.height > 0) {
+      await session.send("Input.dispatchMouseEvent", {
+        type: "mouseMoved", x: clickProbe.x, y: clickProbe.y
+      });
+      await session.send("Input.dispatchMouseEvent", {
+        type: "mousePressed", x: clickProbe.x, y: clickProbe.y,
+        button: "left", clickCount: 1
+      });
+      await session.send("Input.dispatchMouseEvent", {
+        type: "mouseReleased", x: clickProbe.x, y: clickProbe.y,
+        button: "left", clickCount: 1
+      });
+      clickProbe.inputMethod = "CDP.Input.dispatchMouseEvent";
+    }
     await delay(700);
     if (dismissDialogs) {
       const dismissed = await session.send("Runtime.evaluate", {
@@ -286,21 +444,32 @@ try {
 
   let paletteProbe = null;
   if (paletteProbeText) {
-    const opened = await session.send("Runtime.evaluate", {
+    const located = await session.send("Runtime.evaluate", {
       expression: `(() => {
-        const control = document.querySelector('northstar-command-palette');
-        const row = control && control.closest('.k2sp-command-palette-row');
-        const panel = control && control.closest('.formpanel');
-        const trigger = control && control.shadowRoot &&
-          control.shadowRoot.querySelector('.northstar-command__trigger');
         const visible = (node) => !!node &&
           getComputedStyle(node).display !== 'none' &&
           getComputedStyle(node).visibility !== 'hidden' &&
           !!(node.offsetWidth || node.offsetHeight || node.getClientRects().length);
+        const controls = Array.from(document.querySelectorAll(
+          'northstar-command-palette,northstar-case-assistant-palette,northstar-command-palette-acp'
+        ));
+        const control = controls.find((candidate) => {
+          const candidateTrigger = candidate.shadowRoot &&
+            candidate.shadowRoot.querySelector('.northstar-command__trigger');
+          return visible(candidate) && visible(candidateTrigger);
+        }) || null;
+        const row = control && control.closest('.k2sp-command-palette-row');
+        const panel = control && control.closest('.formpanel');
+        const trigger = control && control.shadowRoot &&
+          control.shadowRoot.querySelector('.northstar-command__trigger');
+        const host = document.querySelector('.k2sp-command-palette-host');
+        const fallback = host && host.querySelector('.k2sp-search-fallback');
         if (!control || !trigger) return {
           found: false,
           controlVisible: visible(control),
           rowVisible: visible(row),
+          fallbackVisible: visible(fallback),
+          shellContract: window.__k2spNorthstar?.commandPalette || null,
           panelDisplay: panel ? getComputedStyle(panel).display : null,
           rowClass: row ? row.className : null,
           panelClass: panel ? panel.className : null,
@@ -309,13 +478,30 @@ try {
           directGuidedPanel: !!panel &&
             !!panel.parentElement?.classList.contains('k2sp-guided-journey')
         };
-        trigger.click();
+        const triggerRect = trigger.getBoundingClientRect();
+        const rowRect = row && row.getBoundingClientRect();
+        const hostRect = host && host.getBoundingClientRect();
         return {
           found: true,
+          x: triggerRect.left + triggerRect.width / 2,
+          y: triggerRect.top + triggerRect.height / 2,
+          width: triggerRect.width,
+          height: triggerRect.height,
+          inputMethod: 'CDP.Input.dispatchMouseEvent',
           controlVisible: visible(control),
           rowVisible: visible(row),
+          fallbackVisible: visible(fallback),
+          fallbackHidden: !visible(fallback) &&
+            (!fallback || fallback.hidden || fallback.getAttribute('aria-hidden') === 'true'),
+          visuallyHosted: !!rowRect && !!hostRect &&
+            Math.abs(rowRect.left - hostRect.left) <= 2 &&
+            Math.abs(rowRect.top - hostRect.top) <= 2 &&
+            Math.abs(rowRect.width - hostRect.width) <= 2,
+          ownershipPreserved: !!row && !!host && !host.contains(row),
+          shellContract: window.__k2spNorthstar?.commandPalette || null,
           panelDisplay: panel ? getComputedStyle(panel).display : null,
           triggerVisible: visible(trigger),
+          controlName: control.getAttribute('name') || control.Name || '',
           rowClass: row ? row.className : null,
           panelClass: panel ? panel.className : null,
           panelStyle: panel ? panel.getAttribute('style') : null,
@@ -326,26 +512,102 @@ try {
       })()`,
       returnByValue: true
     }, 5000);
-    paletteProbe = opened.result.value;
-    await delay(150);
+    paletteProbe = located.result.value;
     if (paletteProbe.found) {
-      const typed = await session.send("Runtime.evaluate", {
+      await session.send("Input.dispatchMouseEvent", {
+        type: "mouseMoved", x: paletteProbe.x, y: paletteProbe.y
+      });
+      await session.send("Input.dispatchMouseEvent", {
+        type: "mousePressed", x: paletteProbe.x, y: paletteProbe.y,
+        button: "left", clickCount: 1
+      });
+      await session.send("Input.dispatchMouseEvent", {
+        type: "mouseReleased", x: paletteProbe.x, y: paletteProbe.y,
+        button: "left", clickCount: 1
+      });
+      await delay(200);
+      const afterPointer = await session.send("Runtime.evaluate", {
         expression: `(() => {
-          const control = document.querySelector('northstar-command-palette');
-          const input = control && control.shadowRoot &&
-            control.shadowRoot.querySelector('input[type="search"]');
-          if (!input) return { inputFound: false };
-          input.value = ${JSON.stringify(paletteProbeText)};
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-          return { inputFound: true };
+          const controls = Array.from(document.querySelectorAll(
+            'northstar-command-palette,northstar-case-assistant-palette,northstar-command-palette-acp'
+          ));
+          const open = controls.filter((control) => control.shadowRoot &&
+            control.shadowRoot.querySelectorAll('[role="dialog"]').length === 1);
+          return {
+            pointerDialogCount: open.reduce((count, control) =>
+              count + control.shadowRoot.querySelectorAll('[role="dialog"]').length, 0),
+            pointerControlNames: open.map((control) =>
+              control.getAttribute('name') || control.Name || '')
+          };
         })()`,
         returnByValue: true
       }, 5000);
-      Object.assign(paletteProbe, typed.result.value);
+      Object.assign(paletteProbe, afterPointer.result.value);
+
+      await session.send("Input.dispatchKeyEvent", {
+        type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27
+      });
+      await session.send("Input.dispatchKeyEvent", {
+        type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27
+      });
+      await delay(100);
+      const afterClose = await session.send("Runtime.evaluate", {
+        expression: `({
+          dialogCountAfterPointerEscape: Array.from(
+            document.querySelectorAll(
+              'northstar-command-palette,northstar-case-assistant-palette,northstar-command-palette-acp'
+            )
+          ).reduce((count, control) => count +
+            (control.shadowRoot?.querySelectorAll('[role="dialog"]').length || 0), 0)
+        })`,
+        returnByValue: true
+      }, 5000);
+      Object.assign(paletteProbe, afterClose.result.value);
+
+      await session.send("Input.dispatchKeyEvent", {
+        type: "keyDown", key: "k", code: "KeyK",
+        windowsVirtualKeyCode: 75, modifiers: 2
+      });
+      await session.send("Input.dispatchKeyEvent", {
+        type: "keyUp", key: "k", code: "KeyK",
+        windowsVirtualKeyCode: 75, modifiers: 2
+      });
+      await delay(200);
+      const afterKeyboard = await session.send("Runtime.evaluate", {
+        expression: `(() => {
+          const controls = Array.from(document.querySelectorAll(
+            'northstar-command-palette,northstar-case-assistant-palette,northstar-command-palette-acp'
+          ));
+          const open = controls.filter((control) => control.shadowRoot &&
+            control.shadowRoot.querySelectorAll('[role="dialog"]').length === 1);
+          const input = open[0]?.shadowRoot?.querySelector('input[type="search"]') || null;
+          if (input) input.focus();
+          return {
+            keyboardDialogCount: open.reduce((count, control) =>
+              count + control.shadowRoot.querySelectorAll('[role="dialog"]').length, 0),
+            keyboardControlNames: open.map((control) =>
+              control.getAttribute('name') || control.Name || ''),
+            sameControl:
+              open.length === 1 &&
+              open[0] &&
+              (open[0].getAttribute('name') || open[0].Name || '') ===
+                ${JSON.stringify(paletteProbe.controlName)},
+            inputFound: !!input
+          };
+        })()`,
+        returnByValue: true
+      }, 5000);
+      Object.assign(paletteProbe, afterKeyboard.result.value);
+      if (paletteProbe.inputFound) {
+        await session.send("Input.insertText", { text: paletteProbeText });
+      }
       await delay(350);
       const result = await session.send("Runtime.evaluate", {
         expression: `(() => {
-          const control = document.querySelector('northstar-command-palette');
+          const control = Array.from(document.querySelectorAll(
+            'northstar-command-palette,northstar-case-assistant-palette,northstar-command-palette-acp'
+          )).find((candidate) => candidate.shadowRoot &&
+            candidate.shadowRoot.querySelector('[role="dialog"]')) || null;
           const root = control && control.shadowRoot;
           const input = root && root.querySelector('input[type="search"]');
           const dialog = root && root.querySelector('[role="dialog"]');
@@ -356,12 +618,208 @@ try {
             inputValue: input ? input.value : null,
             focused: !!input && root.activeElement === input,
             optionCount: options.length,
-            statusText: status ? (status.textContent || '').trim() : ''
+            statusText: status ? (status.textContent || '').trim() : '',
+            passed:
+              !!dialog &&
+              !!input &&
+              root.activeElement === input &&
+              ${JSON.stringify(paletteProbe.pointerDialogCount)} === 1 &&
+              ${JSON.stringify(paletteProbe.dialogCountAfterPointerEscape)} === 0 &&
+              ${JSON.stringify(paletteProbe.keyboardDialogCount)} === 1 &&
+              ${JSON.stringify(paletteProbe.sameControl)} === true &&
+              ${JSON.stringify(paletteProbe.visuallyHosted)} === true &&
+              ${JSON.stringify(paletteProbe.fallbackHidden)} === true
           };
         })()`,
         returnByValue: true
       }, 5000);
       Object.assign(paletteProbe, result.result.value);
+    }
+  }
+
+  let assistantProbe = null;
+  if (assistantProbeRequested) {
+    const before = await session.send("Runtime.evaluate", {
+      expression: `(() => {
+        const control = Array.from(document.querySelectorAll(
+          'northstar-command-palette,northstar-case-assistant-palette,northstar-command-palette-acp'
+        )).find((candidate) => candidate.shadowRoot &&
+          candidate.shadowRoot.querySelector('[role="dialog"]')) || null;
+        const option = control && Array.from(
+          control.shadowRoot.querySelectorAll('[role="option"]')
+        ).find((candidate) => /assistant/i.test(candidate.textContent || ''));
+        const rectangle = option && option.getBoundingClientRect();
+        const sidebar = document.querySelector('#k2sp-shell .k2sp-sidebar');
+        return {
+          optionFound: !!option,
+          x: rectangle ? rectangle.left + rectangle.width / 2 : 0,
+          y: rectangle ? rectangle.top + rectangle.height / 2 : 0,
+          width: rectangle ? rectangle.width : 0,
+          height: rectangle ? rectangle.height : 0,
+          before: {
+            clientWidth: document.documentElement.clientWidth,
+            scrollWidth: document.documentElement.scrollWidth,
+            clientHeight: document.documentElement.clientHeight,
+            scrollHeight: document.documentElement.scrollHeight,
+            scrollX: window.scrollX,
+            scrollY: window.scrollY,
+            sidebarWidth: sidebar ? sidebar.getBoundingClientRect().width : null
+          }
+        };
+      })()`,
+      returnByValue: true
+    }, 5000);
+    assistantProbe = before.result.value;
+    if (assistantProbe.optionFound && assistantProbe.width > 0 && assistantProbe.height > 0) {
+      await session.send("Input.dispatchMouseEvent", {
+        type: "mouseMoved", x: assistantProbe.x, y: assistantProbe.y
+      });
+      await session.send("Input.dispatchMouseEvent", {
+        type: "mousePressed", x: assistantProbe.x, y: assistantProbe.y,
+        button: "left", clickCount: 1
+      });
+      await session.send("Input.dispatchMouseEvent", {
+        type: "mouseReleased", x: assistantProbe.x, y: assistantProbe.y,
+        button: "left", clickCount: 1
+      });
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        const readiness = await session.send("Runtime.evaluate", {
+          expression: `(() => {
+            const control = Array.from(document.querySelectorAll(
+              'northstar-command-palette,northstar-case-assistant-palette,northstar-command-palette-acp'
+            )).find((candidate) => candidate._assistantState === 'error');
+            return {
+              overlayReady: !!document.querySelector('.northstar-agent-overlay'),
+              componentError: !!control,
+              componentMessage: control ? control._assistantMessage : ''
+            };
+          })()`,
+          returnByValue: true
+        }, 5000);
+        if (readiness.result.value.overlayReady ||
+            readiness.result.value.componentError) {
+          assistantProbe.componentMessage =
+            readiness.result.value.componentMessage || "";
+          break;
+        }
+        await delay(200);
+      }
+      const openState = await session.send("Runtime.evaluate", {
+        expression: `(() => {
+          const visible = (node) => !!node &&
+            getComputedStyle(node).display !== 'none' &&
+            getComputedStyle(node).visibility !== 'hidden' &&
+            node.getAttribute('aria-hidden') !== 'true' &&
+            !!(node.offsetWidth || node.offsetHeight || node.getClientRects().length);
+          const overlays = Array.from(document.querySelectorAll(
+            '.northstar-agent-overlay'
+          ));
+          const overlay = overlays[0] || null;
+          const frame = overlay && overlay.querySelector(
+            '.northstar-agent-overlay__frame'
+          );
+          const chat = overlay && overlay.querySelector('langflow-chat');
+          const error = overlay && overlay.querySelector(
+            '.northstar-agent-overlay__error[role="alert"]'
+          );
+          const sidebar = document.querySelector('#k2sp-shell .k2sp-sidebar');
+          const modal = document.createElement('div');
+          modal.className = 'k2-modal';
+          Object.assign(modal.style, {
+            position: 'fixed', inset: '20px', display: 'block',
+            width: '200px', height: '100px', zIndex: '10000'
+          });
+          document.body.append(modal);
+          const modalPrecedence = !!frame && (
+            (getComputedStyle(frame).visibility === 'hidden' ||
+              overlay.getAttribute('aria-hidden') === 'true') ||
+            Number(getComputedStyle(modal).zIndex) >
+              Number(getComputedStyle(overlay).zIndex)
+          );
+          modal.remove();
+          return {
+            overlayCount: overlays.length,
+            chatCount: overlay ? overlay.querySelectorAll('langflow-chat').length : 0,
+            errorCount: overlay ? overlay.querySelectorAll(
+              '.northstar-agent-overlay__error[role="alert"]'
+            ).length : 0,
+            errorText: error ? (error.textContent || '').trim() : '',
+            overlayVisible: visible(overlay),
+            overlayPosition: overlay ? getComputedStyle(overlay).position : null,
+            overlayPointerEvents: overlay ? getComputedStyle(overlay).pointerEvents : null,
+            chatPointerEvents: chat ? getComputedStyle(chat).pointerEvents : null,
+            overlayZIndex: overlay ? Number(getComputedStyle(overlay).zIndex) : null,
+            frameWidth: frame ? frame.getBoundingClientRect().width : null,
+            frameHeight: frame ? frame.getBoundingClientRect().height : null,
+            modalPrecedence,
+            open: {
+              clientWidth: document.documentElement.clientWidth,
+              scrollWidth: document.documentElement.scrollWidth,
+              clientHeight: document.documentElement.clientHeight,
+              scrollHeight: document.documentElement.scrollHeight,
+              scrollX: window.scrollX,
+              scrollY: window.scrollY,
+              sidebarWidth: sidebar ? sidebar.getBoundingClientRect().width : null
+            }
+          };
+        })()`,
+        returnByValue: true
+      }, 5000);
+      Object.assign(assistantProbe, openState.result.value);
+
+      await session.send("Input.dispatchKeyEvent", {
+        type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27
+      });
+      await session.send("Input.dispatchKeyEvent", {
+        type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27
+      });
+      await delay(150);
+      const closedState = await session.send("Runtime.evaluate", {
+        expression: `(() => {
+          const control = Array.from(document.querySelectorAll(
+            'northstar-command-palette,northstar-case-assistant-palette,northstar-command-palette-acp'
+          )).find((candidate) => candidate.shadowRoot &&
+            candidate.shadowRoot.querySelector('.northstar-command__trigger')) || null;
+          const trigger = control && control.shadowRoot.querySelector(
+            '.northstar-command__trigger'
+          );
+          const sidebar = document.querySelector('#k2sp-shell .k2sp-sidebar');
+          return {
+            overlayCountAfterClose: document.querySelectorAll(
+              '.northstar-agent-overlay'
+            ).length,
+            chatCountAfterClose: document.querySelectorAll(
+              '.northstar-agent-overlay langflow-chat'
+            ).length,
+            launcherFocusedAfterClose: !!trigger &&
+              control.shadowRoot.activeElement === trigger,
+            after: {
+              clientWidth: document.documentElement.clientWidth,
+              scrollWidth: document.documentElement.scrollWidth,
+              clientHeight: document.documentElement.clientHeight,
+              scrollHeight: document.documentElement.scrollHeight,
+              scrollX: window.scrollX,
+              scrollY: window.scrollY,
+              sidebarWidth: sidebar ? sidebar.getBoundingClientRect().width : null
+            }
+          };
+        })()`,
+        returnByValue: true
+      }, 5000);
+      Object.assign(assistantProbe, closedState.result.value);
+      assistantProbe.layoutStable = JSON.stringify(assistantProbe.before) ===
+        JSON.stringify(assistantProbe.open) &&
+        JSON.stringify(assistantProbe.before) === JSON.stringify(assistantProbe.after);
+      assistantProbe.passed =
+        assistantProbe.overlayCount === 1 &&
+        assistantProbe.overlayPosition === "fixed" &&
+        assistantProbe.overlayPointerEvents === "none" &&
+        (assistantProbe.chatCount === 1 || assistantProbe.errorCount === 1) &&
+        assistantProbe.modalPrecedence === true &&
+        assistantProbe.overlayCountAfterClose === 0 &&
+        assistantProbe.chatCountAfterClose === 0 &&
+        assistantProbe.launcherFocusedAfterClose === true &&
+        assistantProbe.layoutStable === true;
     }
   }
 
@@ -379,6 +837,7 @@ try {
       clickProbe: ${JSON.stringify(clickProbe)},
       clickProbes: ${JSON.stringify(clickProbes)},
       commandPaletteProbe: ${JSON.stringify(paletteProbe)},
+      assistantOverlayProbe: ${JSON.stringify(assistantProbe)},
       clientWidth: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth,
       horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
@@ -503,7 +962,7 @@ try {
           controls: details
         };
       })(),
-      customControls: Array.from(document.querySelectorAll("northstar-command-palette,northstar-dashboard-widget"))
+      customControls: Array.from(document.querySelectorAll("northstar-command-palette,northstar-case-assistant-palette,northstar-command-palette-acp,northstar-dashboard-widget"))
         .map((control) => ({
           tag: control.tagName.toLowerCase(),
           name: control.getAttribute("name") || control.Name || "",

@@ -83,3 +83,4 @@ try {
 }
 
 Write-Output "Modern-only validator, bounded command-palette, and byte-exact Northstar oracle CSS tests: PASS ($prototypeHash)"
+& (Join-Path $PSScriptRoot 'test-command-palette-browser.ps1')

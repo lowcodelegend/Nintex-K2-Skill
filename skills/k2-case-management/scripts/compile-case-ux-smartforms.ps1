@@ -69,11 +69,15 @@ function Add-AgenticChat {
     if($null -eq $enabledProperty -or $chat.enabled -isnot [bool]){throw 'agenticChat.enabled must be a JSON boolean.'}
     if(-not $chat.enabled){return}
 
-    $allowedKeys=@('enabled','integration','viewName','sourcePaletteViewName','controlName','controlPackage','hostUrl','flowId','scriptUrl','windowTitle','label','description','chatPosition','width','height','placement')
+    $allowedKeys=@('enabled','integration','viewName','sourcePaletteViewName','controlName','controlType','controlPackage','hostUrl','flowId','scriptUrl','windowTitle','label','description','chatPosition','width','height','authentication','placement')
     $unknownKeys=@($chat.PSObject.Properties.Name|Where-Object {$allowedKeys -notcontains [string]$_})
     if($unknownKeys.Count -gt 0){throw "agenticChat contains unsupported or potentially secret-bearing properties: $($unknownKeys -join ', '). Browser API keys, headers, tokens, tweaks, and secrets are forbidden."}
     if([string]$chat.integration -ne 'command-palette'){throw "agenticChat.integration must be 'command-palette'."}
     if([string]$chat.controlPackage -ne 'assets/northstar-command-palette'){throw "agenticChat.controlPackage must be 'assets/northstar-command-palette'."}
+    $assistantControlType=[string](Get-ValueOrDefault $chat.controlType 'northstar-command-palette')
+    if($assistantControlType -notmatch '^northstar-[a-z0-9]+(?:-[a-z0-9]+)+$'){
+        throw 'agenticChat.controlType must be a stable northstar-* custom-element tag.'
+    }
     foreach($required in @('viewName','hostUrl','flowId','scriptUrl','windowTitle','label','description')){
         if([string]::IsNullOrWhiteSpace([string]$chat.$required)){throw "agenticChat.$required is required when agentic chat is enabled."}
     }
@@ -85,6 +89,15 @@ function Add-AgenticChat {
     }
     $flowGuid=[guid]::Empty
     if(-not [guid]::TryParse([string]$chat.flowId,[ref]$flowGuid)){throw 'agenticChat.flowId must be a GUID.'}
+    if($null -eq $chat.authentication){throw 'agenticChat.authentication.mode is required when agentic chat is enabled.'}
+    $authenticationKeys=@($chat.authentication.PSObject.Properties.Name)
+    if($authenticationKeys.Count -ne 1 -or $authenticationKeys[0] -ne 'mode'){
+        throw 'agenticChat.authentication supports only mode. Browser API keys, headers, tokens, and secret references are forbidden.'
+    }
+    $authenticationMode=[string]$chat.authentication.mode
+    if($authenticationMode -notin @('server-open-alpha','server-proxy')){
+        throw "agenticChat.authentication.mode must be 'server-open-alpha' or 'server-proxy'."
+    }
     $positions=@('top-left','top-center','top-right','center-left','center-right','bottom-right','bottom-center','bottom-left')
     $position=[string](Get-ValueOrDefault $chat.chatPosition 'bottom-right')
     if($positions -notcontains $position){throw "agenticChat.chatPosition must be one of: $($positions -join ', ')."}
@@ -101,12 +114,22 @@ function Add-AgenticChat {
     if($null -eq $sourceView){throw "agenticChat source command-palette View '$sourceViewName' was not found."}
     $sourceControl=@($sourceView.webComponents|Where-Object {[string]$_.controlType -eq 'northstar-command-palette'})|Select-Object -First 1
     if($null -eq $sourceControl){throw "agenticChat source View '$sourceViewName' does not host northstar-command-palette."}
-    if(@($Manifest.application.views|Where-Object {[string]$_.name -eq [string]$chat.viewName}).Count -gt 0){throw "agenticChat.viewName collides with an existing View: $($chat.viewName)"}
+    $existingAssistantViews=@($Manifest.application.views|Where-Object {[string]$_.name -eq [string]$chat.viewName})
+    if($existingAssistantViews.Count -gt 1){throw "agenticChat.viewName is duplicated in the base manifest: $($chat.viewName)"}
+    if($existingAssistantViews.Count -eq 1){
+        $Manifest.application.views=@($Manifest.application.views|Where-Object {[string]$_.name -ne [string]$chat.viewName})
+    }
+    $paletteViewTitle=[string]$MappingDocument.homepage.commandPalette.viewTitle
+    if([string]::IsNullOrWhiteSpace($paletteViewTitle)){
+        throw 'homepage.commandPalette.viewTitle is required as the shared Northstar shell/compiler contract.'
+    }
 
     $assistantView=$sourceView|ConvertTo-Json -Depth 100|ConvertFrom-Json
     $assistantView.name=[string]$chat.viewName
     $assistantControl=@($assistantView.webComponents|Where-Object {[string]$_.controlType -eq 'northstar-command-palette'})|Select-Object -First 1
     $assistantControl.name=[string](Get-ValueOrDefault $chat.controlName 'Northstar Case Assistant')
+    $assistantControl.controlType=$assistantControlType
+    Set-ObjectProperty $assistantControl.properties 'TagName' $assistantControlType
     foreach($property in ([ordered]@{
         AssistantEnabled=$true
         AssistantLabel=[string]$chat.label
@@ -114,6 +137,7 @@ function Add-AgenticChat {
         LangflowHostUrl=[string]$chat.hostUrl
         LangflowFlowId=[string]$flowGuid
         LangflowScriptUrl=$approvedScript
+        LangflowAuthenticationMode=$authenticationMode
         LangflowWindowTitle=[string]$chat.windowTitle
         LangflowChatPosition=$position
         LangflowWidth=$chatWidth
@@ -135,8 +159,12 @@ function Add-AgenticChat {
     }
     $targetTab.views=@([string]$chat.viewName)+@($targetTab.views)
     if($null -eq $targetForm.viewTitles){Set-ObjectProperty $targetForm 'viewTitles' ([pscustomobject]@{})}
-    Set-ObjectProperty $targetForm.viewTitles ([string]$chat.viewName) 'Case assistant and commands'
-    Write-Warning "ERRATA: '$($chat.viewName)' loads the pinned Langflow widget from jsDelivr at Runtime. Verify K2 CSP/CORS and remove or authenticate this alpha integration before production; no API key or trusted K2 user/case context is embedded."
+    Set-ObjectProperty $targetForm.viewTitles ([string]$chat.viewName) $paletteViewTitle
+    if($authenticationMode -eq 'server-open-alpha'){
+        Write-Warning "ERRATA: '$($chat.viewName)' uses server-open-alpha Langflow authentication. This is temporary development configuration only: set LANGFLOW_AUTO_LOGIN=true and LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true on the Langflow server, restart it, and replace this mode with a governed server-side proxy/token exchange before production."
+    } else {
+        Write-Warning "ERRATA: '$($chat.viewName)' loads the pinned Langflow widget through a governed server proxy. Verify the proxy's authenticated user/token-exchange contract, K2 CSP/CORS, case-context claims, and 401/403 behavior before production; no reusable API key is embedded."
+    }
 }
 
 $uxDocument=Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $Ux)|ConvertFrom-Json
@@ -171,6 +199,8 @@ $views.Add($navigationView);$formViews.Add([string]$navigation.viewName);$titles
 $palette=$homepage.commandPalette
 if([string]$palette.controlType -ne 'northstar-command-palette'){throw 'homepage.commandPalette.controlType must be northstar-command-palette.'}
 if($null -eq $palette.propertiesMap){throw 'homepage.commandPalette.propertiesMap is required.'}
+$paletteViewTitle=[string]$palette.viewTitle
+if([string]::IsNullOrWhiteSpace($paletteViewTitle)){throw 'homepage.commandPalette.viewTitle is required as the shared Northstar shell/compiler contract.'}
 $requiredSuggestionProperties=@('SuggestionCode','Kind','Title','Subtitle','IconToken','TargetUrl','SortOrder','IsActive','ConfigurationVersion')
 if(@($palette.properties).Count -ne $requiredSuggestionProperties.Count -or (@($palette.properties) -join '|') -cne ($requiredSuggestionProperties -join '|')){throw 'homepage.commandPalette.properties must use the canonical governed suggestion contract in order.'}
 $listMethod=Get-ValueOrDefault $palette.listMethod 'List'
@@ -193,7 +223,7 @@ $paletteView=[ordered]@{
         events=@([ordered]@{name='Navigate';action='navigate';sourceProperty='Value';target='_self'})
     })
 }
-$views.Add($paletteView);$formViews.Add([string]$palette.viewName);$titles[[string]$palette.viewName]='Command palette'
+$views.Add($paletteView);$formViews.Add([string]$palette.viewName);$titles[[string]$palette.viewName]=$paletteViewTitle
 $summary=$mappingDocument.dashboard.summary;$cards=[Collections.Generic.List[object]]::new();$props=[Collections.Generic.List[string]]::new()
 foreach($binding in @($summary.components)){if(-not $components.ContainsKey([string]$binding.id)){throw "Unknown UX component mapping: $($binding.id)"};$c=$components[[string]$binding.id];$props.Add([string]$binding.property);$cards.Add([ordered]@{property=$binding.property;label=(Get-ValueOrDefault $binding.label $c.id);tone=(Get-ValueOrDefault $binding.tone 'neutral');explanation=(Get-ValueOrDefault $c.explanation '')})}
 $views.Add([ordered]@{name=$summary.viewName;smartObject=$summary.smartObject;type='capture';properties=@($props);methods=@();defaultListMethod='List';options=@();metricCards=@($cards)});$formViews.Add($summary.viewName);$titles[$summary.viewName]='Operational position'

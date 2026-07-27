@@ -165,6 +165,7 @@ and authenticated Runtime validation.
 - Build polished master-detail forms with one Form Save action, returned-key transfer, item-state batches, filtered child loads, success feedback, hidden bypass buttons, bold labels, and control-friendly layouts.
 - Generate read-only controls, responsive four-column capture layouts, hidden bound technical properties, business-facing property labels, and hidden `tblDebug` Data Label variables.
 - Generate native responsive KPI cards, SmartObject-backed charts, and read-only lifecycle Progress controls; add companion data Views only for explicitly requested customer use cases.
+- Generate guided Forms with supported `Step N of M` progress text, semantic Back/Continue/Save/final-action alignment, and verification against installed Form-control availability metadata.
 - Apply discovered shared headers/footers, view titles, initialization/server-load rules, combined control transfers, and footer ordering.
 - Preserve exact manifest order on flat dashboard/report Forms and expose supported live Form-definition diagnostics.
 - Plan, deploy, inspect, verify Runtime definitions/routes, check in exact forms, and dependency-safe cleanup/replace.

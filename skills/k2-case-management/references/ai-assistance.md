@@ -24,6 +24,7 @@ Declare the integration in the case UX K2 mapping:
     "viewName": "ABC.Case Assistant Palette",
     "sourcePaletteViewName": "ABC.Command Palette",
     "controlName": "Northstar Case Assistant",
+    "controlType": "northstar-command-palette",
     "controlPackage": "assets/northstar-command-palette",
     "hostUrl": "https://langflow.example.com",
     "flowId": "72e9cd5a-4b3e-415c-9b3a-76f222c9c160",
@@ -34,11 +35,21 @@ Declare the integration in the case UX K2 mapping:
     "chatPosition": "bottom-right",
     "width": 420,
     "height": 640,
+    "authentication": {"mode": "server-proxy"},
     "placement": {"formName": "ABC.Case Management", "tab": "Overview"}
   }
 }
 ```
 
-The compiler requires the pinned approved bundle, an HTTPS Langflow host without a trailing slash, a GUID flow ID, a distinct cloned View name, and an existing target Form/tab. It rejects browser API keys, arbitrary headers, tokens, tweaks, and other undeclared properties. The Runtime generates a per-browser-tab session ID rather than allowing Langflow to reuse the flow ID as a shared conversation. It preserves native palette navigation and reports CDN/CSP failures without blocking the Form.
+Declare `homepage.commandPalette.viewTitle` once as the shared shell/compiler contract. The canonical Northstar value is `Command palette`; the assistant replacement inherits that title so the Style Profile can identify and visually position the real K2 View while leaving its ownership tree intact. Do not give an assistant-enabled replacement a different marketing title. `controlType` defaults to `northstar-command-palette`; set it to an explicitly registered stable parallel tag such as `northstar-case-assistant-palette` when an in-use environment requires a separately promoted control.
 
-This alpha contract deliberately supplies no trusted K2 user or case context. Do not infer identity from browser fields or place credentials in the SmartForms manifest. Before production, replace unauthenticated access with the approved OIDC or gateway design, define the case-context claims passed to Langflow, host or approve the pinned bundle under the environment CSP, and verify CORS, chat opening, keyboard use, mobile fit, session isolation, and failure behavior in authenticated Runtime.
+The compiler requires the pinned approved bundle, an HTTPS Langflow host without a trailing slash, a GUID flow ID, a distinct cloned View name, an existing target Form/tab, and exactly one authentication mode:
+
+- `server-open-alpha`: temporary internal development only. Configure the Langflow server with `LANGFLOW_AUTO_LOGIN=true` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true`, then restart Langflow. Record the open-server erratum and never promote it to production.
+- `server-proxy`: the browser calls a governed server proxy or token-exchange seam. The proxy owns API keys, trusted identity, authorization, and case-context claims.
+
+Never serialize a reusable Langflow API key, token, header, secret reference, or arbitrary tweak into a UX mapping, SmartForms manifest/XML, Web Component property, JavaScript, or browser storage. Langflow's normal flow-run endpoint requires `x-api-key`; a browser-facing control must not satisfy that requirement by embedding the key. The Runtime generates only a per-browser-tab conversation ID. It observes only 401/403 status responses for its exact configured flow endpoint and replaces an unresponsive widget with a bounded accessible `Agent unavailable — authentication required` state.
+
+The assistant uses one owned fixed overlay host. The host is zero-flow, viewport-bounded, non-interactive outside the chat, lower than critical K2 modal layers, removed on disconnect/reinitialization, and closed with Escape or its owned Close button. It never reaches into Langflow's closed shadow DOM. Opening and closing must preserve document dimensions, scroll position, and shell/sidebar geometry; closing restores focus to the palette launcher.
+
+This alpha contract deliberately supplies no trusted K2 user or case context. Do not infer identity from browser fields. Before production, use the approved OIDC/gateway design, define the case-context claims passed to Langflow, host or approve the pinned bundle under the environment CSP, and verify CORS, real pointer and Ctrl/Cmd+K palette opening, mobile fit, session isolation, modal layering, layout stability, 401/403 behavior, and failure behavior in authenticated Runtime.

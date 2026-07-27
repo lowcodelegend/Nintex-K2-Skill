@@ -1663,14 +1663,14 @@ namespace K2SmartFormsCli
             return result;
         }
 
-        private static void SetElementProperty(XElement owner, string name, string value)
+        internal static void SetElementProperty(XElement owner, string name, string value)
         {
             var ns = owner.Name.Namespace;
             var properties = owner.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
             if (properties == null) { properties = new XElement(ns + "Properties"); owner.Add(properties); }
             foreach (var old in properties.Elements().Where(x => x.Name.LocalName == "Property" &&
                 string.Equals(ChildValue(x, "Name"), name, StringComparison.OrdinalIgnoreCase)).ToList()) old.Remove();
-            properties.Add(Property(ns, name, value, value, null));
+            properties.Add(Property(ns, name, value, value, value));
         }
 
         private static string ReadElementProperty(XElement owner, string name)

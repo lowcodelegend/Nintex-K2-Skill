@@ -447,6 +447,7 @@
     paletteHost.setAttribute('data-k2sp-shell-region', 'command-palette');
     var fallbackSearch = create('div', 'k2sp-search k2sp-search-fallback');
     fallbackSearch.setAttribute('aria-label', 'Search is available from the command centre');
+    fallbackSearch.setAttribute('aria-disabled', 'true');
     fallbackSearch.appendChild(create('span', '', '⌕'));
     fallbackSearch.appendChild(create('span', '', 'Search or jump to…'));
     fallbackSearch.appendChild(create('kbd', '', 'Ctrl K'));
@@ -742,6 +743,7 @@
     if (!form) return;
     form.classList.add('k2sp-application-content');
     suppressConfiguredFrameworkViews();
+    moveCommandPalette();
 
     if (enhanceGuidedJourney(page)) {
       form.classList.add('k2sp-initiation-workspace');
@@ -769,7 +771,6 @@
         var row = view && (view.closest('.row') || view);
         if (row) row.classList.add(definition[1]);
       });
-      moveCommandPalette();
       transformKpis();
     } else {
       form.classList.add('k2sp-workspace');
@@ -825,16 +826,50 @@
   function moveCommandPalette() {
     var host = document.querySelector('#k2sp-shell .k2sp-command-palette-host');
     if (!host) return false;
+    var expectedTitle = config.commandPaletteViewTitle || 'Command palette';
     var row = document.querySelector('.k2sp-command-palette-row');
     if (!row) {
-      var view = findViewByTitle(config.commandPaletteViewTitle || 'Command palette');
+      var view = findViewByTitle(expectedTitle);
       row = view && (view.closest('.row') || view);
     }
-    if (!row) return false;
+    var fallback = host.querySelector('.k2sp-search-fallback');
+    if (!row) {
+      if (fallback) {
+        fallback.hidden = false;
+        fallback.setAttribute('aria-hidden', 'false');
+      }
+      state.commandPalette = {
+        expectedTitle: expectedTitle,
+        realViewFound: false,
+        visuallyHosted: false,
+        fallbackHidden: false
+      };
+      return false;
+    }
     row.classList.add('k2sp-command-palette-row');
     var panel = row.closest('.formpanel');
     if (panel) panel.classList.add('k2sp-command-palette-panel');
     host.classList.add('k2sp-command-palette-native');
+    if (fallback) {
+      fallback.hidden = true;
+      fallback.setAttribute('aria-hidden', 'true');
+      fallback.setAttribute('inert', '');
+    }
+    var hostRect = host.getBoundingClientRect();
+    row.style.setProperty('--k2sp-command-palette-left', Math.round(hostRect.left) + 'px');
+    row.style.setProperty('--k2sp-command-palette-top', Math.round(hostRect.top) + 'px');
+    row.style.setProperty('--k2sp-command-palette-width', Math.round(hostRect.width) + 'px');
+    var rowRect = row.getBoundingClientRect();
+    state.commandPalette = {
+      expectedTitle: expectedTitle,
+      realViewFound: true,
+      visuallyHosted:
+        Math.abs(rowRect.left - hostRect.left) <= 2 &&
+        Math.abs(rowRect.top - hostRect.top) <= 2 &&
+        Math.abs(rowRect.width - hostRect.width) <= 2,
+      fallbackHidden: !fallback || fallback.hidden === true,
+      ownershipPreserved: !host.contains(row)
+    };
     return true;
   }
 

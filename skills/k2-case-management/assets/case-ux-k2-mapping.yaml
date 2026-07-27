@@ -11,6 +11,7 @@
     },
     "commandPalette":{
       "viewName":"{{CODE}}.Command Palette",
+      "viewTitle":"Command palette",
       "smartObject":"{{COMMAND_SUGGESTION_SMARTOBJECT}}",
       "properties":["SuggestionCode","Kind","Title","Subtitle","IconToken","TargetUrl","SortOrder","IsActive","ConfigurationVersion"],
       "controlName":"Northstar Command Palette",
@@ -78,6 +79,7 @@
     "viewName": "{{CODE}}.Case Assistant Palette",
     "sourcePaletteViewName": "{{CODE}}.Command Palette",
     "controlName": "Northstar Case Assistant",
+    "controlType": "northstar-command-palette",
     "controlPackage": "assets/northstar-command-palette",
     "hostUrl": "https://{{LANGFLOW_HOST}}",
     "flowId": "{{LANGFLOW_FLOW_ID}}",
@@ -88,6 +90,9 @@
     "chatPosition": "bottom-right",
     "width": 420,
     "height": 640,
+    "authentication": {
+      "mode": "server-proxy"
+    },
     "placement": {
       "formName": "{{CODE}}.Case Management",
       "tab": "Overview"

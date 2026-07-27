@@ -8,7 +8,7 @@
       "properties":["NavigationCode","SectionLabel","Label","IconToken","TargetFormName","SortOrder","IsActive","ConfigurationVersion"]
     },
     "commandPalette":{
-      "viewName":"SNC.Command Palette","smartObject":"SNC_SupplierNonconformance_SNC_CommandSuggestion",
+      "viewName":"SNC.Command Palette","viewTitle":"Command palette","smartObject":"SNC_SupplierNonconformance_SNC_CommandSuggestion",
       "properties":["SuggestionCode","Kind","Title","Subtitle","IconToken","TargetUrl","SortOrder","IsActive","ConfigurationVersion"],
       "controlName":"Northstar Command Palette","controlType":"northstar-command-palette",
       "controlPackage":"skills/k2-case-management/assets/northstar-command-palette",
