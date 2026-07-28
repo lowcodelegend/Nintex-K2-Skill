@@ -22,6 +22,7 @@ import os
 import re
 import secrets
 import sqlite3
+import subprocess
 import sys
 import time
 import uuid
@@ -56,7 +57,7 @@ from case_agent_framework import (
 )
 
 
-SERVER_VERSION = "0.4.0"
+SERVER_VERSION = "0.5.0"
 TOKEN_ENVIRONMENT_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]{2,127}$")
 SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
 CASE_NUMBER_PREFIX_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9_-]{0,19}$")
@@ -343,6 +344,218 @@ class AlphaCaseStoreAdapter:
         return hashlib.sha256(_json_key(payload).encode("utf-8")).hexdigest()
 
 
+class K2CliCaseOperationsProvider:
+    """Restricted read adapter over approved K2 SmartObjects."""
+
+    def __init__(
+        self,
+        executable_path: Path,
+        host: str,
+        port: int,
+        security_label: str,
+        timeout_seconds: int = 30,
+    ) -> None:
+        self.executable_path = executable_path.resolve()
+        self.host = host
+        self.port = port
+        self.security_label = security_label
+        self.timeout_seconds = timeout_seconds
+
+    def search_cases(
+        self,
+        query: Optional[str] = None,
+        status_code: Optional[str] = None,
+        stage_code: Optional[str] = None,
+        limit: int = 20,
+    ) -> Mapping[str, Any]:
+        rows = self._rows("search_cases")
+        query_value = (query or "").strip().casefold()
+        status_value = (status_code or "").strip().casefold()
+        stage_value = (stage_code or "").strip().casefold()
+        filtered: List[Dict[str, Any]] = []
+        for row in rows:
+            if status_value and _record_text(row, "StatusCode").casefold() != status_value:
+                continue
+            if stage_value and _record_text(
+                row, "CurrentStageCode"
+            ).casefold() != stage_value:
+                continue
+            if query_value:
+                searchable = " ".join(
+                    _record_text(row, key)
+                    for key in (
+                        "CaseNumber",
+                        "Title",
+                        "CaseTypeCode",
+                        "CaseTypeName",
+                        "OwningTeam",
+                        "OwnerFQN",
+                    )
+                ).casefold()
+                if query_value not in searchable:
+                    continue
+            filtered.append(_camel_record(row))
+        bounded_limit = _bounded_limit(limit, 1, 50)
+        return {
+            "cases": filtered[:bounded_limit],
+            "count": min(len(filtered), bounded_limit),
+            "totalMatched": len(filtered),
+            "truncated": len(filtered) > bounded_limit,
+        }
+
+    def get_case(self, case_id: Any) -> Mapping[str, Any]:
+        row = self._case_row("get_case", case_id)
+        return {"case": _camel_record(row)}
+
+    def get_case_timeline(self, case_id: Any, limit: int = 50) -> Mapping[str, Any]:
+        rows = self._case_rows("get_case_timeline", case_id)
+        rows.sort(
+            key=lambda value: _record_text(value, "EventDate"),
+            reverse=True,
+        )
+        bounded_limit = _bounded_limit(limit, 1, 100)
+        return {
+            "caseId": str(case_id),
+            "events": [_camel_record(value) for value in rows[:bounded_limit]],
+            "truncated": len(rows) > bounded_limit,
+        }
+
+    def list_case_evidence(self, case_id: Any, limit: int = 50) -> Mapping[str, Any]:
+        rows = self._case_rows("list_case_evidence", case_id)
+        bounded_limit = _bounded_limit(limit, 1, 100)
+        return {
+            "caseId": str(case_id),
+            "evidence": [_camel_record(value) for value in rows[:bounded_limit]],
+            "truncated": len(rows) > bounded_limit,
+        }
+
+    def get_allowed_case_actions(self, case_id: Any) -> Mapping[str, Any]:
+        case_row = self._case_row("get_case_record", case_id)
+        if _record_text(case_row, "StatusCode").upper() in {"CANCELLED", "ERROR"}:
+            transitions: List[Dict[str, Any]] = []
+        else:
+            transitions = [
+                row
+                for row in self._rows("list_stage_transitions")
+                if _same_value(
+                    _record_value(row, "CaseTypeId"),
+                    _record_value(case_row, "CaseTypeId"),
+                )
+                and _record_text(row, "FromStageCode").casefold()
+                == _record_text(case_row, "CurrentStageCode").casefold()
+                and _same_value(
+                    _record_value(row, "ConfigurationVersion"),
+                    _record_value(case_row, "ConfigurationVersion"),
+                )
+                and _truthy(_record_value(row, "IsActive"))
+            ]
+        actions = []
+        for transition in transitions:
+            action = _camel_record(transition)
+            action["caseRowVersion"] = _record_value(case_row, "RowVersion")
+            actions.append(action)
+        return {
+            "caseId": str(case_id),
+            "caseNumber": _record_value(case_row, "CaseNumber"),
+            "statusCode": _record_value(case_row, "StatusCode"),
+            "currentStageCode": _record_value(case_row, "CurrentStageCode"),
+            "actions": actions,
+            "authoritativeWritesAvailable": False,
+            "writeAvailabilityReason": (
+                "The CaseCommand parent-workflow processor is not deployed and verified."
+            ),
+        }
+
+    def get_submission_readiness(self, case_id: Any) -> Mapping[str, Any]:
+        row = self._case_row("get_submission_readiness", case_id)
+        return {"readiness": _camel_record(row)}
+
+    def get_case_action_status(
+        self,
+        case_id: Any,
+        command_id: Optional[str] = None,
+        idempotency_key: Optional[str] = None,
+        correlation_id: Optional[str] = None,
+        limit: int = 20,
+    ) -> Mapping[str, Any]:
+        inputs: Dict[str, Any] = {"CaseId": str(case_id)}
+        for key, value in (
+            ("CommandId", command_id),
+            ("IdempotencyKey", idempotency_key),
+            ("CorrelationId", correlation_id),
+        ):
+            if value:
+                inputs[key] = value
+        rows = [
+            value
+            for value in self._rows("get_case_action_status", inputs)
+            if _same_value(_record_value(value, "CaseId"), case_id)
+        ]
+        bounded_limit = _bounded_limit(limit, 1, 50)
+        return {
+            "caseId": str(case_id),
+            "commands": [_camel_record(value) for value in rows[:bounded_limit]],
+            "truncated": len(rows) > bounded_limit,
+        }
+
+    def _case_row(self, operation: str, case_id: Any) -> Dict[str, Any]:
+        rows = self._case_rows(operation, case_id)
+        if not rows:
+            raise AdapterError(f"K2 case was not found: {case_id}")
+        return rows[0]
+
+    def _case_rows(self, operation: str, case_id: Any) -> List[Dict[str, Any]]:
+        _validate_case_id(case_id)
+        return [
+            value
+            for value in self._rows(operation, {"CaseId": str(case_id)})
+            if _same_value(_record_value(value, "CaseId"), case_id)
+        ]
+
+    def _rows(
+        self,
+        operation: str,
+        inputs: Optional[Mapping[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        command = [
+            str(self.executable_path),
+            "--host",
+            self.host,
+            "--port",
+            str(self.port),
+            "--security-label",
+            self.security_label,
+            "--operation",
+            operation,
+            "--inputs-json",
+            json.dumps(dict(inputs or {}), separators=(",", ":")),
+        ]
+        try:
+            completed = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                timeout=self.timeout_seconds,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise AdapterError("The K2 case-operation runtime is unavailable.") from exc
+        if completed.returncode != 0:
+            detail = completed.stderr.strip().splitlines()
+            message = detail[-1][:500] if detail else "unknown K2 runtime error"
+            raise AdapterError(f"K2 case operation failed: {message}")
+        try:
+            payload = json.loads(completed.stdout)
+        except json.JSONDecodeError as exc:
+            raise AdapterError(
+                "The K2 case-operation runtime returned invalid JSON."
+            ) from exc
+        rows = payload.get("rows")
+        if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+            raise AdapterError("The K2 case-operation runtime returned invalid rows.")
+        return rows
+
+
 @dataclass
 class ServerRuntime:
     framework: CaseAgentFramework
@@ -350,6 +563,7 @@ class ServerRuntime:
     durable_drafts: bool
     authentication_mode: str
     creation_mode: str
+    case_operations_provider: Optional[Any]
 
 
 def validate_server_config(
@@ -506,6 +720,73 @@ def validate_server_config(
         not isinstance(value, list) for value in inline_lookups.values()
     ):
         errors.append("runtime.inlineLookups must map lookup codes to lists")
+    case_operations = runtime.get("caseOperations")
+    case_operations_enabled = (
+        isinstance(case_operations, Mapping)
+        and case_operations.get("enabled") is True
+    )
+    if case_operations is not None and not isinstance(case_operations, Mapping):
+        errors.append("runtime.caseOperations must be an object")
+        case_operations = {}
+    if isinstance(case_operations, Mapping) and case_operations:
+        unexpected = set(case_operations) - {
+            "enabled",
+            "provider",
+            "executablePath",
+            "host",
+            "port",
+            "securityLabel",
+            "timeoutSeconds",
+            "authoritativeWritesEnabled",
+            "commandProcessorVerified",
+        }
+        if unexpected:
+            errors.append(
+                "runtime.caseOperations contains unsupported properties: "
+                + ", ".join(sorted(unexpected))
+            )
+        if case_operations_enabled:
+            if case_operations.get("provider") != "k2-cli":
+                errors.append("runtime.caseOperations.provider must be k2-cli")
+            executable_path = case_operations.get("executablePath")
+            if not isinstance(executable_path, str) or not _resolve_path(
+                base_directory, executable_path
+            ).is_file():
+                errors.append(
+                    "runtime.caseOperations.executablePath must name the built K2 client"
+                )
+            operations_host = case_operations.get("host")
+            if not isinstance(operations_host, str) or not operations_host.strip():
+                errors.append("runtime.caseOperations.host is required")
+            operations_port = case_operations.get("port")
+            if (
+                not isinstance(operations_port, int)
+                or isinstance(operations_port, bool)
+                or not 1 <= operations_port <= 65535
+            ):
+                errors.append("runtime.caseOperations.port must be between 1 and 65535")
+            security_label = case_operations.get("securityLabel")
+            if not isinstance(security_label, str) or not security_label.strip():
+                errors.append("runtime.caseOperations.securityLabel is required")
+            timeout_seconds = case_operations.get("timeoutSeconds", 30)
+            if (
+                not isinstance(timeout_seconds, int)
+                or isinstance(timeout_seconds, bool)
+                or not 1 <= timeout_seconds <= 120
+            ):
+                errors.append(
+                    "runtime.caseOperations.timeoutSeconds must be between 1 and 120"
+                )
+            if case_operations.get("authoritativeWritesEnabled") is not False:
+                errors.append(
+                    "runtime.caseOperations.authoritativeWritesEnabled must remain false "
+                    "until the command processor and identity boundary are verified"
+                )
+            if case_operations.get("commandProcessorVerified") is not False:
+                errors.append(
+                    "runtime.caseOperations.commandProcessorVerified must remain false "
+                    "for the current read-only adapter"
+                )
     factory = runtime.get("factory")
     alpha_case_store = runtime.get("alphaCaseStore")
     alpha_enabled = (
@@ -572,6 +853,13 @@ def validate_server_config(
             errors.append(
                 "unauthenticated mode forbids runtime.factory and external data providers"
             )
+        if case_operations_enabled and security.get(
+            "allowUnauthenticatedCaseReads"
+        ) is not True:
+            errors.append(
+                "unauthenticated K2 case reads require "
+                "security.allowUnauthenticatedCaseReads=true"
+            )
         if runtime.get("mutationsEnabled") is True:
             if not alpha_enabled:
                 errors.append(
@@ -632,10 +920,11 @@ def validate_token_records(records: Any) -> List[str]:
             errors.append(f"{location}.principalId is required")
         scopes = record.get("scopes")
         if not isinstance(scopes, list) or not scopes or any(
-            value not in {"case:create", "case:create:commit"} for value in scopes
+            value not in {"case:create", "case:create:commit", "case:read"}
+            for value in scopes
         ):
             errors.append(
-                f"{location}.scopes must contain case:create and optionally case:create:commit"
+                f"{location}.scopes must contain one or more supported case scopes"
             )
         elif "case:create:commit" in scopes and "case:create" not in scopes:
             errors.append(f"{location} commit scope requires case:create")
@@ -688,6 +977,7 @@ def create_application(
     adapters: Dict[str, Any] = {}
     durable_drafts = False
     creation_mode = "disabled"
+    case_operations_provider: Optional[Any] = None
     factory_config = runtime_config.get("factory")
     if factory_config:
         bindings = _load_runtime_factory(
@@ -717,6 +1007,21 @@ def create_application(
             contract = registry.get(case_type_code)
             adapters[str(contract["creationAdapter"])] = alpha_adapter
         creation_mode = "alpha"
+    case_operations_config = runtime_config.get("caseOperations", {})
+    if (
+        isinstance(case_operations_config, Mapping)
+        and case_operations_config.get("enabled") is True
+    ):
+        case_operations_provider = K2CliCaseOperationsProvider(
+            _resolve_path(
+                base_directory,
+                str(case_operations_config["executablePath"]),
+            ),
+            str(case_operations_config["host"]),
+            int(case_operations_config["port"]),
+            str(case_operations_config["securityLabel"]),
+            int(case_operations_config.get("timeoutSeconds", 30)),
+        )
     if mutations_enabled and not durable_drafts and not alpha_enabled:
         raise ValueError("Mutation-enabled MCP runtime requires a durable draft store.")
     framework = CaseAgentFramework(
@@ -773,6 +1078,7 @@ def create_application(
         durable_drafts=durable_drafts,
         authentication_mode=authentication_mode,
         creation_mode=creation_mode,
+        case_operations_provider=case_operations_provider,
     )
     _register_tools(mcp, runtime)
 
@@ -788,6 +1094,8 @@ def create_application(
                 "mutationsEnabled": mutations_enabled,
                 "durableDrafts": durable_drafts,
                 "creationMode": creation_mode,
+                "caseOperationsAvailable": case_operations_provider is not None,
+                "authoritativeCaseWritesAvailable": False,
             }
         )
 
@@ -801,6 +1109,8 @@ def create_application(
     else:
         security_config = config["security"]
         development_scopes = {"case:create"}
+        if case_operations_provider is not None:
+            development_scopes.add("case:read")
         if mutations_enabled and creation_mode == "alpha":
             development_scopes.add("case:create:commit")
         app.add_middleware(
@@ -1000,6 +1310,126 @@ def _register_tools(mcp: FastMCP, runtime: ServerRuntime) -> None:
             ),
         )
 
+    if runtime.case_operations_provider is not None:
+        provider = runtime.case_operations_provider
+
+        @mcp.tool(
+            title="Search K2 cases",
+            annotations=read_annotations,
+            structured_output=True,
+        )
+        def search_cases(
+            query: Optional[str] = None,
+            status_code: Optional[str] = None,
+            stage_code: Optional[str] = None,
+            limit: int = 20,
+        ) -> Dict[str, Any]:
+            """Search the bounded K2 case queue by text, status, and current stage."""
+            identity = _require_identity("case:read")
+            return _invoke(
+                "search_cases",
+                identity,
+                lambda: provider.search_cases(
+                    query, status_code, stage_code, limit
+                ),
+            )
+
+        @mcp.tool(
+            title="Get K2 case workspace",
+            annotations=read_annotations,
+            structured_output=True,
+        )
+        def get_case(case_id: str) -> Dict[str, Any]:
+            """Get the authoritative K2 workspace projection for one case identifier."""
+            identity = _require_identity("case:read")
+            return _invoke(
+                "get_case",
+                identity,
+                lambda: provider.get_case(case_id),
+            )
+
+        @mcp.tool(
+            title="Get K2 case timeline",
+            annotations=read_annotations,
+            structured_output=True,
+        )
+        def get_case_timeline(case_id: str, limit: int = 50) -> Dict[str, Any]:
+            """Get recent authoritative audit and communication events for one K2 case."""
+            identity = _require_identity("case:read")
+            return _invoke(
+                "get_case_timeline",
+                identity,
+                lambda: provider.get_case_timeline(case_id, limit),
+            )
+
+        @mcp.tool(
+            title="List K2 case evidence",
+            annotations=read_annotations,
+            structured_output=True,
+        )
+        def list_case_evidence(case_id: str, limit: int = 50) -> Dict[str, Any]:
+            """List allegation-to-evidence links in the K2 case evidence projection."""
+            identity = _require_identity("case:read")
+            return _invoke(
+                "list_case_evidence",
+                identity,
+                lambda: provider.list_case_evidence(case_id, limit),
+            )
+
+        @mcp.tool(
+            title="Get allowed K2 case actions",
+            annotations=read_annotations,
+            structured_output=True,
+        )
+        def get_allowed_case_actions(case_id: str) -> Dict[str, Any]:
+            """Preview configured lifecycle actions; authoritative writes are unavailable."""
+            identity = _require_identity("case:read")
+            return _invoke(
+                "get_allowed_case_actions",
+                identity,
+                lambda: provider.get_allowed_case_actions(case_id),
+            )
+
+        @mcp.tool(
+            title="Get K2 case submission readiness",
+            annotations=read_annotations,
+            structured_output=True,
+        )
+        def get_submission_readiness(case_id: str) -> Dict[str, Any]:
+            """Evaluate the governed K2 submission-readiness projection for one case."""
+            identity = _require_identity("case:read")
+            return _invoke(
+                "get_submission_readiness",
+                identity,
+                lambda: provider.get_submission_readiness(case_id),
+            )
+
+        @mcp.tool(
+            title="Get K2 case action status",
+            annotations=read_annotations,
+            structured_output=True,
+        )
+        def get_case_action_status(
+            case_id: str,
+            command_id: Optional[str] = None,
+            idempotency_key: Optional[str] = None,
+            correlation_id: Optional[str] = None,
+            limit: int = 20,
+        ) -> Dict[str, Any]:
+            """Inspect prior CaseCommand status without creating or changing a command."""
+            identity = _require_identity("case:read")
+            return _invoke(
+                "get_case_action_status",
+                identity,
+                lambda: provider.get_case_action_status(
+                    case_id,
+                    command_id,
+                    idempotency_key,
+                    correlation_id,
+                    limit,
+                ),
+            )
+
 
 def _require_identity(
     required_scope: str, case_type_code: Optional[str] = None
@@ -1115,6 +1545,54 @@ def _raise_tool_error(message: str) -> Dict[str, Any]:
     raise ToolError(message)
 
 
+def _validate_case_id(value: Any) -> None:
+    text = str(value).strip()
+    if not text or len(text) > 80 or not re.fullmatch(r"[A-Za-z0-9_-]+", text):
+        raise AdapterError("case_id must be a simple K2 case identifier.")
+
+
+def _bounded_limit(value: Any, minimum: int, maximum: int) -> int:
+    if isinstance(value, bool):
+        raise AdapterError(f"limit must be between {minimum} and {maximum}.")
+    try:
+        converted = int(value)
+    except (TypeError, ValueError) as exc:
+        raise AdapterError(f"limit must be between {minimum} and {maximum}.") from exc
+    if not minimum <= converted <= maximum:
+        raise AdapterError(f"limit must be between {minimum} and {maximum}.")
+    return converted
+
+
+def _record_value(record: Mapping[str, Any], key: str) -> Any:
+    expected = key.casefold()
+    for record_key, value in record.items():
+        if str(record_key).casefold() == expected:
+            return value
+    return None
+
+
+def _record_text(record: Mapping[str, Any], key: str) -> str:
+    value = _record_value(record, key)
+    return "" if value is None else str(value)
+
+
+def _same_value(left: Any, right: Any) -> bool:
+    return str(left).strip().casefold() == str(right).strip().casefold()
+
+
+def _truthy(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().casefold() in {"1", "true", "yes"}
+
+
+def _camel_record(record: Mapping[str, Any]) -> Dict[str, Any]:
+    return {
+        (str(key)[:1].lower() + str(key)[1:] if str(key) else str(key)): value
+        for key, value in record.items()
+    }
+
+
 async def _send_auth_error(send: Send, message: str) -> None:
     body = json.dumps({"error": "unauthorized", "message": message}).encode("utf-8")
     await send(
@@ -1157,6 +1635,7 @@ def generate_token_record(
     principal_id: str,
     case_types: Sequence[str],
     commit_scope: bool = False,
+    read_scope: bool = False,
     expires_at: Optional[str] = None,
 ) -> Tuple[str, Dict[str, Any]]:
     if not principal_id.strip():
@@ -1169,6 +1648,8 @@ def generate_token_record(
     scopes = ["case:create"]
     if commit_scope:
         scopes.append("case:create:commit")
+    if read_scope:
+        scopes.append("case:read")
     record: Dict[str, Any] = {
         "sha256": hashlib.sha256(token.encode("utf-8")).hexdigest(),
         "principalId": principal_id,
@@ -1270,6 +1751,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     token_parser.add_argument("--principal", required=True)
     token_parser.add_argument("--case-type", action="append", required=True)
     token_parser.add_argument("--commit", action="store_true")
+    token_parser.add_argument("--read", action="store_true")
     token_parser.add_argument("--expires-at")
     subparsers.add_parser("selftest")
     args = parser.parse_args(argv)
@@ -1300,6 +1782,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 args.principal,
                 args.case_type,
                 commit_scope=args.commit,
+                read_scope=args.read,
                 expires_at=args.expires_at,
             )
         except ValueError as exc:

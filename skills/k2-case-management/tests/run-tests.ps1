@@ -85,8 +85,12 @@ $paletteManifest = Get-Content -Raw -LiteralPath (Join-Path $paletteRoot 'manife
 $paletteRuntime = Get-Content -Raw -LiteralPath (Join-Path $paletteRoot 'northstar-command-runtime.js')
 if (@($paletteManifest.events.id) -notcontains 'OpenAssistant' -or
     @($paletteManifest.properties.id) -notcontains 'AssistantEnabled' -or
+    @($paletteManifest.properties.id) -notcontains 'AssistantExperience' -or
     @($paletteManifest.properties.id) -notcontains 'LangflowHostUrl' -or
-    @($paletteManifest.properties.id) -notcontains 'LangflowAuthenticationMode') {
+    @($paletteManifest.properties.id) -notcontains 'LangflowAuthenticationMode' -or
+    @($paletteManifest.properties.id) -notcontains 'LangflowFileComponentId' -or
+    @($paletteManifest.properties.id) -notcontains 'LangflowChatInputComponentId' -or
+    @($paletteManifest.properties.id) -notcontains 'LangflowAllowedFileTypes') {
     throw 'Northstar command palette does not declare the bounded case-assistant contract.'
 }
 $langflowPortableProperties = @($paletteManifest.properties | Where-Object id -in @('LangflowChatPosition','LangflowWidth','LangflowHeight'))
@@ -95,14 +99,21 @@ if ($langflowPortableProperties.Count -ne 3 -or @($langflowPortableProperties | 
 }
 if ($paletteRuntime -notmatch 'start_open' -or
     $paletteRuntime -notmatch 'window\.sessionStorage' -or
+    $paletteRuntime -notmatch 'command-portal' -or
+    $paletteRuntime -notmatch '/api/v1/monitor/messages/sessions' -or
+    $paletteRuntime -notmatch '/api/v2/files' -or
+    $paletteRuntime -notmatch '/api/v1/files/upload/' -or
+    $paletteRuntime -notmatch '/api/v1/run/' -or
+    $paletteRuntime -notmatch 'northstar-agent-portal__sessions' -or
+    $paletteRuntime -notmatch '_clearPortalSession' -or
     $paletteRuntime -notmatch 'northstar-agent-overlay' -or
     $paletteRuntime -notmatch 'position:\s*"fixed"' -or
     $paletteRuntime -notmatch 'response\.status === 401' -or
     $paletteRuntime -notmatch [regex]::Escape('langflow-ai/langflow-embedded-chat@v1.0.8') -or
     $paletteRuntime -match '\bapi_key\b|\badditional_headers\b') {
-    throw 'Northstar command palette must open the pinned Langflow widget with an isolated browser-tab session and no embedded credentials or headers.'
+    throw 'Northstar command palette must retain the legacy widget and provide the credential-free session/file command portal.'
 }
-Write-Output 'Northstar command-palette assistant contract tests passed.'
+Write-Output 'Northstar command-palette legacy assistant and advanced portal contract tests passed.'
 
 $composer = Join-Path $PSScriptRoot '..\scripts\compose-case-ux.ps1'
 $overlay = Join-Path $PSScriptRoot '..\assets\case-ux-overlay.yaml'
@@ -279,27 +290,30 @@ try {
     $mapping = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot 'portable-case-mapping.json') | ConvertFrom-Json
     $mapping | Add-Member -NotePropertyName agenticChat -NotePropertyValue ([pscustomobject]@{
         enabled = $true
-        integration = 'command-palette'
+        integration = 'command-portal'
         viewName = 'RQT.Case Assistant Palette'
         sourcePaletteViewName = 'RQT.Command Palette'
         controlName = 'Northstar Case Assistant'
-        controlType = 'northstar-case-assistant-palette'
+        controlType = 'northstar-command-palette'
         controlPackage = 'assets/northstar-command-palette'
-        hostUrl = 'https://langflow.example.test'
+        hostUrl = 'http://127.0.0.1:7860'
         flowId = '72e9cd5a-4b3e-415c-9b3a-76f222c9c160'
-        scriptUrl = 'https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@v1.0.8/dist/build/static/js/bundle.min.js'
         windowTitle = 'Request Assistant'
         label = 'Ask Request Assistant'
         description = 'Ask questions and take supported request actions'
         chatPosition = 'bottom-right'
-        width = 420
-        height = 640
-        authentication = [pscustomobject]@{mode='server-proxy'}
+        width = 1120
+        height = 760
+        fileComponentId = 'Read-File-1olS3'
+        chatInputComponentId = 'ChatInput-b67sL'
+        allowedFileTypes = '.pdf,.txt,.png'
+        maxFileSizeMb = 25
+        authentication = [pscustomobject]@{mode='server-open-alpha'}
         placement = [pscustomobject]@{formName='RQT.Case Management';tab='Cases'}
     })
     $mapping | ConvertTo-Json -Depth 100 | Set-Content -Encoding utf8 -LiteralPath $agenticMapping
     & $compiler -Ux $validUx -Mapping $agenticMapping -BaseManifest (Join-Path $PSScriptRoot 'portable-case-base.json') -Output $agenticCompiled
-    if ($LASTEXITCODE -ne 0) { throw 'Expected command-palette Langflow assistant compilation to pass.' }
+    if ($LASTEXITCODE -ne 0) { throw 'Expected command-portal Langflow assistant compilation to pass.' }
     $manifest = Get-Content -Raw -LiteralPath $agenticCompiled | ConvertFrom-Json
     $sourcePalette = @($manifest.application.views | Where-Object name -eq 'RQT.Command Palette')[0]
     $assistantPalette = @($manifest.application.views | Where-Object name -eq 'RQT.Case Assistant Palette')[0]
@@ -308,11 +322,17 @@ try {
     $assistantControl = $assistantPalette.webComponents[0]
     if ($null -ne $sourceControl.properties.PSObject.Properties['AssistantEnabled'] -or
         $assistantControl.properties.AssistantEnabled -ne $true -or
+        $assistantControl.properties.AssistantExperience -ne 'command-portal' -or
         $assistantControl.properties.LangflowFlowId -ne '72e9cd5a-4b3e-415c-9b3a-76f222c9c160' -or
-        $assistantControl.properties.LangflowHostUrl -ne 'https://langflow.example.test' -or
-        $assistantControl.properties.LangflowAuthenticationMode -ne 'server-proxy' -or
-        $assistantControl.controlType -ne 'northstar-case-assistant-palette' -or
-        $assistantControl.properties.TagName -ne 'northstar-case-assistant-palette') {
+        $assistantControl.properties.LangflowHostUrl -ne 'http://127.0.0.1:7860' -or
+        $assistantControl.properties.LangflowAuthenticationMode -ne 'server-open-alpha' -or
+        $assistantControl.properties.LangflowFileComponentId -ne 'Read-File-1olS3' -or
+        $assistantControl.properties.LangflowChatInputComponentId -ne 'ChatInput-b67sL' -or
+        $assistantControl.properties.LangflowAllowedFileTypes -ne '.pdf,.txt,.png' -or
+        $assistantControl.properties.LangflowMaxFileSizeMb -ne 25 -or
+        $assistantControl.properties.LangflowScriptUrl -ne '' -or
+        $assistantControl.controlType -ne 'northstar-command-palette' -or
+        $assistantControl.properties.TagName -ne 'northstar-command-palette') {
         throw 'Agentic chat compiler leaked configuration into the shared palette or omitted the cloned palette configuration.'
     }
     if ($null -ne $assistantControl.properties.PSObject.Properties['apiKey'] -or
@@ -352,7 +372,7 @@ try {
         if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Force }
     }
 }
-Write-Output 'Case-UX command-palette Langflow assistant tests passed.'
+Write-Output 'Case-UX advanced Langflow command-portal tests passed.'
 
 $completionMapping = [IO.Path]::GetTempFileName()
 $completionCompiled = [IO.Path]::GetTempFileName()

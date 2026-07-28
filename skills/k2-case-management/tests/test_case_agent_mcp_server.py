@@ -20,6 +20,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from case_agent_mcp_server import (  # noqa: E402
     AlphaCaseStoreAdapter,
+    K2CliCaseOperationsProvider,
     StaticTokenDirectory,
     create_application,
     generate_token_record,
@@ -252,6 +253,7 @@ class CaseAgentMcpServerTests(unittest.TestCase):
             r"EXAMPLE\alice",
             ["EVIDENCE_EXCEPTION"],
             commit_scope=True,
+            read_scope=True,
             expires_at="2099-01-01T00:00:00Z",
         )
         self.assertNotIn(token, json.dumps(record))
@@ -259,7 +261,64 @@ class CaseAgentMcpServerTests(unittest.TestCase):
         identity = StaticTokenDirectory([record]).authenticate(token)
         self.assertEqual(r"EXAMPLE\alice", identity.principal_id)
         self.assertIn("case:create:commit", identity.scopes)
+        self.assertIn("case:read", identity.scopes)
         self.assertIsNone(StaticTokenDirectory([record]).authenticate(token + "invalid"))
+
+    def test_k2_case_operations_are_bounded_and_read_only(self):
+        provider = K2CliCaseOperationsProvider(
+            Path(sys.executable), "localhost", 5555, "K2"
+        )
+
+        def rows(operation, inputs=None):
+            del inputs
+            if operation == "search_cases":
+                return [
+                    {
+                        "CaseId": 13,
+                        "CaseNumber": "RQB-13",
+                        "Title": "Reported tax issue",
+                        "StatusCode": "DRAFT",
+                        "CurrentStageCode": "CAPTURE",
+                    }
+                ]
+            if operation == "get_case_record":
+                return [
+                    {
+                        "CaseId": 13,
+                        "CaseNumber": "RQB-13",
+                        "CaseTypeId": 4,
+                        "StatusCode": "DRAFT",
+                        "CurrentStageCode": "CAPTURE",
+                        "ConfigurationVersion": 1,
+                        "RowVersion": "AAAAAAAAB9E=",
+                    }
+                ]
+            if operation == "list_stage_transitions":
+                return [
+                    {
+                        "CaseTypeId": 4,
+                        "FromStageCode": "CAPTURE",
+                        "ToStageCode": "TRIAGE",
+                        "OutcomeCode": "SUBMIT",
+                        "ConfigurationVersion": 1,
+                        "RequiresConfirmation": True,
+                        "IsActive": True,
+                    }
+                ]
+            raise AssertionError(operation)
+
+        provider._rows = rows
+        search = provider.search_cases(query="tax", limit=10)
+        self.assertEqual("RQB-13", search["cases"][0]["caseNumber"])
+        allowed = provider.get_allowed_case_actions("13")
+        self.assertEqual("SUBMIT", allowed["actions"][0]["outcomeCode"])
+        self.assertEqual(
+            "AAAAAAAAB9E=", allowed["actions"][0]["caseRowVersion"]
+        )
+        self.assertFalse(allowed["authoritativeWritesAvailable"])
+
+    def test_case_operation_tools_are_feature_gated(self):
+        asyncio.run(self._case_operation_tools_are_feature_gated())
 
     def test_remote_streamable_http_tools_and_authorization(self):
         asyncio.run(self._remote_streamable_http_tools_and_authorization())
@@ -321,6 +380,54 @@ class CaseAgentMcpServerTests(unittest.TestCase):
                 )
                 self.assertTrue(create.isError)
                 self.assertIn("lacks required scope", create.content[0].text)
+            finally:
+                await disconnect(client, transport, session)
+
+    async def _case_operation_tools_are_feature_gated(self):
+        port = free_port()
+        config = unauthenticated_config_for(port)
+        config["security"]["allowUnauthenticatedCaseReads"] = True
+        config["runtime"]["caseOperations"] = {
+            "enabled": True,
+            "provider": "k2-cli",
+            "executablePath": sys.executable,
+            "host": "localhost",
+            "port": 5555,
+            "securityLabel": "K2",
+            "timeoutSeconds": 30,
+            "authoritativeWritesEnabled": False,
+            "commandProcessorVerified": False,
+        }
+        self.assertEqual([], validate_server_config(config, ROOT / "assets"))
+        app, runtime = create_application(config, ROOT / "assets")
+        self.assertIsNotNone(runtime.case_operations_provider)
+
+        with RunningServer(app, port) as server:
+            health = httpx.get(server.base_url + "/healthz").json()
+            self.assertTrue(health["caseOperationsAvailable"])
+            self.assertFalse(health["authoritativeCaseWritesAvailable"])
+            client, transport, session = await connect(server.base_url + "/mcp")
+            try:
+                tools = await session.list_tools()
+                names = {value.name for value in tools.tools}
+                self.assertTrue(
+                    {
+                        "search_cases",
+                        "get_case",
+                        "get_case_timeline",
+                        "list_case_evidence",
+                        "get_allowed_case_actions",
+                        "get_submission_readiness",
+                        "get_case_action_status",
+                    }.issubset(names)
+                )
+                allowed = next(
+                    value
+                    for value in tools.tools
+                    if value.name == "get_allowed_case_actions"
+                )
+                self.assertTrue(allowed.annotations.readOnlyHint)
+                self.assertFalse(allowed.annotations.destructiveHint)
             finally:
                 await disconnect(client, transport, session)
 

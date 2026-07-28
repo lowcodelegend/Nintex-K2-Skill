@@ -3,55 +3,53 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{9A8D3056-EAE1-4E13-906B-A5E2AC22096E}</ProjectGuid>
+    <ProjectGuid>{D7BC0EEA-C3B8-43C4-8C3E-55256168875F}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>K2EnvironmentCli</RootNamespace>
-    <AssemblyName>k2env</AssemblyName>
+    <RootNamespace>K2CaseOperationsCli</RootNamespace>
+    <AssemblyName>k2caseops</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <K2InstallDir Condition=" '$(K2InstallDir)' == '' ">C:\Program Files\K2</K2InstallDir>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols><DebugType>full</DebugType><Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath><DefineConstants>DEBUG;TRACE</DefineConstants>
-    <WarningLevel>4</WarningLevel><PlatformTarget>x64</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType><Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath><DefineConstants>TRACE</DefineConstants>
-    <WarningLevel>4</WarningLevel><PlatformTarget>x64</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
     <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Xml" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="SourceCode.Framework">
-      <HintPath>$(K2InstallDir)\Bin\SourceCode.Framework.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="SourceCode.HostClientAPI">
       <HintPath>$(K2InstallDir)\Bin\SourceCode.HostClientAPI.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="SourceCode.Forms.Management">
-      <HintPath>$(K2InstallDir)\Bin\SourceCode.Forms.Management.dll</HintPath>
+    <Reference Include="SourceCode.SmartObjects.Client">
+      <HintPath>$(K2InstallDir)\Bin\SourceCode.SmartObjects.Client.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Cli.cs" />
-    <Compile Include="CapabilityDiscovery.cs" />
-    <Compile Include="Discovery.cs" />
-    <Compile Include="Models.cs" />
-    <Compile Include="ProfileStore.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="RuntimeAssemblyResolver.cs" />
-    <Compile Include="ShortCodeRegistry.cs" />
-    <Compile Include="Validator.cs" />
   </ItemGroup>
-  <ItemGroup><None Include="App.config" /></ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

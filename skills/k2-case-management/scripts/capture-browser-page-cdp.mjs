@@ -177,7 +177,12 @@ const clickNames = argumentsFor("click-name");
 const clickName = clickNames[0] || "";
 const dismissDialogs = process.argv.includes("--dismiss-dialogs");
 const paletteProbeText = argument("palette-probe-text", "");
-const assistantProbeRequested = process.argv.includes("--assistant-probe");
+const assistantBehaviorRequested = process.argv.includes("--assistant-probe");
+const assistantOpenProbeRequested = process.argv.includes("--assistant-open-probe");
+const assistantLiveMessage = argument("assistant-live-message", "");
+const assistantProbeRequested = assistantBehaviorRequested ||
+  assistantOpenProbeRequested ||
+  assistantLiveMessage.length > 0;
 const noScreenshot = process.argv.includes("--no-screenshot");
 const edge = argument(
   "edge",
@@ -451,7 +456,7 @@ try {
           getComputedStyle(node).visibility !== 'hidden' &&
           !!(node.offsetWidth || node.offsetHeight || node.getClientRects().length);
         const controls = Array.from(document.querySelectorAll(
-          'northstar-command-palette,northstar-case-assistant-palette,northstar-command-palette-acp'
+          'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp'
         ));
         const control = controls.find((candidate) => {
           const candidateTrigger = candidate.shadowRoot &&
@@ -529,7 +534,7 @@ try {
       const afterPointer = await session.send("Runtime.evaluate", {
         expression: `(() => {
           const controls = Array.from(document.querySelectorAll(
-            'northstar-command-palette,northstar-case-assistant-palette,northstar-command-palette-acp'
+            'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp'
           ));
           const open = controls.filter((control) => control.shadowRoot &&
             control.shadowRoot.querySelectorAll('[role="dialog"]').length === 1);
@@ -555,7 +560,7 @@ try {
         expression: `({
           dialogCountAfterPointerEscape: Array.from(
             document.querySelectorAll(
-              'northstar-command-palette,northstar-case-assistant-palette,northstar-command-palette-acp'
+              'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp'
             )
           ).reduce((count, control) => count +
             (control.shadowRoot?.querySelectorAll('[role="dialog"]').length || 0), 0)
@@ -576,7 +581,7 @@ try {
       const afterKeyboard = await session.send("Runtime.evaluate", {
         expression: `(() => {
           const controls = Array.from(document.querySelectorAll(
-            'northstar-command-palette,northstar-case-assistant-palette,northstar-command-palette-acp'
+            'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp'
           ));
           const open = controls.filter((control) => control.shadowRoot &&
             control.shadowRoot.querySelectorAll('[role="dialog"]').length === 1);
@@ -605,7 +610,7 @@ try {
       const result = await session.send("Runtime.evaluate", {
         expression: `(() => {
           const control = Array.from(document.querySelectorAll(
-            'northstar-command-palette,northstar-case-assistant-palette,northstar-command-palette-acp'
+            'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp'
           )).find((candidate) => candidate.shadowRoot &&
             candidate.shadowRoot.querySelector('[role="dialog"]')) || null;
           const root = control && control.shadowRoot;
@@ -642,7 +647,7 @@ try {
     const before = await session.send("Runtime.evaluate", {
       expression: `(() => {
         const control = Array.from(document.querySelectorAll(
-          'northstar-command-palette,northstar-case-assistant-palette,northstar-command-palette-acp'
+          'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp'
         )).find((candidate) => candidate.shadowRoot &&
           candidate.shadowRoot.querySelector('[role="dialog"]')) || null;
         const option = control && Array.from(
@@ -686,10 +691,16 @@ try {
         const readiness = await session.send("Runtime.evaluate", {
           expression: `(() => {
             const control = Array.from(document.querySelectorAll(
-              'northstar-command-palette,northstar-case-assistant-palette,northstar-command-palette-acp'
+              'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp'
             )).find((candidate) => candidate._assistantState === 'error');
+            const overlay = document.querySelector('.northstar-agent-overlay');
+            const portal = overlay && overlay.querySelector('.northstar-agent-portal');
             return {
-              overlayReady: !!document.querySelector('.northstar-agent-overlay'),
+              overlayReady: !!overlay && (
+                !!overlay.querySelector('langflow-chat') ||
+                !!overlay.querySelector('[role="alert"]') ||
+                !!(portal && portal.querySelector('.northstar-agent-portal__session'))
+              ),
               componentError: !!control,
               componentMessage: control ? control._assistantMessage : ''
             };
@@ -719,6 +730,7 @@ try {
             '.northstar-agent-overlay__frame'
           );
           const chat = overlay && overlay.querySelector('langflow-chat');
+          const portal = overlay && overlay.querySelector('.northstar-agent-portal');
           const error = overlay && overlay.querySelector(
             '.northstar-agent-overlay__error[role="alert"]'
           );
@@ -740,6 +752,14 @@ try {
           return {
             overlayCount: overlays.length,
             chatCount: overlay ? overlay.querySelectorAll('langflow-chat').length : 0,
+            portalCount: overlay ? overlay.querySelectorAll('.northstar-agent-portal').length : 0,
+            portalSessionCount: portal ? portal.querySelectorAll(
+              '.northstar-agent-portal__session'
+            ).length : 0,
+            portalHasNewChat: !!(portal && portal.querySelector(
+              '.northstar-agent-portal__new'
+            )),
+            portalHasFileInput: !!(portal && portal.querySelector('input[type="file"]')),
             errorCount: overlay ? overlay.querySelectorAll(
               '.northstar-agent-overlay__error[role="alert"]'
             ).length : 0,
@@ -767,6 +787,227 @@ try {
       }, 5000);
       Object.assign(assistantProbe, openState.result.value);
 
+      if (assistantProbe.portalCount === 1 && assistantBehaviorRequested) {
+        const behaviorState = await session.send("Runtime.evaluate", {
+          expression: `(async () => {
+            const waitFor = async (predicate, timeout = 5000) => {
+              const deadline = Date.now() + timeout;
+              while (Date.now() < deadline) {
+                if (predicate()) return true;
+                await new Promise((resolve) => setTimeout(resolve, 25));
+              }
+              return false;
+            };
+            const control = Array.from(document.querySelectorAll(
+              'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp'
+            )).find((candidate) => candidate._assistantExperience === 'command-portal');
+            if (!control) return { portalBehaviorExercised: false };
+            const originalConfirm = window.confirm;
+            try {
+              const originalSessionId = control._portalSessionId;
+              document.querySelector('.northstar-agent-portal__new')?.click();
+              const newSessionChanged = await waitFor(
+                () => !!control._portalSessionId &&
+                  control._portalSessionId !== originalSessionId);
+
+              const documentAttachment = new File(
+                ['case attachment'], 'case.pdf', { type: 'application/pdf' });
+              const imageAttachment = new File(
+                ['image attachment'], 'case.png', { type: 'image/png' });
+              await control._addPortalFiles([documentAttachment, imageAttachment]);
+              const documentUploaded = control._portalAttachments.some(
+                (item) => item.name === 'case.pdf' &&
+                  item.status === 'ready' &&
+                  item.path === 'test/file-1.pdf');
+              const imageUploaded = control._portalAttachments.some(
+                (item) => item.name === 'case.png' &&
+                  item.status === 'ready' &&
+                  item.path.endsWith('/test-image.png'));
+
+              const input = document.querySelector(
+                '.northstar-agent-portal__composer textarea');
+              if (input) {
+                input.value = 'Investigate case 42';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                document.querySelector('.northstar-agent-portal__send')?.click();
+              }
+              const streamedReplyReady = await waitFor(
+                () => !control._portalSending &&
+                  control._portalMessages.some((message) =>
+                    message.role === 'assistant' &&
+                    message.text === 'Portal ready'));
+
+              const requests = Array.isArray(window.__portalRequests)
+                ? window.__portalRequests : [];
+              const runRequest = requests.find((request) =>
+                request.method === 'POST' &&
+                request.url.includes('/api/v1/run/'));
+              let runPayload = {};
+              try { runPayload = JSON.parse(runRequest?.body || '{}'); } catch {}
+              const runPayloadValid = runPayload.input_value === 'Investigate case 42' &&
+                runPayload.session_id === control._portalSessionId &&
+                runPayload.tweaks &&
+                runPayload.tweaks[control.LangflowFileComponentId] &&
+                runPayload.tweaks[control.LangflowFileComponentId].path[0] ===
+                  'test/file-1.pdf' &&
+                runPayload.tweaks[control.LangflowChatInputComponentId] &&
+                runPayload.tweaks[control.LangflowChatInputComponentId].files.endsWith(
+                  '/test-image.png');
+
+              const backtick = String.fromCharCode(96);
+              const fence = backtick.repeat(3);
+              control._portalMessages.push({
+                id: 'markdown-probe',
+                role: 'assistant',
+                timestamp: new Date().toISOString(),
+                files: [],
+                text: [
+                  '# Markdown response',
+                  '',
+                  '**Bold** and *emphasis* with ' + backtick + 'inline code' + backtick + '.',
+                  '',
+                  '- First item',
+                  '- Second item',
+                  '',
+                  '> Governed quotation',
+                  '',
+                  '| Field | Value |',
+                  '| --- | --- |',
+                  '| Status | Ready |',
+                  '',
+                  '[Safe link](https://example.com/case)',
+                  '[Unsafe link](javascript:alert(1))',
+                  '<img src=x onerror=alert(1)>',
+                  '',
+                  fence + 'js',
+                  '<script>window.__markdownInjected = true;</script>',
+                  fence
+                ].join('\\n')
+              });
+              control._renderAssistantPortal();
+              const markdownCopies = Array.from(document.querySelectorAll(
+                '.northstar-agent-portal__message-copy.is-markdown'));
+              const markdown = markdownCopies[markdownCopies.length - 1] || null;
+              const markdownRendered = !!markdown &&
+                !!markdown.querySelector('h3') &&
+                !!markdown.querySelector('strong') &&
+                !!markdown.querySelector('em') &&
+                !!markdown.querySelector('code') &&
+                !!markdown.querySelector('ul li') &&
+                !!markdown.querySelector('blockquote') &&
+                !!markdown.querySelector('table th') &&
+                !!markdown.querySelector('pre code') &&
+                !!markdown.querySelector('a[href^="https://example.com/"]');
+              const markdownSanitized = !!markdown &&
+                !markdown.querySelector('script,img,iframe,object,embed') &&
+                !Array.from(markdown.querySelectorAll('a')).some((link) =>
+                  !/^(https?:|mailto:)$/i.test(link.protocol)) &&
+                markdown.textContent.includes('<img src=x onerror=alert(1)>') &&
+                window.__markdownInjected !== true;
+              const markdownHeadingPreservesPageH1 = !!markdown &&
+                !markdown.querySelector('h1,h2');
+
+              window.confirm = () => true;
+              Array.from(document.querySelectorAll(
+                '.northstar-agent-portal__actions button'
+              )).find((button) => button.textContent.trim() === 'Clear')?.click();
+              const cleared = await waitFor(() =>
+                !control._portalSending &&
+                control._portalMessages.length === 0);
+              const deleteRequested = requests.some((request) =>
+                request.method === 'DELETE' &&
+                request.url.includes('/api/v1/monitor/messages/session/'));
+
+              return {
+                portalBehaviorExercised: true,
+                newSessionChanged,
+                documentUploaded,
+                imageUploaded,
+                streamedReplyReady,
+                runPayloadValid,
+                markdownRendered,
+                markdownSanitized,
+                markdownHeadingPreservesPageH1,
+                cleared,
+                deleteRequested
+              };
+            } finally {
+              window.confirm = originalConfirm;
+            }
+          })()`,
+          returnByValue: true,
+          awaitPromise: true
+        }, 10000);
+        Object.assign(assistantProbe, behaviorState.result.value);
+      }
+
+      if (assistantProbe.portalCount === 1 && assistantLiveMessage.length > 0) {
+        const liveState = await session.send("Runtime.evaluate", {
+          expression: `(async () => {
+            const waitFor = async (predicate, timeout = 90000) => {
+              const deadline = Date.now() + timeout;
+              while (Date.now() < deadline) {
+                if (predicate()) return true;
+                await new Promise((resolve) => setTimeout(resolve, 100));
+              }
+              return false;
+            };
+            const control = Array.from(document.querySelectorAll(
+              'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp'
+            )).find((candidate) => candidate._assistantExperience === 'command-portal');
+            if (!control) return { liveMessageSent: false, liveError: 'Portal control not found.' };
+            document.querySelector('.northstar-agent-portal__new')?.click();
+            await waitFor(() => !!control._portalSessionId, 5000);
+            const input = document.querySelector(
+              '.northstar-agent-portal__composer textarea');
+            const send = document.querySelector('.northstar-agent-portal__send');
+            if (!input || !send) {
+              return { liveMessageSent: false, liveError: 'Composer controls not found.' };
+            }
+            input.value = ${JSON.stringify(assistantLiveMessage)};
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            send.click();
+            const completed = await waitFor(
+              () => control._portalSending === false &&
+                control._portalMessages.some((message) =>
+                  message.role === 'assistant' &&
+                  typeof message.text === 'string' &&
+                  message.text.trim().length > 0));
+            const replies = control._portalMessages.filter(
+              (message) => message.role === 'assistant');
+            const reply = replies.length ? replies[replies.length - 1] : null;
+            const markdownCopies = Array.from(document.querySelectorAll(
+              '.northstar-agent-portal__message.is-assistant ' +
+              '.northstar-agent-portal__message-copy.is-markdown'));
+            const markdown = markdownCopies.length
+              ? markdownCopies[markdownCopies.length - 1] : null;
+            return {
+              liveMessageSent: true,
+              liveCompleted: completed,
+              liveSessionId: control._portalSessionId || '',
+              liveReplyText: reply ? reply.text : '',
+              liveStatus: control._portalStatus || '',
+              liveMessageCount: control._portalMessages.length,
+              liveMarkdownRendered: !!markdown &&
+                markdown.children.length > 0 &&
+                !markdown.querySelector('script,img,iframe,object,embed'),
+              liveMarkdownElements: markdown ? {
+                headings: markdown.querySelectorAll('h3,h4,h5,h6').length,
+                strong: markdown.querySelectorAll('strong').length,
+                lists: markdown.querySelectorAll('ul,ol').length,
+                code: markdown.querySelectorAll('code').length,
+                blockquotes: markdown.querySelectorAll('blockquote').length,
+                tables: markdown.querySelectorAll('table').length,
+                links: markdown.querySelectorAll('a').length
+              } : null
+            };
+          })()`,
+          returnByValue: true,
+          awaitPromise: true
+        }, 100000);
+        Object.assign(assistantProbe, liveState.result.value);
+      }
+
       await session.send("Input.dispatchKeyEvent", {
         type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27
       });
@@ -777,7 +1018,7 @@ try {
       const closedState = await session.send("Runtime.evaluate", {
         expression: `(() => {
           const control = Array.from(document.querySelectorAll(
-            'northstar-command-palette,northstar-case-assistant-palette,northstar-command-palette-acp'
+            'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp'
           )).find((candidate) => candidate.shadowRoot &&
             candidate.shadowRoot.querySelector('.northstar-command__trigger')) || null;
           const trigger = control && control.shadowRoot.querySelector(
@@ -790,6 +1031,9 @@ try {
             ).length,
             chatCountAfterClose: document.querySelectorAll(
               '.northstar-agent-overlay langflow-chat'
+            ).length,
+            portalCountAfterClose: document.querySelectorAll(
+              '.northstar-agent-overlay .northstar-agent-portal'
             ).length,
             launcherFocusedAfterClose: !!trigger &&
               control.shadowRoot.activeElement === trigger,
@@ -814,10 +1058,12 @@ try {
         assistantProbe.overlayCount === 1 &&
         assistantProbe.overlayPosition === "fixed" &&
         assistantProbe.overlayPointerEvents === "none" &&
-        (assistantProbe.chatCount === 1 || assistantProbe.errorCount === 1) &&
+        (assistantProbe.chatCount === 1 || assistantProbe.portalCount === 1 ||
+          assistantProbe.errorCount === 1) &&
         assistantProbe.modalPrecedence === true &&
         assistantProbe.overlayCountAfterClose === 0 &&
         assistantProbe.chatCountAfterClose === 0 &&
+        assistantProbe.portalCountAfterClose === 0 &&
         assistantProbe.launcherFocusedAfterClose === true &&
         assistantProbe.layoutStable === true;
     }
@@ -962,7 +1208,7 @@ try {
           controls: details
         };
       })(),
-      customControls: Array.from(document.querySelectorAll("northstar-command-palette,northstar-case-assistant-palette,northstar-command-palette-acp,northstar-dashboard-widget"))
+      customControls: Array.from(document.querySelectorAll("northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp,northstar-dashboard-widget"))
         .map((control) => ({
           tag: control.tagName.toLowerCase(),
           name: control.getAttribute("name") || control.Name || "",
@@ -975,7 +1221,13 @@ try {
         })),
       customControlRuntime: {
         baseType: typeof window.K2BaseControl,
-        paletteDefined: !!window.customElements.get("northstar-command-palette"),
+        paletteDefined: [
+          "northstar-command-palette",
+          "northstar-case-assistant-palette",
+          "northstar-case-command-portal",
+          "northstar-case-command-portal-markdown",
+          "northstar-command-palette-acp"
+        ].some((name) => !!window.customElements.get(name)),
         dashboardDefined: !!window.customElements.get("northstar-dashboard-widget"),
         scripts: Array.from(document.scripts).slice(-12).map((script) => ({
           source: script.src,

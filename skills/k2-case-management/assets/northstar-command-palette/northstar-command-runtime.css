@@ -228,6 +228,607 @@ kbd {
   }
 }
 
+.northstar-agent-overlay__frame--portal {
+  background: #fff;
+  border: 1px solid #dfe3ea;
+  border-radius: 18px;
+  box-shadow: 0 28px 90px rgba(16, 24, 40, .3);
+  max-width: calc(100vw - 24px);
+  overflow: hidden !important;
+  pointer-events: auto !important;
+}
+
+.northstar-agent-overlay__frame--portal > .northstar-agent-overlay__close {
+  top: 15px !important;
+  right: 18px !important;
+}
+
+.northstar-agent-portal {
+  background: #f8fafc;
+  color: #101828;
+  display: grid;
+  font-family: "Segoe UI", Arial, sans-serif;
+  grid-template-columns: 280px minmax(0, 1fr);
+  height: 100%;
+  overflow: hidden;
+  pointer-events: auto;
+  width: 100%;
+}
+
+.northstar-agent-portal.is-dragging {
+  box-shadow: inset 0 0 0 3px #6558d3;
+}
+
+.northstar-agent-portal button,
+.northstar-agent-portal textarea {
+  font: inherit;
+}
+
+.northstar-agent-portal button:focus-visible,
+.northstar-agent-portal textarea:focus-visible {
+  outline: 3px solid rgba(92, 78, 196, .34);
+  outline-offset: 2px;
+}
+
+.northstar-agent-portal__sidebar {
+  background: #111827;
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  padding: 20px 14px 14px;
+}
+
+.northstar-agent-portal__brand {
+  align-items: center;
+  display: flex;
+  gap: 11px;
+  margin: 0 4px 20px;
+}
+
+.northstar-agent-portal__brand > span:last-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.northstar-agent-portal__brand strong {
+  font-size: 15px;
+}
+
+.northstar-agent-portal__brand small {
+  color: #98a2b3;
+  margin-top: 2px;
+}
+
+.northstar-agent-portal__mark {
+  align-items: center;
+  background: #6558d3;
+  border-radius: 10px;
+  display: flex;
+  flex: 0 0 36px;
+  font-size: 20px;
+  height: 36px;
+  justify-content: center;
+}
+
+.northstar-agent-portal__new {
+  background: #6558d3;
+  border: 0;
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 650 !important;
+  min-height: 42px;
+  padding: 10px 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.northstar-agent-portal__sessions {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  margin: 14px 0;
+  overflow: auto;
+}
+
+.northstar-agent-portal__session {
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  color: #d0d5dd;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px;
+  text-align: left;
+}
+
+.northstar-agent-portal__session:hover,
+.northstar-agent-portal__session.is-active {
+  background: #273244;
+  color: #fff;
+}
+
+.northstar-agent-portal__session strong,
+.northstar-agent-portal__session small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.northstar-agent-portal__session strong {
+  font-size: 13px;
+}
+
+.northstar-agent-portal__session small,
+.northstar-agent-portal__note {
+  color: #98a2b3;
+  font-size: 11px;
+}
+
+.northstar-agent-portal__note {
+  border-top: 1px solid #344054;
+  line-height: 1.4;
+  margin: 0;
+  padding: 12px 6px 0;
+}
+
+.northstar-agent-portal__main {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.northstar-agent-portal__header {
+  align-items: center;
+  background: #fff;
+  border-bottom: 1px solid #eaecf0;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-height: 72px;
+  padding: 10px 86px 10px 22px;
+}
+
+.northstar-agent-portal__header h2,
+.northstar-agent-portal__header p {
+  margin: 0;
+}
+
+.northstar-agent-portal__header h2 {
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.northstar-agent-portal__header p {
+  color: #667085;
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.northstar-agent-portal__menu {
+  display: none;
+}
+
+.northstar-agent-portal__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.northstar-agent-portal__actions button {
+  background: #fff;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  color: #344054;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 9px;
+}
+
+.northstar-agent-portal__actions button.is-danger {
+  color: #b42318;
+}
+
+.northstar-agent-portal__messages {
+  align-items: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: auto;
+  padding: 26px clamp(18px, 5vw, 64px);
+}
+
+.northstar-agent-portal__empty {
+  align-items: center;
+  align-self: center;
+  color: #475467;
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+  max-width: 420px;
+  padding: 32px;
+  text-align: center;
+}
+
+.northstar-agent-portal__empty > span {
+  align-items: center;
+  background: #ecebff;
+  border-radius: 18px;
+  color: #5147bf;
+  display: flex;
+  font-size: 30px;
+  height: 64px;
+  justify-content: center;
+  width: 64px;
+}
+
+.northstar-agent-portal__empty h3 {
+  color: #101828;
+  font-size: 20px;
+  margin: 18px 0 8px;
+}
+
+.northstar-agent-portal__empty p {
+  line-height: 1.5;
+  margin: 0;
+}
+
+.northstar-agent-portal__message {
+  align-self: flex-start;
+  max-width: min(720px, 88%);
+}
+
+.northstar-agent-portal__message.is-user {
+  align-self: flex-end;
+}
+
+.northstar-agent-portal__message > strong {
+  color: #667085;
+  display: block;
+  font-size: 11px;
+  margin: 0 6px 5px;
+}
+
+.northstar-agent-portal__message-copy {
+  background: #fff;
+  border: 1px solid #e4e7ec;
+  border-radius: 14px 14px 14px 4px;
+  box-shadow: 0 2px 5px rgba(16, 24, 40, .04);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  padding: 12px 14px;
+  white-space: pre-wrap;
+}
+
+.northstar-agent-portal__message-copy.is-markdown {
+  white-space: normal;
+}
+
+.northstar-agent-portal__message-copy.is-markdown > :first-child {
+  margin-top: 0;
+}
+
+.northstar-agent-portal__message-copy.is-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.northstar-agent-portal__message-copy.is-markdown p {
+  margin: 0 0 10px;
+}
+
+.northstar-agent-portal__message-copy.is-markdown h3,
+.northstar-agent-portal__message-copy.is-markdown h4,
+.northstar-agent-portal__message-copy.is-markdown h5,
+.northstar-agent-portal__message-copy.is-markdown h6 {
+  color: #101828;
+  line-height: 1.3;
+  margin: 16px 0 7px;
+}
+
+.northstar-agent-portal__message-copy.is-markdown h3 {
+  font-size: 18px;
+}
+
+.northstar-agent-portal__message-copy.is-markdown h4 {
+  font-size: 16px;
+}
+
+.northstar-agent-portal__message-copy.is-markdown h5,
+.northstar-agent-portal__message-copy.is-markdown h6 {
+  font-size: 14px;
+}
+
+.northstar-agent-portal__message-copy.is-markdown ul,
+.northstar-agent-portal__message-copy.is-markdown ol {
+  margin: 8px 0 12px;
+  padding-inline-start: 24px;
+}
+
+.northstar-agent-portal__message-copy.is-markdown li + li {
+  margin-top: 4px;
+}
+
+.northstar-agent-portal__message-copy.is-markdown blockquote {
+  border-inline-start: 3px solid #9b8afb;
+  color: #475467;
+  margin: 10px 0;
+  padding: 2px 0 2px 12px;
+}
+
+.northstar-agent-portal__message-copy.is-markdown a {
+  color: #4f46a5;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.northstar-agent-portal__message-copy.is-markdown a:focus-visible,
+.northstar-agent-portal__markdown-table:focus-visible {
+  outline: 3px solid rgba(92, 78, 196, .3);
+  outline-offset: 2px;
+}
+
+.northstar-agent-portal__message-copy.is-markdown code {
+  background: #f2f4f7;
+  border-radius: 4px;
+  color: #344054;
+  font-family: Consolas, "SFMono-Regular", "Liberation Mono", monospace;
+  font-size: .9em;
+  padding: 2px 4px;
+}
+
+.northstar-agent-portal__message-copy.is-markdown pre {
+  background: #101828;
+  border-radius: 8px;
+  color: #f2f4f7;
+  margin: 10px 0;
+  max-width: 100%;
+  overflow: auto;
+  padding: 12px;
+  white-space: pre;
+}
+
+.northstar-agent-portal__message-copy.is-markdown pre code {
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  padding: 0;
+}
+
+.northstar-agent-portal__message-copy.is-markdown hr {
+  border: 0;
+  border-top: 1px solid #d0d5dd;
+  margin: 14px 0;
+}
+
+.northstar-agent-portal__markdown-table {
+  margin: 10px 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.northstar-agent-portal__markdown-table table {
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 100%;
+  white-space: normal;
+}
+
+.northstar-agent-portal__markdown-table th,
+.northstar-agent-portal__markdown-table td {
+  border: 1px solid #d0d5dd;
+  padding: 7px 9px;
+  text-align: start;
+  vertical-align: top;
+}
+
+.northstar-agent-portal__markdown-table th {
+  background: #f2f4f7;
+  color: #344054;
+  font-weight: 700;
+}
+
+.northstar-agent-portal__message.is-user .northstar-agent-portal__message-copy {
+  background: #5c4ec4;
+  border-color: #5c4ec4;
+  border-radius: 14px 14px 4px 14px;
+  color: #fff;
+}
+
+.northstar-agent-portal__message-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.northstar-agent-portal__message-files span {
+  background: #eef2f6;
+  border-radius: 7px;
+  color: #475467;
+  font-size: 11px;
+  padding: 5px 7px;
+}
+
+.northstar-agent-portal__footer {
+  background: #fff;
+  border-top: 1px solid #eaecf0;
+  padding: 12px clamp(16px, 4vw, 48px) 10px;
+}
+
+.northstar-agent-portal__attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 7px;
+}
+
+.northstar-agent-portal__attachment {
+  align-items: center;
+  background: #f2f4f7;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  color: #344054;
+  display: flex;
+  font-size: 11px;
+  gap: 5px;
+  max-width: 100%;
+  padding: 4px 5px 4px 8px;
+}
+
+.northstar-agent-portal__attachment.is-error {
+  background: #fff1f0;
+  border-color: #fda29b;
+  color: #912018;
+}
+
+.northstar-agent-portal__attachment button {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.northstar-agent-portal__composer {
+  align-items: flex-end;
+  background: #fff;
+  border: 1px solid #cfd5df;
+  border-radius: 13px;
+  box-shadow: 0 2px 6px rgba(16, 24, 40, .06);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 7px;
+}
+
+.northstar-agent-portal__composer textarea {
+  border: 0;
+  color: #101828;
+  max-height: 130px;
+  min-height: 36px;
+  outline: 0;
+  padding: 8px 2px;
+  resize: vertical;
+}
+
+.northstar-agent-portal__attach,
+.northstar-agent-portal__send {
+  border: 0;
+  border-radius: 9px;
+  cursor: pointer;
+  font-weight: 650 !important;
+  min-height: 36px;
+}
+
+.northstar-agent-portal__attach {
+  background: #f2f4f7;
+  color: #344054;
+  font-size: 20px;
+  width: 36px;
+}
+
+.northstar-agent-portal__send {
+  background: #5c4ec4;
+  color: #fff;
+  padding: 0 15px;
+}
+
+.northstar-agent-portal__status {
+  color: #667085;
+  font-size: 11px;
+  line-height: 1.35;
+  margin: 6px 2px 0;
+  min-height: 15px;
+}
+
+@media (max-width: 760px) {
+  .northstar-agent-overlay__frame--portal {
+    border-radius: 0;
+    max-height: 100vh !important;
+    max-width: 100vw !important;
+  }
+
+  .northstar-agent-overlay__frame--portal > .northstar-agent-overlay__close {
+    top: 12px !important;
+    right: 12px !important;
+  }
+
+  .northstar-agent-portal {
+    display: block;
+    position: relative;
+  }
+
+  .northstar-agent-portal__sidebar {
+    bottom: 0;
+    box-shadow: 18px 0 42px rgba(16, 24, 40, .28);
+    left: 0;
+    position: absolute;
+    top: 0;
+    transform: translateX(-104%);
+    transition: transform .18s ease;
+    width: min(82vw, 300px);
+    z-index: 4;
+  }
+
+  .northstar-agent-portal__sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .northstar-agent-portal__main {
+    height: 100%;
+  }
+
+  .northstar-agent-portal__menu {
+    align-items: center;
+    background: #f2f4f7;
+    border: 0;
+    border-radius: 8px;
+    color: #344054;
+    display: flex;
+    height: 36px;
+    justify-content: center;
+    width: 36px;
+  }
+
+  .northstar-agent-portal__header {
+    padding: 9px 76px 9px 10px;
+  }
+
+  .northstar-agent-portal__header p,
+  .northstar-agent-portal__actions button.is-danger {
+    display: none;
+  }
+
+  .northstar-agent-portal__messages {
+    padding: 18px 12px;
+  }
+
+  .northstar-agent-portal__message {
+    max-width: 92%;
+  }
+
+  .northstar-agent-portal__footer {
+    padding: 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .northstar-agent-portal__sidebar {
+    transition: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     scroll-behavior: auto !important;

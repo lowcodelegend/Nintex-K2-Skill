@@ -10,9 +10,13 @@ The workflow validates authorization and input, calls the gateway with a correla
 
 For agentic case creation, use [the reusable framework contract](agentic-case-framework.md). Let the agent discover an immutable case-type creation contract instead of teaching the shared framework solution-specific fields. Keep incomplete input in a protected principal-owned intake draft, validate it on the server, require a snapshot-bound confirmation, and atomically dispatch through one registered adapter. Creation does not imply submission.
 
-## Embedded Langflow case assistant
+## Langflow case-assistant command portal
 
-An embedded assistant is an optional case-type UX capability, not part of the canonical authoritative case state. Prefer the existing `northstar-command-palette` as its entry point: the compiler clones the governed palette View for the selected Form, adds **Ask Case Assistant** as a fixed command, and moves that clone to the first position on the mapped case-context tab. This keeps one keyboard-accessible command surface and avoids a second unexplained floating launcher before the user asks for assistance.
+The assistant is an optional case-type UX capability, not part of canonical case state. Use the existing `northstar-command-palette` as its entry point: the compiler clones the governed palette View for the selected Form, adds **Ask Case Assistant** as a fixed command, and moves that clone to the first position on the mapped case-context tab. Selecting it opens a large owned `command-portal` experience that replaces Langflow's default embedded chat control. The legacy `command-palette`/embedded-widget integration remains available only for compatibility.
+
+Resolve availability before compiling the UX. Run `k2env validate` and read the selected profile summary. When `capabilities.langflow.available` or `capabilities.langflow.features.commandPortal` is false, mark the portal unavailable and retain the ordinary governed command palette; do not emit a knowingly dead assistant entry point. When both are true, use `baseUrl`, `flowId`, `chatInputComponentId`, and `readFileComponentId` from `capabilities.langflow` as mapping defaults. Runtime failures remain independently bounded because the environment check is a timestamped build-time capability observation, not a permanent guarantee.
+
+The portal provides a conversation sidebar, friendly local titles, distinct Langflow session IDs, New chat, session selection, clear/delete, streamed replies, Stop, and capability-gated attachments. Expose image selection only when `features.imageAttachments` is true and document selection only when `features.documentAttachments` is true. It is a conversation client only. An attachment supplied to Langflow is not case evidence and must not be written to the Evidence entity unless the flow separately invokes the governed case MCP contract and the user completes the required case action.
 
 Declare the integration in the case UX K2 mapping:
 
@@ -20,7 +24,7 @@ Declare the integration in the case UX K2 mapping:
 {
   "agenticChat": {
     "enabled": true,
-    "integration": "command-palette",
+    "integration": "command-portal",
     "viewName": "ABC.Case Assistant Palette",
     "sourcePaletteViewName": "ABC.Command Palette",
     "controlName": "Northstar Case Assistant",
@@ -28,14 +32,17 @@ Declare the integration in the case UX K2 mapping:
     "controlPackage": "assets/northstar-command-palette",
     "hostUrl": "https://langflow.example.com",
     "flowId": "72e9cd5a-4b3e-415c-9b3a-76f222c9c160",
-    "scriptUrl": "https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@v1.0.8/dist/build/static/js/bundle.min.js",
     "windowTitle": "Case Assistant",
     "label": "Ask Case Assistant",
     "description": "Ask questions and take supported case actions",
     "chatPosition": "bottom-right",
-    "width": 420,
-    "height": 640,
-    "authentication": {"mode": "server-proxy"},
+    "width": 1120,
+    "height": 760,
+    "fileComponentId": "Read-File-1olS3",
+    "chatInputComponentId": "ChatInput-b67sL",
+    "allowedFileTypes": ".pdf,.txt,.md,.csv,.docx,.xlsx,.png,.jpg,.jpeg,.gif,.bmp,.webp",
+    "maxFileSizeMb": 25,
+    "authentication": {"mode": "server-open-alpha"},
     "placement": {"formName": "ABC.Case Management", "tab": "Overview"}
   }
 }
@@ -43,13 +50,26 @@ Declare the integration in the case UX K2 mapping:
 
 Declare `homepage.commandPalette.viewTitle` once as the shared shell/compiler contract. The canonical Northstar value is `Command palette`; the assistant replacement inherits that title so the Style Profile can identify and visually position the real K2 View while leaving its ownership tree intact. Do not give an assistant-enabled replacement a different marketing title. `controlType` defaults to `northstar-command-palette`; set it to an explicitly registered stable parallel tag such as `northstar-case-assistant-palette` when an in-use environment requires a separately promoted control.
 
-The compiler requires the pinned approved bundle, an HTTPS Langflow host without a trailing slash, a GUID flow ID, a distinct cloned View name, an existing target Form/tab, and exactly one authentication mode:
+The command portal calls these Langflow endpoints directly:
 
-- `server-open-alpha`: temporary internal development only. Configure the Langflow server with `LANGFLOW_AUTO_LOGIN=true` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true`, then restart Langflow. Record the open-server erratum and never promote it to production.
+- `GET /api/v1/monitor/messages/sessions?flow_id={flowId}` for stored session discovery;
+- `GET /api/v1/monitor/messages?flow_id={flowId}&session_id={sessionId}&order=asc` for history;
+- `DELETE /api/v1/monitor/messages/session/{sessionId}` for clear/delete;
+- `POST /api/v2/files` for non-image file upload;
+- `POST /api/v1/files/upload/{flowId}` for image upload;
+- `POST /api/v1/run/{flowId}?stream=true` with `input_value`, `session_id`, `input_type`, `output_type`, and the configured component `tweaks`.
+
+For non-image attachments, add a Langflow **Read File** component to the flow and map its stable component ID in `fileComponentId`; the portal passes the uploaded `path` array to that component. For images, map the stable **Chat Input** component ID in `chatInputComponentId`; the portal uploads each image to the flow-scoped v1 endpoint and passes the returned file path to that component's `files` tweak. Keep stored-message behavior enabled so Langflow remains the message-history store. The browser stores only display metadata such as friendly titles and the active session ID.
+
+Flow inspection deliberately distinguishes those paths. A healthy Langflow instance can therefore report the command portal, sessions, streaming, images, and case MCP tools as available while reporting document attachments as unavailable. That is a usable partial feature set: omit document file types and `fileComponentId` until a Read File component is added and the environment is revalidated.
+
+The compiler requires a GUID flow ID, a distinct cloned View name, an existing target Form/tab, and exactly one connection mode:
+
+- `server-open-alpha`: the current internal-development mode. Configure Langflow for open access and restart it. The compiler permits HTTP only for `localhost`, `127.0.0.1`, or `::1`; other hosts still require HTTPS. No browser API key or MCP credential is emitted.
 - `server-proxy`: the browser calls a governed server proxy or token-exchange seam. The proxy owns API keys, trusted identity, authorization, and case-context claims.
 
-Never serialize a reusable Langflow API key, token, header, secret reference, or arbitrary tweak into a UX mapping, SmartForms manifest/XML, Web Component property, JavaScript, or browser storage. Langflow's normal flow-run endpoint requires `x-api-key`; a browser-facing control must not satisfy that requirement by embedding the key. The Runtime generates only a per-browser-tab conversation ID. It observes only 401/403 status responses for its exact configured flow endpoint and replaces an unresponsive widget with a bounded accessible `Agent unavailable — authentication required` state.
+Never serialize a reusable Langflow API key, token, header, secret reference, or arbitrary caller-controlled tweak into a UX mapping, SmartForms manifest/XML, Web Component property, JavaScript, or browser storage. The open-alpha deployment deliberately makes the needed endpoints accessible without a key; it does not make a browser-embedded key acceptable. The case MCP server is used by the Langflow flow, not called directly by this portal, and therefore requires no MCP credential in the control.
 
-The assistant uses one owned fixed overlay host. The host is zero-flow, viewport-bounded, non-interactive outside the chat, lower than critical K2 modal layers, removed on disconnect/reinitialization, and closed with Escape or its owned Close button. It never reaches into Langflow's closed shadow DOM. Opening and closing must preserve document dimensions, scroll position, and shell/sidebar geometry; closing restores focus to the palette launcher.
+The assistant uses one owned fixed overlay host. On desktop it is a large bounded panel with a 280-pixel session sidebar; on narrow screens it becomes a full-screen portal with a drawer. The host is zero-flow, non-interactive outside the portal, lower than critical K2 modal layers, removed on disconnect/reinitialization, and closed with Escape or its owned Close button. Opening and closing preserve document dimensions, scroll position, and shell/sidebar geometry; closing restores focus to the palette launcher.
 
-This alpha contract deliberately supplies no trusted K2 user or case context. Do not infer identity from browser fields. Before production, use the approved OIDC/gateway design, define the case-context claims passed to Langflow, host or approve the pinned bundle under the environment CSP, and verify CORS, real pointer and Ctrl/Cmd+K palette opening, mobile fit, session isolation, modal layering, layout stability, 401/403 behavior, and failure behavior in authenticated Runtime.
+This alpha contract deliberately supplies no trusted K2 user or case context. Do not infer identity from browser fields. Verify the actual deployment's `/docs` contract because Langflow API versions can evolve. Browser acceptance must exercise real pointer and Ctrl/Cmd+K palette opening, new and switched sessions, stored history, streamed output, Stop, file upload, clear/delete, mobile fit, modal layering, layout stability, CORS, and failure behavior. Before production, add the approved identity/gateway design and case-context claims without changing the portal's interaction contract.

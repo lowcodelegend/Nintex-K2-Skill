@@ -18,7 +18,7 @@ Specialist manifests remain authoritative for their artifacts. The solution mani
 
 ## Environment
 
-Before K2 discovery, read [environment-profiles.md](references/environment-profiles.md), run `scripts/k2env.ps1 validate`, then `show --summary --output json`; reuse those resolved values without reloading full inventories. On first use run `discover --name <stable-name> --default`.
+Before K2 discovery, read [environment-profiles.md](references/environment-profiles.md), run `scripts/k2env.ps1 validate`, then `show --summary --output json`; reuse those resolved values without reloading full inventories. Treat optional `capabilities.*.available` values as feature gates, not as failures of the core K2 environment. For case assistance, require both `capabilities.langflow.available` and `capabilities.langflow.features.commandPortal`, and gate image/document upload independently. On first use run `discover --name <stable-name> --default`, adding `--langflow-url <https-base-url> --langflow-flow-id <flow-guid>` or `--no-langflow` when the environment decision is known.
 
 Resolve both three-state SmartForms choices before generating Forms. For an unselected Style Profile, show discovered choices and persist `set-style-profile`. For an unselected common framework, inspect `psf` first, ask about a discovered PSF bundle without assuming it, inspect exact lifecycle/layout mappings, then persist `set-common-header` or `--no-common-header`. Refresh only after an expected environment change. Keep profiles and secrets outside projects and skills.
 

@@ -127,8 +127,45 @@ if ($actualVersion -cne 'k2build 0.26.0') {
 }
 $environmentExecutable = Join-Path $skillRoot "tool\K2EnvironmentCli\bin\$Configuration\k2env.exe"
 $environmentVersion = (& $environmentExecutable version | Out-String).Trim()
-if ($environmentVersion -cne 'k2env 0.8.1') {
+if ($environmentVersion -cne 'k2env 0.9.0') {
     throw "Unexpected k2env version output: $environmentVersion"
 }
 
-Write-Output "k2-builder 0.26.0 validation passed ($Configuration); k2env 0.8.1 built at $environmentExecutable."
+$capabilityTestRoot = Join-Path ([IO.Path]::GetTempPath()) ('K2EnvironmentCapabilities-' + [Guid]::NewGuid().ToString('N'))
+try {
+    $capabilityEnvironmentRoot = Join-Path $capabilityTestRoot 'environments'
+    New-Item -ItemType Directory -Path $capabilityEnvironmentRoot | Out-Null
+    $capabilityProfile = [ordered]@{
+        SchemaVersion = 1
+        Name = 'capability-test'
+        Capabilities = [ordered]@{}
+    }
+    [IO.File]::WriteAllText(
+        (Join-Path $capabilityEnvironmentRoot 'capability-test.json'),
+        ($capabilityProfile | ConvertTo-Json -Depth 10),
+        [Text.UTF8Encoding]::new($false))
+    $testFlowId = '11111111-1111-1111-1111-111111111111'
+    $unavailable = (& $environmentExecutable set-langflow --root $capabilityTestRoot --name capability-test --langflow-url 'http://127.0.0.1:1' --langflow-flow-id $testFlowId --output json | Out-String) | ConvertFrom-Json
+    if ($LASTEXITCODE -ne 0 -or
+        -not [bool]$unavailable.langflow.Configured -or
+        [bool]$unavailable.langflow.Available -or
+        [string]$unavailable.langflow.BaseUrl -ne 'http://127.0.0.1:1' -or
+        [string]$unavailable.langflow.FlowId -ne $testFlowId) {
+        throw 'k2env must persist a configured but unavailable Langflow capability.'
+    }
+    $cleared = (& $environmentExecutable set-langflow --root $capabilityTestRoot --name capability-test --no-langflow --output json | Out-String) | ConvertFrom-Json
+    if ($LASTEXITCODE -ne 0 -or [bool]$cleared.langflow.Configured -or [bool]$cleared.langflow.Available) {
+        throw 'k2env must support an explicitly unconfigured Langflow capability.'
+    }
+} finally {
+    if (Test-Path -LiteralPath $capabilityTestRoot) {
+        $tempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\')
+        $resolved = [IO.Path]::GetFullPath($capabilityTestRoot).TrimEnd('\')
+        if (-not $resolved.StartsWith($tempRoot + '\', [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Capability-test cleanup escaped the temporary root: $resolved"
+        }
+        Remove-Item -LiteralPath $resolved -Recurse -Force
+    }
+}
+
+Write-Output "k2-builder 0.26.0 validation passed ($Configuration); k2env 0.9.0 built at $environmentExecutable."

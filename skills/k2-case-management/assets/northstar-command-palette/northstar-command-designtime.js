@@ -30,6 +30,7 @@
         this._searchUrlTemplate = "";
         this._placeholder = "Search cases, work and reports";
         this._assistantEnabled = false;
+        this._assistantExperience = "embedded-widget";
         this._assistantLabel = "Ask Case Assistant";
         this._assistantDescription = "Ask questions and take supported case actions";
         this._langflowHostUrl = "";
@@ -40,6 +41,10 @@
         this._langflowChatPosition = "bottom-right";
         this._langflowWidth = 420;
         this._langflowHeight = 640;
+        this._langflowFileComponentId = "";
+        this._langflowChatInputComponentId = "";
+        this._langflowAllowedFileTypes = ".pdf,.txt,.md,.csv,.docx,.xlsx,.png,.jpg,.jpeg,.gif,.bmp,.webp";
+        this._langflowMaxFileSizeMb = 25;
         this._width = "100%";
         this._height = "48px";
         this._isVisible = true;
@@ -61,6 +66,12 @@
       set Placeholder(value) { this._placeholder = value || "Search cases, work and reports"; this.render(); changed(this, "Placeholder"); }
       get AssistantEnabled() { return this._assistantEnabled; }
       set AssistantEnabled(value) { this._assistantEnabled = value === true || value === "true"; this.render(); changed(this, "AssistantEnabled"); }
+      get AssistantExperience() { return this._assistantExperience; }
+      set AssistantExperience(value) {
+        this._assistantExperience = value === "command-portal" ? value : "embedded-widget";
+        this.render();
+        changed(this, "AssistantExperience");
+      }
       get AssistantLabel() { return this._assistantLabel; }
       set AssistantLabel(value) { this._assistantLabel = value || "Ask Case Assistant"; this.render(); changed(this, "AssistantLabel"); }
       get AssistantDescription() { return this._assistantDescription; }
@@ -84,6 +95,14 @@
       set LangflowWidth(value) { this._langflowWidth = Number(value) || 420; changed(this, "LangflowWidth"); }
       get LangflowHeight() { return this._langflowHeight; }
       set LangflowHeight(value) { this._langflowHeight = Number(value) || 640; changed(this, "LangflowHeight"); }
+      get LangflowFileComponentId() { return this._langflowFileComponentId; }
+      set LangflowFileComponentId(value) { this._langflowFileComponentId = value == null ? "" : String(value); changed(this, "LangflowFileComponentId"); }
+      get LangflowChatInputComponentId() { return this._langflowChatInputComponentId; }
+      set LangflowChatInputComponentId(value) { this._langflowChatInputComponentId = value == null ? "" : String(value); changed(this, "LangflowChatInputComponentId"); }
+      get LangflowAllowedFileTypes() { return this._langflowAllowedFileTypes; }
+      set LangflowAllowedFileTypes(value) { this._langflowAllowedFileTypes = value == null ? "" : String(value); changed(this, "LangflowAllowedFileTypes"); }
+      get LangflowMaxFileSizeMb() { return this._langflowMaxFileSizeMb; }
+      set LangflowMaxFileSizeMb(value) { this._langflowMaxFileSizeMb = Number(value) || 25; changed(this, "LangflowMaxFileSizeMb"); }
       get Width() { return this._width; }
       set Width(value) { this._width = value || "100%"; this.style.width = this._width; changed(this, "Width"); }
       get Height() { return this._height; }
@@ -121,7 +140,9 @@
           const label = document.createElement("span");
           label.textContent = this._placeholder;
           const shortcut = document.createElement("kbd");
-          shortcut.textContent = this._assistantEnabled ? "Ctrl K · Assistant" : "Ctrl K";
+          shortcut.textContent = this._assistantEnabled
+            ? "Ctrl K · " + (this._assistantExperience === "command-portal" ? "Chat portal" : "Assistant")
+            : "Ctrl K";
           preview.append(label, shortcut);
           this._shadow.append(preview);
           this._hasRendered = true;

@@ -9,6 +9,7 @@ namespace K2EnvironmentCli
         public string Name { get; set; }
         public K2Settings K2 { get; set; }
         public UrlSettings Urls { get; set; }
+        public CapabilitySettings Capabilities { get; set; }
         public SmartFormsSettings SmartForms { get; set; }
         public List<SolutionCodeRegistration> SolutionCodes { get; set; }
         public List<ObservedSolutionCode> ObservedSolutionCodes { get; set; }
@@ -17,6 +18,38 @@ namespace K2EnvironmentCli
         public DiscoveryMetadata Discovery { get; set; }
         public string CreatedUtc { get; set; }
         public string LastValidatedUtc { get; set; }
+    }
+
+    public sealed class CapabilitySettings
+    {
+        public LangflowCapability Langflow { get; set; }
+    }
+
+    public sealed class LangflowCapability
+    {
+        public bool Configured { get; set; }
+        public bool Available { get; set; }
+        public string BaseUrl { get; set; }
+        public string HealthUrl { get; set; }
+        public int? HttpStatus { get; set; }
+        public string Version { get; set; }
+        public string FlowId { get; set; }
+        public string FlowName { get; set; }
+        public string ChatInputComponentId { get; set; }
+        public string ReadFileComponentId { get; set; }
+        public LangflowFeatureSet Features { get; set; }
+        public string CheckedUtc { get; set; }
+        public string Message { get; set; }
+    }
+
+    public sealed class LangflowFeatureSet
+    {
+        public bool CommandPortal { get; set; }
+        public bool SessionHistory { get; set; }
+        public bool Streaming { get; set; }
+        public bool ImageAttachments { get; set; }
+        public bool DocumentAttachments { get; set; }
+        public bool CaseMcpTools { get; set; }
     }
 
     public sealed class SolutionCodeRegistration

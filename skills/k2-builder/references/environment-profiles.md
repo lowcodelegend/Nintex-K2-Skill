@@ -14,10 +14,12 @@ k2\
 Run discovery once on a self-hosted K2 machine. It reads the K2 installation registry key and assembly version, maps the SmartForms applications and public binding from IIS, records the current integrated identity, and verifies the management port plus Designer and Runtime routes.
 
 ```powershell
-& '<k2-builder-root>\scripts\k2env.ps1' discover --name spk2-local --default
+& '<k2-builder-root>\scripts\k2env.ps1' discover --name spk2-local --default --langflow-url 'https://langflow.example.com' --langflow-flow-id '<flow-guid>'
 ```
 
 Discovery also queries the supported K2 `FormsManager` API for installed themes, Style Profiles, and likely common framework views, including headers and footers. Candidates include their parameters, controls, view events/rule-action counts, version, category, and consumer-form count. It does not query or modify K2 databases and never writes credentials. Supply `--install-dir`, `--host`, or `--base-url` only to override an incorrectly inferred value.
+
+`--langflow-url` records an optional Langflow base URL and probes its unauthenticated `/health_check` plus `/api/v1/version` endpoints. Add `--langflow-flow-id` to inspect the selected assistant flow through `/api/v1/flows/{id}`. The profile stores only non-secret capability facts: configured/available state, normalized base and health URLs, HTTP status, reported version, check time, diagnostic message, selected flow identity, detected Chat Input/Read File component IDs, and granular feature flags for the command portal, session history, streaming, image attachments, document attachments, and case MCP tools. Use `--no-langflow` to make the feature explicitly unavailable. On refresh, an existing URL and matching flow ID are preserved unless a different selection is supplied; on first discovery, `LANGFLOW_SERVER_URL` and `LANGFLOW_FLOW_ID` are used when no explicit choices are present.
 
 After first discovery, inspect `smartForms.styleProfiles`. If `smartForms.styleProfileSelection` is `unselected`, present each profile's display name, system name, category, and GUID and ask which should apply to newly generated forms by default. Persist either the exact selection or a deliberate opt-out:
 
@@ -51,7 +53,14 @@ If validation passes, use the stored values and do not repeat full discovery. Ap
 
 `explicit user/manifest value → selected environment profile → tool default`
 
-The environment profile supplies K2 host, ports, integrated-authentication mode, security label, install directory, detected product build, Designer host token, public base URLs, installed SmartForms legacy themes/Style Profiles/framework candidates, the chosen default Style Profile, the selected common-framework lifecycle/layout contract, and a durable solution-code registry. For SmartForms use `explicit manifest value → selected environment default → deliberate exception`; stop and ask while either selection is `unselected`. `k2forms` automatically consumes the selected header/footer contract unless `application.commonHeader` explicitly selects/overrides it or disables it with a reason. The profile does not replace application-specific SQL database settings.
+The environment profile supplies K2 host, ports, integrated-authentication mode, security label, install directory, detected product build, Designer host token, public base URLs, optional integration capabilities, installed SmartForms legacy themes/Style Profiles/framework candidates, the chosen default Style Profile, the selected common-framework lifecycle/layout contract, and a durable solution-code registry. Normal build discovery reads `capabilities.langflow.available`, `capabilities.langflow.baseUrl`, and `capabilities.langflow.features`. Enable the command portal only when both the instance and `features.commandPortal` are available; enable each attachment path only when its corresponding feature is true. The detected flow and component IDs supply the normal mapping defaults. For SmartForms use `explicit manifest value → selected environment default → deliberate exception`; stop and ask while either selection is `unselected`. `k2forms` automatically consumes the selected header/footer contract unless `application.commonHeader` explicitly selects/overrides it or disables it with a reason. The profile does not replace application-specific SQL database settings.
+
+Validation re-probes configured Langflow availability without rerunning full K2 inventory. Langflow is optional: an unreachable or unconfigured instance is reported with check status `unavailable` and sets the capability to `available: false`, but does not invalidate an otherwise healthy K2 profile. Reconfigure or clear it independently:
+
+```powershell
+& '<k2-builder-root>\scripts\k2env.ps1' set-langflow --name spk2-local --langflow-url 'https://langflow.example.com' --langflow-flow-id '<flow-guid>'
+& '<k2-builder-root>\scripts\k2env.ps1' set-langflow --name spk2-local --no-langflow
+```
 
 ## Solution short-code uniqueness
 

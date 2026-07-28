@@ -44,9 +44,45 @@
       expectedTitle:"Command palette",realViewFound:true,visuallyHosted:true,
       fallbackHidden:true,ownershipPreserved:true
     }};
-    window.fetch=async function(){
+    window.__portalRequests=[];
+    window.fetch=async function(input,options){
       const denied=new URLSearchParams(location.search).get("auth")==="403";
-      return new Response(denied ? "Forbidden" : "{}",{
+      const url=typeof input==="string"?input:input.url;
+      window.__portalRequests.push({
+        url,
+        method:(options&&options.method)||"GET",
+        body:options&&typeof options.body==="string"?options.body:""
+      });
+      if(denied){
+        return new Response("Forbidden",{status:403,headers:{"Content-Type":"application/json"}});
+      }
+      if(url.includes("/monitor/messages/sessions")){
+        return new Response("[]",{status:200,headers:{"Content-Type":"application/json"}});
+      }
+      if(url.includes("/monitor/messages?")){
+        return new Response("[]",{status:200,headers:{"Content-Type":"application/json"}});
+      }
+      if(url.includes("/api/v2/files")){
+        return new Response(JSON.stringify({id:"file-1",path:"test/file-1.pdf"}),{
+          status:201,headers:{"Content-Type":"application/json"}
+        });
+      }
+      if(url.includes("/api/v1/files/upload/")){
+        return new Response(JSON.stringify({
+          flowId:"72e9cd5a-4b3e-415c-9b3a-76f222c9c160",
+          file_path:"72e9cd5a-4b3e-415c-9b3a-76f222c9c160/test-image.png"
+        }),{status:201,headers:{"Content-Type":"application/json"}});
+      }
+      if(url.includes("/api/v1/run/")){
+        const body=[
+          JSON.stringify({event:"add_message",data:{sender:"Machine",text:""}}),
+          JSON.stringify({event:"token",data:{chunk:"Portal"}}),
+          JSON.stringify({event:"token",data:{chunk:" ready"}}),
+          JSON.stringify({event:"end",data:{result:{message:"Portal ready"}}})
+        ].join("\n")+"\n";
+        return new Response(body,{status:200,headers:{"Content-Type":"application/json"}});
+      }
+      return new Response("{}",{
         status:denied ? 403 : 200,
         headers:{"Content-Type":"application/json"}
       });
@@ -73,11 +109,17 @@
     control.setAttribute("name","NorthstarCommandPalette");
     control.setAttribute("controltype","northstar-command-palette");
     control.AssistantEnabled=true;
+    control.AssistantExperience=new URLSearchParams(location.search).get("experience")==="portal"
+      ?"command-portal":"embedded-widget";
     control.AssistantLabel="Ask Case Assistant";
     control.AssistantDescription="Test the owned overlay";
     control.LangflowHostUrl="https://langflow.example.test";
     control.LangflowFlowId="72e9cd5a-4b3e-415c-9b3a-76f222c9c160";
     control.LangflowAuthenticationMode="server-proxy";
+    control.LangflowWidth=1120;
+    control.LangflowHeight=760;
+    control.LangflowFileComponentId="Read-File-1olS3";
+    control.LangflowChatInputComponentId="ChatInput-b67sL";
     control.Suggestions=[
       {SuggestionCode:"NAV_CASES",Kind:"Navigation",Title:"All cases",Subtitle:"Cases",IconToken:"folder",TargetUrl:"/Runtime/Runtime/Form/APP.All%20Cases",SortOrder:10,IsActive:true},
       {SuggestionCode:"CASE_42",Kind:"Case",Title:"NC-0042 — Coating defect",Subtitle:"Apex Components · Investigate",IconToken:"case",TargetUrl:"/Runtime/Runtime/Form/APP.Case%20Workspace?CaseId=42",SortOrder:20,IsActive:true},
@@ -85,6 +127,9 @@
     ];
     control.addEventListener("Navigate",()=>{document.body.dataset.navigateTarget=control.Value;});
     document.querySelector(".k2sp-command-palette-row").append(control);
+    if(new URLSearchParams(location.search).get("open")==="1"){
+      setTimeout(()=>control._openAssistant(),0);
+    }
   </script>
 </body>
 </html>

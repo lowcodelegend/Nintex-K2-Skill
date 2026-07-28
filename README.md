@@ -77,6 +77,7 @@ Discover and persist this K2 environment once:
 & "$builder\scripts\k2env.ps1" discover --name k2-local --default
 & "$builder\scripts\k2env.ps1" validate --name k2-local
 & "$builder\scripts\k2env.ps1" show --summary --output json
+& "$builder\scripts\k2env.ps1" set-langflow --name k2-local --langflow-url 'https://langflow.example.com' --langflow-flow-id '<flow-guid>'
 ```
 
 Discovery inventories K2/IIS endpoints, Style Profiles, and likely common headers/footers. Complete the prompted defaults once; later projects reuse the non-secret profile.

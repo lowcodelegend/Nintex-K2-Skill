@@ -17,7 +17,7 @@ namespace K2EnvironmentCli
 {
     internal static class Discovery
     {
-        public static EnvironmentProfile Discover(string name, string installOverride, string hostOverride, string baseUrlOverride)
+        public static EnvironmentProfile Discover(string name, string installOverride, string hostOverride, string baseUrlOverride, string langflowUrl, string langflowFlowId)
         {
             var sources = new List<string>();
             var install = ResolveInstallDirectory(installOverride, sources);
@@ -53,6 +53,10 @@ namespace K2EnvironmentCli
                     Designer = CombineUrl(webBase, iis == null ? "/Designer" : iis.DesignerPath),
                     Runtime = CombineUrl(webBase, iis == null ? "/Runtime" : iis.RuntimePath),
                     Management = CombineUrl(webBase, iis == null ? "/Management" : iis.ManagementPath)
+                },
+                Capabilities = new CapabilitySettings
+                {
+                    Langflow = CapabilityDiscovery.Configure(langflowUrl, langflowFlowId)
                 },
                 SmartForms = smartForms,
                 SolutionCodes = new List<SolutionCodeRegistration>(),

@@ -7,7 +7,7 @@ namespace K2EnvironmentCli
 {
     internal static class Cli
     {
-        public const string Version = "0.8.1";
+        public const string Version = "0.9.0";
 
         public static int Run(string[] args)
         {
@@ -22,6 +22,7 @@ namespace K2EnvironmentCli
             if (command == "show") return Show(store, options);
             if (command == "validate") return Validate(store, options);
             if (command == "set-default") return SetDefault(store, options);
+            if (command == "set-langflow") return SetLangflow(store, options);
             if (command == "set-style-profile") return SetStyleProfile(store, options);
             if (command == "inspect-header") return InspectHeader(store, options);
             if (command == "inspect-framework") return InspectHeader(store, options);
@@ -41,7 +42,9 @@ namespace K2EnvironmentCli
                 throw new CliException("Environment profile already exists: " + store.ProfilePath(name) + ". Use refresh to replace it.");
             EnvironmentProfile previous = null;
             if (overwrite && File.Exists(store.ProfilePath(name))) previous = store.Read(name);
-            var profile = Discovery.Discover(name, options.Get("install-dir"), options.Get("host"), options.Get("base-url"));
+            var langflowUrl = ResolveLangflowUrl(previous, options);
+            var langflowFlowId = ResolveLangflowFlowId(previous, options, langflowUrl);
+            var profile = Discovery.Discover(name, options.Get("install-dir"), options.Get("host"), options.Get("base-url"), langflowUrl, langflowFlowId);
             PreserveStyleProfileSelection(previous, profile);
             PreserveCommonHeaderSelection(previous, profile);
             PreserveSolutionCodeRegistrations(previous, profile);
@@ -104,6 +107,83 @@ namespace K2EnvironmentCli
         {
             var name = options.Require("name"); store.SetDefault(name);
             Console.WriteLine("Default K2 environment: " + name); return 0;
+        }
+
+        private static int SetLangflow(ProfileStore store, Options options)
+        {
+            var name = store.ResolveName(options.Get("name"));
+            var profile = store.Read(name);
+            var explicitUrl = options.Get("langflow-url");
+            var explicitFlowId = options.Get("langflow-flow-id");
+            if (options.Has("no-langflow") == !string.IsNullOrWhiteSpace(explicitUrl))
+                throw new CliException("Choose exactly one of --langflow-url URL or --no-langflow.");
+            if (options.Has("no-langflow") && !string.IsNullOrWhiteSpace(explicitFlowId))
+                throw new CliException("--no-langflow cannot be combined with --langflow-flow-id.");
+            var previousCapability = profile.Capabilities == null ? null : profile.Capabilities.Langflow;
+            var flowId = explicitFlowId;
+            if (string.IsNullOrWhiteSpace(flowId) && previousCapability != null &&
+                previousCapability.Configured &&
+                SameBaseUrl(previousCapability.BaseUrl, explicitUrl))
+                flowId = previousCapability.FlowId;
+            if (string.IsNullOrWhiteSpace(flowId))
+                flowId = Environment.GetEnvironmentVariable("LANGFLOW_FLOW_ID");
+            if (profile.Capabilities == null) profile.Capabilities = new CapabilitySettings();
+            profile.Capabilities.Langflow = CapabilityDiscovery.Probe(
+                CapabilityDiscovery.Configure(options.Has("no-langflow") ? null : explicitUrl, flowId));
+            store.Write(profile, true);
+            if (options.IsJson)
+                Console.WriteLine(PrettyJson.Serialize(new { environment = name, langflow = profile.Capabilities.Langflow }));
+            else
+                WriteLangflow(profile.Capabilities.Langflow);
+            return 0;
+        }
+
+        private static string ResolveLangflowUrl(EnvironmentProfile previous, Options options)
+        {
+            if (options.Has("no-langflow"))
+            {
+                if (!string.IsNullOrWhiteSpace(options.Get("langflow-url")))
+                    throw new CliException("--no-langflow cannot be combined with --langflow-url.");
+                return null;
+            }
+            var explicitUrl = options.Get("langflow-url");
+            if (!string.IsNullOrWhiteSpace(explicitUrl)) return explicitUrl;
+            var previousCapability = previous == null || previous.Capabilities == null
+                ? null
+                : previous.Capabilities.Langflow;
+            if (previousCapability != null && previousCapability.Configured &&
+                !string.IsNullOrWhiteSpace(previousCapability.BaseUrl))
+                return previousCapability.BaseUrl;
+            return Environment.GetEnvironmentVariable("LANGFLOW_SERVER_URL");
+        }
+
+        private static string ResolveLangflowFlowId(EnvironmentProfile previous, Options options, string langflowUrl)
+        {
+            if (options.Has("no-langflow"))
+            {
+                if (!string.IsNullOrWhiteSpace(options.Get("langflow-flow-id")))
+                    throw new CliException("--no-langflow cannot be combined with --langflow-flow-id.");
+                return null;
+            }
+            var explicitFlowId = options.Get("langflow-flow-id");
+            if (!string.IsNullOrWhiteSpace(explicitFlowId) && string.IsNullOrWhiteSpace(langflowUrl))
+                throw new CliException("--langflow-flow-id requires a configured Langflow URL.");
+            if (!string.IsNullOrWhiteSpace(explicitFlowId)) return explicitFlowId;
+            var previousCapability = previous == null || previous.Capabilities == null
+                ? null
+                : previous.Capabilities.Langflow;
+            if (previousCapability != null && previousCapability.Configured &&
+                SameBaseUrl(previousCapability.BaseUrl, langflowUrl) &&
+                !string.IsNullOrWhiteSpace(previousCapability.FlowId))
+                return previousCapability.FlowId;
+            return Environment.GetEnvironmentVariable("LANGFLOW_FLOW_ID");
+        }
+
+        private static bool SameBaseUrl(string left, string right)
+        {
+            return !string.IsNullOrWhiteSpace(left) &&
+                !string.IsNullOrWhiteSpace(right) &&
+                string.Equals(left.Trim().TrimEnd('/'), right.Trim().TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
         }
 
         private static int CheckShortCode(ProfileStore store, Options options)
@@ -469,6 +549,7 @@ namespace K2EnvironmentCli
             Console.WriteLine("Install: " + profile.K2.InstallDirectory);
             Console.WriteLine("Designer: " + profile.Urls.Designer);
             Console.WriteLine("Runtime: " + profile.Urls.Runtime);
+            WriteLangflow(profile.Capabilities == null ? null : profile.Capabilities.Langflow);
             if (profile.SmartForms != null)
             {
                 Console.WriteLine("Themes: " + string.Join(", ", (profile.SmartForms.Themes ?? new List<string>()).ToArray()));
@@ -488,6 +569,7 @@ namespace K2EnvironmentCli
         {
             var style = profile.SmartForms == null ? null : profile.SmartForms.DefaultStyleProfile;
             var header = profile.SmartForms == null ? null : profile.SmartForms.DefaultCommonHeader;
+            var langflow = profile.Capabilities == null ? null : profile.Capabilities.Langflow;
             var summary = new
             {
                 name = profile.Name,
@@ -495,6 +577,33 @@ namespace K2EnvironmentCli
                 lastValidatedUtc = profile.LastValidatedUtc,
                 k2 = new { profile.K2.Host, profile.K2.ManagementPort, profile.K2.WorkflowPort, profile.K2.DesignerHost, profile.K2.SecurityLabel, profile.K2.IntegratedAuthentication, profile.K2.Version },
                 urls = profile.Urls,
+                capabilities = new
+                {
+                    langflow = langflow == null ? null : new
+                    {
+                        configured = langflow.Configured,
+                        available = langflow.Available,
+                        baseUrl = langflow.BaseUrl,
+                        healthUrl = langflow.HealthUrl,
+                        httpStatus = langflow.HttpStatus,
+                        version = langflow.Version,
+                        flowId = langflow.FlowId,
+                        flowName = langflow.FlowName,
+                        chatInputComponentId = langflow.ChatInputComponentId,
+                        readFileComponentId = langflow.ReadFileComponentId,
+                        features = langflow.Features == null ? null : new
+                        {
+                            commandPortal = langflow.Features.CommandPortal,
+                            sessionHistory = langflow.Features.SessionHistory,
+                            streaming = langflow.Features.Streaming,
+                            imageAttachments = langflow.Features.ImageAttachments,
+                            documentAttachments = langflow.Features.DocumentAttachments,
+                            caseMcpTools = langflow.Features.CaseMcpTools
+                        },
+                        checkedUtc = langflow.CheckedUtc,
+                        message = langflow.Message
+                    }
+                },
                 styleProfileSelection = profile.SmartForms == null ? null : profile.SmartForms.StyleProfileSelection,
                 styleProfile = style == null ? null : new { style.Guid, style.Name, style.DisplayName, style.CategoryPath },
                 commonHeaderSelection = profile.SmartForms == null ? null : profile.SmartForms.CommonHeaderSelection,
@@ -513,9 +622,34 @@ namespace K2EnvironmentCli
             Console.WriteLine("K2: " + profile.K2.Host + ":" + profile.K2.ManagementPort + ", version " + profile.K2.Version);
             Console.WriteLine("Designer: " + profile.Urls.Designer);
             Console.WriteLine("Runtime: " + profile.Urls.Runtime);
+            WriteLangflow(profile.Capabilities == null ? null : profile.Capabilities.Langflow);
             Console.WriteLine("Style profile: " + (style == null ? "(none)" : style.DisplayName + " [" + style.Name + "]"));
             Console.WriteLine("Common framework: " + (header == null ? "(none)" : header.ViewDisplayName + " [" + header.ViewName + "]" + (header.Footer == null ? "" : " + " + header.Footer.ViewDisplayName)));
             Console.WriteLine("Short-code inventory: " + (profile.ObservedSolutionCodesUtc ?? "unknown") + "; reservations=" + ShortCodeRegistry.Registrations(profile).Count);
+        }
+
+        private static void WriteLangflow(LangflowCapability capability)
+        {
+            if (capability == null || !capability.Configured)
+            {
+                Console.WriteLine("Langflow: unavailable (not configured)");
+                return;
+            }
+            Console.WriteLine("Langflow: " + (capability.Available ? "available" : "unavailable") +
+                " @ " + capability.BaseUrl +
+                (string.IsNullOrWhiteSpace(capability.Version) ? "" : " (v" + capability.Version + ")") +
+                (string.IsNullOrWhiteSpace(capability.CheckedUtc) ? "" : ", checked " + capability.CheckedUtc));
+            if (!string.IsNullOrWhiteSpace(capability.FlowId))
+            {
+                Console.WriteLine("  Flow: " + (string.IsNullOrWhiteSpace(capability.FlowName) ? capability.FlowId : capability.FlowName + " (" + capability.FlowId + ")"));
+                var features = capability.Features ?? new LangflowFeatureSet();
+                Console.WriteLine("  Features: command portal=" + features.CommandPortal.ToString().ToLowerInvariant() +
+                    ", sessions=" + features.SessionHistory.ToString().ToLowerInvariant() +
+                    ", streaming=" + features.Streaming.ToString().ToLowerInvariant() +
+                    ", images=" + features.ImageAttachments.ToString().ToLowerInvariant() +
+                    ", documents=" + features.DocumentAttachments.ToString().ToLowerInvariant() +
+                    ", case MCP=" + features.CaseMcpTools.ToString().ToLowerInvariant());
+            }
         }
 
         private static void WriteHeader(HeaderViewCandidate item, bool detailed)
@@ -542,12 +676,13 @@ namespace K2EnvironmentCli
         {
             Console.WriteLine("k2env " + Version + " - durable K2 Five environment profiles");
             Console.WriteLine("Commands:");
-            Console.WriteLine("  discover --name NAME [--default] [--install-dir PATH] [--host HOST] [--base-url URL]");
-            Console.WriteLine("  refresh  --name NAME [--install-dir PATH] [--host HOST] [--base-url URL]");
+            Console.WriteLine("  discover --name NAME [--default] [--install-dir PATH] [--host HOST] [--base-url URL] [--langflow-url URL [--langflow-flow-id GUID] | --no-langflow]");
+            Console.WriteLine("  refresh  --name NAME [--install-dir PATH] [--host HOST] [--base-url URL] [--langflow-url URL [--langflow-flow-id GUID] | --no-langflow]");
             Console.WriteLine("  show [--name NAME] [--summary] [--output json]");
             Console.WriteLine("  validate [--name NAME] [--output json]");
             Console.WriteLine("  list [--output json]");
             Console.WriteLine("  set-default --name NAME");
+            Console.WriteLine("  set-langflow [--name NAME] (--langflow-url URL [--langflow-flow-id GUID] | --no-langflow) [--output json]");
             Console.WriteLine("  set-style-profile [--name NAME] (--style-profile NAME_OR_GUID | --no-style-profile)");
             Console.WriteLine("  inspect-header [--name NAME] --hint TEXT [--output json]");
             Console.WriteLine("  inspect-framework [--name NAME] --hint TEXT [--output json]");
@@ -579,7 +714,7 @@ namespace K2EnvironmentCli
                 var token = args[i];
                 if (!token.StartsWith("--")) throw new CliException("Unexpected argument: " + token);
                 var name = token.Substring(2);
-                if (name == "default" || name == "no-style-profile" || name == "no-common-header" || name == "adopt-existing" || name == "confirm" || name == "summary" || name == "live") { result._switches.Add(name); continue; }
+                if (name == "default" || name == "no-style-profile" || name == "no-common-header" || name == "no-langflow" || name == "adopt-existing" || name == "confirm" || name == "summary" || name == "live") { result._switches.Add(name); continue; }
                 if (i + 1 >= args.Length || args[i + 1].StartsWith("--")) throw new CliException("Missing value for --" + name + ".");
                 List<string> values;
                 if (!result._values.TryGetValue(name, out values)) { values = new List<string>(); result._values[name] = values; }

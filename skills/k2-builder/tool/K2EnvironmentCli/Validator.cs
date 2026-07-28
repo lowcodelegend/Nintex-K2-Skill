@@ -38,6 +38,12 @@ namespace K2EnvironmentCli
                 registrations.Select(x => x.Code).Distinct(StringComparer.OrdinalIgnoreCase).Count() == registrations.Count;
             Check(checks, "solution-code-registry", validRegistrations,
                 validRegistrations ? registrations.Count + " unique reservation(s)" : "invalid or duplicate solution-code reservation(s)");
+            if (profile.Capabilities == null) profile.Capabilities = new CapabilitySettings();
+            profile.Capabilities.Langflow = CapabilityDiscovery.Probe(profile.Capabilities.Langflow);
+            CheckOptional(checks, "langflow", profile.Capabilities.Langflow.Available,
+                profile.Capabilities.Langflow.Configured
+                    ? profile.Capabilities.Langflow.Message + " " + profile.Capabilities.Langflow.BaseUrl
+                    : profile.Capabilities.Langflow.Message);
             if (hasSmartFormsMetadata && string.Equals(profile.SmartForms.StyleProfileSelection, "selected", StringComparison.OrdinalIgnoreCase))
             {
                 var selected = profile.SmartForms.DefaultStyleProfile;
@@ -60,13 +66,23 @@ namespace K2EnvironmentCli
                 CheckUrl(checks, "designer-url", profile.Urls.Designer);
                 CheckUrl(checks, "runtime-url", profile.Urls.Runtime);
             }
-            var valid = checks.TrueForAll(x => x.Status == "ok");
+            var valid = checks.TrueForAll(x => x.Status != "failed");
             return new ValidationResult { Name = profile.Name, ProfilePath = path, Valid = valid, ValidatedUtc = DateTime.UtcNow.ToString("o"), Checks = checks };
         }
 
         private static void Check(List<ValidationCheck> checks, string name, bool success, string message)
         {
             checks.Add(new ValidationCheck { Name = name, Status = success ? "ok" : "failed", Message = message });
+        }
+
+        private static void CheckOptional(List<ValidationCheck> checks, string name, bool available, string message)
+        {
+            checks.Add(new ValidationCheck
+            {
+                Name = name,
+                Status = available ? "ok" : "unavailable",
+                Message = message
+            });
         }
 
         private static void CheckTcp(List<ValidationCheck> checks, string name, string host, int port)

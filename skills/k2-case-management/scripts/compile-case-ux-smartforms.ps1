@@ -69,26 +69,22 @@ function Add-AgenticChat {
     if($null -eq $enabledProperty -or $chat.enabled -isnot [bool]){throw 'agenticChat.enabled must be a JSON boolean.'}
     if(-not $chat.enabled){return}
 
-    $allowedKeys=@('enabled','integration','viewName','sourcePaletteViewName','controlName','controlType','controlPackage','hostUrl','flowId','scriptUrl','windowTitle','label','description','chatPosition','width','height','authentication','placement')
+    $allowedKeys=@('enabled','integration','viewName','sourcePaletteViewName','controlName','controlType','controlPackage','hostUrl','flowId','scriptUrl','windowTitle','label','description','chatPosition','width','height','fileComponentId','chatInputComponentId','allowedFileTypes','maxFileSizeMb','authentication','placement')
     $unknownKeys=@($chat.PSObject.Properties.Name|Where-Object {$allowedKeys -notcontains [string]$_})
     if($unknownKeys.Count -gt 0){throw "agenticChat contains unsupported or potentially secret-bearing properties: $($unknownKeys -join ', '). Browser API keys, headers, tokens, tweaks, and secrets are forbidden."}
-    if([string]$chat.integration -ne 'command-palette'){throw "agenticChat.integration must be 'command-palette'."}
+    $integration=[string]$chat.integration
+    if($integration -notin @('command-palette','command-portal')){throw "agenticChat.integration must be 'command-palette' or 'command-portal'."}
     if([string]$chat.controlPackage -ne 'assets/northstar-command-palette'){throw "agenticChat.controlPackage must be 'assets/northstar-command-palette'."}
     $assistantControlType=[string](Get-ValueOrDefault $chat.controlType 'northstar-command-palette')
     if($assistantControlType -notmatch '^northstar-[a-z0-9]+(?:-[a-z0-9]+)+$'){
         throw 'agenticChat.controlType must be a stable northstar-* custom-element tag.'
     }
-    foreach($required in @('viewName','hostUrl','flowId','scriptUrl','windowTitle','label','description')){
+    foreach($required in @('viewName','hostUrl','flowId','windowTitle','label','description')){
         if([string]::IsNullOrWhiteSpace([string]$chat.$required)){throw "agenticChat.$required is required when agentic chat is enabled."}
     }
     $approvedScript='https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@v1.0.8/dist/build/static/js/bundle.min.js'
-    if([string]$chat.scriptUrl -cne $approvedScript){throw "agenticChat.scriptUrl must use the approved pinned Langflow v1.0.8 bundle: $approvedScript"}
-    $hostUri=$null
-    if(-not [Uri]::TryCreate([string]$chat.hostUrl,[UriKind]::Absolute,[ref]$hostUri) -or $hostUri.Scheme -ne 'https' -or -not [string]::IsNullOrEmpty($hostUri.Query) -or -not [string]::IsNullOrEmpty($hostUri.Fragment) -or ([string]$chat.hostUrl).EndsWith('/')){
-        throw 'agenticChat.hostUrl must be an absolute HTTPS origin with no query, fragment, or trailing slash.'
-    }
-    $flowGuid=[guid]::Empty
-    if(-not [guid]::TryParse([string]$chat.flowId,[ref]$flowGuid)){throw 'agenticChat.flowId must be a GUID.'}
+    if($integration -eq 'command-palette' -and [string]$chat.scriptUrl -cne $approvedScript){throw "agenticChat.scriptUrl must use the approved pinned Langflow v1.0.8 bundle for command-palette integration: $approvedScript"}
+    if($integration -eq 'command-portal' -and -not [string]::IsNullOrWhiteSpace([string]$chat.scriptUrl)){throw 'agenticChat.scriptUrl must be omitted for command-portal because it replaces the embedded Langflow widget.'}
     if($null -eq $chat.authentication){throw 'agenticChat.authentication.mode is required when agentic chat is enabled.'}
     $authenticationKeys=@($chat.authentication.PSObject.Properties.Name)
     if($authenticationKeys.Count -ne 1 -or $authenticationKeys[0] -ne 'mode'){
@@ -98,13 +94,33 @@ function Add-AgenticChat {
     if($authenticationMode -notin @('server-open-alpha','server-proxy')){
         throw "agenticChat.authentication.mode must be 'server-open-alpha' or 'server-proxy'."
     }
+    $hostUri=$null
+    $validHost=[Uri]::TryCreate([string]$chat.hostUrl,[UriKind]::Absolute,[ref]$hostUri)
+    $isOpenLoopback=$validHost -and $authenticationMode -eq 'server-open-alpha' -and $hostUri.Scheme -eq 'http' -and $hostUri.Host -in @('localhost','127.0.0.1','::1')
+    if(-not $validHost -or ($hostUri.Scheme -ne 'https' -and -not $isOpenLoopback) -or -not [string]::IsNullOrEmpty($hostUri.Query) -or -not [string]::IsNullOrEmpty($hostUri.Fragment) -or ([string]$chat.hostUrl).EndsWith('/')){
+        throw 'agenticChat.hostUrl must be an absolute HTTPS origin, or an HTTP loopback origin in server-open-alpha mode, with no query, fragment, or trailing slash.'
+    }
+    $flowGuid=[guid]::Empty
+    if(-not [guid]::TryParse([string]$chat.flowId,[ref]$flowGuid)){throw 'agenticChat.flowId must be a GUID.'}
     $positions=@('top-left','top-center','top-right','center-left','center-right','bottom-right','bottom-center','bottom-left')
     $position=[string](Get-ValueOrDefault $chat.chatPosition 'bottom-right')
     if($positions -notcontains $position){throw "agenticChat.chatPosition must be one of: $($positions -join ', ')."}
-    $chatWidth=[int](Get-ValueOrDefault $chat.width 420)
-    $chatHeight=[int](Get-ValueOrDefault $chat.height 640)
+    $chatWidth=[int](Get-ValueOrDefault $chat.width $(if($integration -eq 'command-portal'){1120}else{420}))
+    $chatHeight=[int](Get-ValueOrDefault $chat.height $(if($integration -eq 'command-portal'){760}else{640}))
     if($chatWidth -lt 320 -or $chatWidth -gt 1200){throw 'agenticChat.width must be between 320 and 1200 pixels.'}
     if($chatHeight -lt 420 -or $chatHeight -gt 1200){throw 'agenticChat.height must be between 420 and 1200 pixels.'}
+    $fileComponentId=[string](Get-ValueOrDefault $chat.fileComponentId '')
+    if(-not [string]::IsNullOrWhiteSpace($fileComponentId) -and $fileComponentId -notmatch '^[A-Za-z][A-Za-z0-9_-]{1,127}$'){
+        throw 'agenticChat.fileComponentId must be a stable Langflow component ID containing only letters, numbers, underscore, and hyphen.'
+    }
+    $chatInputComponentId=[string](Get-ValueOrDefault $chat.chatInputComponentId '')
+    if(-not [string]::IsNullOrWhiteSpace($chatInputComponentId) -and $chatInputComponentId -notmatch '^[A-Za-z][A-Za-z0-9_-]{1,127}$'){
+        throw 'agenticChat.chatInputComponentId must be a stable Langflow component ID containing only letters, numbers, underscore, and hyphen.'
+    }
+    $allowedFileTypes=[string](Get-ValueOrDefault $chat.allowedFileTypes '.pdf,.txt,.md,.csv,.docx,.xlsx,.png,.jpg,.jpeg,.gif,.bmp,.webp')
+    if($allowedFileTypes -notmatch '^\.[A-Za-z0-9]+(?:,\.[A-Za-z0-9]+)*$'){throw 'agenticChat.allowedFileTypes must be a comma-separated extension allowlist such as .pdf,.txt,.png.'}
+    $maxFileSizeMb=[int](Get-ValueOrDefault $chat.maxFileSizeMb 25)
+    if($maxFileSizeMb -lt 1 -or $maxFileSizeMb -gt 100){throw 'agenticChat.maxFileSizeMb must be between 1 and 100.'}
     if($null -eq $chat.placement -or [string]::IsNullOrWhiteSpace([string]$chat.placement.formName) -or [string]::IsNullOrWhiteSpace([string]$chat.placement.tab)){
         throw 'agenticChat.placement.formName and agenticChat.placement.tab are required.'
     }
@@ -132,16 +148,21 @@ function Add-AgenticChat {
     Set-ObjectProperty $assistantControl.properties 'TagName' $assistantControlType
     foreach($property in ([ordered]@{
         AssistantEnabled=$true
+        AssistantExperience=$(if($integration -eq 'command-portal'){'command-portal'}else{'embedded-widget'})
         AssistantLabel=[string]$chat.label
         AssistantDescription=[string]$chat.description
         LangflowHostUrl=[string]$chat.hostUrl
         LangflowFlowId=[string]$flowGuid
-        LangflowScriptUrl=$approvedScript
+        LangflowScriptUrl=$(if($integration -eq 'command-portal'){''}else{$approvedScript})
         LangflowAuthenticationMode=$authenticationMode
         LangflowWindowTitle=[string]$chat.windowTitle
         LangflowChatPosition=$position
         LangflowWidth=$chatWidth
         LangflowHeight=$chatHeight
+        LangflowFileComponentId=$fileComponentId
+        LangflowChatInputComponentId=$chatInputComponentId
+        LangflowAllowedFileTypes=$allowedFileTypes
+        LangflowMaxFileSizeMb=$maxFileSizeMb
     }).GetEnumerator()){Set-ObjectProperty $assistantControl.properties ([string]$property.Key) $property.Value}
     $Manifest.application.views=@($Manifest.application.views)+@($assistantView)
 
@@ -161,9 +182,9 @@ function Add-AgenticChat {
     if($null -eq $targetForm.viewTitles){Set-ObjectProperty $targetForm 'viewTitles' ([pscustomobject]@{})}
     Set-ObjectProperty $targetForm.viewTitles ([string]$chat.viewName) $paletteViewTitle
     if($authenticationMode -eq 'server-open-alpha'){
-        Write-Warning "ERRATA: '$($chat.viewName)' uses server-open-alpha Langflow authentication. This is temporary development configuration only: set LANGFLOW_AUTO_LOGIN=true and LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true on the Langflow server, restart it, and replace this mode with a governed server-side proxy/token exchange before production."
+        Write-Warning "ERRATA: '$($chat.viewName)' uses server-open-alpha Langflow access for the $integration experience. This is temporary internal development configuration only: set LANGFLOW_AUTO_LOGIN=true and LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true on the Langflow server and restart it before testing."
     } else {
-        Write-Warning "ERRATA: '$($chat.viewName)' loads the pinned Langflow widget through a governed server proxy. Verify the proxy's authenticated user/token-exchange contract, K2 CSP/CORS, case-context claims, and 401/403 behavior before production; no reusable API key is embedded."
+        Write-Warning "ERRATA: '$($chat.viewName)' uses the $integration experience through a governed server proxy. Verify the proxy, K2 CSP/CORS, case-context claims, and failure behavior before production; no reusable API key is embedded."
     }
 }
 

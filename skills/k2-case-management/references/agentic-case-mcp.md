@@ -24,7 +24,7 @@ Give the displayed bearer token only to the Langflow secret store. Put the emitt
 & scripts/case-agent-mcp.ps1 serve .\case-agent-mcp-server.yaml
 ```
 
-The endpoint is `<publicBaseUrl><mcpPath>`, normally `https://case-agent.example/mcp`. `/healthz` reports service readiness, authentication mode, mutation state, draft durability, and `creationMode` (`disabled`, `alpha`, or `adapter`).
+The endpoint is `<publicBaseUrl><mcpPath>`, normally `https://case-agent.example/mcp`. `/healthz` reports service readiness, authentication mode, mutation state, draft durability, `creationMode` (`disabled`, `alpha`, or `adapter`), `caseOperationsAvailable`, and `authoritativeCaseWritesAvailable`.
 
 ### Temporary unauthenticated development
 
@@ -37,7 +37,8 @@ Use `assets/case-agent-mcp-development.yaml` only when the user explicitly asks 
 - `runtime.alphaCaseStore.enabled` and `acknowledgeNonProduction` are explicitly `true`.
 - `runtime.alphaCaseStore.path` names the local SQLite case store and `caseNumberPrefix` visibly identifies its records.
 - Commit scope is granted internally only while all alpha gates are satisfied; it cannot be supplied as an arbitrary configuration scope.
-- `runtime.factory` remains absent, so no external data provider or K2 adapter is reachable.
+- `runtime.factory` remains absent, so alpha creation cannot reach a production creation adapter.
+- Optional K2 case reads require `security.allowUnauthenticatedCaseReads:true` plus an explicitly enabled read-only `runtime.caseOperations` block. Use that combination only for the requested internal test boundary and synthetic/non-sensitive data.
 - Drafts are memory-only and disappear when the server restarts.
 - Confirmed cases survive restarts in the alpha SQLite store, retain the exact canonical/extension/file-handle snapshot, receive a stable case ID and number, and start in `CAPTURE` with `submitted:false`.
 
@@ -58,6 +59,18 @@ Use the MCP Tools component as the Agent component's toolset. Keep tool caching 
 Instruct the agent to call `list_permitted_case_types` before selecting a case type and to use `description`, `useWhen`, `doNotUseWhen`, and `expectedOutcome` when explaining or routing the request. It must not choose from `name` alone. Call `get_case_creation_contract` only after the case type is selected to collect its governed fields.
 
 ## Tools and scopes
+
+`case:read` permits the optional, bounded K2 case-operation tools:
+
+- `search_cases`
+- `get_case`
+- `get_case_timeline`
+- `list_case_evidence`
+- `get_allowed_case_actions`
+- `get_submission_readiness`
+- `get_case_action_status`
+
+The built-in `k2-cli` provider accepts only those operations and fixed SmartObject mappings; it does not accept caller-supplied SmartObject names, methods, SQL, or workflow identifiers. Build `tool/K2CaseOperationsCli/K2CaseOperationsCli.csproj`, configure its executable path and K2 host connection in `runtime.caseOperations`, keep `authoritativeWritesEnabled:false` and `commandProcessorVerified:false`, and opt into `--read` when generating a static bearer token.
 
 `case:create` permits:
 
