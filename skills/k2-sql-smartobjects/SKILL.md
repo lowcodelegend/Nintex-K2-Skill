@@ -1,9 +1,13 @@
 ---
 name: k2-sql-smartobjects
-description: Build, update, inspect, verify, and clean up SQL Server-backed SmartObjects in self-hosted Nintex K2 Five using declarative JSON manifests and the bundled k2sql .NET CLI. Use for SQL data models including master-detail relationships, approval matrices, governed lookups, reusable standard reference data, constraints, tables/views/procedures, SQL Service Instances, generated SmartObjects, troubleshooting, or repeatable deployments. Do not use for SmartBox, SharePoint, REST, Oracle, SmartForms, or workflow construction.
+description: Build, update, inspect, verify, and clean up SQL Server-backed SmartObjects in self-hosted Nintex K2 Five using declarative JSON manifests and the bundled k2sql .NET CLI. Use for SQL data models including master-detail relationships, approval matrices, governed lookups, reusable standard reference data, constraints, tables/views/procedures, SQL Service Instances, generated SmartObjects, troubleshooting, or repeatable deployments. When a request says only SmartObject or data model without choosing a backend, ask whether to use SQL or SmartBox. Do not use for native SmartBox storage, SharePoint, REST, Oracle, SmartForms, or workflow construction.
 ---
 
 # K2 SQL SmartObjects
+
+## Select the backend first
+
+If the user has not selected a backend, ask: **“Should this data use native K2 SmartBox storage or a SQL Server backend?”** Recommend SQL for relationships, constraints, procedures, reporting, approval matrices, integration, or material scale. Recommend `$k2-smartbox-smartobjects` for simple K2-owned CRUD, prototypes, and small lists. If SmartBox is selected, hand off to that skill and do not create a SQL manifest.
 
 Deploy a SQL model and its K2 SQL Server Service Instance as one repeatable unit. Never change K2 databases directly or automate K2 Management UI.
 

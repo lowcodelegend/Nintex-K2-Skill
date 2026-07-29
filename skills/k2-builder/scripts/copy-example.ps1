@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('corporate-workflow', 'expense-claim', 'request-management')]
+    [ValidateSet('corporate-workflow', 'expense-claim', 'request-management', 'smartbox-request')]
     [string]$Name,
 
     [Parameter(Mandatory = $true)]
@@ -34,25 +34,50 @@ function Assert-ExampleReference {
 
 function Assert-ExampleIntegrity {
     param([Parameter(Mandatory = $true)][string]$ExampleRoot)
-    $smartObjectsPath = Join-Path $ExampleRoot 'manifest.json'
+    $solutionPath = Join-Path $ExampleRoot 'solution-manifest.json'
+    $solution = if (Test-Path -LiteralPath $solutionPath -PathType Leaf) {
+        Get-Content -LiteralPath $solutionPath -Raw | ConvertFrom-Json
+    } else {
+        $null
+    }
+    $smartObjectsRelative = if ($null -ne $solution -and $null -ne $solution.components.smartObjects) {
+        [string]$solution.components.smartObjects.manifest
+    } else {
+        'manifest.json'
+    }
+    $smartObjectsPath = Join-Path $ExampleRoot $smartObjectsRelative
     if (-not (Test-Path -LiteralPath $smartObjectsPath -PathType Leaf)) {
-        throw "Bundled example has no manifest.json: $ExampleRoot"
+        throw "Bundled example has no SmartObjects manifest: $smartObjectsPath"
     }
     $smartObjects = Get-Content -LiteralPath $smartObjectsPath -Raw | ConvertFrom-Json
-    foreach ($script in @($smartObjects.database.scripts)) {
-        Assert-ExampleReference $ExampleRoot ([string]$script) 'manifest.json database.scripts'
+    $databaseScripts = if ($null -ne $smartObjects.PSObject.Properties['database'] -and
+        $null -ne $smartObjects.database -and
+        $null -ne $smartObjects.database.PSObject.Properties['scripts']) {
+        @($smartObjects.database.scripts)
+    } else {
+        @()
+    }
+    foreach ($script in $databaseScripts) {
+        if ($null -ne $script) {
+            Assert-ExampleReference $ExampleRoot ([string]$script) "$smartObjectsRelative database.scripts"
+        }
     }
 
-    $solutionPath = Join-Path $ExampleRoot 'solution-manifest.json'
-    if (Test-Path -LiteralPath $solutionPath -PathType Leaf) {
-        $solution = Get-Content -LiteralPath $solutionPath -Raw | ConvertFrom-Json
-        if ($null -ne $solution.components.smartObjects) {
+    if ($null -ne $solution) {
+        if ($null -ne $solution.components.PSObject.Properties['smartObjects'] -and
+            $null -ne $solution.components.smartObjects) {
             Assert-ExampleReference $ExampleRoot ([string]$solution.components.smartObjects.manifest) 'solution-manifest.json components.smartObjects'
         }
-        if ($null -ne $solution.components.forms) {
+        if ($null -ne $solution.components.PSObject.Properties['forms'] -and
+            $null -ne $solution.components.forms) {
             Assert-ExampleReference $ExampleRoot ([string]$solution.components.forms.manifest) 'solution-manifest.json components.forms'
         }
-        foreach ($workflow in @($solution.components.workflows)) {
+        $exampleWorkflows = if ($null -ne $solution.components.PSObject.Properties['workflows']) {
+            @($solution.components.workflows)
+        } else {
+            @()
+        }
+        foreach ($workflow in $exampleWorkflows) {
             if ($null -ne $workflow) {
                 Assert-ExampleReference $ExampleRoot ([string]$workflow.manifest) 'solution-manifest.json components.workflows'
             }

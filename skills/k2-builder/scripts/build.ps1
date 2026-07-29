@@ -46,7 +46,7 @@ foreach ($assetName in @('solution-manifest.template.json', 'deployment-ledger.t
 $exampleTestRoot = Join-Path ([IO.Path]::GetTempPath()) ('K2BuilderExamples-' + [Guid]::NewGuid().ToString('N'))
 try {
     New-Item -ItemType Directory -Path $exampleTestRoot | Out-Null
-    foreach ($exampleName in @('corporate-workflow', 'expense-claim', 'request-management')) {
+    foreach ($exampleName in @('corporate-workflow', 'expense-claim', 'request-management', 'smartbox-request')) {
         $destination = Join-Path $exampleTestRoot $exampleName
         & (Join-Path $PSScriptRoot 'copy-example.ps1') -Name $exampleName -Destination $destination | Out-Null
         if ($LASTEXITCODE -ne 0) { throw "Example copy validation failed: $exampleName" }
@@ -122,7 +122,7 @@ if ($agentContent -notmatch '(?m)^\s*default_prompt:\s*"Use \$k2-builder .+"\s*$
 }
 
 $actualVersion = (& $entryPoint version | Out-String).Trim()
-if ($actualVersion -cne 'k2build 0.26.0') {
+if ($actualVersion -cne 'k2build 0.27.0') {
     throw "Unexpected k2build version output: $actualVersion"
 }
 $environmentExecutable = Join-Path $skillRoot "tool\K2EnvironmentCli\bin\$Configuration\k2env.exe"
@@ -168,4 +168,4 @@ try {
     }
 }
 
-Write-Output "k2-builder 0.26.0 validation passed ($Configuration); k2env 0.9.0 built at $environmentExecutable."
+Write-Output "k2-builder 0.27.0 validation passed ($Configuration); k2env 0.9.0 built at $environmentExecutable."

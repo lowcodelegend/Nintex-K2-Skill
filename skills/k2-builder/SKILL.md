@@ -1,13 +1,13 @@
 ---
 name: k2-builder
-description: Orchestrate, verify, and clean up complete self-hosted Nintex K2 Five solutions across SQL-backed SmartObjects, modern SmartForms, and HTML5 workflows, with durable K2 environment profiles. Use when turning requirements into an ordered artifact graph, coordinating specialist skills, designing lookup, approval-matrix, or master-detail contracts, enforcing cross-artifact defaults, verifying an end-to-end application, or tearing down a generated solution from its manifest. Do not use as a replacement for the specialist skills or for unsupported K2 artifact types.
+description: Orchestrate, verify, and clean up complete self-hosted Nintex K2 Five solutions across SQL- or SmartBox-backed SmartObjects, modern SmartForms, and HTML5 workflows, with durable K2 environment profiles. Use when turning requirements into an ordered artifact graph, choosing a data backend, coordinating specialist skills, designing lookup, approval-matrix, or master-detail contracts, enforcing cross-artifact defaults, verifying an end-to-end application, or tearing down a generated solution from its manifest. Do not use as a replacement for the specialist skills or for unsupported K2 artifact types.
 ---
 
 # K2 solution builder
 
 Coordinate the installed specialists in dependency order:
 
-1. `$k2-sql-smartobjects` for SQL, Service Instances, and generated SmartObjects.
+1. Ask the user to choose native SmartBox or SQL Server when the backend is not stated. Use `$k2-smartbox-smartobjects` for simple K2-owned CRUD, or `$k2-sql-smartobjects` for relational, procedural, reporting, integration, approval-matrix, or higher-scale data.
 2. `$k2-smartforms-web-components` for any declared modern K2 5.9+ Web Component package and registration.
 3. `$k2-smartforms` for Views, Forms, rules, runtime CRUD, and placement of registered modern controls.
 4. `$k2-workflows` for HTML5 workflows and SmartForms integration.
@@ -26,7 +26,7 @@ Before naming artifacts, choose a three- or four-letter uppercase code, run `che
 
 ## Build
 
-1. Read [solution-manifest.md](references/solution-manifest.md) and [contracts.md](references/contracts.md). Create the solution manifest beside its specialist manifests. Start from [solution-manifest.template.json](assets/solution-manifest.template.json), or use `scripts/copy-example.ps1` for `corporate-workflow`, `expense-claim`, or `request-management`; adapt examples and never deploy them blindly.
+1. Read [solution-manifest.md](references/solution-manifest.md) and [contracts.md](references/contracts.md). Create the solution manifest beside its specialist manifests. Start from [solution-manifest.template.json](assets/solution-manifest.template.json), or use `scripts/copy-example.ps1` for `corporate-workflow`, `expense-claim`, `request-management`, or `smartbox-request`; adapt examples and never deploy them blindly.
 2. Resolve every lookup, approval-matrix, master-detail, form-state, presentation, identity, and ownership decision required by the contracts.
 3. Run `scripts/k2build.ps1 validate -Manifest <solution-manifest.json>`, then `plan` and present its dependency-ordered mutations and assumptions.
 4. A request to build/create/deploy authorizes `deploy ... -Confirm` after that checkpoint. Stop on the first failed layer and preserve successful prerequisites. After interruption use `-Resume`; use `k2forms ... --forms-only` only when Views are known-good.

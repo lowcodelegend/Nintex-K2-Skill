@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "name": "SBQ.Native request data",
+  "application": {
+    "rootCategoryPath": "K2 Skills\\SBQ.Native Requests"
+  },
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "deployment": {
+    "updateExisting": false
+  },
+  "smartObjects": [
+    {
+      "systemName": "SBQ_Request",
+      "displayName": "SBQ.Request",
+      "properties": [
+        {
+          "name": "RequestId",
+          "displayName": "Request ID",
+          "type": "AutoNumber",
+          "key": true
+        },
+        {
+          "name": "Title",
+          "displayName": "Title",
+          "type": "Text",
+          "required": true,
+          "maxLength": 200
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "smokeTestLists": true
+  }
+}

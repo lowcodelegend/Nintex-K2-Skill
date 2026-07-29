@@ -1,0 +1,4 @@
+interface:
+  display_name: "K2 SmartBox SmartObjects"
+  short_description: "Build native K2 SmartBox SmartObjects"
+  default_prompt: "Use $k2-smartbox-smartobjects to build a native SmartBox-backed K2 data model."

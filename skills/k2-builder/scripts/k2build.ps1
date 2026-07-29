@@ -17,7 +17,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if ($Command -eq 'version') {
-    Write-Output 'k2build 0.26.0'
+    Write-Output 'k2build 0.27.0'
     return
 }
 
@@ -185,19 +185,26 @@ if ($null -eq $smartObjects -and $null -eq $forms -and $workflows.Count -eq 0) {
 $smartObjectsPath = $null
 $formsPath = $null
 $smartObjectsManifest = $null
+$smartObjectBackend = $null
 $formsManifest = $null
 $approvalMatrices = @()
 $sqlMasterDetails = @()
 $sqlFormConstraints = @()
 
 if ($null -ne $smartObjects) {
+    $smartObjectBackend = ([string](Get-PropertyValue $smartObjects 'backend')).ToLowerInvariant()
+    if ($smartObjectBackend -notin @('sql', 'smartbox')) {
+        Add-Issue 'components.smartObjects.backend is required and must be sql or smartbox.'
+    }
     $smartObjectsPath = Resolve-ComponentManifest $smartObjects 'components.smartObjects'
     if ($null -ne $smartObjectsPath) {
         $smartObjectsManifest = Read-JsonFile $smartObjectsPath 'SmartObjects'
+        $smartObjectSkill = if ($smartObjectBackend -eq 'smartbox') { 'k2-smartbox-smartobjects' } else { 'k2-sql-smartobjects' }
+        $smartObjectWrapper = if ($smartObjectBackend -eq 'smartbox') { 'k2smartbox.ps1' } else { 'k2sql.ps1' }
         $planItems.Add([pscustomobject]@{
-            order = 1; component = 'smartObjects'; skill = 'k2-sql-smartobjects'
+            order = 1; component = 'smartObjects'; skill = $smartObjectSkill
             manifest = $smartObjectsPath; dependsOn = @()
-            planCommand = "& '<k2-sql-smartobjects-root>\scripts\k2sql.ps1' plan --manifest '$smartObjectsPath'"
+            planCommand = "& '<$smartObjectSkill-root>\scripts\$smartObjectWrapper' plan --manifest '$smartObjectsPath'"
         })
     }
 }
@@ -211,33 +218,40 @@ if ($null -ne $smartObjectsManifest) {
     } elseif ($smartObjectsRoot -ne $rootCategoryPath) {
         Add-Issue "SmartObjects rootCategoryPath '$smartObjectsRoot' does not match solution root '$rootCategoryPath'."
     }
-    $database = Get-PropertyValue $smartObjectsManifest 'database'
-    Test-ShortCodePrefix ([string](Get-PropertyValue $database 'name')) 'Database name'
-    $smartObjectK2 = Get-PropertyValue $smartObjectsManifest 'k2'
-    $serviceInstance = Get-PropertyValue $smartObjectK2 'serviceInstance'
-    Test-ShortCodePrefix ([string](Get-PropertyValue $serviceInstance 'systemName')) 'Service Instance system name'
-    Test-ShortCodePrefix ([string](Get-PropertyValue $serviceInstance 'displayName')) 'Service Instance display name'
-    $sqlVerification = Get-PropertyValue $smartObjectsManifest 'verification'
-    foreach ($sqlObject in @(Get-PropertyValue $sqlVerification 'sqlObjects')) {
-        $qualifiedName = ([string](Get-PropertyValue $sqlObject 'schema')) + '.' + ([string](Get-PropertyValue $sqlObject 'name'))
-        Test-ShortCodePrefix $qualifiedName 'Fully qualified SQL object name'
+    if ($smartObjectBackend -eq 'sql') {
+        $database = Get-PropertyValue $smartObjectsManifest 'database'
+        Test-ShortCodePrefix ([string](Get-PropertyValue $database 'name')) 'Database name'
+        $smartObjectK2 = Get-PropertyValue $smartObjectsManifest 'k2'
+        $serviceInstance = Get-PropertyValue $smartObjectK2 'serviceInstance'
+        Test-ShortCodePrefix ([string](Get-PropertyValue $serviceInstance 'systemName')) 'Service Instance system name'
+        Test-ShortCodePrefix ([string](Get-PropertyValue $serviceInstance 'displayName')) 'Service Instance display name'
+        $sqlVerification = Get-PropertyValue $smartObjectsManifest 'verification'
+        foreach ($sqlObject in @(Get-PropertyValue $sqlVerification 'sqlObjects')) {
+            $qualifiedName = ([string](Get-PropertyValue $sqlObject 'schema')) + '.' + ([string](Get-PropertyValue $sqlObject 'name'))
+            Test-ShortCodePrefix $qualifiedName 'Fully qualified SQL object name'
+        }
+        $approvalMatrices = @(Get-PropertyValue $smartObjectsManifest 'approvalMatrices')
+        if ($approvalMatrices.Count -eq 1 -and $null -eq $approvalMatrices[0]) { $approvalMatrices = @() }
+        foreach ($matrix in $approvalMatrices) {
+            $matrixCode = [string](Get-PropertyValue $matrix 'matrixCode')
+            $matrixName = [string](Get-PropertyValue $matrix 'name')
+            $matrixSchema = [string](Get-PropertyValue $matrix 'schema')
+            Test-ShortCodePrefix $matrixName 'Approval matrix name'
+            Test-ShortCodePrefix $matrixCode 'Approval matrix code'
+            Test-ShortCodePrefix ($matrixSchema + '.' + [string](Get-PropertyValue $matrix 'table')) 'Approval matrix table'
+            Test-ShortCodePrefix ($matrixSchema + '.' + [string](Get-PropertyValue $matrix 'resolverProcedure')) 'Approval matrix resolver procedure'
+        }
+        $sqlMasterDetails = @(Get-PropertyValue $smartObjectsManifest 'masterDetails')
+        if ($sqlMasterDetails.Count -eq 1 -and $null -eq $sqlMasterDetails[0]) { $sqlMasterDetails = @() }
+        $sqlFormConstraints = @(Get-PropertyValue $smartObjectsManifest 'formConstraints')
+        if ($sqlFormConstraints.Count -eq 1 -and $null -eq $sqlFormConstraints[0]) { $sqlFormConstraints = @() }
     }
-
-    $approvalMatrices = @(Get-PropertyValue $smartObjectsManifest 'approvalMatrices')
-    if ($approvalMatrices.Count -eq 1 -and $null -eq $approvalMatrices[0]) { $approvalMatrices = @() }
-    foreach ($matrix in $approvalMatrices) {
-        $matrixCode = [string](Get-PropertyValue $matrix 'matrixCode')
-        $matrixName = [string](Get-PropertyValue $matrix 'name')
-        $matrixSchema = [string](Get-PropertyValue $matrix 'schema')
-        Test-ShortCodePrefix $matrixName 'Approval matrix name'
-        Test-ShortCodePrefix $matrixCode 'Approval matrix code'
-        Test-ShortCodePrefix ($matrixSchema + '.' + [string](Get-PropertyValue $matrix 'table')) 'Approval matrix table'
-        Test-ShortCodePrefix ($matrixSchema + '.' + [string](Get-PropertyValue $matrix 'resolverProcedure')) 'Approval matrix resolver procedure'
+    elseif ($smartObjectBackend -eq 'smartbox') {
+        foreach ($item in @(Get-PropertyValue $smartObjectsManifest 'smartObjects')) {
+            Test-SmartObjectPrefix ([string](Get-PropertyValue $item 'systemName')) 'SmartBox SmartObject system name'
+            Test-ShortCodePrefix ([string](Get-PropertyValue $item 'displayName')) 'SmartBox SmartObject display name'
+        }
     }
-    $sqlMasterDetails = @(Get-PropertyValue $smartObjectsManifest 'masterDetails')
-    if ($sqlMasterDetails.Count -eq 1 -and $null -eq $sqlMasterDetails[0]) { $sqlMasterDetails = @() }
-    $sqlFormConstraints = @(Get-PropertyValue $smartObjectsManifest 'formConstraints')
-    if ($sqlFormConstraints.Count -eq 1 -and $null -eq $sqlFormConstraints[0]) { $sqlFormConstraints = @() }
 }
 
 if ($null -ne $forms) {
@@ -445,6 +459,9 @@ if ($null -ne $formsManifest) {
 
 $masterDetailPolicies = @(Get-PropertyValue $policies 'masterDetails')
 if ($masterDetailPolicies.Count -eq 1 -and $null -eq $masterDetailPolicies[0]) { $masterDetailPolicies = @() }
+if ($smartObjectBackend -eq 'smartbox' -and $masterDetailPolicies.Count -gt 0) {
+    Add-Issue 'policies.masterDetails requires components.smartObjects.backend=sql; SmartBox does not enforce relational integrity.'
+}
 $formMasterDetails = @()
 if ($null -ne $formsManifest) {
     $formsApplication = Get-PropertyValue $formsManifest 'application'
@@ -711,6 +728,7 @@ $result = [pscustomobject]@{
     rootCategoryPath = $rootCategoryPath
     dataCategoryPath = $dataCategoryPath
     adminCategoryPath = $adminCategoryPath
+    smartObjectBackend = $smartObjectBackend
     dataModelComplexity = $dataModelComplexity
     approvalMatrices = @($approvalMatrices | ForEach-Object {
         [pscustomobject]@{
@@ -736,6 +754,7 @@ else {
     Write-Output "Short code: $shortCode"
     Write-Output "Root category: $rootCategoryPath"
     Write-Output "SmartObject category: $dataCategoryPath"
+    if ($null -ne $smartObjects) { Write-Output "SmartObject backend: $smartObjectBackend" }
     Write-Output "Administration category: $adminCategoryPath"
     Write-Output "Data model complexity: $dataModelComplexity"
     foreach ($matrix in $result.approvalMatrices) {
@@ -775,8 +794,9 @@ if ($issues.Count -gt 0) { throw "K2 solution validation failed with $($issues.C
 
 if ($Command -in @('deploy', 'verify', 'cleanup')) {
     if ($Output -ne 'text') { throw "$Command supports text output only; specialist structured deployment results are not yet available." }
-    if ($Command -in @('deploy', 'cleanup') -and -not $Confirm) { throw "$Command changes SQL and K2 state. Review the manifest and rerun with -Confirm." }
+    if ($Command -in @('deploy', 'cleanup') -and -not $Confirm) { throw "$Command changes K2 and possibly SQL state. Review the manifest and rerun with -Confirm." }
     if ($DropDatabase -and $Command -ne 'cleanup') { throw '-DropDatabase is valid only with cleanup.' }
+    if ($DropDatabase -and $smartObjectBackend -ne 'sql') { throw '-DropDatabase is valid only when components.smartObjects.backend is sql.' }
 
     function Invoke-Specialist {
         param($Item, [string]$Action, [switch]$ResumeForms, [switch]$DropApplicationDatabase, [switch]$DeleteRootCategory)
@@ -784,6 +804,7 @@ if ($Command -in @('deploy', 'verify', 'cleanup')) {
         $skillsRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
         $scriptPath = Join-Path $skillsRoot (Join-Path $Item.skill ('scripts\' + $(
             if ($Item.skill -eq 'k2-sql-smartobjects') { 'k2sql.ps1' }
+            elseif ($Item.skill -eq 'k2-smartbox-smartobjects') { 'k2smartbox.ps1' }
             elseif ($Item.skill -eq 'k2-smartforms') { 'k2forms.ps1' }
             else { 'k2wf.ps1' }
         )))
@@ -824,7 +845,11 @@ if ($Command -in @('deploy', 'verify', 'cleanup')) {
                 -DeleteRootCategory:($cleanupIndex -eq $cleanupItems.Count - 1)
         }
         Write-Output "K2 solution cleanup succeeded: $solutionName"
-        Write-Output "Database: $(if ($DropDatabase) { 'dropped as requested' } else { 'preserved; use -DropDatabase only for disposable application data' })"
+        if ($smartObjectBackend -eq 'sql') {
+            Write-Output "Database: $(if ($DropDatabase) { 'dropped as requested' } else { 'preserved; use -DropDatabase only for disposable application data' })"
+        } else {
+            Write-Output 'Data backend: SmartBox objects deleted with their manifest-owned K2 artifacts'
+        }
         Write-Output 'K2 categories: empty solution-owned descendants and root removed; non-empty categories preserved'
         Write-Output 'Solution short-code reservation: preserved'
         return

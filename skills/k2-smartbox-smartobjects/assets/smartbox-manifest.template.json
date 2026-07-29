@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "name": "ABC.Application data",
+  "application": {
+    "rootCategoryPath": "K2 Skills\\ABC.Application"
+  },
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "deployment": {
+    "updateExisting": false
+  },
+  "smartObjects": [
+    {
+      "systemName": "ABC_Request",
+      "displayName": "ABC.Request",
+      "description": "A native SmartBox request.",
+      "properties": [
+        {
+          "name": "RequestId",
+          "displayName": "Request ID",
+          "type": "AutoNumber",
+          "key": true
+        },
+        {
+          "name": "Title",
+          "displayName": "Title",
+          "type": "Text",
+          "required": true,
+          "maxLength": 200
+        },
+        {
+          "name": "Notes",
+          "displayName": "Notes",
+          "type": "Memo"
+        },
+        {
+          "name": "Active",
+          "displayName": "Active",
+          "type": "YesNo"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "smokeTestLists": true
+  }
+}

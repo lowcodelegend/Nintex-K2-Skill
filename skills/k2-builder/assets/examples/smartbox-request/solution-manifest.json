@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "shortCode": "SBQ",
+  "name": "SBQ.Native Requests",
+  "application": {
+    "rootCategoryPath": "K2 Skills\\SBQ.Native Requests"
+  },
+  "components": {
+    "smartObjects": {
+      "backend": "smartbox",
+      "manifest": "smartbox-manifest.json"
+    }
+  },
+  "policies": {
+    "dataModelComplexity": "small",
+    "versionFreeNames": true,
+    "modernForms": true,
+    "masterDetails": [],
+    "workflowEntries": []
+  },
+  "verification": {
+    "runtimeBaseUrl": "https://k2.example.test/Runtime",
+    "scenarios": []
+  }
+}

@@ -4,7 +4,7 @@
   "name": "EXP.Expense Claims",
   "application": { "rootCategoryPath": "K2 Skills\\EXP.Expense Claims" },
   "components": {
-    "smartObjects": { "manifest": "manifest.json" },
+    "smartObjects": { "backend": "sql", "manifest": "manifest.json" },
     "forms": { "manifest": "smartforms-manifest.json", "dependsOn": ["smartObjects"] },
     "workflows": []
   },

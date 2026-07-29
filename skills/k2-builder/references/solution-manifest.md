@@ -12,6 +12,7 @@ The solution manifest is the orchestration contract. It references specialist ma
   },
   "components": {
     "smartObjects": {
+      "backend": "sql",
       "manifest": "manifest.json"
     },
     "forms": {
@@ -78,18 +79,19 @@ The solution manifest is the orchestration contract. It references specialist ma
 - `schemaVersion` must be `1`.
 - `shortCode` is required and contains exactly three or four uppercase letters. Check and reserve it with `k2env` in the target environment before generating artifacts; validation of its shape does not by itself prove uniqueness.
 - `name` is a human-readable solution name prefixed with `<shortCode>.`. Do not add a release number.
-- `application.rootCategoryPath` is the shared K2 application root. Every selected specialist manifest must match it. SQL SmartObjects derives `<root>\Data`; SmartForms derives ordinary `<root>\Views`/`Forms` and administrative `<root>\Admin\Views`/`Forms`.
+- `application.rootCategoryPath` is the shared K2 application root. Every selected specialist manifest must match it. Both SmartObject specialists derive `<root>\Data`; SmartForms derives ordinary `<root>\Views`/`Forms` and administrative `<root>\Admin\Views`/`Forms`.
 - The category leaf and all solution-owned artifact names in referenced manifests must use the same `<shortCode>.` prefix. Fully qualified SQL objects normally satisfy this by using the short code as their schema.
-- `components.smartObjects.manifest` points to a `$k2-sql-smartobjects` manifest.
+- `components.smartObjects.backend` is required and is `sql` or `smartbox`. Ask the user when the requirement has not selected one; do not infer a backend from the word SmartObject.
+- `components.smartObjects.manifest` points to the matching `$k2-sql-smartobjects` or `$k2-smartbox-smartobjects` manifest.
 - `components.forms.manifest` points to a `$k2-smartforms` manifest.
 - `components.workflows` is an array of named `$k2-workflows` manifests.
 - Each referenced workflow manifest must set `application.workflowCategoryName` to `<application root leaf> WFs` (for example, `EXP.Expense Approval WFs`). Generic `Workflow` or `Workflows` category names are invalid.
 - Manifest paths are relative to the solution manifest.
 - `dependsOn` makes deployment order explicit. Forms normally depend on SmartObjects; SmartForms-integrated workflows normally depend on both.
 - `policies.dataModelComplexity` is required: use `small` to default lookups to stable code/text foreign keys, or `complex` to default them to normalized surrogate keys. Explicit per-lookup requirements may override that default.
-- Country references are not an overrideable free-text choice: every editable `*CountryCode` or `*CountryId` must use a declared required lookup. Reuse a governed enterprise source or the `$k2-sql-smartobjects` bundled ISO catalog.
+- Country references are not an overrideable free-text choice: every editable `*CountryCode` or `*CountryId` must use a declared required lookup. Reuse a governed enterprise source; the bundled ISO catalog is available only with the SQL backend.
 - `policies.versionFreeNames` and `policies.modernForms` should normally remain true.
-- Approval matrices live in the referenced SmartObjects manifest's root `approvalMatrices` array. The builder validates their namespace, requires Admin maintenance UX in the referenced Forms manifest, validates workflow matrix codes/dimension inputs, and previews stages/rule counts. Routing destinations must be explicit; `$designer` is resolved only when deliberately declared.
+- Approval matrices require the SQL backend and live in the referenced SmartObjects manifest's root `approvalMatrices` array. The builder validates their namespace, requires Admin maintenance UX in the referenced Forms manifest, validates workflow matrix codes/dimension inputs, and previews stages/rule counts. Routing destinations must be explicit; `$designer` is resolved only when deliberately declared.
 - Form-facing database invariants live in the referenced SmartObjects manifest's root `formConstraints` array. For every matching editable SmartForms View property, the builder requires exactly one `validations` entry with the same required, length, range, format/pattern, and must-be-true semantics; named checks link through SQL `sourceConstraints` and View `sourceConstraint`.
 - `policies.masterDetails` makes each one-to-many relationship a cross-layer requirement. Every item must match one SQL `masterDetails` relationship by name and one SmartForms `form.masterDetail.details` child by Form, keys, and Views. Every declared Form child must have exactly one policy item, including when several child tables share a master Form. The named View SmartObjects must match `masterSmartObject` and `detailSmartObject`; incomplete cross-layer models are rejected.
 - Each `workflowEntries` item binds a workflow, a generated form, and the entry-state decision.

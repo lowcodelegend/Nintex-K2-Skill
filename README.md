@@ -1,6 +1,6 @@
 # Nintex K2 Skills
 
-Build self-hosted K2 Five applications from manifests, not clicks. Seven portable Agent Skills and seven CLI tools design governed case-management solutions and create SQL-backed SmartObjects, modern Web Component controls, custom Style Profiles, modern SmartForms, HTML5 workflows, and complete verified solutions through K2 management and Designer services.
+Build self-hosted K2 Five applications from manifests, not clicks. Eight portable Agent Skills and eight CLI tools design governed case-management solutions and create SQL- or SmartBox-backed SmartObjects, modern Web Component controls, custom Style Profiles, modern SmartForms, HTML5 workflows, and complete verified solutions through K2 management and Designer services.
 
 Windows x64 only. It does not target Nintex Automation Cloud or legacy K2 Studio workflows.
 
@@ -186,11 +186,11 @@ and authenticated Runtime validation.
 - Inventory K2 version, endpoints, themes, Style Profiles, common framework views, and short-code use on existing Forms/Views.
 - Emit compact resolved environment JSON; inspect and refresh one short code live without full rediscovery.
 - Persist Style Profile and header/footer lifecycle choices, including rule calls, control transfers, titles, and ordering.
-- Validate and plan complete solution manifests with SQL → SmartObjects → SmartForms → workflow dependencies.
+- Require an explicit SQL or SmartBox data-backend choice, then validate and plan complete SmartObjects → SmartForms → workflow dependencies.
 - Deploy and verify complete solutions in dependency order, with resumable checkpoints.
 - Clean up complete solutions directly from their manifests in reverse dependency order, without broad rediscovery or repeated inspection.
 - Reserve unique 3–4 letter solution codes per environment; enforce version-free names, shared categories, workflow states, approval-matrix/Admin UX, and master-detail contracts.
-- Copy bundled `corporate-workflow`, `expense-claim`, and `request-management` examples into a project.
+- Copy bundled `corporate-workflow`, `expense-claim`, `request-management`, and `smartbox-request` examples into a project.
 
 ### `k2sql`
 
@@ -199,6 +199,13 @@ and authenticated Runtime validation.
 - Verify declared master/detail primary keys, generated parent IDs, exact FK types, delete behavior, and child FK indexes.
 - Generate threshold, dimensional, and multi-stage approval-matrix tables, seeds, and resolver procedures.
 - Plan, deploy, inspect, verify SQL/SmartObject metadata, run List smoke tests, and explicitly clean up disposable instances/databases.
+
+### `k2smartbox`
+
+- Create native K2 SmartBox SmartObjects from checked-in manifests without provisioning a database or Service Instance.
+- Support AutoNumber/AutoGuid keys plus Text, Memo, Number, YesNo, Date, DateTime, Guid, File, and Image properties.
+- Publish and verify native Create, Save, Delete, Load, and GetList methods under `<solution>\Data`.
+- Permit safe additive updates, reject destructive model changes, and clean up only exact manifest-owned objects.
 
 ### `k2forms`
 

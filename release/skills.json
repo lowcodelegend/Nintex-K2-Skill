@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "suiteName": "k2-skills",
-  "suiteVersion": "0.76.0",
+  "suiteVersion": "0.77.0",
   "skills": [
     {
       "name": "k2-sql-smartobjects",
@@ -20,6 +20,25 @@
         "path": "skills/k2-sql-smartobjects/tool/K2SqlCli/bin/Release/k2sql.exe",
         "arguments": ["version"],
         "expectedOutput": "k2sql 0.8.0"
+      }
+    },
+    {
+      "name": "k2-smartbox-smartobjects",
+      "version": "0.1.0",
+      "platform": "win-x64",
+      "buildScript": "skills/k2-smartbox-smartobjects/scripts/build.ps1",
+      "buildParameters": {
+        "Configuration": "Release",
+        "Clean": true
+      },
+      "builtFiles": [
+        "skills/k2-smartbox-smartobjects/tool/K2SmartBoxCli/bin/Release/k2smartbox.exe",
+        "skills/k2-smartbox-smartobjects/tool/K2SmartBoxCli/bin/Release/k2smartbox.exe.config"
+      ],
+      "versionCommand": {
+        "path": "skills/k2-smartbox-smartobjects/tool/K2SmartBoxCli/bin/Release/k2smartbox.exe",
+        "arguments": ["version"],
+        "expectedOutput": "k2smartbox 0.1.0"
       }
     },
     {
@@ -81,7 +100,7 @@
     },
     {
       "name": "k2-builder",
-      "version": "0.26.0",
+      "version": "0.27.0",
       "platform": "win-x64",
       "buildScript": "skills/k2-builder/scripts/build.ps1",
       "buildParameters": {
@@ -94,7 +113,7 @@
       "versionCommand": {
         "path": "skills/k2-builder/scripts/k2build.ps1",
         "arguments": ["version"],
-        "expectedOutput": "k2build 0.26.0"
+        "expectedOutput": "k2build 0.27.0"
       }
     },
     {

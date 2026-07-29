@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "name": "SBX.SmartBox CLI test",
+  "application": {
+    "rootCategoryPath": "K2 Skills\\SBX.SmartBox CLI Test"
+  },
+  "k2": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "deployment": {
+    "updateExisting": false
+  },
+  "smartObjects": [
+    {
+      "systemName": "SBX_DisposableRequest",
+      "displayName": "SBX.Disposable Request",
+      "description": "Disposable live verification object for k2smartbox.",
+      "properties": [
+        {
+          "name": "RequestId",
+          "displayName": "Request ID",
+          "type": "AutoNumber",
+          "key": true
+        },
+        {
+          "name": "Title",
+          "displayName": "Title",
+          "type": "Text",
+          "required": true,
+          "maxLength": 200
+        },
+        {
+          "name": "Notes",
+          "displayName": "Notes",
+          "type": "Memo"
+        },
+        {
+          "name": "Active",
+          "displayName": "Active",
+          "type": "YesNo"
+        },
+        {
+          "name": "DueDate",
+          "displayName": "Due Date",
+          "type": "Date"
+        },
+        {
+          "name": "Attachment",
+          "displayName": "Attachment",
+          "type": "File"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "smokeTestLists": true
+  }
+}
