@@ -57,7 +57,7 @@
     <Compile Include="AssetHost.cs" />
     <Compile Include="Cli.cs" />
     <Compile Include="CssValidationContract.cs" />
-    <Compile Include="DesignerStyleProfileGateway.cs" />
+    <Compile Include="AuthenticatedStyleProfileGateway.cs" />
     <Compile Include="Manifest.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="RuntimeAssemblyResolver.cs" />

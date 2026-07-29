@@ -226,6 +226,7 @@ and authenticated Runtime validation.
 
 - Host source-controlled CSS and JavaScript in isolated same-origin IIS virtual directories.
 - Create new K2 Style Profiles from scratch, update exact profiles in place, check them in, inspect definitions, and block unsafe name collisions.
+- Preserve integrated or non-integrated K2 author identity across Style Profile definition load, deployment, and check-in without accepting an author override.
 - Generate a semantic colour adapter from the installed K2 variable contract, prove every variable/context mapping before deployment, and audit computed native Runtime colours at desktop and mobile widths.
 - Preserve CSS/JS file order and verify category, metadata, checkout state, HTTPS responses, MIME types, and source/served hashes.
 - Enforce runtime-only CSS scoping and explicit JavaScript Designer guards so shell transforms, observers, overlays, and loading screens do not run in design mode.

@@ -68,7 +68,95 @@ namespace K2StyleProfilesCli
                     "input.invalid { border-color:#c00; }",
                     "weak-invalid.css");
             }, "equal or greater specificity");
+
+            var nonIntegrated = new K2ConnectionOptions
+            {
+                Integrated = false,
+                SecurityLabel = "K2SQL",
+                UserName = "K2Admin"
+            };
+            Assert(
+                StyleProfileManager.DescribeAuthorContext(
+                    nonIntegrated,
+                    @"NINTEX\Administrator")
+                == "K2SQL:K2Admin",
+                "Non-integrated author context");
+            var integrated = new K2ConnectionOptions
+            {
+                Integrated = true,
+                SecurityLabel = "K2"
+            };
+            Assert(
+                StyleProfileManager.DescribeAuthorContext(
+                    integrated,
+                    @"NINTEX\Administrator")
+                == @"K2:NINTEX\Administrator",
+                "Integrated author context");
+
+            var deploymentProfile = new StyleProfile(
+                "K2Skills_AuthenticatedAuthor",
+                "Authenticated authoring self-test");
+            deploymentProfile.DisplayName = "K2 Skills Authenticated Author";
+            var session = new RecordingAuthoringSession(
+                deploymentProfile.ToXml());
+            var loaded = AuthenticatedStyleProfileGateway.Load(
+                session,
+                deploymentProfile.Guid);
+            var deployedGuid =
+                AuthenticatedStyleProfileGateway.DeployAndCheckIn(
+                    session,
+                    deploymentProfile,
+                    "K2 Skills\\Tests");
+            Assert(
+                loaded == deploymentProfile.ToXml(),
+                "Authenticated definition load");
+            Assert(
+                deployedGuid == deploymentProfile.Guid,
+                "Authenticated deployment GUID");
+            Assert(
+                session.Calls.SequenceEqual(
+                    new[] { "load", "deploy:false", "check-in" }),
+                "Single authenticated load/deploy/check-in session");
+            Assert(
+                session.DeployedDefinition == deploymentProfile.ToXml(),
+                "Authenticated deployment XML");
+            AuthenticatedStyleProfileGateway.AssertInstalledContract();
             Console.WriteLine("SELFTEST SUCCEEDED");
+        }
+
+        private sealed class RecordingAuthoringSession :
+            IStyleProfileAuthoringSession
+        {
+            private readonly string _definition;
+
+            public RecordingAuthoringSession(string definition)
+            {
+                _definition = definition;
+                Calls = new List<string>();
+            }
+
+            public List<string> Calls { get; private set; }
+            public string DeployedDefinition { get; private set; }
+
+            public string Load(Guid guid)
+            {
+                Calls.Add("load");
+                return _definition;
+            }
+
+            public void Deploy(
+                string definitionXml,
+                string categoryPath,
+                bool checkIn)
+            {
+                Calls.Add("deploy:" + checkIn.ToString().ToLowerInvariant());
+                DeployedDefinition = definitionXml;
+            }
+
+            public void CheckIn(Guid guid)
+            {
+                Calls.Add("check-in");
+            }
         }
 
         private static void AssertThrows(Action action, string messagePart)

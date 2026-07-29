@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Principal;
 using SourceCode.Forms.Authoring;
 using SourceCode.Forms.Management;
 using SourceCode.Hosting.Client.BaseAPI;
@@ -11,13 +12,11 @@ namespace K2StyleProfilesCli
     {
         private readonly StyleProfileManifest _manifest;
         private readonly AssetHost _assets;
-        private readonly DesignerStyleProfileGateway _designer;
 
         public StyleProfileManager(StyleProfileManifest manifest)
         {
             _manifest = manifest;
             _assets = new AssetHost(manifest);
-            _designer = new DesignerStyleProfileGateway();
         }
 
         public void Doctor()
@@ -25,11 +24,19 @@ namespace K2StyleProfilesCli
             _assets.CheckInputs();
             WithFormsManager(manager =>
             {
+                AssertAuthenticatedAuthoringConnection(manager);
+                AuthenticatedStyleProfileGateway.AssertInstalledContract();
                 manager.GetStyleProfiles();
+                Console.WriteLine(
+                    "Effective Style Profile author context: "
+                    + DescribeAuthorContext());
+                Console.WriteLine(
+                    "Style Profile authoring path: authenticated FormsManager "
+                    + "load/deploy/check-in");
                 return 0;
             });
             Console.WriteLine("K2 management connection: OK");
-            Console.WriteLine("K2 Designer Style Profile contract: OK");
+            Console.WriteLine("K2 authenticated Style Profile contract: OK");
         }
 
         public ArtifactState GetState()
@@ -38,7 +45,7 @@ namespace K2StyleProfilesCli
             {
                 var info = Resolve(manager);
                 if (info == null) return new ArtifactState { Exists = false };
-                return State(info);
+                return State(info, manager);
             });
         }
 
@@ -47,6 +54,7 @@ namespace K2StyleProfilesCli
             _assets.Deploy();
             var savedGuid = WithFormsManager(manager =>
             {
+                var authoring = new FormsManagerStyleProfileAuthoringSession(manager);
                 var existing = Resolve(manager);
                 if (existing != null && !_manifest.StyleProfile.ReplaceExisting)
                     throw new CliException("Style Profile already exists and styleProfile.replaceExisting is false: " + existing.DisplayName + " (" + existing.Guid + ")");
@@ -59,7 +67,9 @@ namespace K2StyleProfilesCli
                     string currentJson = null;
                     if (existing != null)
                     {
-                        currentJson = _designer.Load(existing.Guid);
+                        currentJson = AuthenticatedStyleProfileGateway.Load(
+                            authoring,
+                            existing.Guid);
                         if (!existing.IsCheckedOut && DefinitionMatches(existing, currentJson))
                         {
                             Console.WriteLine("Style Profile is already current: " + existing.DisplayName + " (" + existing.Guid + ", v" + existing.Version + ")");
@@ -72,10 +82,20 @@ namespace K2StyleProfilesCli
                         }
                     }
                     var definition = BuildDefinition(currentJson);
-                    var result = _designer.Save(definition.ToJson(), _manifest.StyleProfile.CategoryPath);
-                    manager.CheckInStyleProfile(result.Guid);
-                    Console.WriteLine((existing == null ? "Created" : "Updated") + " Style Profile: " + _manifest.StyleProfile.DisplayName + " (" + result.Guid + ")");
-                    return result.Guid;
+                    var saved = AuthenticatedStyleProfileGateway.DeployAndCheckIn(
+                        authoring,
+                        definition,
+                        _manifest.StyleProfile.CategoryPath);
+                    Console.WriteLine(
+                        (existing == null ? "Created" : "Updated")
+                        + " Style Profile: "
+                        + _manifest.StyleProfile.DisplayName
+                        + " ("
+                        + saved
+                        + "; author="
+                        + DescribeAuthorContext()
+                        + ")");
+                    return saved;
                 }
                 catch
                 {
@@ -99,19 +119,48 @@ namespace K2StyleProfilesCli
 
         public void Inspect(bool includeDefinition)
         {
-            var state = GetState();
-            if (!state.Exists)
+            WithFormsManager(manager =>
             {
-                Console.WriteLine("Style Profile: absent (" + _manifest.StyleProfile.SystemName + ")");
-                return;
-            }
-            Console.WriteLine("Style Profile: " + state.DisplayName + " [" + state.SystemName + "] (" + state.Guid + ", v" + state.Version +
-                ", category " + state.CategoryPath + ", checkedOut=" + state.IsCheckedOut.ToString().ToLowerInvariant() + ")");
-            Console.WriteLine("Consumers: " + state.ConsumerCount + " form(s)");
-            var definition = new StyleProfile(_designer.Load(state.Guid), true);
-            foreach (CustomFile file in definition.Files)
-                Console.WriteLine("  " + file.Type + ": " + Uri.UnescapeDataString(file.Url));
-            if (includeDefinition) Console.WriteLine(_designer.Load(state.Guid));
+                var info = Resolve(manager);
+                if (info == null)
+                {
+                    Console.WriteLine(
+                        "Style Profile: absent ("
+                        + _manifest.StyleProfile.SystemName
+                        + ")");
+                    return 0;
+                }
+                var state = State(info, manager);
+                Console.WriteLine(
+                    "Style Profile: "
+                    + state.DisplayName
+                    + " ["
+                    + state.SystemName
+                    + "] ("
+                    + state.Guid
+                    + ", v"
+                    + state.Version
+                    + ", category "
+                    + state.CategoryPath
+                    + ", checkedOut="
+                    + state.IsCheckedOut.ToString().ToLowerInvariant()
+                    + ")");
+                Console.WriteLine("Consumers: " + state.ConsumerCount + " form(s)");
+                var authoring =
+                    new FormsManagerStyleProfileAuthoringSession(manager);
+                var rawDefinition = AuthenticatedStyleProfileGateway.Load(
+                    authoring,
+                    state.Guid);
+                var definition = new StyleProfile(rawDefinition, true);
+                foreach (CustomFile file in definition.Files)
+                    Console.WriteLine(
+                        "  "
+                        + file.Type
+                        + ": "
+                        + Uri.UnescapeDataString(file.Url));
+                if (includeDefinition) Console.WriteLine(rawDefinition);
+                return 0;
+            });
         }
 
         public void Cleanup()
@@ -142,6 +191,7 @@ namespace K2StyleProfilesCli
         {
             WithFormsManager(manager =>
             {
+                var authoring = new FormsManagerStyleProfileAuthoringSession(manager);
                 var info = manager.GetStyleProfile(expectedGuid);
                 if (info == null) throw new CliException("Style Profile was not found after deployment: " + expectedGuid);
                 if (info.IsCheckedOut) throw new CliException("Style Profile remains checked out after deployment: " + info.DisplayName);
@@ -152,7 +202,11 @@ namespace K2StyleProfilesCli
                 if (!string.Equals(NormalizeCategory(info.CategoryPath), NormalizeCategory(_manifest.StyleProfile.CategoryPath), StringComparison.OrdinalIgnoreCase))
                     throw new CliException("Deployed Style Profile category does not match the manifest. K2='" + info.CategoryPath + "', manifest='" + _manifest.StyleProfile.CategoryPath + "'.");
 
-                var definition = new StyleProfile(_designer.Load(info.Guid), true);
+                var definition = new StyleProfile(
+                    AuthenticatedStyleProfileGateway.Load(
+                        authoring,
+                        info.Guid),
+                    true);
                 var actualFiles = definition.Files.Cast<CustomFile>().ToList();
                 if (actualFiles.Count != _manifest.StyleProfile.Files.Count)
                     throw new CliException("Deployed Style Profile file count does not match the manifest.");
@@ -230,9 +284,10 @@ namespace K2StyleProfilesCli
             return combined.SingleOrDefault();
         }
 
-        private ArtifactState State(StyleProfileInfo info)
+        private ArtifactState State(StyleProfileInfo info, FormsManager manager)
         {
-            var consumers = WithFormsManager(manager => manager.GetFormsForStyleProfiles(new[] { info.Guid }).Forms.Cast<FormInfo>().Count());
+            var consumers = manager.GetFormsForStyleProfiles(
+                new[] { info.Guid }).Forms.Cast<FormInfo>().Count();
             return new ArtifactState
             {
                 Exists = true,
@@ -254,6 +309,7 @@ namespace K2StyleProfilesCli
             {
                 manager.CreateConnection();
                 manager.Connection.Open(BuildConnectionString());
+                AssertAuthenticatedAuthoringConnection(manager);
                 return action(manager);
             }
             finally
@@ -286,6 +342,64 @@ namespace K2StyleProfilesCli
                 builder.CachePassword = false;
             }
             return builder.ConnectionString;
+        }
+
+        private void AssertAuthenticatedAuthoringConnection(FormsManager manager)
+        {
+            if (manager.Connection == null
+                || !manager.Connection.IsConnected
+                || !manager.Connection.IsAuthenticated)
+            {
+                throw new CliException(
+                    "K2 Style Profile authoring connection is not authenticated.");
+            }
+            if (manager.Connection.Integrated != _manifest.K2.Integrated)
+            {
+                throw new CliException(
+                    "K2 Style Profile authoring connection authentication mode "
+                    + "does not match the manifest.");
+            }
+            if (!string.Equals(
+                manager.Connection.SecurityLabelName,
+                _manifest.K2.SecurityLabel,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                throw new CliException(
+                    "K2 Style Profile authoring connection security label "
+                    + "does not match the manifest.");
+            }
+        }
+
+        internal string DescribeAuthorContext()
+        {
+            return DescribeAuthorContext(
+                _manifest.K2,
+                WindowsIdentity.GetCurrent().Name);
+        }
+
+        internal static string DescribeAuthorContext(
+            K2ConnectionOptions options,
+            string windowsIdentity)
+        {
+            var label = options.SecurityLabel ?? string.Empty;
+            string account;
+            if (options.Integrated)
+            {
+                account = windowsIdentity;
+            }
+            else
+            {
+                account = options.UserName ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(options.Domain)
+                    && account.IndexOf("\\", StringComparison.Ordinal) < 0)
+                {
+                    account = options.Domain + "\\" + account;
+                }
+            }
+            var prefix = label + ":";
+            return account.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                ? account
+                : prefix + account;
         }
 
         private static string ReadEnvironmentVariable(string name)

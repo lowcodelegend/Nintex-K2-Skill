@@ -4,7 +4,7 @@
 
 | Command | Mutates | Behavior |
 | --- | --- | --- |
-| `doctor --manifest <path>` | No | Validate the manifest, local sources, runtime-only guards, installed IIS/K2 prerequisites, K2 management connectivity, and the installed Designer save contract. |
+| `doctor --manifest <path>` | No | Validate the manifest, local sources, runtime-only guards, installed IIS/K2 prerequisites, authenticated K2 management connectivity, effective author context, and the public Style Profile load/deploy/check-in contract. |
 | `plan --manifest <path>` | No | Show create/update/conflict state, GUID/version/consumers, IIS mapping, exact ordered files, sources, URLs, and verification scope. |
 | `deploy --manifest <path> --confirm` | IIS and K2 | Create or validate the virtual directory, copy assets, create/update and check in the Style Profile, then run full verification. An already-current checked-in profile is not versioned again. |
 | `verify --manifest <path>` | No | Verify checked-in metadata/category, exact ordered type/URL contract, hosted HTTP status/MIME type, and source/served SHA-256 equality. |
@@ -18,6 +18,8 @@ Exit `0` means success, `2` means usage/manifest/safety validation failed, and `
 Mutating commands require `--confirm`. Always run `plan` first.
 
 The executable resolves K2 from `K2_INSTALL_DIR`, the SourceCode registry key, or `C:\Program Files\K2`. It is a Windows x64 .NET Framework CLI and loads proprietary assemblies from the local K2 installation; packages must not redistribute `SourceCode.*.dll`.
+
+Style Profile definition loads, deployment, and check-in all use the same `FormsManager` connection. In non-integrated mode, `doctor` authenticates the configured security-label account and reports a context such as `K2SQL:K2Admin`; K2 stamps that connected identity as author. The CLI never accepts an author override.
 
 ## Typical use
 

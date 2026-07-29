@@ -63,6 +63,7 @@ The JSON root contains `schemaVersion`, `name`, `k2`, `styleProfile`, `hosting`,
 - `integrated`: use the current Windows identity when true.
 - `securityLabel`: normally `K2`.
 - For non-integrated authentication, set `domain`, `userName`, and `passwordEnvironmentVariable`. Store no password in JSON.
+- The same authenticated connection is used for Style Profile load, deploy, and check-in. `doctor` reports the effective author context; there is no manifest property for overriding or spoofing an author.
 
 ## `styleProfile`
 
