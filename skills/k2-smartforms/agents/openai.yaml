@@ -1,4 +1,4 @@
 interface:
   display_name: "K2 SmartForms Builder"
-  short_description: "Build validated SmartForms with governed lookups"
-  default_prompt: "Use $k2-smartforms to generate and verify polished CRUD and master-detail Forms with governed lookups, SQL-matched validation, and constraint-safe test-data Pre-fill."
+  short_description: "Build and verify governed K2 SmartForms"
+  default_prompt: "Use $k2-smartforms to generate and verify polished CRUD and master-detail Forms, including attended Runtime evidence through a user-authenticated OIDC Edge session when required."

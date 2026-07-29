@@ -31,4 +31,7 @@ if ($LASTEXITCODE -ne 0) {
 $output = Join-Path $skillRoot "tool\K2SmartFormsCli\bin\$Configuration\k2forms.exe"
 & $output selftest | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "k2forms self-test failed with exit code $LASTEXITCODE." }
+$browserHelper = Join-Path $PSScriptRoot 'k2forms-runtime-browser.ps1'
+& $browserHelper SelfTest | Out-Host
+if ($LASTEXITCODE -ne 0) { throw "k2forms Runtime browser helper self-test failed with exit code $LASTEXITCODE." }
 Write-Output $output
