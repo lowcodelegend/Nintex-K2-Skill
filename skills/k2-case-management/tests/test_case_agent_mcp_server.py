@@ -24,6 +24,7 @@ from case_agent_mcp_server import (  # noqa: E402
     StaticTokenDirectory,
     create_application,
     generate_token_record,
+    validate_case_operations_mapping,
     validate_server_config,
     validate_token_records,
 )
@@ -266,7 +267,11 @@ class CaseAgentMcpServerTests(unittest.TestCase):
 
     def test_k2_case_operations_are_bounded_and_read_only(self):
         provider = K2CliCaseOperationsProvider(
-            Path(sys.executable), "localhost", 5555, "K2"
+            Path(sys.executable),
+            ROOT / "assets" / "case-operations-mapping.example.json",
+            "localhost",
+            5555,
+            "K2",
         )
 
         def rows(operation, inputs=None):
@@ -316,6 +321,19 @@ class CaseAgentMcpServerTests(unittest.TestCase):
             "AAAAAAAAB9E=", allowed["actions"][0]["caseRowVersion"]
         )
         self.assertFalse(allowed["authoritativeWritesAvailable"])
+
+    def test_case_operation_mapping_rejects_expanded_execution_surface(self):
+        mapping = json.loads(
+            (ROOT / "assets" / "case-operations-mapping.example.json").read_text()
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "mapping.json"
+            mapping["operations"]["get_case"]["method"] = "Execute"
+            mapping["operations"]["get_case"]["allowedInputs"].append("SmartObject")
+            path.write_text(json.dumps(mapping), encoding="utf-8")
+            errors = validate_case_operations_mapping(path)
+            self.assertTrue(any("read-only List" in error for error in errors))
+            self.assertTrue(any("allowedInputs" in error for error in errors))
 
     def test_case_operation_tools_are_feature_gated(self):
         asyncio.run(self._case_operation_tools_are_feature_gated())
@@ -391,6 +409,7 @@ class CaseAgentMcpServerTests(unittest.TestCase):
             "enabled": True,
             "provider": "k2-cli",
             "executablePath": sys.executable,
+            "mappingPath": "case-operations-mapping.example.json",
             "host": "localhost",
             "port": 5555,
             "securityLabel": "K2",

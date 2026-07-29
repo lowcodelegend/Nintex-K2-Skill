@@ -26,6 +26,26 @@ Give the displayed bearer token only to the Langflow secret store. Put the emitt
 
 The endpoint is `<publicBaseUrl><mcpPath>`, normally `https://case-agent.example/mcp`. `/healthz` reports service readiness, authentication mode, mutation state, draft durability, `creationMode` (`disabled`, `alpha`, or `adapter`), `caseOperationsAvailable`, and `authoritativeCaseWritesAvailable`.
 
+### Windows service
+
+For a persistent Windows host, use the WinSW-based service helper rather than an interactive PowerShell process. Download a trusted WinSW 3 executable through the environment's approved software channel; the repository intentionally does not redistribute that binary.
+
+```powershell
+$skill = 'C:\Users\svc-k2\.codex\skills\k2-case-management'
+$serviceRoot = 'C:\ProgramData\K2CaseAgent'
+
+& "$skill\scripts\case-agent-service.ps1" Install `
+  -ConfigPath "$serviceRoot\case-agent-mcp-server.yaml" `
+  -WinSWPath 'C:\Installers\WinSW-x64.exe' `
+  -ServiceRoot $serviceRoot
+
+& "$skill\scripts\case-agent-service.ps1" Status
+```
+
+The helper validates the MCP configuration, installs stable copies of WinSW and `uv`, removes inherited user write access from the service directory, and configures automatic delayed start, TCP/IP dependency, hidden execution, rolling logs, bounded stop time, and restart-on-failure. `Update` safely refreshes the wrapper and XML; `Start`, `Stop`, `Restart`, `Status`, and `Uninstall` manage the installed service. `Uninstall` preserves configuration and logs unless `-RemoveServiceFiles` is explicit.
+
+The default service identity is LocalSystem. That is sufficient for a transport-only or alpha runtime, but the K2 CLI uses integrated authentication. Before enabling `runtime.caseOperations`, run the service under a least-privilege Windows service identity that K2 recognizes and authorize that identity only for the mapped read SmartObjects. Manage service-account credentials through Windows service controls or a managed service account; do not place a password in XML, command arguments, the MCP configuration, or the repository.
+
 ### Temporary unauthenticated development
 
 Use `assets/case-agent-mcp-development.yaml` only when the user explicitly asks to defer authentication and permit alpha case creation for an internal Langflow development test. Set the real development DNS name or IP in `publicBaseUrl` and `allowedHosts`. This mode requires all of the following gates:
@@ -70,7 +90,31 @@ Instruct the agent to call `list_permitted_case_types` before selecting a case t
 - `get_submission_readiness`
 - `get_case_action_status`
 
-The built-in `k2-cli` provider accepts only those operations and fixed SmartObject mappings; it does not accept caller-supplied SmartObject names, methods, SQL, or workflow identifiers. The packaged executable is `tool/K2CaseOperationsCli/bin/Release/k2caseops.exe`; run `scripts/k2caseops.ps1 version` to verify it, then configure the executable path and K2 host connection in `runtime.caseOperations`. Keep `authoritativeWritesEnabled:false` and `commandProcessorVerified:false`, and opt into `--read` when generating a static bearer token.
+The built-in `k2-cli` provider accepts only those operations. An administrator-owned mapping file supplies the deployed SmartObject system names, but every operation remains pinned to its read-only `List` method and fixed input allowlist; MCP callers cannot supply SmartObject names, methods, SQL, or workflow identifiers. Copy and adapt `assets/case-operations-mapping.example.json`, then validate it:
+
+```powershell
+& scripts/k2caseops.ps1 validate-mapping `
+  --mapping .\case-operations-mapping.json
+```
+
+Configure the trusted file in `runtime.caseOperations`:
+
+```json
+{
+  "enabled": true,
+  "provider": "k2-cli",
+  "executablePath": "tool/K2CaseOperationsCli/bin/Release/k2caseops.exe",
+  "mappingPath": "case-operations-mapping.json",
+  "host": "localhost",
+  "port": 5555,
+  "securityLabel": "K2",
+  "timeoutSeconds": 30,
+  "authoritativeWritesEnabled": false,
+  "commandProcessorVerified": false
+}
+```
+
+The packaged executable is `tool/K2CaseOperationsCli/bin/Release/k2caseops.exe`; run `scripts/k2caseops.ps1 version` to verify it. Keep `authoritativeWritesEnabled:false` and `commandProcessorVerified:false`, and opt into `--read` when generating a static bearer token. The seven tools appear in MCP discovery only when this block validates and is enabled; the client identity still needs `case:read` to invoke them.
 
 `case:create` permits:
 

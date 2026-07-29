@@ -57,11 +57,27 @@ from case_agent_framework import (
 )
 
 
-SERVER_VERSION = "0.5.0"
+SERVER_VERSION = "0.6.0"
 TOKEN_ENVIRONMENT_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]{2,127}$")
 SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
 CASE_NUMBER_PREFIX_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9_-]{0,19}$")
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
+CASE_OPERATION_CONTRACT = {
+    "search_cases": (),
+    "get_case": ("CaseId",),
+    "get_case_timeline": ("CaseId",),
+    "list_case_evidence": ("CaseId",),
+    "get_allowed_case_actions": ("CaseId",),
+    "get_submission_readiness": ("CaseId",),
+    "get_case_action_status": (
+        "CaseId",
+        "CommandId",
+        "IdempotencyKey",
+        "CorrelationId",
+    ),
+    "get_case_record": ("CaseId",),
+    "list_stage_transitions": (),
+}
 LOG = logging.getLogger("k2.case_agent_mcp")
 
 
@@ -350,12 +366,14 @@ class K2CliCaseOperationsProvider:
     def __init__(
         self,
         executable_path: Path,
+        mapping_path: Path,
         host: str,
         port: int,
         security_label: str,
         timeout_seconds: int = 30,
     ) -> None:
         self.executable_path = executable_path.resolve()
+        self.mapping_path = mapping_path.resolve()
         self.host = host
         self.port = port
         self.security_label = security_label
@@ -519,6 +537,8 @@ class K2CliCaseOperationsProvider:
     ) -> List[Dict[str, Any]]:
         command = [
             str(self.executable_path),
+            "--mapping",
+            str(self.mapping_path),
             "--host",
             self.host,
             "--port",
@@ -564,6 +584,48 @@ class ServerRuntime:
     authentication_mode: str
     creation_mode: str
     case_operations_provider: Optional[Any]
+
+
+def validate_case_operations_mapping(path: Path) -> List[str]:
+    try:
+        document = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        return [f"case operations mapping could not be read: {exc}"]
+    if not isinstance(document, Mapping) or document.get("schemaVersion") != 1:
+        return ["case operations mapping schemaVersion must be 1"]
+    operations = document.get("operations")
+    if not isinstance(operations, Mapping):
+        return ["case operations mapping must contain operations"]
+    errors: List[str] = []
+    unexpected = set(operations) - set(CASE_OPERATION_CONTRACT)
+    if unexpected:
+        errors.append(
+            "case operations mapping contains unsupported operations: "
+            + ", ".join(sorted(str(value) for value in unexpected))
+        )
+    for operation, expected_inputs in CASE_OPERATION_CONTRACT.items():
+        configured = operations.get(operation)
+        if not isinstance(configured, Mapping):
+            errors.append(f"case operations mapping is missing operation: {operation}")
+            continue
+        smart_object = configured.get("smartObject")
+        if not isinstance(smart_object, str) or not smart_object.strip():
+            errors.append(f"case operation {operation} must name a SmartObject")
+        if configured.get("method") != "List":
+            errors.append(
+                f"case operation {operation} must use the read-only List method"
+            )
+        allowed_inputs = configured.get("allowedInputs")
+        if (
+            not isinstance(allowed_inputs, list)
+            or len(allowed_inputs) != len(expected_inputs)
+            or {str(value).casefold() for value in allowed_inputs}
+            != {value.casefold() for value in expected_inputs}
+        ):
+            errors.append(
+                f"case operation {operation} has an invalid allowedInputs contract"
+            )
+    return errors
 
 
 def validate_server_config(
@@ -733,6 +795,7 @@ def validate_server_config(
             "enabled",
             "provider",
             "executablePath",
+            "mappingPath",
             "host",
             "port",
             "securityLabel",
@@ -755,6 +818,19 @@ def validate_server_config(
                 errors.append(
                     "runtime.caseOperations.executablePath must name the built K2 client"
                 )
+            mapping_path = case_operations.get("mappingPath")
+            resolved_mapping_path = (
+                _resolve_path(base_directory, mapping_path)
+                if isinstance(mapping_path, str)
+                else None
+            )
+            if resolved_mapping_path is None or not resolved_mapping_path.is_file():
+                errors.append(
+                    "runtime.caseOperations.mappingPath must name the trusted "
+                    "case operations mapping"
+                )
+            else:
+                errors.extend(validate_case_operations_mapping(resolved_mapping_path))
             operations_host = case_operations.get("host")
             if not isinstance(operations_host, str) or not operations_host.strip():
                 errors.append("runtime.caseOperations.host is required")
@@ -1016,6 +1092,10 @@ def create_application(
             _resolve_path(
                 base_directory,
                 str(case_operations_config["executablePath"]),
+            ),
+            _resolve_path(
+                base_directory,
+                str(case_operations_config["mappingPath"]),
             ),
             str(case_operations_config["host"]),
             int(case_operations_config["port"]),

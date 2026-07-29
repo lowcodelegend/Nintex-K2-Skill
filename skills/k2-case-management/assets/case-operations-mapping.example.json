@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "operations": {
+    "search_cases": {
+      "smartObject": "RQB_Raqeeb_Sql_RQBRPT_CaseQueue",
+      "method": "List",
+      "allowedInputs": []
+    },
+    "get_case": {
+      "smartObject": "RQB_Raqeeb_Sql_RQBRPT_CaseWorkspace",
+      "method": "List",
+      "allowedInputs": ["CaseId"]
+    },
+    "get_case_timeline": {
+      "smartObject": "RQB_Raqeeb_Sql_RQBRPT_CaseTimeline",
+      "method": "List",
+      "allowedInputs": ["CaseId"]
+    },
+    "list_case_evidence": {
+      "smartObject": "RQB_Raqeeb_Sql_RQBRPT_EvidenceMatrix",
+      "method": "List",
+      "allowedInputs": ["CaseId"]
+    },
+    "get_allowed_case_actions": {
+      "smartObject": "RQB_Raqeeb_Sql_RQB_AllowedAction_List",
+      "method": "List",
+      "allowedInputs": ["CaseId"]
+    },
+    "get_submission_readiness": {
+      "smartObject": "RQB_Raqeeb_Sql_RQB_SubmissionReadiness_Get",
+      "method": "List",
+      "allowedInputs": ["CaseId"]
+    },
+    "get_case_action_status": {
+      "smartObject": "RQB_Raqeeb_Sql_RQB_CaseCommand",
+      "method": "List",
+      "allowedInputs": [
+        "CaseId",
+        "CommandId",
+        "IdempotencyKey",
+        "CorrelationId"
+      ]
+    },
+    "get_case_record": {
+      "smartObject": "RQB_Raqeeb_Sql_RQB_Case",
+      "method": "List",
+      "allowedInputs": ["CaseId"]
+    },
+    "list_stage_transitions": {
+      "smartObject": "RQB_Raqeeb_Sql_RQB_AllowedStageTransition",
+      "method": "List",
+      "allowedInputs": []
+    }
+  }
+}

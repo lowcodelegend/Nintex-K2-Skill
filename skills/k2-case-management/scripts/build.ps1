@@ -37,6 +37,11 @@ $output = Join-Path $skillRoot "tool\K2CaseOperationsCli\bin\$Configuration\k2ca
 if ($LASTEXITCODE -ne 0) {
     throw "k2caseops version check failed with exit code $LASTEXITCODE."
 }
+$mapping = Join-Path $skillRoot 'assets\case-operations-mapping.example.json'
+& $output validate-mapping --mapping $mapping | Out-Host
+if ($LASTEXITCODE -ne 0) {
+    throw "k2caseops mapping validation failed with exit code $LASTEXITCODE."
+}
 
 $previousBytecodeSetting = $env:PYTHONDONTWRITEBYTECODE
 $env:PYTHONDONTWRITEBYTECODE = '1'

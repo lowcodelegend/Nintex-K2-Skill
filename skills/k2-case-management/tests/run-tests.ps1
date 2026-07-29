@@ -447,6 +447,25 @@ $caseAgentMcpConfig = Join-Path $PSScriptRoot '..\assets\case-agent-mcp-server.y
 if ($LASTEXITCODE -ne 0) { throw 'Case-agent MCP version command failed.' }
 & $caseAgentMcp validate-config $caseAgentMcpConfig
 if ($LASTEXITCODE -ne 0) { throw 'Canonical case-agent MCP configuration failed validation.' }
+$serviceRenderer = Join-Path $PSScriptRoot '..\scripts\case-agent-service.ps1'
+$serviceTestRoot = Join-Path ([IO.Path]::GetTempPath()) ('k2-case-agent-service-' + [guid]::NewGuid())
+try {
+    $renderedService = & $serviceRenderer Render -ConfigPath $caseAgentMcpConfig -ServiceRoot $serviceTestRoot -ServiceName 'TestK2CaseAgentMcp'
+    $renderedServicePath = @($renderedService)[-1]
+    $serviceXml = [xml](Get-Content -Raw -LiteralPath $renderedServicePath)
+    if ($serviceXml.service.id -ne 'TestK2CaseAgentMcp' -or
+        $serviceXml.service.startmode -ne 'Automatic' -or
+        $serviceXml.service.delayedAutoStart -ne 'true' -or
+        $serviceXml.service.depend -ne 'Tcpip' -or
+        $serviceXml.service.onfailure.action -ne 'restart' -or
+        $serviceXml.service.log.mode -ne 'roll') {
+        throw 'Rendered WinSW service omitted the required resilience contract.'
+    }
+} finally {
+    if (Test-Path -LiteralPath $serviceTestRoot) {
+        Remove-Item -LiteralPath $serviceTestRoot -Recurse -Force
+    }
+}
 & $caseAgentMcp selftest
 if ($LASTEXITCODE -ne 0) { throw 'Case-agent MCP self-test failed.' }
 & $uv run --no-project --with 'mcp==1.28.1' --with 'uvicorn==0.51.0' python -m unittest discover -s $PSScriptRoot -p 'test_case_agent_mcp_server.py' -v

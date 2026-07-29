@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Web.Script.Serialization;
 using SourceCode.Hosting.Client.BaseAPI;
@@ -11,7 +12,7 @@ namespace K2CaseOperationsCli
 {
     internal static class Program
     {
-        private const string Version = "0.1.0";
+        private const string Version = "0.2.0";
         private const int MaximumRows = 500;
 
         private sealed class OperationDefinition
@@ -21,37 +22,37 @@ namespace K2CaseOperationsCli
             public string[] AllowedInputs { get; set; }
         }
 
-        private static readonly IDictionary<string, OperationDefinition> Operations =
+        private static readonly IDictionary<string, OperationDefinition> OperationContract =
             new Dictionary<string, OperationDefinition>(StringComparer.OrdinalIgnoreCase)
             {
                 {
                     "search_cases",
-                    Define("RQB_Raqeeb_Sql_RQBRPT_CaseQueue", "List")
+                    Define(null, "List")
                 },
                 {
                     "get_case",
-                    Define("RQB_Raqeeb_Sql_RQBRPT_CaseWorkspace", "List", "CaseId")
+                    Define(null, "List", "CaseId")
                 },
                 {
                     "get_case_timeline",
-                    Define("RQB_Raqeeb_Sql_RQBRPT_CaseTimeline", "List", "CaseId")
+                    Define(null, "List", "CaseId")
                 },
                 {
                     "list_case_evidence",
-                    Define("RQB_Raqeeb_Sql_RQBRPT_EvidenceMatrix", "List", "CaseId")
+                    Define(null, "List", "CaseId")
                 },
                 {
                     "get_allowed_case_actions",
-                    Define("RQB_Raqeeb_Sql_RQB_AllowedAction_List", "List", "CaseId")
+                    Define(null, "List", "CaseId")
                 },
                 {
                     "get_submission_readiness",
-                    Define("RQB_Raqeeb_Sql_RQB_SubmissionReadiness_Get", "List", "CaseId")
+                    Define(null, "List", "CaseId")
                 },
                 {
                     "get_case_action_status",
                     Define(
-                        "RQB_Raqeeb_Sql_RQB_CaseCommand",
+                        null,
                         "List",
                         "CaseId",
                         "CommandId",
@@ -60,13 +61,19 @@ namespace K2CaseOperationsCli
                 },
                 {
                     "get_case_record",
-                    Define("RQB_Raqeeb_Sql_RQB_Case", "List", "CaseId")
+                    Define(null, "List", "CaseId")
                 },
                 {
                     "list_stage_transitions",
-                    Define("RQB_Raqeeb_Sql_RQB_AllowedStageTransition", "List")
+                    Define(null, "List")
                 }
             };
+
+        private sealed class MappingDocument
+        {
+            public int SchemaVersion { get; set; }
+            public Dictionary<string, OperationDefinition> Operations { get; set; }
+        }
 
         public static int Main(string[] args)
         {
@@ -80,10 +87,25 @@ namespace K2CaseOperationsCli
             RuntimeAssemblyResolver.Install();
             try
             {
-                var options = ParseArguments(args);
+                var validateMapping =
+                    args.Length > 0 &&
+                    string.Equals(
+                        args[0],
+                        "validate-mapping",
+                        StringComparison.OrdinalIgnoreCase);
+                var options = ParseArguments(
+                    validateMapping ? args.Skip(1).ToArray() : args);
+                var operations = LoadMapping(Required(options, "mapping"));
+                if (validateMapping)
+                {
+                    Console.WriteLine(
+                        "Valid case operations mapping: " +
+                        Path.GetFullPath(options["mapping"]));
+                    return 0;
+                }
                 var operation = Required(options, "operation");
                 OperationDefinition definition;
-                if (!Operations.TryGetValue(operation, out definition))
+                if (!operations.TryGetValue(operation, out definition))
                 {
                     throw new ArgumentException("Unsupported case operation: " + operation);
                 }
@@ -261,6 +283,83 @@ namespace K2CaseOperationsCli
                 Method = method,
                 AllowedInputs = allowedInputs
             };
+        }
+
+        private static IDictionary<string, OperationDefinition> LoadMapping(string path)
+        {
+            var fullPath = Path.GetFullPath(path);
+            if (!File.Exists(fullPath))
+            {
+                throw new FileNotFoundException(
+                    "Case operations mapping was not found.",
+                    fullPath);
+            }
+            var serializer = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
+            var document = serializer.Deserialize<MappingDocument>(
+                File.ReadAllText(fullPath));
+            if (document == null || document.SchemaVersion != 1)
+            {
+                throw new ArgumentException(
+                    "Case operations mapping schemaVersion must be 1.");
+            }
+            if (document.Operations == null)
+            {
+                throw new ArgumentException(
+                    "Case operations mapping must contain operations.");
+            }
+            var unexpected = document.Operations.Keys
+                .Where(value => !OperationContract.ContainsKey(value))
+                .ToArray();
+            if (unexpected.Length > 0)
+            {
+                throw new ArgumentException(
+                    "Case operations mapping contains unsupported operations: " +
+                    string.Join(", ", unexpected));
+            }
+            foreach (var contract in OperationContract)
+            {
+                OperationDefinition configured;
+                if (!document.Operations.TryGetValue(contract.Key, out configured) ||
+                    configured == null)
+                {
+                    throw new ArgumentException(
+                        "Case operations mapping is missing operation: " + contract.Key);
+                }
+                if (string.IsNullOrWhiteSpace(configured.SmartObject))
+                {
+                    throw new ArgumentException(
+                        "Case operation " + contract.Key +
+                        " must name a SmartObject.");
+                }
+                if (!string.Equals(
+                    configured.Method,
+                    contract.Value.Method,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new ArgumentException(
+                        "Case operation " + contract.Key +
+                        " must use the read-only List method.");
+                }
+                var configuredInputs = configured.AllowedInputs ?? new string[0];
+                var expectedInputs = contract.Value.AllowedInputs ?? new string[0];
+                if (configuredInputs.Length != expectedInputs.Length ||
+                    configuredInputs.Any(
+                        value => !expectedInputs.Contains(
+                            value,
+                            StringComparer.OrdinalIgnoreCase)) ||
+                    expectedInputs.Any(
+                        value => !configuredInputs.Contains(
+                            value,
+                            StringComparer.OrdinalIgnoreCase)))
+                {
+                    throw new ArgumentException(
+                        "Case operation " + contract.Key +
+                        " has an invalid allowedInputs contract.");
+                }
+            }
+            return new Dictionary<string, OperationDefinition>(
+                document.Operations,
+                StringComparer.OrdinalIgnoreCase);
         }
 
         private static void ValidateInputs(

@@ -21,6 +21,7 @@ Building and packaging the complete suite from source additionally requires:
 - The exact .NET Framework 4.8 Developer Pack/targeting pack because the CLI projects target `.NETFramework,Version=v4.8`.
 - Python 3.10 or later, available as `python` on `PATH`, for the case-management validators and agent framework.
 - [`uv`](https://docs.astral.sh/uv/), available as `uv` on `PATH`, for the case-agent MCP server and its integration tests.
+- Optionally, a trusted WinSW 3 x64 executable when installing the case-agent MCP endpoint as an auto-starting Windows service.
 
 Install the source-build prerequisites with WinGet when they are not already present:
 
@@ -177,6 +178,7 @@ and authenticated Runtime validation.
 - Compose a canonical product UX into solution manifests: operations dashboard, personal Worklist, guided initiation, reusable case workspace, reports, empty/error/breach/read-only states, and solution-specific overlays.
 - Generate platform-neutral reference evidence, then capture authenticated native Runtime evidence at desktop, tablet, and mobile widths with overflow and browser-diagnostic gates.
 - Validate declarative case-type design YAML and produce an explicit build inventory for transformation into supported `k2-builder` manifests; the YAML is not a native K2 import format.
+- Host the optional Langflow-facing MCP endpoint as a hardened, restartable WinSW service and map its bounded read operations to deployment-specific K2 SmartObject system names.
 
 ### `k2env` and `k2build`
 
