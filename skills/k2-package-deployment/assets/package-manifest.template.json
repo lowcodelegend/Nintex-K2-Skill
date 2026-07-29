@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "name": "ABC application release",
+  "source": {
+    "host": "localhost",
+    "port": 5555,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "package": {
+    "rootCategoryPath": "K2 Skills\\ABC.Application",
+    "outputFile": "release\\ABC.Application.kspx",
+    "configFile": "release\\ABC.Application.package.xml",
+    "description": "ABC application release",
+    "validate": true,
+    "includeDependencies": true,
+    "artifacts": [],
+    "excludeTypes": [],
+    "smartObjectData": [
+      {
+        "smartObject": "ABC_Status",
+        "classification": "reference",
+        "action": "auto",
+        "reason": "Governed reference vocabulary"
+      },
+      {
+        "smartObject": "ABC_Request",
+        "classification": "transactional",
+        "action": "auto",
+        "reason": "Environment-owned operational records"
+      }
+    ]
+  },
+  "deployment": {
+    "packageFile": "release\\ABC.Application.kspx",
+    "configFile": "release\\ABC.Application.deploy.xml",
+    "target": {
+      "host": "localhost",
+      "port": 5555,
+      "integrated": true,
+      "securityLabel": "K2"
+    },
+    "resolutions": []
+  }
+}

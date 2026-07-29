@@ -1,0 +1,4 @@
+interface:
+  display_name: "K2 Package & Deployment"
+  short_description: "Plan and deploy guarded K2 packages"
+  default_prompt: "Use $k2-package-deployment to plan a backend-aware K2 package and show every inclusion, exclusion, and data decision before asking for confirmation."

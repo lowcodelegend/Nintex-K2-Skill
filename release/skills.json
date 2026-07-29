@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "suiteName": "k2-skills",
-  "suiteVersion": "0.78.0",
+  "suiteVersion": "0.79.0",
   "skills": [
     {
       "name": "k2-sql-smartobjects",
@@ -39,6 +39,18 @@
         "path": "skills/k2-smartbox-smartobjects/tool/K2SmartBoxCli/bin/Release/k2smartbox.exe",
         "arguments": ["version"],
         "expectedOutput": "k2smartbox 0.1.0"
+      }
+    },
+    {
+      "name": "k2-package-deployment",
+      "version": "0.1.0",
+      "platform": "win-x64",
+      "buildScript": null,
+      "builtFiles": [],
+      "versionCommand": {
+        "path": "skills/k2-package-deployment/scripts/k2package.ps1",
+        "arguments": ["version"],
+        "expectedOutput": "k2package 0.1.0"
       }
     },
     {
