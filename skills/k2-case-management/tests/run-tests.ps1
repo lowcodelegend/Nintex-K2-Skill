@@ -104,6 +104,8 @@ if ($paletteRuntime -notmatch 'start_open' -or
     $paletteRuntime -notmatch '/api/v2/files' -or
     $paletteRuntime -notmatch '/api/v1/files/upload/' -or
     $paletteRuntime -notmatch '/api/v1/run/' -or
+    $paletteRuntime -notmatch 'case_type_shortcode' -or
+    $paletteRuntime -notmatch 'northstar-case-context' -or
     $paletteRuntime -notmatch 'northstar-agent-portal__sessions' -or
     $paletteRuntime -notmatch '_clearPortalSession' -or
     $paletteRuntime -notmatch 'northstar-agent-overlay' -or

@@ -456,7 +456,7 @@ try {
           getComputedStyle(node).visibility !== 'hidden' &&
           !!(node.offsetWidth || node.offsetHeight || node.getClientRects().length);
         const controls = Array.from(document.querySelectorAll(
-          'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp'
+          'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-case-command-portal-context,northstar-command-palette-acp'
         ));
         const control = controls.find((candidate) => {
           const candidateTrigger = candidate.shadowRoot &&
@@ -534,7 +534,7 @@ try {
       const afterPointer = await session.send("Runtime.evaluate", {
         expression: `(() => {
           const controls = Array.from(document.querySelectorAll(
-            'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp'
+            'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-case-command-portal-context,northstar-command-palette-acp'
           ));
           const open = controls.filter((control) => control.shadowRoot &&
             control.shadowRoot.querySelectorAll('[role="dialog"]').length === 1);
@@ -560,7 +560,7 @@ try {
         expression: `({
           dialogCountAfterPointerEscape: Array.from(
             document.querySelectorAll(
-              'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp'
+              'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-case-command-portal-context,northstar-command-palette-acp'
             )
           ).reduce((count, control) => count +
             (control.shadowRoot?.querySelectorAll('[role="dialog"]').length || 0), 0)
@@ -581,7 +581,7 @@ try {
       const afterKeyboard = await session.send("Runtime.evaluate", {
         expression: `(() => {
           const controls = Array.from(document.querySelectorAll(
-            'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp'
+            'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-case-command-portal-context,northstar-command-palette-acp'
           ));
           const open = controls.filter((control) => control.shadowRoot &&
             control.shadowRoot.querySelectorAll('[role="dialog"]').length === 1);
@@ -610,7 +610,7 @@ try {
       const result = await session.send("Runtime.evaluate", {
         expression: `(() => {
           const control = Array.from(document.querySelectorAll(
-            'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp'
+            'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-case-command-portal-context,northstar-command-palette-acp'
           )).find((candidate) => candidate.shadowRoot &&
             candidate.shadowRoot.querySelector('[role="dialog"]')) || null;
           const root = control && control.shadowRoot;
@@ -647,7 +647,7 @@ try {
     const before = await session.send("Runtime.evaluate", {
       expression: `(() => {
         const control = Array.from(document.querySelectorAll(
-          'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp'
+          'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-case-command-portal-context,northstar-command-palette-acp'
         )).find((candidate) => candidate.shadowRoot &&
           candidate.shadowRoot.querySelector('[role="dialog"]')) || null;
         const option = control && Array.from(
@@ -691,7 +691,7 @@ try {
         const readiness = await session.send("Runtime.evaluate", {
           expression: `(() => {
             const control = Array.from(document.querySelectorAll(
-              'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp'
+              'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-case-command-portal-context,northstar-command-palette-acp'
             )).find((candidate) => candidate._assistantState === 'error');
             const overlay = document.querySelector('.northstar-agent-overlay');
             const portal = overlay && overlay.querySelector('.northstar-agent-portal');
@@ -799,7 +799,7 @@ try {
               return false;
             };
             const control = Array.from(document.querySelectorAll(
-              'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp'
+              'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-case-command-portal-context,northstar-command-palette-acp'
             )).find((candidate) => candidate._assistantExperience === 'command-portal');
             if (!control) return { portalBehaviorExercised: false };
             const originalConfirm = window.confirm;
@@ -844,7 +844,17 @@ try {
                 request.url.includes('/api/v1/run/'));
               let runPayload = {};
               try { runPayload = JSON.parse(runRequest?.body || '{}'); } catch {}
-              const runPayloadValid = runPayload.input_value === 'Investigate case 42' &&
+              const expectedContextPrefix =
+                '[[northstar-case-context:{"case_type_shortcode":"RQB","source":"url","trusted":false}]]\\n';
+              const parsedPathShortcode = control._caseTypeShortcodeFromUrl(
+                'https://spk2.trials.demome.tech/Runtime/Runtime/Form/RQB.New%20Whistleblower%20Case/'
+              );
+              const runPayloadValid =
+                runPayload.input_value === expectedContextPrefix + 'Investigate case 42' &&
+                control._stripPrototypeCaseContext(runPayload.input_value) ===
+                  'Investigate case 42' &&
+                control._caseTypeShortcode === 'RQB' &&
+                parsedPathShortcode === 'RQB' &&
                 runPayload.session_id === control._portalSessionId &&
                 runPayload.tweaks &&
                 runPayload.tweaks[control.LangflowFileComponentId] &&
@@ -953,7 +963,7 @@ try {
               return false;
             };
             const control = Array.from(document.querySelectorAll(
-              'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp'
+              'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-case-command-portal-context,northstar-command-palette-acp'
             )).find((candidate) => candidate._assistantExperience === 'command-portal');
             if (!control) return { liveMessageSent: false, liveError: 'Portal control not found.' };
             document.querySelector('.northstar-agent-portal__new')?.click();
@@ -984,6 +994,8 @@ try {
             return {
               liveMessageSent: true,
               liveCompleted: completed,
+              liveControlTag: control.localName || '',
+              liveCaseTypeShortcode: control._caseTypeShortcode || '',
               liveSessionId: control._portalSessionId || '',
               liveReplyText: reply ? reply.text : '',
               liveStatus: control._portalStatus || '',
@@ -1018,7 +1030,7 @@ try {
       const closedState = await session.send("Runtime.evaluate", {
         expression: `(() => {
           const control = Array.from(document.querySelectorAll(
-            'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp'
+            'northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-case-command-portal-context,northstar-command-palette-acp'
           )).find((candidate) => candidate.shadowRoot &&
             candidate.shadowRoot.querySelector('.northstar-command__trigger')) || null;
           const trigger = control && control.shadowRoot.querySelector(
@@ -1208,7 +1220,7 @@ try {
           controls: details
         };
       })(),
-      customControls: Array.from(document.querySelectorAll("northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-command-palette-acp,northstar-dashboard-widget"))
+      customControls: Array.from(document.querySelectorAll("northstar-command-palette,northstar-case-assistant-palette,northstar-case-command-portal,northstar-case-command-portal-markdown,northstar-case-command-portal-context,northstar-command-palette-acp,northstar-dashboard-widget"))
         .map((control) => ({
           tag: control.tagName.toLowerCase(),
           name: control.getAttribute("name") || control.Name || "",
@@ -1226,6 +1238,7 @@ try {
           "northstar-case-assistant-palette",
           "northstar-case-command-portal",
           "northstar-case-command-portal-markdown",
+          "northstar-case-command-portal-context",
           "northstar-command-palette-acp"
         ].some((name) => !!window.customElements.get(name)),
         dashboardDefined: !!window.customElements.get("northstar-dashboard-widget"),

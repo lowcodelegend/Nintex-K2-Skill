@@ -23,8 +23,8 @@ try {
         @{ Name = 'desktop-403'; Width = 1440; Height = 1000; Port = 9362; Url = ($harnessUrl + '?auth=403') },
         @{ Name = 'tablet-ok'; Width = 768; Height = 1024; Port = 9363; Url = $harnessUrl },
         @{ Name = 'mobile-403'; Width = 390; Height = 844; Port = 9364; Url = ($harnessUrl + '?auth=403') },
-        @{ Name = 'desktop-portal'; Width = 1440; Height = 1000; Port = 9365; Url = ($harnessUrl + '?experience=portal'); Portal = $true },
-        @{ Name = 'mobile-portal'; Width = 390; Height = 844; Port = 9366; Url = ($harnessUrl + '?experience=portal'); Portal = $true }
+        @{ Name = 'desktop-portal'; Width = 1440; Height = 1000; Port = 9365; Url = ($harnessUrl + '?experience=portal&caseType=RQB'); Portal = $true },
+        @{ Name = 'mobile-portal'; Width = 390; Height = 844; Port = 9366; Url = ($harnessUrl + '?experience=portal&caseType=RQB'); Portal = $true }
     )
 
     foreach ($case in $cases) {

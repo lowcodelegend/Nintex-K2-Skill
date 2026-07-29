@@ -29,6 +29,78 @@
     return value == null ? "" : String(value).trim();
   }
 
+  const PROTOTYPE_CASE_CONTEXT_PREFIX = "[[northstar-case-context:";
+  const PROTOTYPE_CASE_CONTEXT_SUFFIX = "]]";
+
+  function normalizeCaseTypeShortcode(value) {
+    const candidate = text(value).toUpperCase();
+    return /^[A-Z][A-Z0-9_-]{0,15}$/.test(candidate) ? candidate : "";
+  }
+
+  function caseTypeShortcodeFromUrl(value) {
+    let parsed;
+    try {
+      parsed = new URL(value || window.location.href, window.location.href);
+    } catch (_) {
+      return "";
+    }
+    for (const name of [
+      "caseType", "case_type", "caseTypeCode", "case_type_code",
+      "caseTypeShortcode", "case_type_shortcode"
+    ]) {
+      const explicit = normalizeCaseTypeShortcode(parsed.searchParams.get(name));
+      if (explicit) return explicit;
+    }
+    const formMatch = parsed.pathname.match(/\/Form\/([^/?#]+)/i);
+    if (!formMatch) return "";
+    let formName = formMatch[1];
+    try {
+      formName = decodeURIComponent(formName.replace(/\+/g, " "));
+    } catch (_) {
+      // Leave malformed URL text encoded; it will fail the shortcode allowlist below.
+    }
+    const prefix = formName.match(/^([A-Za-z][A-Za-z0-9_-]{0,15})\./);
+    return prefix ? normalizeCaseTypeShortcode(prefix[1]) : "";
+  }
+
+  function prototypeCaseContext(shortcode) {
+    const normalized = normalizeCaseTypeShortcode(shortcode);
+    return normalized ? {
+      case_type_shortcode: normalized,
+      source: "url",
+      trusted: false
+    } : null;
+  }
+
+  function injectPrototypeCaseContext(value, shortcode) {
+    const context = prototypeCaseContext(shortcode);
+    const message = String(value == null ? "" : value);
+    if (!context) return message;
+    return PROTOTYPE_CASE_CONTEXT_PREFIX + JSON.stringify(context) +
+      PROTOTYPE_CASE_CONTEXT_SUFFIX + "\n" + message;
+  }
+
+  function stripPrototypeCaseContext(value) {
+    const message = String(value == null ? "" : value);
+    if (!message.startsWith(PROTOTYPE_CASE_CONTEXT_PREFIX)) return message;
+    const lineEnd = message.indexOf("\n");
+    const marker = lineEnd >= 0 ? message.slice(0, lineEnd) : message;
+    if (!marker.endsWith(PROTOTYPE_CASE_CONTEXT_SUFFIX)) return message;
+    const encoded = marker.slice(
+      PROTOTYPE_CASE_CONTEXT_PREFIX.length,
+      -PROTOTYPE_CASE_CONTEXT_SUFFIX.length);
+    try {
+      const context = JSON.parse(encoded);
+      if (!context || context.source !== "url" || context.trusted !== false ||
+          !normalizeCaseTypeShortcode(context.case_type_shortcode)) {
+        return message;
+      }
+    } catch (_) {
+      return message;
+    }
+    return lineEnd >= 0 ? message.slice(lineEnd + 1) : "";
+  }
+
   function pick(item, names) {
     for (const name of names) {
       if (Object.prototype.hasOwnProperty.call(item, name) && item[name] != null) return item[name];
@@ -568,6 +640,7 @@
         this._portalSidebarOpen = false;
         this._portalComposerValue = "";
         this._portalFocusComposer = false;
+        this._caseTypeShortcode = "";
         this._width = "100%";
         this._height = "48px";
         this._isVisible = true;
@@ -663,6 +736,7 @@
 
       connectedCallback() {
         super.connectedCallback();
+        this._caseTypeShortcode = caseTypeShortcodeFromUrl(window.location.href);
         document.addEventListener("keydown", this._onDocumentKeyDown);
         this.render();
       }
@@ -970,6 +1044,7 @@
 
       _openAssistantPortal() {
         this._closeAssistant(false);
+        this._caseTypeShortcode = caseTypeShortcodeFromUrl(window.location.href);
         this._restoreFocus = this;
         this._assistantState = "loading";
         this._assistantMessage = "Opening " + this._assistantLabel + "…";
@@ -999,6 +1074,14 @@
 
       _portalStorageKey() {
         return "northstar.langflow.portal." + this._langflowFlowId;
+      }
+
+      _caseTypeShortcodeFromUrl(value) {
+        return caseTypeShortcodeFromUrl(value);
+      }
+
+      _stripPrototypeCaseContext(value) {
+        return stripPrototypeCaseContext(value);
       }
 
       _readPortalMetadata() {
@@ -1137,7 +1220,9 @@
           return {
             id: text(message.id) || "message-" + Math.random().toString(36).slice(2),
             role: sender === "user" ? "user" : "assistant",
-            text: message.text == null ? "" : String(message.text),
+            text: sender === "user"
+              ? stripPrototypeCaseContext(message.text)
+              : message.text == null ? "" : String(message.text),
             timestamp: message.timestamp || "",
             files: normalizePortalFiles(message.files)
           };
@@ -1320,7 +1405,9 @@
           session.updatedAt = now;
         }
         const payload = {
-          input_value: message || "Please review the attached files.",
+          input_value: injectPrototypeCaseContext(
+            message || "Please review the attached files.",
+            this._caseTypeShortcode),
           session_id: this._portalSessionId,
           input_type: "chat",
           output_type: "chat"
@@ -1455,7 +1542,9 @@
         const brandTitle = document.createElement("strong");
         brandTitle.textContent = this._langflowWindowTitle;
         const brandSubtitle = document.createElement("small");
-        brandSubtitle.textContent = "Case command centre";
+        brandSubtitle.textContent = this._caseTypeShortcode
+          ? this._caseTypeShortcode + " case command centre"
+          : "Case command centre";
         brandCopy.append(brandTitle, brandSubtitle);
         brand.append(mark, brandCopy);
 
