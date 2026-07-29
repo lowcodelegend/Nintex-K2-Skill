@@ -59,3 +59,5 @@ Run `Stop` when finished. It closes only Edge processes using the recorded dedic
 Do not promote a route redirect, screenshot, or technical DOM assertion into a behavioral pass by itself. A mutating or workflow checkpoint requires the matching action, a post-action assertion, and `operatorAttested=true`. Report missing checkpoints as skipped errata.
 
 For unattended CI, run management verification only unless an approved interactive Windows runner and dedicated test identity are available. OAuth client credentials, device-code tokens, injected headers, and authentication bypasses do not substitute for a real SmartForms Runtime user session.
+
+Anonymous Forms do not reuse this authenticated profile. For an anonymous Form with native Calendar controls, follow [anonymous-calendar-runtime.md](anonymous-calendar-runtime.md): use a disposable cookie-free browser profile, inspect only the exact culture request, and never save a HAR or screenshot that contains the anonymous token value.
