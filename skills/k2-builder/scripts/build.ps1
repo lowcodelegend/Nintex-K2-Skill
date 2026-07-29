@@ -122,12 +122,12 @@ if ($agentContent -notmatch '(?m)^\s*default_prompt:\s*"Use \$k2-builder .+"\s*$
 }
 
 $actualVersion = (& $entryPoint version | Out-String).Trim()
-if ($actualVersion -cne 'k2build 0.27.0') {
+if ($actualVersion -cne 'k2build 0.28.0') {
     throw "Unexpected k2build version output: $actualVersion"
 }
 $environmentExecutable = Join-Path $skillRoot "tool\K2EnvironmentCli\bin\$Configuration\k2env.exe"
 $environmentVersion = (& $environmentExecutable version | Out-String).Trim()
-if ($environmentVersion -cne 'k2env 0.9.0') {
+if ($environmentVersion -cne 'k2env 0.10.0') {
     throw "Unexpected k2env version output: $environmentVersion"
 }
 
@@ -168,4 +168,57 @@ try {
     }
 }
 
-Write-Output "k2-builder 0.27.0 validation passed ($Configuration); k2env 0.9.0 built at $environmentExecutable."
+$credentialTestRoot = Join-Path ([IO.Path]::GetTempPath()) ('K2EnvironmentCredentials-' + [Guid]::NewGuid().ToString('N'))
+try {
+    $credentialEnvironmentRoot = Join-Path $credentialTestRoot 'environments'
+    New-Item -ItemType Directory -Path $credentialEnvironmentRoot | Out-Null
+    $credentialProfile = [ordered]@{
+        SchemaVersion = 1
+        Name = 'credential-test'
+        K2 = [ordered]@{
+            IntegratedAuthentication = $false
+            SecurityLabel = 'K2SQL'
+            UserName = 'K2Admin'
+            PasswordEnvironmentVariable = 'K2_DEPLOYMENT_PASSWORD'
+            CredentialReference = 'credential-test'
+        }
+    }
+    [IO.File]::WriteAllText(
+        (Join-Path $credentialEnvironmentRoot 'credential-test.json'),
+        ($credentialProfile | ConvertTo-Json -Depth 10),
+        [Text.UTF8Encoding]::new($false))
+    $credentialProbe = Join-Path $credentialTestRoot 'credential-probe.ps1'
+    [IO.File]::WriteAllText(
+        $credentialProbe,
+        "if (`$env:K2_DEPLOYMENT_PASSWORD -cne `$env:K2ENV_EXPECTED_TEST_SECRET) { exit 9 }`r`nWrite-Output 'credential-loaded'`r`n",
+        [Text.UTF8Encoding]::new($false))
+    $environmentWrapper = Join-Path $PSScriptRoot 'k2env.ps1'
+    $testSecret = 'test-only-' + [Guid]::NewGuid().ToString('N')
+    $env:K2ENV_CREDENTIAL_TEST_SOURCE = $testSecret
+    $env:K2ENV_EXPECTED_TEST_SECRET = $testSecret
+    $captureOutput = (& $environmentWrapper set-deployment-credential --root $credentialTestRoot --name credential-test --capture-password-environment-variable K2ENV_CREDENTIAL_TEST_SOURCE | Out-String)
+    if ($LASTEXITCODE -ne 0) { throw 'k2env protected deployment credential capture failed.' }
+    $credentialPath = Join-Path (Join-Path $credentialTestRoot 'credentials') 'credential-test.credential.clixml'
+    if (-not (Test-Path -LiteralPath $credentialPath -PathType Leaf)) { throw 'k2env did not persist the protected deployment credential.' }
+    if ((Get-Content -LiteralPath $credentialPath -Raw).Contains($testSecret) -or $captureOutput.Contains($testSecret)) {
+        throw 'k2env leaked the deployment password into stored or displayed content.'
+    }
+    $invokeOutput = (& $environmentWrapper invoke --root $credentialTestRoot --name credential-test --command $credentialProbe | Out-String)
+    if ($LASTEXITCODE -ne 0 -or $invokeOutput -notmatch 'credential-loaded') {
+        throw 'k2env invoke did not expose the protected deployment credential to the child process.'
+    }
+}
+finally {
+    Remove-Item Env:\K2ENV_CREDENTIAL_TEST_SOURCE -ErrorAction SilentlyContinue
+    Remove-Item Env:\K2ENV_EXPECTED_TEST_SECRET -ErrorAction SilentlyContinue
+    if (Test-Path -LiteralPath $credentialTestRoot) {
+        $tempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\')
+        $resolved = [IO.Path]::GetFullPath($credentialTestRoot).TrimEnd('\')
+        if (-not $resolved.StartsWith($tempRoot + '\', [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Credential-test cleanup escaped the temporary root: $resolved"
+        }
+        Remove-Item -LiteralPath $resolved -Recurse -Force
+    }
+}
+
+Write-Output "k2-builder 0.28.0 validation passed ($Configuration); k2env 0.10.0 built at $environmentExecutable."

@@ -202,6 +202,10 @@ namespace K2EnvironmentCli
         public string DesignerHost { get; set; }
         public string SecurityLabel { get; set; }
         public bool IntegratedAuthentication { get; set; }
+        public string Domain { get; set; }
+        public string UserName { get; set; }
+        public string PasswordEnvironmentVariable { get; set; }
+        public string CredentialReference { get; set; }
         public string InstallDirectory { get; set; }
         public string Version { get; set; }
     }

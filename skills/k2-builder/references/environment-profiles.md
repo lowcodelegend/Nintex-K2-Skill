@@ -4,6 +4,8 @@
 
 ```text
 k2\
+├── credentials\
+│   └── spk2-local.credential.clixml
 ├── config.json
 └── environments\
     └── spk2-local.json
@@ -11,13 +13,17 @@ k2\
 
 ## First use
 
-Run discovery once on a self-hosted K2 machine. It reads the K2 installation registry key and assembly version, maps the SmartForms applications and public binding from IIS, records the current integrated identity, and verifies the management port plus Designer and Runtime routes.
+Run discovery once on a self-hosted K2 machine. It reads the K2 installation registry key and assembly version, maps the SmartForms applications and public binding from IIS, detects the default K2 security label, and verifies the authenticated management connection plus Designer and Runtime routes.
 
 ```powershell
 & '<k2-builder-root>\scripts\k2env.ps1' discover --name spk2-local --default --langflow-url 'https://langflow.example.com' --langflow-flow-id '<flow-guid>'
 ```
 
-Discovery also queries the supported K2 `FormsManager` API for installed themes, Style Profiles, and likely common framework views, including headers and footers. Candidates include their parameters, controls, view events/rule-action counts, version, category, and consumer-form count. It does not query or modify K2 databases and never writes credentials. Supply `--install-dir`, `--host`, or `--base-url` only to override an incorrectly inferred value.
+Discovery also queries the supported K2 `FormsManager` API for installed themes, Style Profiles, and likely common framework views, including headers and footers. Candidates include their parameters, controls, view events/rule-action counts, version, category, and consumer-form count. It does not query or modify K2 databases.
+
+When the installed default security label is `K2`, onboarding uses Windows Integrated authentication and stores no credential. When another label such as `K2SQL` is the default, `k2env.ps1` securely prompts for the reusable K2 deployment identity. It stores the resulting `PSCredential` under `credentials\` using Windows DPAPI, readable only by the capturing Windows identity; the environment JSON stores only the label, user name, `K2_DEPLOYMENT_PASSWORD` variable name, and opaque credential reference. No plaintext password is written to the profile, repository, command line, or persistent environment. Supply `--security-label LABEL --integrated true|false` only to override incorrect detection. Use `--user-name USER` to prefill the prompt. For unattended onboarding, an already protected orchestration process may supply `--capture-password-environment-variable NAME`; its value is imported into DPAPI storage and is not retained in the profile.
+
+Use `detect-auth --output json` to inspect that decision without connecting or prompting.
 
 `--langflow-url` records an optional Langflow base URL and probes its unauthenticated `/health_check` plus `/api/v1/version` endpoints. Add `--langflow-flow-id` to inspect the selected assistant flow through `/api/v1/flows/{id}`. The profile stores only non-secret capability facts: configured/available state, normalized base and health URLs, HTTP status, reported version, check time, diagnostic message, selected flow identity, detected Chat Input/Read File component IDs, and granular feature flags for the command portal, session history, streaming, image attachments, document attachments, and case MCP tools. Use `--no-langflow` to make the feature explicitly unavailable. On refresh, an existing URL and matching flow ID are preserved unless a different selection is supplied; on first discovery, `LANGFLOW_SERVER_URL` and `LANGFLOW_FLOW_ID` are used when no explicit choices are present.
 
@@ -53,7 +59,24 @@ If validation passes, use the stored values and do not repeat full discovery. Ap
 
 `explicit user/manifest value → selected environment profile → tool default`
 
-The environment profile supplies K2 host, ports, integrated-authentication mode, security label, install directory, detected product build, Designer host token, public base URLs, optional integration capabilities, installed SmartForms legacy themes/Style Profiles/framework candidates, the chosen default Style Profile, the selected common-framework lifecycle/layout contract, and a durable solution-code registry. Normal build discovery reads `capabilities.langflow.available`, `capabilities.langflow.baseUrl`, and `capabilities.langflow.features`. Enable the command portal only when both the instance and `features.commandPortal` are available; enable each attachment path only when its corresponding feature is true. The detected flow and component IDs supply the normal mapping defaults. For SmartForms use `explicit manifest value → selected environment default → deliberate exception`; stop and ask while either selection is `unselected`. `k2forms` automatically consumes the selected header/footer contract unless `application.commonHeader` explicitly selects/overrides it or disables it with a reason. The profile does not replace application-specific SQL database settings.
+The environment profile supplies K2 host, ports, integrated-authentication mode, security label, deployment user/credential reference, install directory, detected product build, Designer host token, public base URLs, optional integration capabilities, installed SmartForms legacy themes/Style Profiles/framework candidates, the chosen default Style Profile, the selected common-framework lifecycle/layout contract, and a durable solution-code registry. Normal build discovery reads `capabilities.langflow.available`, `capabilities.langflow.baseUrl`, and `capabilities.langflow.features`. Enable the command portal only when both the instance and `features.commandPortal` are available; enable each attachment path only when its corresponding feature is true. The detected flow and component IDs supply the normal mapping defaults. For SmartForms use `explicit manifest value → selected environment default → deliberate exception`; stop and ask while either selection is `unselected`. `k2forms` automatically consumes the selected header/footer contract unless `application.commonHeader` explicitly selects/overrides it or disables it with a reason. The profile does not replace application-specific SQL database settings.
+
+Project `k2.integratedAuthentication`, `securityLabel`, `domain`, `userName`, and `passwordEnvironmentVariable` into the corresponding K2 connection fields in every specialist manifest. Keep `K2_DEPLOYMENT_PASSWORD` environment-wide; do not invent `CPR_K2_PASSWORD` or another solution-specific K2 password variable. Runtime OIDC/forms login and SQL Server `sa`/Windows Integrated database authentication are separate contexts and do not alter this K2 management identity.
+
+For a non-integrated profile, run deployment and live authoring checks through the environment wrapper so it decrypts the credential only for the child process:
+
+```powershell
+& '<k2-builder-root>\scripts\k2env.ps1' invoke --name spk2-local --command `
+  '<specialist-root>\scripts\k2forms.ps1' deploy --manifest '.\smartforms-manifest.json' --confirm
+```
+
+Rotate or repair the stored credential without changing project manifests:
+
+```powershell
+& '<k2-builder-root>\scripts\k2env.ps1' set-deployment-credential --name spk2-local
+```
+
+`validate` authenticates through K2 using the effective profile identity and fails if that authoring context is unavailable. If the protected file was copied from another machine or Windows account, recapture it; DPAPI protection is intentionally not portable.
 
 Validation re-probes configured Langflow availability without rerunning full K2 inventory. Langflow is optional: an unreachable or unconfigured instance is reported with check status `unavailable` and sets the capability to `available: false`, but does not invalidate an otherwise healthy K2 profile. Reconfigure or clear it independently:
 
@@ -85,4 +108,4 @@ A reservation is idempotent only for the same solution name and rejects another 
 
 Use `refresh` after K2 upgrades, IIS binding/application changes, or intentional movement of the K2 server. A failed validation is a reason to inspect the reported check and refresh only when the discovered change is expected.
 
-Use `--root <path>` for isolated tests or centrally managed alternate stores. Do not place profiles in projects or under a skill directory. Do not add passwords, tokens, or SQL credentials to a profile.
+Use `--root <path>` for isolated tests or centrally managed alternate stores. Do not place profiles or protected credentials in projects or under a skill directory. Do not add passwords, tokens, or SQL credentials to a profile.

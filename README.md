@@ -14,7 +14,7 @@ Running the installed K2 skills requires:
 - A Windows x64 K2 development machine with self-hosted K2 Five installed locally.
 - Windows PowerShell 5.1 or later and .NET Framework 4.8.
 - SQL Server access for SQL-backed SmartObjects.
-- Normally, integrated Active Directory authentication for K2 management, Designer, Runtime, and IIS access.
+- K2 management access through either the default `K2` Windows Integrated security label or a non-integrated default label whose deployment credential can be captured during onboarding. Runtime OIDC/forms login and SQL Server authentication remain separate.
 
 Building and packaging the complete suite from source additionally requires:
 
@@ -122,7 +122,7 @@ Discover and persist this K2 environment once:
 & "$builder\scripts\k2env.ps1" set-langflow --name k2-local --langflow-url 'https://langflow.example.com' --langflow-flow-id '<flow-guid>'
 ```
 
-Discovery inventories K2/IIS endpoints, Style Profiles, and likely common headers/footers. Complete the prompted defaults once; later projects reuse the non-secret profile.
+Discovery inventories K2/IIS endpoints, Style Profiles, and likely common headers/footers. It uses Windows Integrated authentication when `K2` is the default security label; otherwise it prompts once for the K2 deployment identity and protects that credential with Windows DPAPI outside the non-secret environment profile. Later projects reuse the environment-wide identity instead of solution-specific password variables.
 
 Copy the bundled complete example and review its plan:
 

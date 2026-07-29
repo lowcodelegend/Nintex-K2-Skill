@@ -17,7 +17,7 @@ namespace K2EnvironmentCli
 {
     internal static class Discovery
     {
-        public static EnvironmentProfile Discover(string name, string installOverride, string hostOverride, string baseUrlOverride, string langflowUrl, string langflowFlowId)
+        public static EnvironmentProfile Discover(string name, string installOverride, string hostOverride, string baseUrlOverride, string langflowUrl, string langflowFlowId, K2Settings authentication)
         {
             var sources = new List<string>();
             var install = ResolveInstallDirectory(installOverride, sources);
@@ -35,18 +35,29 @@ namespace K2EnvironmentCli
             var host = string.IsNullOrWhiteSpace(hostOverride) ? "localhost" : hostOverride.Trim();
             var webBase = !string.IsNullOrWhiteSpace(baseUrlOverride) ? NormalizeBaseUrl(baseUrlOverride) :
                 iis != null ? iis.BaseUrl : "http://" + (string.IsNullOrWhiteSpace(domain) ? machine : machine + "." + domain);
+            var k2 = new K2Settings
+            {
+                Host = host,
+                ManagementPort = 5555,
+                WorkflowPort = 5252,
+                DesignerHost = "smartforms",
+                SecurityLabel = authentication.SecurityLabel,
+                IntegratedAuthentication = authentication.IntegratedAuthentication,
+                Domain = authentication.Domain,
+                UserName = authentication.UserName,
+                PasswordEnvironmentVariable = authentication.PasswordEnvironmentVariable,
+                CredentialReference = authentication.CredentialReference,
+                InstallDirectory = install,
+                Version = version
+            };
             List<ObservedSolutionCode> observedSolutionCodes;
-            var smartForms = DiscoverSmartForms(host, sources, out observedSolutionCodes);
+            var smartForms = DiscoverSmartForms(k2, sources, out observedSolutionCodes);
 
             return new EnvironmentProfile
             {
                 SchemaVersion = 1,
                 Name = ProfileStore.ValidateName(name),
-                K2 = new K2Settings
-                {
-                    Host = host, ManagementPort = 5555, WorkflowPort = 5252, DesignerHost = "smartforms",
-                    SecurityLabel = "K2", IntegratedAuthentication = true, InstallDirectory = install, Version = version
-                },
+                K2 = k2,
                 Urls = new UrlSettings
                 {
                     Base = webBase,
@@ -76,23 +87,14 @@ namespace K2EnvironmentCli
             };
         }
 
-        private static SmartFormsSettings DiscoverSmartForms(string host, List<string> sources, out List<ObservedSolutionCode> observedSolutionCodes)
+        private static SmartFormsSettings DiscoverSmartForms(K2Settings settings, List<string> sources, out List<ObservedSolutionCode> observedSolutionCodes)
         {
-            var builder = new SCConnectionStringBuilder
-            {
-                Authenticate = true,
-                Host = host,
-                Port = 5555,
-                Integrated = true,
-                IsPrimaryLogin = true,
-                SecurityLabelName = "K2"
-            };
             using (var manager = new FormsManager())
             {
                 manager.CreateConnection();
                 try
                 {
-                    manager.Connection.Open(builder.ConnectionString);
+                    manager.Connection.Open(BuildConnectionString(settings));
                     var themes = manager.GetThemes().Themes.Cast<Theme>().Select(x => x.Name).OrderBy(x => x).ToList();
                     var profiles = manager.GetStyleProfiles().StyleProfiles.Cast<StyleProfileInfo>()
                         .OrderBy(x => x.DisplayName).ThenBy(x => x.Name)
@@ -225,6 +227,27 @@ namespace K2EnvironmentCli
 
         private static FormsManager OpenFormsManager(K2Settings settings)
         {
+            var manager = new FormsManager();
+            manager.CreateConnection();
+            try { manager.Connection.Open(BuildConnectionString(settings)); return manager; }
+            catch
+            {
+                manager.DeleteConnection();
+                manager.Dispose();
+                throw;
+            }
+        }
+
+        internal static void ProbeAuthentication(K2Settings settings)
+        {
+            using (var manager = OpenFormsManager(settings))
+            {
+                manager.GetThemes();
+            }
+        }
+
+        private static string BuildConnectionString(K2Settings settings)
+        {
             var builder = new SCConnectionStringBuilder
             {
                 Authenticate = true,
@@ -234,15 +257,21 @@ namespace K2EnvironmentCli
                 IsPrimaryLogin = true,
                 SecurityLabelName = settings.SecurityLabel
             };
-            var manager = new FormsManager();
-            manager.CreateConnection();
-            try { manager.Connection.Open(builder.ConnectionString); return manager; }
-            catch
+            if (!settings.IntegratedAuthentication)
             {
-                manager.DeleteConnection();
-                manager.Dispose();
-                throw;
+                if (string.IsNullOrWhiteSpace(settings.UserName))
+                    throw new CliException("Non-integrated K2 authentication requires a deployment user name.");
+                if (string.IsNullOrWhiteSpace(settings.PasswordEnvironmentVariable))
+                    throw new CliException("Non-integrated K2 authentication requires a password environment-variable name.");
+                var password = Environment.GetEnvironmentVariable(settings.PasswordEnvironmentVariable);
+                if (string.IsNullOrEmpty(password))
+                    throw new CliException("K2 deployment credential is unavailable. Run through k2env.ps1 so the protected credential can be loaded.");
+                builder.WindowsDomain = settings.Domain;
+                builder.UserID = settings.UserName;
+                builder.Password = password;
+                builder.CachePassword = false;
             }
+            return builder.ConnectionString;
         }
 
         private static bool IsHeaderCandidate(ViewInfo view)

@@ -7,7 +7,7 @@ namespace K2EnvironmentCli
 {
     internal static class Cli
     {
-        public const string Version = "0.9.0";
+        public const string Version = "0.10.0";
 
         public static int Run(string[] args)
         {
@@ -44,7 +44,8 @@ namespace K2EnvironmentCli
             if (overwrite && File.Exists(store.ProfilePath(name))) previous = store.Read(name);
             var langflowUrl = ResolveLangflowUrl(previous, options);
             var langflowFlowId = ResolveLangflowFlowId(previous, options, langflowUrl);
-            var profile = Discovery.Discover(name, options.Get("install-dir"), options.Get("host"), options.Get("base-url"), langflowUrl, langflowFlowId);
+            var authentication = ResolveAuthentication(previous, options, name);
+            var profile = Discovery.Discover(name, options.Get("install-dir"), options.Get("host"), options.Get("base-url"), langflowUrl, langflowFlowId, authentication);
             PreserveStyleProfileSelection(previous, profile);
             PreserveCommonHeaderSelection(previous, profile);
             PreserveSolutionCodeRegistrations(previous, profile);
@@ -60,6 +61,52 @@ namespace K2EnvironmentCli
             store.Write(profile, overwrite);
             if (options.Has("default") || store.ReadIndex() == null) store.SetDefault(profile.Name);
             return 0;
+        }
+
+        private static K2Settings ResolveAuthentication(EnvironmentProfile previous, Options options, string name)
+        {
+            var prior = previous == null ? null : previous.K2;
+            var integrated = ParseOptionalBoolean(options.Get("integrated"), "--integrated")
+                ?? (prior == null ? (bool?)null : prior.IntegratedAuthentication)
+                ?? true;
+            var securityLabel = FirstNonEmpty(options.Get("security-label"), prior == null ? null : prior.SecurityLabel, "K2");
+            var result = new K2Settings
+            {
+                IntegratedAuthentication = integrated,
+                SecurityLabel = securityLabel
+            };
+            if (integrated) return result;
+
+            result.Domain = FirstNonEmpty(options.Get("domain"), prior == null ? null : prior.Domain, null);
+            result.UserName = FirstNonEmpty(options.Get("user-name"), prior == null ? null : prior.UserName, null);
+            result.PasswordEnvironmentVariable = FirstNonEmpty(
+                options.Get("password-environment-variable"),
+                prior == null ? null : prior.PasswordEnvironmentVariable,
+                "K2_DEPLOYMENT_PASSWORD");
+            result.CredentialReference = FirstNonEmpty(
+                options.Get("credential-reference"),
+                prior == null ? null : prior.CredentialReference,
+                ProfileStore.ValidateName(name));
+            if (string.IsNullOrWhiteSpace(result.UserName))
+                throw new CliException("Non-integrated K2 authentication requires --user-name. Use k2env.ps1 discovery to capture the deployment credential securely.");
+            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(result.PasswordEnvironmentVariable)))
+                throw new CliException("The K2 deployment password environment variable is not populated. Use k2env.ps1 so the protected credential is loaded for discovery.");
+            return result;
+        }
+
+        private static bool? ParseOptionalBoolean(string value, string option)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            bool parsed;
+            if (!bool.TryParse(value, out parsed)) throw new CliException(option + " must be true or false.");
+            return parsed;
+        }
+
+        private static string FirstNonEmpty(string first, string second, string fallback)
+        {
+            if (!string.IsNullOrWhiteSpace(first)) return first.Trim();
+            if (!string.IsNullOrWhiteSpace(second)) return second.Trim();
+            return fallback;
         }
 
         private static int Show(ProfileStore store, Options options)
@@ -544,7 +591,9 @@ namespace K2EnvironmentCli
             if (json) { Console.WriteLine(PrettyJson.Serialize(profile)); return; }
             Console.WriteLine("K2 environment: " + profile.Name);
             Console.WriteLine("Profile: " + path);
-            Console.WriteLine("K2: " + profile.K2.Host + ":" + profile.K2.ManagementPort + " (integrated, label=" + profile.K2.SecurityLabel + ")");
+            Console.WriteLine("K2: " + profile.K2.Host + ":" + profile.K2.ManagementPort + " (" +
+                (profile.K2.IntegratedAuthentication ? "integrated" : "credential, user=" + profile.K2.SecurityLabel + ":" + profile.K2.UserName) +
+                ", label=" + profile.K2.SecurityLabel + ")");
             Console.WriteLine("Version: " + profile.K2.Version);
             Console.WriteLine("Install: " + profile.K2.InstallDirectory);
             Console.WriteLine("Designer: " + profile.Urls.Designer);
@@ -575,7 +624,13 @@ namespace K2EnvironmentCli
                 name = profile.Name,
                 profilePath = path,
                 lastValidatedUtc = profile.LastValidatedUtc,
-                k2 = new { profile.K2.Host, profile.K2.ManagementPort, profile.K2.WorkflowPort, profile.K2.DesignerHost, profile.K2.SecurityLabel, profile.K2.IntegratedAuthentication, profile.K2.Version },
+                k2 = new
+                {
+                    profile.K2.Host, profile.K2.ManagementPort, profile.K2.WorkflowPort, profile.K2.DesignerHost,
+                    profile.K2.SecurityLabel, profile.K2.IntegratedAuthentication, profile.K2.Domain,
+                    profile.K2.UserName, profile.K2.PasswordEnvironmentVariable, profile.K2.CredentialReference,
+                    profile.K2.Version
+                },
                 urls = profile.Urls,
                 capabilities = new
                 {
@@ -676,8 +731,8 @@ namespace K2EnvironmentCli
         {
             Console.WriteLine("k2env " + Version + " - durable K2 Five environment profiles");
             Console.WriteLine("Commands:");
-            Console.WriteLine("  discover --name NAME [--default] [--install-dir PATH] [--host HOST] [--base-url URL] [--langflow-url URL [--langflow-flow-id GUID] | --no-langflow]");
-            Console.WriteLine("  refresh  --name NAME [--install-dir PATH] [--host HOST] [--base-url URL] [--langflow-url URL [--langflow-flow-id GUID] | --no-langflow]");
+            Console.WriteLine("  discover --name NAME [--default] [--install-dir PATH] [--host HOST] [--base-url URL] [--integrated true|false] [--security-label LABEL] [--user-name USER] [--password-environment-variable NAME] [--credential-reference NAME] [--langflow-url URL [--langflow-flow-id GUID] | --no-langflow]");
+            Console.WriteLine("  refresh  --name NAME [same connection options as discover]");
             Console.WriteLine("  show [--name NAME] [--summary] [--output json]");
             Console.WriteLine("  validate [--name NAME] [--output json]");
             Console.WriteLine("  list [--output json]");

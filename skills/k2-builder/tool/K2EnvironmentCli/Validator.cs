@@ -30,6 +30,34 @@ namespace K2EnvironmentCli
 
             if (profile.K2 != null)
                 CheckTcp(checks, "management-port", profile.K2.Host, profile.K2.ManagementPort);
+            if (profile.K2 != null)
+            {
+                var authContract = profile.K2.IntegratedAuthentication ||
+                    (!string.IsNullOrWhiteSpace(profile.K2.SecurityLabel) &&
+                     !string.IsNullOrWhiteSpace(profile.K2.UserName) &&
+                     !string.IsNullOrWhiteSpace(profile.K2.PasswordEnvironmentVariable) &&
+                     !string.IsNullOrWhiteSpace(profile.K2.CredentialReference));
+                Check(checks, "deployment-auth-contract", authContract,
+                    profile.K2.IntegratedAuthentication
+                        ? "Windows Integrated, label=" + profile.K2.SecurityLabel
+                        : "credential reference=" + (profile.K2.CredentialReference ?? "missing") +
+                          ", identity=" + (profile.K2.SecurityLabel ?? "missing") + ":" + (profile.K2.UserName ?? "missing"));
+                if (authContract)
+                {
+                    try
+                    {
+                        Discovery.ProbeAuthentication(profile.K2);
+                        Check(checks, "deployment-authoring-context", true,
+                            profile.K2.IntegratedAuthentication
+                                ? "authenticated with Windows Integrated security label " + profile.K2.SecurityLabel
+                                : "authenticated as " + profile.K2.SecurityLabel + ":" + profile.K2.UserName);
+                    }
+                    catch (Exception ex)
+                    {
+                        Check(checks, "deployment-authoring-context", false, ex.GetBaseException().Message);
+                    }
+                }
+            }
             var hasSmartFormsMetadata = profile.SmartForms != null && profile.SmartForms.Themes != null && profile.SmartForms.StyleProfiles != null;
             Check(checks, "smartforms-metadata", hasSmartFormsMetadata,
                 hasSmartFormsMetadata ? profile.SmartForms.Themes.Count + " theme(s), " + profile.SmartForms.StyleProfiles.Count + " style profile(s)" : "missing; refresh the environment profile");
