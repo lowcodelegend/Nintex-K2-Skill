@@ -2,10 +2,47 @@
 
 Build self-hosted K2 Five applications from manifests, not clicks. Seven portable Agent Skills and six CLI tools design governed case-management solutions and create SQL-backed SmartObjects, modern Web Component controls, custom Style Profiles, modern SmartForms, HTML5 workflows, and complete verified solutions through K2 management and Designer services.
 
-Windows x64 only. Requires K2 Five installed locally, PowerShell 5.1+, .NET Framework 4.8, SQL Server access, and normally integrated AD authentication. Building the CLIs from source additionally requires the .NET Framework 4.8 Developer Pack. It does not target Nintex Automation Cloud or legacy K2 Studio workflows.
+Windows x64 only. It does not target Nintex Automation Cloud or legacy K2 Studio workflows.
 
 > [!WARNING]
 > Use this toolkit only in a K2 development environment, preferably a dedicated single-user VM. Generation, replacement, workflow publication, and cleanup can make broad changes to K2 and application databases; it is not intended to run directly against shared test, staging, or production environments. Install and run Codex or Claude Code on the K2 VM itself so the agent can use the locally installed K2 assemblies, Windows identity, registry configuration, IIS metadata, and management endpoints.
+
+## Prerequisites
+
+Running the installed K2 skills requires:
+
+- A Windows x64 K2 development machine with self-hosted K2 Five installed locally.
+- Windows PowerShell 5.1 or later and .NET Framework 4.8.
+- SQL Server access for SQL-backed SmartObjects.
+- Normally, integrated Active Directory authentication for K2 management, Designer, Runtime, and IIS access.
+
+Building and packaging the complete suite from source additionally requires:
+
+- The exact .NET Framework 4.8 Developer Pack/targeting pack because the CLI projects target `.NETFramework,Version=v4.8`.
+- Python 3.10 or later, available as `python` on `PATH`, for the case-management validators and agent framework.
+- [`uv`](https://docs.astral.sh/uv/), available as `uv` on `PATH`, for the case-agent MCP server and its integration tests.
+
+Install the source-build prerequisites with WinGet when they are not already present:
+
+```powershell
+winget install --exact --id Microsoft.DotNet.Framework.DeveloperPack_4 --version 4.8
+winget install --exact --id Python.Python.3.12
+winget install --exact --id astral-sh.uv
+```
+
+Open a new PowerShell session after installation so the updated `PATH` is available, then verify:
+
+```powershell
+python --version
+uv --version
+Test-Path 'C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8'
+```
+
+### Optional AI and Langflow
+
+Langflow is optional. It is not required to build or install the suite, or to create and operate the core SQL SmartObjects, SmartForms, Style Profiles, and workflows. Use Langflow only when enabling AI-assisted features such as the case command portal, conversational case intake, governed agentic case creation, or other advisory AI flows.
+
+The `k2-case-management` skill exposes its governed agent framework through a remote Streamable HTTP MCP server that Langflow can use as a tool provider. Langflow supplies the model/agent flow; the MCP server itself does not call a model. Configure Langflow only for environments that advertise the corresponding capability, keep AI output advisory and subject to human oversight, and follow the authenticated HTTPS deployment guidance in [`skills/k2-case-management/references/agentic-case-mcp.md`](skills/k2-case-management/references/agentic-case-mcp.md).
 
 ## Install
 
@@ -77,6 +114,8 @@ Discover and persist this K2 environment once:
 & "$builder\scripts\k2env.ps1" discover --name k2-local --default
 & "$builder\scripts\k2env.ps1" validate --name k2-local
 & "$builder\scripts\k2env.ps1" show --summary --output json
+
+# Optional: configure Langflow only when enabling AI-assisted features
 & "$builder\scripts\k2env.ps1" set-langflow --name k2-local --langflow-url 'https://langflow.example.com' --langflow-flow-id '<flow-guid>'
 ```
 

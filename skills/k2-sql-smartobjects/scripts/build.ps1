@@ -42,7 +42,7 @@ if ($parseErrors.Count -gt 0) {
 
 $countryAsset = Join-Path $skillRoot 'assets\reference-data\iso-3166-1-country.sql'
 $countrySql = Get-Content -Raw -LiteralPath $countryAsset
-$countryRows = [regex]::Matches($countrySql, "(?m)^\s+\(N'(?<code>[A-Z]{2})',\s+N'.+',\s+\d+\),?$")
+$countryRows = [regex]::Matches($countrySql, "(?m)^\s+\(N'(?<code>[A-Z]{2})',\s+N'.+',\s+\d+\),?\r?$")
 if ($countryRows.Count -ne 249 -or
     @($countryRows | ForEach-Object { $_.Groups['code'].Value } | Select-Object -Unique).Count -ne 249 -or
     $countrySql -notmatch "\(N'AE', N'United Arab Emirates'," -or
