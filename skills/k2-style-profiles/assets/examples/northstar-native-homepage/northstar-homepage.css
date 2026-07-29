@@ -1984,12 +1984,16 @@ body.k2sp-page-initiation .k2sp-journey-guidance ul {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
+  body::before,
+  body::after {
     animation-duration: .001s !important;
     animation-iteration-count: 1 !important;
+    transition-duration: .001s !important;
+  }
+
+  body.k2sp-spike .k2sp-sidebar a.k2sp-nav-item,
+  .k2sp-transition,
+  .k2sp-toast {
     transition-duration: .001s !important;
   }
 }

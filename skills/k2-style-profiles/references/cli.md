@@ -4,7 +4,7 @@
 
 | Command | Mutates | Behavior |
 | --- | --- | --- |
-| `doctor --manifest <path>` | No | Validate the manifest, local sources, runtime-only guards, installed IIS/K2 prerequisites, authenticated K2 management connectivity, effective author context, and the public Style Profile load/deploy/check-in contract. |
+| `doctor --manifest <path>` | No | Validate the manifest, local sources, runtime-only guards, safe motion scoping, installed IIS/K2 prerequisites, authenticated K2 management connectivity, effective author context, and the public Style Profile load/deploy/check-in contract. |
 | `plan --manifest <path>` | No | Show create/update/conflict state, GUID/version/consumers, IIS mapping, exact ordered files, sources, URLs, and verification scope. |
 | `deploy --manifest <path> --confirm` | IIS and K2 | Create or validate the virtual directory, copy assets, create/update and check in the Style Profile, then run full verification. An already-current checked-in profile is not versioned again. |
 | `verify --manifest <path>` | No | Verify checked-in metadata/category, exact ordered type/URL contract, hosted HTTP status/MIME type, and source/served SHA-256 equality. |
@@ -58,6 +58,11 @@ For application shells and DOM enhancement, the separate browser validator exerc
 ```
 
 It validates delivery headers, Designer isolation, cold-load flashing after first contentful paint, cached warm transitions, synchronous transition cover, readiness fail-open, overflow, and browser diagnostics. `k2style` manifest validation also rejects an important native-input border/background override that has no later invalid treatment with equal or greater specificity.
+
+Manifest validation rejects transition, animation, and scroll-behavior declarations applied
+through universal selectors. Even a Runtime-scoped selector such as
+`html:not(.designer) *` reaches native K2 dropdowns and can break popup positioning under a
+reduced-motion preference.
 
 For a Northstar case solution, `capture-browser-page-cdp.mjs --click-name <native-control-name>` clicks the real named K2 action before capture and records invalid controls, visible treatment, summary, ARIA state, focus, selected-screen state, compatibility-probe state, overflow, and diagnostics. Repeat `--click-name` to execute a real multi-screen sequence, use `--dismiss-dialogs` when intermediate actions show native K2 feedback, and add `--palette-probe-text <text>` to open, focus, and query the real command-palette Web Component after navigation. The result also records computed completed-step indicator and tick geometry.
 

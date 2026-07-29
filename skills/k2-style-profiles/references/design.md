@@ -47,6 +47,31 @@ K2 Runtime performs partial updates and can replace nodes. DOM manipulation must
 - honor `prefers-reduced-motion`;
 - avoid hiding content until enhancement succeeds.
 
+### Reduced motion and native K2 controls
+
+Target only Style Profile-owned elements that actually declare motion. Never use a universal
+reduced-motion reset such as `html:not(.designer) * { transition-duration: 1ms; }`, even though
+it is Runtime-scoped. It still matches native K2 controls. K2 dropdowns use their transition
+lifecycle while creating, positioning, and focusing the selected popup option; overriding that
+timing can make a partially scrolled page jump to the top while the list opens outside the
+viewport.
+
+Prefer exact owned selectors:
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  html:not(.designer) .app-transition,
+  html:not(.designer) .app-toast {
+    transition-duration: 1ms !important;
+  }
+}
+```
+
+If the profile declares no custom transition or animation, add no duration reset. Test a tall
+Runtime Form with reduced motion emulated: scroll away from the top, click native dropdown text
+and arrow targets, and require unchanged document scroll plus a visible, correctly positioned
+list. `k2style doctor` rejects universal selectors that carry motion-control declarations.
+
 ## Integration with SmartForms
 
 Create and verify the Style Profile first. In a `$k2-smartforms` manifest, set `application.styleProfile` to its exact name or GUID, keep `useLegacyTheme=false`, and set `form.useStyleProfile=false` on Forms that should retain K2's plain modern default. Style Profile deployment does not edit existing Forms; changing or removing a Form's selected profile remains SmartForms reconciliation/regeneration work.
@@ -79,6 +104,7 @@ Some K2 5.10 Runtime builds reference the misspelled localization global `locVal
 - Every URL returns 2xx over HTTPS with the expected MIME type.
 - Served bytes equal source bytes.
 - Runtime works with empty, long, invalid, slow, mobile, keyboard-only, and reduced-motion states.
+- With reduced motion enabled, native dropdowns opened above and below the fold retain document scroll and position their list in the viewport.
 - Clicking an empty guided Continue/Save action invokes its real K2 event, blocks navigation/persistence, visibly treats every expected invalid control, exposes the matching summary count, and focuses/reveals the first failure without browser exceptions or horizontal overflow.
 - After real Pre-fill/Continue/Save navigation, the original command palette remains visible, opens, focuses its search input, and returns governed options on every guided screen.
 - Every completed-step check uses the declared centered geometry rather than a font-dependent glyph.

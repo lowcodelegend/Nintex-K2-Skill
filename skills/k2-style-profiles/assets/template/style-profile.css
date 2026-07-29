@@ -3,6 +3,9 @@
  * k2-color-scheme.min.css owns the complete platform variable mapping.
  * Keep this file for solution-specific layout and polish gaps.
  * Keep every selector under html:not(.designer) so Designer remains untouched.
+ * Scope reduced-motion declarations only to owned components with declared motion.
+ * Never reset transition or animation timing through a universal (*) selector:
+ * native K2 dropdown positioning depends on its own transition lifecycle.
  */
 html:not(.designer) {
   --k2sp-accent: #2563eb;

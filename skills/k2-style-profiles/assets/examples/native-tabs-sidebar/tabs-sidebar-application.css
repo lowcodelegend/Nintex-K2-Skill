@@ -367,12 +367,19 @@ html:not(.designer).k2sp-tabs-runtime body.k2sp-tabs-collapsed.k2sp-tabs-switchi
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html:not(.designer).k2sp-tabs-runtime *,
-  html:not(.designer).k2sp-tabs-runtime *::before,
-  html:not(.designer).k2sp-tabs-runtime *::after {
+  html:not(.designer).k2sp-tabs-runtime .k2sp-tab-list-host {
     scroll-behavior: auto !important;
+  }
+
+  html:not(.designer).k2sp-tabs-runtime body.k2sp-tabs-enhanced,
+  html:not(.designer).k2sp-tabs-runtime .k2sp-tab-sidebar,
+  html:not(.designer).k2sp-tabs-runtime #k2sp-tab-sidebar a[role="tab"],
+  html:not(.designer).k2sp-tabs-runtime .k2sp-tab-sidebar-toggle {
+    transition-duration: .001s !important;
+  }
+
+  html:not(.designer).k2sp-tabs-runtime body.k2sp-tabs-switching::after {
     animation-duration: .001s !important;
     animation-iteration-count: 1 !important;
-    transition-duration: .001s !important;
   }
 }

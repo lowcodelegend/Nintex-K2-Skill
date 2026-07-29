@@ -173,11 +173,7 @@ html:not(.designer).k2sp-runtime .k2sp-transition-mark {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html:not(.designer).k2sp-runtime *,
-  html:not(.designer).k2sp-runtime *::before,
-  html:not(.designer).k2sp-runtime *::after {
-    animation-duration: 1ms !important;
-    animation-iteration-count: 1 !important;
+  html:not(.designer).k2sp-runtime .k2sp-transition {
     transition-duration: 1ms !important;
   }
 }

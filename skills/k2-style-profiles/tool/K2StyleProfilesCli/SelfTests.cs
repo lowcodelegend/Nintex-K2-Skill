@@ -68,6 +68,28 @@ namespace K2StyleProfilesCli
                     "input.invalid { border-color:#c00; }",
                     "weak-invalid.css");
             }, "equal or greater specificity");
+            CssValidationContract.Validate(
+                "@media (prefers-reduced-motion: reduce) {" +
+                ".journey-transition, .journey-transition::before {" +
+                "transition-duration:1ms !important;" +
+                "animation-duration:1ms !important; }}",
+                "scoped-motion.css");
+            AssertThrows(delegate
+            {
+                CssValidationContract.Validate(
+                    "@media (prefers-reduced-motion: reduce) {" +
+                    "html:not(.designer) * {" +
+                    "transition-duration:.01ms !important; }}",
+                    "broad-transition.css");
+            }, "universal selector");
+            AssertThrows(delegate
+            {
+                CssValidationContract.Validate(
+                    "@media (prefers-reduced-motion: reduce) {" +
+                    "*::before, *::after {" +
+                    "animation-duration:1ms !important; }}",
+                    "broad-animation.css");
+            }, "universal selector");
 
             var nonIntegrated = new K2ConnectionOptions
             {

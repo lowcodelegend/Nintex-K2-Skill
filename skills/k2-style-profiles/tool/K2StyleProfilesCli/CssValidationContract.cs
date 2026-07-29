@@ -29,10 +29,17 @@ namespace K2StyleProfilesCli
         private static readonly Regex InvalidSelectorPattern = new Regex(
             @"(?i)(?:\.invalid\b|\[aria-invalid(?:\s*=\s*['""]?true['""]?)?\])",
             RegexOptions.Compiled);
+        private static readonly Regex UniversalSelectorPattern = new Regex(
+            @"(?i)(?:^|[\s>+~,])\*(?=$|[\s>+~,.:#\[])",
+            RegexOptions.Compiled);
+        private static readonly Regex MotionDeclarationPattern = new Regex(
+            @"(?im)(?:^|;)\s*(transition(?:-duration)?|animation(?:-duration|-iteration-count)?|scroll-behavior)\s*:",
+            RegexOptions.Compiled);
 
         public static void Validate(string css, string sourceName)
         {
             if (string.IsNullOrWhiteSpace(css)) return;
+            RejectBroadMotionOverrides(css, sourceName);
             var rules = Parse(css);
             foreach (var rule in rules.Where(x =>
                 x.Treatments.Count > 0 &&
@@ -58,6 +65,31 @@ namespace K2StyleProfilesCli
                             " but has no later .invalid or " +
                             "[aria-invalid=true] treatment with equal or greater specificity.");
                     }
+                }
+            }
+        }
+
+        private static void RejectBroadMotionOverrides(string css, string sourceName)
+        {
+            var clean = Regex.Replace(css, @"/\*.*?\*/", string.Empty, RegexOptions.Singleline);
+            foreach (Match match in RulePattern.Matches(clean))
+            {
+                var motion = MotionDeclarationPattern.Match(match.Groups[2].Value);
+                if (!motion.Success) continue;
+                foreach (var selector in match.Groups[1].Value.Split(','))
+                {
+                    var trimmed = selector.Trim();
+                    if (trimmed.Length == 0 ||
+                        trimmed.StartsWith("@", StringComparison.Ordinal) ||
+                        !UniversalSelectorPattern.IsMatch(trimmed))
+                        continue;
+                    throw new CliException(
+                        "CSS validation contract failed in '" + sourceName +
+                        "': selector '" + Collapse(trimmed) + "' applies broad " +
+                        motion.Groups[1].Value + " behavior through a universal selector. " +
+                        "Scope reduced-motion and other motion overrides only to explicitly " +
+                        "owned Style Profile elements; universal overrides can break native " +
+                        "K2 dropdown positioning and cause Runtime to jump to the top.");
                 }
             }
         }
