@@ -70,7 +70,7 @@ Instruct the agent to call `list_permitted_case_types` before selecting a case t
 - `get_submission_readiness`
 - `get_case_action_status`
 
-The built-in `k2-cli` provider accepts only those operations and fixed SmartObject mappings; it does not accept caller-supplied SmartObject names, methods, SQL, or workflow identifiers. Build `tool/K2CaseOperationsCli/K2CaseOperationsCli.csproj`, configure its executable path and K2 host connection in `runtime.caseOperations`, keep `authoritativeWritesEnabled:false` and `commandProcessorVerified:false`, and opt into `--read` when generating a static bearer token.
+The built-in `k2-cli` provider accepts only those operations and fixed SmartObject mappings; it does not accept caller-supplied SmartObject names, methods, SQL, or workflow identifiers. The packaged executable is `tool/K2CaseOperationsCli/bin/Release/k2caseops.exe`; run `scripts/k2caseops.ps1 version` to verify it, then configure the executable path and K2 host connection in `runtime.caseOperations`. Keep `authoritativeWritesEnabled:false` and `commandProcessorVerified:false`, and opt into `--read` when generating a static bearer token.
 
 `case:create` permits:
 

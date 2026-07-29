@@ -11,6 +11,7 @@ namespace K2CaseOperationsCli
 {
     internal static class Program
     {
+        private const string Version = "0.1.0";
         private const int MaximumRows = 500;
 
         private sealed class OperationDefinition
@@ -69,6 +70,13 @@ namespace K2CaseOperationsCli
 
         public static int Main(string[] args)
         {
+            if (args.Length == 1 &&
+                string.Equals(args[0], "version", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("k2caseops " + Version);
+                return 0;
+            }
+
             RuntimeAssemblyResolver.Install();
             try
             {

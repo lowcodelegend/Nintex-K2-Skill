@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "suiteName": "k2-skills",
-  "suiteVersion": "0.74.0",
+  "suiteVersion": "0.75.0",
   "skills": [
     {
       "name": "k2-sql-smartobjects",
@@ -99,11 +99,22 @@
     },
     {
       "name": "k2-case-management",
-      "version": "0.20.0",
+      "version": "0.21.0",
       "platform": "win-x64",
       "buildScript": "skills/k2-case-management/scripts/build.ps1",
-      "builtFiles": [],
-      "versionCommand": null
+      "buildParameters": {
+        "Configuration": "Release",
+        "Clean": true
+      },
+      "builtFiles": [
+        "skills/k2-case-management/tool/K2CaseOperationsCli/bin/Release/k2caseops.exe",
+        "skills/k2-case-management/tool/K2CaseOperationsCli/bin/Release/k2caseops.exe.config"
+      ],
+      "versionCommand": {
+        "path": "skills/k2-case-management/scripts/k2caseops.ps1",
+        "arguments": ["version"],
+        "expectedOutput": "k2caseops 0.1.0"
+      }
     },
     {
       "name": "k2-smartforms-web-components",

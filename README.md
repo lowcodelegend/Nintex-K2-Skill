@@ -1,6 +1,6 @@
 # Nintex K2 Skills
 
-Build self-hosted K2 Five applications from manifests, not clicks. Seven portable Agent Skills and six CLI tools design governed case-management solutions and create SQL-backed SmartObjects, modern Web Component controls, custom Style Profiles, modern SmartForms, HTML5 workflows, and complete verified solutions through K2 management and Designer services.
+Build self-hosted K2 Five applications from manifests, not clicks. Seven portable Agent Skills and seven CLI tools design governed case-management solutions and create SQL-backed SmartObjects, modern Web Component controls, custom Style Profiles, modern SmartForms, HTML5 workflows, and complete verified solutions through K2 management and Designer services.
 
 Windows x64 only. It does not target Nintex Automation Cloud or legacy K2 Studio workflows.
 
@@ -90,6 +90,7 @@ if ($missing) { throw "Missing installed skills: $($missing -join ', ')" }
 
 & "$installed\k2-style-profiles\scripts\k2style.ps1" version
 & "$installed\k2-smartforms-web-components\scripts\k2controls.ps1" version
+& "$installed\k2-case-management\scripts\k2caseops.ps1" version
 ```
 
 Restart or reload the agent session after installing so its skill inventory is rediscovered. A source checkout is not a substitute for the installed operational package.
