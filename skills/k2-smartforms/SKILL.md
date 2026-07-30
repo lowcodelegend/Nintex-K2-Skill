@@ -7,6 +7,10 @@ description: Generate, deploy, inspect, verify, replace, and clean up K2 Five Sm
 
 Build checked-in Forms/Views through supported K2 APIs; never edit K2 databases or automate Designer UI.
 
+## Project feedback loop
+
+Before the first authorized project mutation, use the sibling `$k2-builder` skill's `scripts/initialize-skill-feedback.ps1 -ProjectRoot <project-root> -SkillOwner k2-smartforms` without waiting for a separate request. Read and maintain `docs/skill-learnings.md` under the generated `AGENTS.md` rule. If `$k2-builder` is unavailable, create the equivalent stable-ID learning log with affected owners, evidence, recommended changes, acceptance criteria, disposition, feedback history, and periodic local-commit/upstream-PR suggestions. Never edit installed skills or submit changes without authorization.
+
 ## Workflow
 
 1. Confirm self-hosted K2 Five and existing SmartObjects. If `$k2-builder` is installed, validate its selected environment profile before discovery. Separate Runtime user authentication, K2 management authentication, and SQL Server authentication; never infer one from another. Reuse the environment-wide integrated K2 management connection and Windows-integrated SQL connection when they validate, even when Runtime users sign in through OIDC or a K2SQL security label. Resolve only the Style Profile/header/footer dependencies explicitly selected by the application or opted into by a Form; an unused environment framework may remain `unselected` and must not block plain modern Forms. When a requested custom Style Profile does not exist, create and verify it first with `$k2-style-profiles`.

@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "suiteName": "k2-skills",
-  "suiteVersion": "0.84.0",
+  "suiteVersion": "0.85.0",
   "skills": [
     {
       "name": "k2-sql-smartobjects",
-      "version": "0.8.0",
+      "version": "0.8.1",
       "platform": "win-x64",
       "buildScript": "skills/k2-sql-smartobjects/scripts/build.ps1",
       "buildParameters": {
@@ -19,12 +19,12 @@
       "versionCommand": {
         "path": "skills/k2-sql-smartobjects/tool/K2SqlCli/bin/Release/k2sql.exe",
         "arguments": ["version"],
-        "expectedOutput": "k2sql 0.8.0"
+        "expectedOutput": "k2sql 0.8.1"
       }
     },
     {
       "name": "k2-smartbox-smartobjects",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "platform": "win-x64",
       "buildScript": "skills/k2-smartbox-smartobjects/scripts/build.ps1",
       "buildParameters": {
@@ -38,24 +38,24 @@
       "versionCommand": {
         "path": "skills/k2-smartbox-smartobjects/tool/K2SmartBoxCli/bin/Release/k2smartbox.exe",
         "arguments": ["version"],
-        "expectedOutput": "k2smartbox 0.1.0"
+        "expectedOutput": "k2smartbox 0.1.1"
       }
     },
     {
       "name": "k2-package-deployment",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "platform": "win-x64",
       "buildScript": null,
       "builtFiles": [],
       "versionCommand": {
         "path": "skills/k2-package-deployment/scripts/k2package.ps1",
         "arguments": ["version"],
-        "expectedOutput": "k2package 0.1.0"
+        "expectedOutput": "k2package 0.1.1"
       }
     },
     {
       "name": "k2-smartforms",
-      "version": "0.54.0",
+      "version": "0.54.1",
       "platform": "win-x64",
       "buildScript": "skills/k2-smartforms/scripts/build.ps1",
       "buildParameters": {
@@ -69,12 +69,12 @@
       "versionCommand": {
         "path": "skills/k2-smartforms/tool/K2SmartFormsCli/bin/Release/k2forms.exe",
         "arguments": ["version"],
-        "expectedOutput": "k2forms 0.54.0"
+        "expectedOutput": "k2forms 0.54.1"
       }
     },
     {
       "name": "k2-style-profiles",
-      "version": "0.15.0",
+      "version": "0.15.1",
       "platform": "win-x64",
       "buildScript": "skills/k2-style-profiles/scripts/build.ps1",
       "buildParameters": {
@@ -88,12 +88,12 @@
       "versionCommand": {
         "path": "skills/k2-style-profiles/tool/K2StyleProfilesCli/bin/Release/k2style.exe",
         "arguments": ["version"],
-        "expectedOutput": "k2style 0.15.0"
+        "expectedOutput": "k2style 0.15.1"
       }
     },
     {
       "name": "k2-workflows",
-      "version": "0.18.3",
+      "version": "0.18.4",
       "platform": "win-x64",
       "buildScript": "skills/k2-workflows/scripts/build.ps1",
       "buildParameters": {
@@ -107,12 +107,12 @@
       "versionCommand": {
         "path": "skills/k2-workflows/tool/K2WorkflowCli/bin/Release/k2wf.exe",
         "arguments": ["version"],
-        "expectedOutput": "k2wf 0.18.3"
+        "expectedOutput": "k2wf 0.18.4"
       }
     },
     {
       "name": "k2-builder",
-      "version": "0.28.0",
+      "version": "0.28.1",
       "platform": "win-x64",
       "buildScript": "skills/k2-builder/scripts/build.ps1",
       "buildParameters": {
@@ -125,12 +125,12 @@
       "versionCommand": {
         "path": "skills/k2-builder/scripts/k2build.ps1",
         "arguments": ["version"],
-        "expectedOutput": "k2build 0.28.0"
+        "expectedOutput": "k2build 0.28.1"
       }
     },
     {
       "name": "k2-case-management",
-      "version": "0.22.0",
+      "version": "0.22.1",
       "platform": "win-x64",
       "buildScript": "skills/k2-case-management/scripts/build.ps1",
       "buildParameters": {
@@ -149,7 +149,7 @@
     },
     {
       "name": "k2-smartforms-web-components",
-      "version": "0.4.1",
+      "version": "0.4.2",
       "platform": "win-x64",
       "buildScript": "skills/k2-smartforms-web-components/scripts/build.ps1",
       "buildParameters": {
@@ -162,7 +162,7 @@
       "versionCommand": {
         "path": "skills/k2-smartforms-web-components/tool/K2WebComponentCli/bin/Release/k2controls.exe",
         "arguments": ["version"],
-        "expectedOutput": "k2controls 0.4.1"
+        "expectedOutput": "k2controls 0.4.2"
       }
     }
   ]

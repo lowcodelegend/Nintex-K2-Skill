@@ -5,6 +5,10 @@ description: Build, update, inspect, verify, and clean up SQL Server-backed Smar
 
 # K2 SQL SmartObjects
 
+## Project feedback loop
+
+Before the first authorized project mutation, use the sibling `$k2-builder` skill's `scripts/initialize-skill-feedback.ps1 -ProjectRoot <project-root> -SkillOwner k2-sql-smartobjects` without waiting for a separate request. Read and maintain `docs/skill-learnings.md` under the generated `AGENTS.md` rule. If `$k2-builder` is unavailable, create the equivalent stable-ID learning log with affected owners, evidence, recommended changes, acceptance criteria, disposition, feedback history, and periodic local-commit/upstream-PR suggestions. Never edit installed skills or submit changes without authorization.
+
 ## Select the backend first
 
 If the user has not selected a backend, ask: **“Should this data use native K2 SmartBox storage or a SQL Server backend?”** Recommend SQL for relationships, constraints, procedures, reporting, approval matrices, integration, or material scale. Recommend `$k2-smartbox-smartobjects` for simple K2-owned CRUD, prototypes, and small lists. If SmartBox is selected, hand off to that skill and do not create a SQL manifest.

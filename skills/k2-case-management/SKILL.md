@@ -7,6 +7,10 @@ description: Design governed Nintex Automation K2 case management and case lifec
 
 Design reusable, governed, stage-based case solutions. Use `k2-case-management` to determine what components should exist and how they interact. Use `$k2-builder` to implement those components correctly in self-hosted Nintex Automation K2.
 
+## Project feedback loop
+
+Before the first authorized project mutation, use the sibling `$k2-builder` skill's `scripts/initialize-skill-feedback.ps1 -ProjectRoot <project-root> -SkillOwner k2-case-management` without waiting for a separate request. Read and maintain `docs/skill-learnings.md` under the generated `AGENTS.md` rule. If `$k2-builder` is unavailable, create the equivalent stable-ID learning log with affected owners, evidence, recommended changes, acceptance criteria, disposition, feedback history, and periodic local-commit/upstream-PR suggestions. Never edit installed skills or submit changes without authorization.
+
 ## Use and boundary
 
 Use this skill when a request, event, issue, investigation, or exception persists across human and automated activities; collects evidence; moves through controlled stages; has owners, queues, deadlines, or escalations; requires adjudication; and needs a defensible history.

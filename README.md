@@ -111,6 +111,21 @@ $skillsRoot = Join-Path $HOME '.codex\skills'
 $builder = Join-Path $skillsRoot 'k2-builder'
 ```
 
+Every new K2 project gets a project-local self-improvement loop before its first generated or modified artifact. The skills initialize it automatically; it can also be bootstrapped explicitly:
+
+```powershell
+& "$builder\scripts\initialize-skill-feedback.ps1" `
+    -ProjectRoot '.\my-k2-solution' `
+    -SkillOwner k2-builder,k2-smartforms,k2-workflows
+```
+
+The idempotent initializer preserves existing instructions and creates:
+
+- `AGENTS.md`, with a managed rule requiring future agents to read and maintain the learning queue;
+- `docs/skill-learnings.md`, with stable `K2L-NNNN` IDs, statuses, affected skill owners, observed behavior and evidence, recommended skill changes, acceptance criteria, disposition, and feedback history.
+
+At releases, substantial handoffs, and at least every 14 active days, agents review open learnings and suggest up to three focused actions: improve the project in a local commit, submit an upstream code pull request, or submit an upstream documentation-only pull request. Suggestions are automatic; unrelated commits, pushes, installed-skill edits, and pull-request creation still require authorization. Existing project learnings remain project-local until their owner deliberately promotes them upstream.
+
 Discover and persist this K2 environment once:
 
 ```powershell

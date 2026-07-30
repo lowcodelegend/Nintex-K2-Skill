@@ -7,6 +7,10 @@ description: Build, package, deploy, inspect, verify, update, and remove modern 
 
 Create supported K2 5.9+ Web Component controls without crossing into the legacy .NET custom-control framework. Use this skill for the control package and its lifecycle; use `$k2-smartforms` to place the registered control in generated Views or Forms, and `$k2-builder` to coordinate it with the rest of a solution.
 
+## Project feedback loop
+
+Before the first authorized project mutation, use the sibling `$k2-builder` skill's `scripts/initialize-skill-feedback.ps1 -ProjectRoot <project-root> -SkillOwner k2-smartforms-web-components` without waiting for a separate request. Read and maintain `docs/skill-learnings.md` under the generated `AGENTS.md` rule. If `$k2-builder` is unavailable, create the equivalent stable-ID learning log with affected owners, evidence, recommended changes, acceptance criteria, disposition, feedback history, and periodic local-commit/upstream-PR suggestions. Never edit installed skills or submit changes without authorization.
+
 ## Modern-only boundary
 
 Accept only a ZIP whose root contains `manifest.json` and its declared design-time/runtime JavaScript, CSS, icons, and other resources. The control class must extend `K2BaseControl` and be registered with `customElements.define`.

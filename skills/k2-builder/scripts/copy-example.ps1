@@ -124,4 +124,28 @@ foreach ($file in Get-ChildItem -LiteralPath $source -Recurse -File -Force) {
 
 Assert-ExampleIntegrity $destinationPath
 
+$owners = @('k2-builder')
+if ($Name -eq 'smartbox-request') {
+    $owners += 'k2-smartbox-smartobjects'
+} else {
+    $owners += 'k2-sql-smartobjects'
+}
+$solutionManifestPath = Join-Path $destinationPath 'solution-manifest.json'
+if (Test-Path -LiteralPath $solutionManifestPath -PathType Leaf) {
+    $solutionManifest = Get-Content -LiteralPath $solutionManifestPath -Raw | ConvertFrom-Json
+    if ($null -ne $solutionManifest.components.PSObject.Properties['forms'] -and
+        $null -ne $solutionManifest.components.forms) {
+        $owners += 'k2-smartforms'
+    }
+    if ($null -ne $solutionManifest.components.PSObject.Properties['workflows'] -and
+        @($solutionManifest.components.workflows).Count -gt 0) {
+        $owners += 'k2-workflows'
+    }
+}
+$feedbackInitializer = Join-Path $PSScriptRoot 'initialize-skill-feedback.ps1'
+& $feedbackInitializer -ProjectRoot $destinationPath -SkillOwner $owners | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    throw "Skill-feedback initialization failed with exit code $LASTEXITCODE."
+}
+
 Write-Output "Copied $Name example to $destinationPath"

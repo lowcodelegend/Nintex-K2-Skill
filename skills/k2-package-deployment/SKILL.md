@@ -7,6 +7,10 @@ description: Plan, create, inspect, and deploy self-hosted Nintex K2 Five Packag
 
 Promote existing K2 artifacts between aligned environments. Treat the package manifest, generated XML, `.kspx`, checksums, and logs as release evidence.
 
+## Project feedback loop
+
+Before the first authorized project mutation, use the sibling `$k2-builder` skill's `scripts/initialize-skill-feedback.ps1 -ProjectRoot <project-root> -SkillOwner k2-package-deployment` without waiting for a separate request. Read and maintain `docs/skill-learnings.md` under the generated `AGENTS.md` rule. If `$k2-builder` is unavailable, create the equivalent stable-ID learning log with affected owners, evidence, recommended changes, acceptance criteria, disposition, feedback history, and periodic local-commit/upstream-PR suggestions. Never edit installed skills or submit changes without authorization.
+
 ## Workflow
 
 1. Read [package-policy.md](references/package-policy.md), [smartbox-data.md](references/smartbox-data.md), and [manifest.md](references/manifest.md).

@@ -11,7 +11,7 @@ namespace K2SmartBoxCli
         {
             if (args == null || args.Length == 0 || IsHelp(args[0])) { PrintHelp(); return 0; }
             var command = args[0].ToLowerInvariant();
-            if (command == "version") { Console.WriteLine("k2smartbox 0.1.0"); return 0; }
+            if (command == "version") { Console.WriteLine("k2smartbox 0.1.1"); return 0; }
             if (command == "selftest") { SelfTest(); return 0; }
             var options = ParseOptions(args.Skip(1).ToArray());
             var manifest = DeploymentManifest.Load(GetOption(options, "manifest", true));

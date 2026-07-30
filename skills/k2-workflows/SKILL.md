@@ -7,6 +7,10 @@ description: Build, publish, inspect, verify, and clean up K2 Five HTML5 Workflo
 
 Use `scripts/k2wf.ps1` for the HTML5 Designer JSON/`SaveKprx` path; never author through legacy workflow APIs or edit K2 databases.
 
+## Project feedback loop
+
+Before the first authorized project mutation, use the sibling `$k2-builder` skill's `scripts/initialize-skill-feedback.ps1 -ProjectRoot <project-root> -SkillOwner k2-workflows` without waiting for a separate request. Read and maintain `docs/skill-learnings.md` under the generated `AGENTS.md` rule. If `$k2-builder` is unavailable, create the equivalent stable-ID learning log with affected owners, evidence, recommended changes, acceptance criteria, disposition, feedback history, and periodic local-commit/upstream-PR suggestions. Never edit installed skills or submit changes without authorization.
+
 ## Workflow
 
 1. If `$k2-builder` is installed, validate its selected environment profile before discovery. Project its K2 authentication fields into the workflow manifest, launch non-integrated commands through `k2env.ps1 invoke`, run `doctor <manifest>`, and report the resolved identity and authoring model.

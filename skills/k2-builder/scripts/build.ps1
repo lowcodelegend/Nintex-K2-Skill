@@ -38,6 +38,21 @@ foreach ($scriptPath in @($entryPoint, (Join-Path $PSScriptRoot 'k2env.ps1'))) {
     }
 }
 
+$feedbackInitializer = Join-Path $PSScriptRoot 'initialize-skill-feedback.ps1'
+$parseTokens = $null
+$parseErrors = $null
+[Management.Automation.Language.Parser]::ParseFile(
+    $feedbackInitializer,
+    [ref]$parseTokens,
+    [ref]$parseErrors) | Out-Null
+if ($parseErrors.Count -gt 0) {
+    throw "initialize-skill-feedback.ps1 has PowerShell parse errors: $($parseErrors.Message -join '; ')"
+}
+& $feedbackInitializer -SelfTest | Out-Host
+if ($LASTEXITCODE -ne 0) {
+    throw "Skill-feedback initializer self-test failed with exit code $LASTEXITCODE."
+}
+
 foreach ($assetName in @('solution-manifest.template.json', 'deployment-ledger.template.json')) {
     $assetPath = Join-Path $skillRoot ('assets\' + $assetName)
     Get-Content -LiteralPath $assetPath -Raw | ConvertFrom-Json | Out-Null
@@ -50,6 +65,10 @@ try {
         $destination = Join-Path $exampleTestRoot $exampleName
         & (Join-Path $PSScriptRoot 'copy-example.ps1') -Name $exampleName -Destination $destination | Out-Null
         if ($LASTEXITCODE -ne 0) { throw "Example copy validation failed: $exampleName" }
+        if (-not (Test-Path -LiteralPath (Join-Path $destination 'AGENTS.md') -PathType Leaf) -or
+            -not (Test-Path -LiteralPath (Join-Path $destination 'docs\skill-learnings.md') -PathType Leaf)) {
+            throw "Example copy did not initialize the project skill-feedback loop: $exampleName"
+        }
     }
 
     $countryProbeRoot = Join-Path $exampleTestRoot 'country-lookup-gate'
@@ -122,7 +141,7 @@ if ($agentContent -notmatch '(?m)^\s*default_prompt:\s*"Use \$k2-builder .+"\s*$
 }
 
 $actualVersion = (& $entryPoint version | Out-String).Trim()
-if ($actualVersion -cne 'k2build 0.28.0') {
+if ($actualVersion -cne 'k2build 0.28.1') {
     throw "Unexpected k2build version output: $actualVersion"
 }
 $environmentExecutable = Join-Path $skillRoot "tool\K2EnvironmentCli\bin\$Configuration\k2env.exe"
@@ -221,4 +240,4 @@ finally {
     }
 }
 
-Write-Output "k2-builder 0.28.0 validation passed ($Configuration); k2env 0.10.0 built at $environmentExecutable."
+Write-Output "k2-builder 0.28.1 validation passed ($Configuration); k2env 0.10.0 built at $environmentExecutable."

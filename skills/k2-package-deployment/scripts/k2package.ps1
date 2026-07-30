@@ -12,7 +12,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
 
-$script:ToolVersion = '0.1.0'
+$script:ToolVersion = '0.1.1'
 $script:SmartBoxServiceClass = 'SourceCode.SmartObjects.Services.SmartBox.SBService'
 $script:SqlServiceClass = 'SourceCode.SmartObjects.Services.SQL.SqlServerService'
 $script:SmartBoxServiceTypeGuid = [Guid]'bb835c3f-aecb-4182-9ab3-26724c3a8860'

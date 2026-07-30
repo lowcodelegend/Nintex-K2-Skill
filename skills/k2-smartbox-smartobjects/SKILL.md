@@ -7,6 +7,10 @@ description: Build, update, inspect, verify, and clean up native SmartBox-backed
 
 Build small native K2 data models without creating a SQL database or Service Instance. Treat the manifest as the ownership boundary and use the CLI for every live change.
 
+## Project feedback loop
+
+Before the first authorized project mutation, use the sibling `$k2-builder` skill's `scripts/initialize-skill-feedback.ps1 -ProjectRoot <project-root> -SkillOwner k2-smartbox-smartobjects` without waiting for a separate request. Read and maintain `docs/skill-learnings.md` under the generated `AGENTS.md` rule. If `$k2-builder` is unavailable, create the equivalent stable-ID learning log with affected owners, evidence, recommended changes, acceptance criteria, disposition, feedback history, and periodic local-commit/upstream-PR suggestions. Never edit installed skills or submit changes without authorization.
+
 ## Select the backend first
 
 If the user has not selected a backend, ask: **“Should this data use native K2 SmartBox storage or a SQL Server backend?”**

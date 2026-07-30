@@ -10,7 +10,7 @@ namespace K2WorkflowCli
         {
             if (args.Length == 0 || Has(args, "--help") || Has(args, "-h")) { Help(); return 0; }
             var command = args[0].ToLowerInvariant();
-            if (command == "version") { Console.WriteLine("k2wf 0.18.3"); return 0; }
+            if (command == "version") { Console.WriteLine("k2wf 0.18.4"); return 0; }
             if (command == "selftest") { SelfTests.Run(); return 0; }
             if (command == "doctor")
             {
@@ -83,7 +83,7 @@ namespace K2WorkflowCli
         }
         private static void Help()
         {
-            Console.WriteLine("k2wf 0.18.3 - K2 Five HTML5 Workflow Designer JSON CLI");
+            Console.WriteLine("k2wf 0.18.4 - K2 Five HTML5 Workflow Designer JSON CLI");
             Console.WriteLine("Commands:");
             Console.WriteLine("  doctor [manifest.json]");
             Console.WriteLine("  plan <manifest.json>");

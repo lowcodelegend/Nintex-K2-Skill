@@ -16,6 +16,10 @@ For persistent case-management applications, use `$k2-case-management` first to 
 
 Specialist manifests remain authoritative for their artifacts. The solution manifest owns dependencies, shared policy, entry points, scenarios, and cleanup scope.
 
+## Project feedback loop
+
+Before the first authorized project mutation, run `scripts/initialize-skill-feedback.ps1 -ProjectRoot <project-root> -SkillOwner k2-builder,<active-specialists>` without waiting for a separate request. Read [skill-feedback.md](references/skill-feedback.md), then maintain the created `docs/skill-learnings.md` whenever work reveals a broadly reusable improvement. Follow the managed `AGENTS.md` review cadence and suggestion paths; never edit installed skills, commit unrelated work, push, or open a pull request without authorization.
+
 ## Environment
 
 Before K2 discovery, read [environment-profiles.md](references/environment-profiles.md), run `scripts/k2env.ps1 validate`, then `show --summary --output json`; reuse those resolved values without reloading full inventories. Treat optional `capabilities.*.available` values as feature gates, not as failures of the core K2 environment. For case assistance, require both `capabilities.langflow.available` and `capabilities.langflow.features.commandPortal`, and gate image/document upload independently. On first use run `discover --name <stable-name> --default`, adding `--langflow-url <https-base-url> --langflow-flow-id <flow-guid>` or `--no-langflow` when the environment decision is known. Onboarding detects the installed K2 default security label. When it is not `K2`, attend the secure deployment-credential prompt; the password is DPAPI-protected outside the profile. Project every specialist manifest's K2 authentication fields from `profile.k2`, use its environment-wide `passwordEnvironmentVariable`, and launch non-integrated deployment/inspection commands through `k2env.ps1 invoke` so the protected password is exposed only to that child process. Never create solution-specific K2 password variables.

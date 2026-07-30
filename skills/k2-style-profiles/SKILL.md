@@ -7,6 +7,10 @@ description: Create, host, deploy, inspect, verify, update, and safely remove se
 
 Create checked-in K2 Style Profiles from declarative manifests, host their CSS/JavaScript in IIS, and verify both the K2 artifact and the bytes served to Runtime.
 
+## Project feedback loop
+
+Before the first authorized project mutation, use the sibling `$k2-builder` skill's `scripts/initialize-skill-feedback.ps1 -ProjectRoot <project-root> -SkillOwner k2-style-profiles` without waiting for a separate request. Read and maintain `docs/skill-learnings.md` under the generated `AGENTS.md` rule. If `$k2-builder` is unavailable, create the equivalent stable-ID learning log with affected owners, evidence, recommended changes, acceptance criteria, disposition, feedback history, and periodic local-commit/upstream-PR suggestions. Never edit installed skills or submit changes without authorization.
+
 ## Workflow
 
 1. Confirm this is self-hosted K2 Five on a Windows K2 development server. Read [design.md](references/design.md), [manifest.md](references/manifest.md), and [cli.md](references/cli.md). For a colour scheme, read [color-schemes.md](references/color-schemes.md). For a sidebar between Forms, read [smartobject-sidebar.md](references/smartobject-sidebar.md). For a native case-management homepage, use [the Northstar native homepage example](assets/examples/northstar-native-homepage). For one Form whose native K2 tabs become the sidebar, read [native-tabs-sidebar.md](references/native-tabs-sidebar.md). Use the matching complete example.
