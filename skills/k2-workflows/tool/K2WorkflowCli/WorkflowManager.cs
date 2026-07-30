@@ -19,6 +19,7 @@ namespace K2WorkflowCli
         private readonly object _client;
         private readonly Type _clientType;
         private readonly string _userName;
+        private readonly bool _ownsDesignerConnection;
         private SmartObjectDescriptor _smartObject;
         private SmartObjectMethodDescriptor _approvalMatrix;
         private SmartObjectMethodDescriptor _caseLifecycleResolver;
@@ -41,12 +42,15 @@ namespace K2WorkflowCli
             var identity = WindowsIdentity.GetCurrent();
             var principal = new WindowsPrincipal(identity);
             System.Threading.Thread.CurrentPrincipal = principal;
-            _userName = ResolveDesignerUser(principal);
-            _client = CreateDesignerClient();
+            _userName = manifest.K2.Integrated
+                ? ResolveDesignerUser(principal)
+                : K2Connection.DescribeIdentity(manifest.K2);
+            _client = CreateDesignerClient(manifest.K2);
+            _ownsDesignerConnection = !manifest.K2.Integrated;
             _clientType = _client.GetType();
         }
 
-        public static void Doctor()
+        public static void Doctor(K2Settings settings)
         {
             var webBin = RuntimeAssemblyResolver.WorkflowDesignerBin;
             foreach (var file in new[] { "SourceCode.K2Designer.dll", "SourceCode.Designer.Client.dll", "Newtonsoft.Json.dll" })
@@ -55,8 +59,46 @@ namespace K2WorkflowCli
                 if (!File.Exists(Path.Combine(RuntimeAssemblyResolver.InstallDirectory, "Bin", file))) throw new CliException("Required K2 assembly is missing: " + file);
             Console.WriteLine("K2 install: " + RuntimeAssemblyResolver.InstallDirectory);
             Console.WriteLine("Workflow designer: " + webBin);
-            Console.WriteLine("Identity: " + WindowsIdentity.GetCurrent().Name);
-            Console.WriteLine("Designer identity: K2:" + WindowsIdentity.GetCurrent().Name);
+            if (settings == null)
+            {
+                Console.WriteLine(
+                    "Windows identity: "
+                    + WindowsIdentity.GetCurrent().Name);
+                Console.WriteLine(
+                    "Authoring probe: manifest not supplied; "
+                    + "run doctor <manifest.json> to validate its K2 identity.");
+            }
+            else
+            {
+                var client = CreateDesignerClient(settings);
+                try
+                {
+                    var clientType = client.GetType();
+                    var connection = clientType.GetProperty(
+                        "Connection").GetValue(client, null)
+                        as BaseAPIConnection;
+                    if (connection != null)
+                        K2Connection.AssertAuthenticated(
+                            connection,
+                            settings,
+                            "K2 workflow Designer authoring");
+                    Console.WriteLine(
+                        "Designer identity: "
+                        + K2Connection.DescribeIdentity(settings));
+                    Console.WriteLine(
+                        "Authentication: "
+                        + (settings.Integrated
+                            ? "Integrated Windows"
+                            : "non-integrated "
+                                + settings.SecurityLabel));
+                }
+                finally
+                {
+                    CloseDesignerClient(
+                        client,
+                        !settings.Integrated);
+                }
+            }
             Console.WriteLine("Authoring model: K2 Five HTML5 Workflow Designer JSON");
             Console.WriteLine("Designer environment: smartforms");
         }
@@ -189,7 +231,10 @@ namespace K2WorkflowCli
             var connection = Activator.CreateInstance(connectionType);
             try
             {
-                connectionType.GetMethod("Open", new[] { typeof(string) }).Invoke(connection, new object[] { _manifest.K2.Host });
+                OpenWorkflowClientConnection(
+                    workflowAssembly,
+                    connectionType,
+                    connection);
                 var instance = connectionType.GetMethod("CreateProcessInstance", new[] { typeof(string) }).Invoke(connection, new object[] { _manifest.Workflow.ProcessFullName });
                 var fields = instance.GetType().GetProperty("DataFields").GetValue(instance, null);
                 var item = fields.GetType().GetProperty("Item", new[] { typeof(string) });
@@ -213,7 +258,8 @@ namespace K2WorkflowCli
 
         public void RuntimeStatus()
         {
-            using (var runtime = new RuntimeWorkflowManager()) runtime.ReportInstances(_manifest.Workflow.ProcessFullName);
+            using (var runtime = new RuntimeWorkflowManager(_manifest.K2))
+                runtime.ReportInstances(_manifest.Workflow.ProcessFullName);
         }
 
         public void ReportInstanceData(int instanceId)
@@ -223,7 +269,10 @@ namespace K2WorkflowCli
             var connection = Activator.CreateInstance(connectionType);
             try
             {
-                connectionType.GetMethod("Open", new[] { typeof(string) }).Invoke(connection, new object[] { _manifest.K2.Host });
+                OpenWorkflowClientConnection(
+                    workflowAssembly,
+                    connectionType,
+                    connection);
                 var instance = connectionType.GetMethod("OpenProcessInstance", new[] { typeof(int) }).Invoke(connection, new object[] { instanceId });
                 var fields = instance.GetType().GetProperty("DataFields").GetValue(instance, null) as System.Collections.IEnumerable;
                 Console.WriteLine("Process instance data: " + instanceId);
@@ -249,7 +298,10 @@ namespace K2WorkflowCli
             var connection = Activator.CreateInstance(connectionType);
             try
             {
-                connectionType.GetMethod("Open", new[] { typeof(string) }).Invoke(connection, new object[] { _manifest.K2.Host });
+                OpenWorkflowClientConnection(
+                    workflowAssembly,
+                    connectionType,
+                    connection);
                 var worklist = connectionType.GetMethod("OpenWorklist", Type.EmptyTypes).Invoke(connection, null) as System.Collections.IEnumerable;
                 var count = 0;
                 if (worklist != null) foreach (var item in worklist)
@@ -280,7 +332,10 @@ namespace K2WorkflowCli
             var connection = Activator.CreateInstance(connectionType);
             try
             {
-                connectionType.GetMethod("Open", new[] { typeof(string) }).Invoke(connection, new object[] { _manifest.K2.Host });
+                OpenWorkflowClientConnection(
+                    workflowAssembly,
+                    connectionType,
+                    connection);
                 var item = connectionType.GetMethod("OpenWorklistItem", new[] { typeof(string) }).Invoke(connection, new object[] { serialNumber });
                 var actions = item.GetType().GetProperty("Actions").GetValue(item, null);
                 var action = actions.GetType().GetProperty("Item", new[] { typeof(string) }).GetValue(actions, new object[] { actionName });
@@ -294,6 +349,36 @@ namespace K2WorkflowCli
                 var close = connectionType.GetMethod("Close", Type.EmptyTypes); if (close != null) close.Invoke(connection, null);
                 var disposable = connection as IDisposable; if (disposable != null) disposable.Dispose();
             }
+        }
+
+        private void OpenWorkflowClientConnection(
+            Assembly workflowAssembly,
+            Type connectionType,
+            object connection)
+        {
+            if (_manifest.K2.Integrated)
+            {
+                connectionType.GetMethod(
+                    "Open",
+                    new[] { typeof(string) }).Invoke(
+                        connection,
+                        new object[] { _manifest.K2.Host });
+                return;
+            }
+
+            var setupType = workflowAssembly.GetType(
+                "SourceCode.Workflow.Client.ConnectionSetup",
+                true);
+            var setup = Activator.CreateInstance(setupType);
+            setupType.GetProperty("ConnectionString").SetValue(
+                setup,
+                K2Connection.BuildWorkflowConnectionString(_manifest.K2),
+                null);
+            connectionType.GetMethod(
+                "Open",
+                new[] { setupType }).Invoke(
+                    connection,
+                    new[] { setup });
         }
 
         public void Inspect()
@@ -341,7 +426,10 @@ namespace K2WorkflowCli
                 var components = ((JArray)root["nodes"]).OfType<JObject>()
                     .SelectMany(x => (x["children"] as JArray) == null ? Enumerable.Empty<JObject>() : ((JArray)x["children"]).OfType<JObject>())
                     .Select(x => (int?)x["componentId"]).ToArray();
-                foreach (var required in new[] { 30011, 30004, 30009 })
+                var requiredComponents = new List<int> { 30011, 30009 };
+                if (_manifest.Workflow.Email == null || !_manifest.Workflow.Email.Enabled.HasValue || _manifest.Workflow.Email.Enabled.Value)
+                    requiredComponents.Add(30004);
+                foreach (var required in requiredComponents)
                     if (!components.Contains(required)) throw new CliException("Saved request-approval workflow is missing event component " + required + ".");
                 if (_manifest.Workflow.ApprovalMatrix == null) VerifyManifestTaskAssignment(root, _manifest.Workflow.UserTask.Assignees);
                 else VerifyApprovalMatrixTaskAssignment(root);
@@ -463,7 +551,7 @@ namespace K2WorkflowCli
             }
             if (_manifest.Workflow.Publish)
             {
-                using (var runtime = new RuntimeWorkflowManager())
+                using (var runtime = new RuntimeWorkflowManager(_manifest.K2))
                     if (runtime.GetProcessSet(_manifest.Workflow.ProcessFullName) == null)
                         throw new CliException("Published runtime workflow was not found.");
             }
@@ -553,7 +641,7 @@ namespace K2WorkflowCli
             var runtimeExists = false;
             if (deleteDeployed)
             {
-                using (var runtime = new RuntimeWorkflowManager())
+                using (var runtime = new RuntimeWorkflowManager(_manifest.K2))
                 {
                     runtimeExists = runtime.GetProcessSet(_manifest.Workflow.ProcessFullName) != null;
                     if (runtimeExists)
@@ -578,7 +666,8 @@ namespace K2WorkflowCli
             {
                 if (runtimeExists)
                 {
-                    using (var runtime = new RuntimeWorkflowManager()) runtime.DeleteAllDefinitions(_manifest.Workflow.ProcessFullName);
+                    using (var runtime = new RuntimeWorkflowManager(_manifest.K2))
+                        runtime.DeleteAllDefinitions(_manifest.Workflow.ProcessFullName);
                 }
                 if (id.HasValue)
                 {
@@ -656,16 +745,13 @@ namespace K2WorkflowCli
             try
             {
                 server.CreateConnection();
-                var builder = new SCConnectionStringBuilder
-                {
-                    Authenticate = true,
-                    Host = _manifest.K2.Host,
-                    Port = (uint)_manifest.K2.Port,
-                    Integrated = _manifest.K2.Integrated,
-                    IsPrimaryLogin = true,
-                    SecurityLabelName = _manifest.K2.SecurityLabel
-                };
-                server.Connection.Open(builder.ConnectionString);
+                server.Connection.Open(
+                    K2Connection.BuildManagementConnectionString(
+                        _manifest.K2));
+                K2Connection.AssertAuthenticated(
+                    server.Connection,
+                    _manifest.K2,
+                    "K2 category");
                 return action(server);
             }
             finally
@@ -773,8 +859,46 @@ namespace K2WorkflowCli
             catch (TargetInvocationException ex) { throw new CliException(ex.GetBaseException().Message); }
         }
 
-        private static object CreateDesignerClient()
+        private static object CreateDesignerClient(K2Settings settings)
         {
+            if (!settings.Integrated)
+            {
+                var clientAssembly = Assembly.LoadFrom(
+                    Path.Combine(
+                        RuntimeAssemblyResolver.WorkflowDesignerBin,
+                        "SourceCode.Designer.Client.dll"));
+                var clientType = clientAssembly.GetType(
+                    "SourceCode.Designer.Client.K2DesignerManagementClient",
+                    true);
+                var client = Activator.CreateInstance(clientType);
+                try
+                {
+                    clientType.GetMethod(
+                        "CreateConnection",
+                        Type.EmptyTypes).Invoke(client, null);
+                    var connection = clientType.GetProperty(
+                        "Connection").GetValue(client, null)
+                        as BaseAPIConnection;
+                    if (connection == null)
+                        throw new CliException(
+                            "K2 Designer client did not create a connection.");
+                    connection.Open(
+                        K2Connection.BuildManagementConnectionString(
+                            settings));
+                    K2Connection.AssertAuthenticated(
+                        connection,
+                        settings,
+                        "K2 workflow Designer authoring");
+                    return client;
+                }
+                catch
+                {
+                    var disposable = client as IDisposable;
+                    if (disposable != null) disposable.Dispose();
+                    throw;
+                }
+            }
+
             var assembly = Assembly.LoadFrom(Path.Combine(RuntimeAssemblyResolver.WorkflowDesignerBin, "SourceCode.K2Designer.dll"));
             var type = assembly.GetType("SourceCode.K2Designer.ProcessBase.ConnectionClassContext", true);
             var context = Activator.CreateInstance(type);
@@ -803,7 +927,34 @@ namespace K2WorkflowCli
             return property == null ? string.Empty : Convert.ToString(property.GetValue(value, null));
         }
 
-        public void Dispose() { var disposable = _client as IDisposable; if (disposable != null) disposable.Dispose(); }
+        private static void CloseDesignerClient(
+            object client,
+            bool ownsConnection)
+        {
+            if (client == null) return;
+            var clientType = client.GetType();
+            if (ownsConnection)
+            {
+                var connection = clientType.GetProperty(
+                    "Connection").GetValue(client, null)
+                    as BaseAPIConnection;
+                if (connection != null && connection.IsConnected)
+                    connection.Close();
+                var delete = clientType.GetMethod(
+                    "DeleteConnection",
+                    Type.EmptyTypes);
+                if (delete != null) delete.Invoke(client, null);
+            }
+            var disposable = client as IDisposable;
+            if (disposable != null) disposable.Dispose();
+        }
+
+        public void Dispose()
+        {
+            CloseDesignerClient(
+                _client,
+                _ownsDesignerConnection);
+        }
     }
 
     internal sealed class RuntimeWorkflowManager : IDisposable
@@ -811,11 +962,33 @@ namespace K2WorkflowCli
         private readonly object _server;
         private readonly Type _type;
 
-        public RuntimeWorkflowManager()
+        public RuntimeWorkflowManager(K2Settings settings)
         {
             var assembly = Assembly.LoadFrom(Path.Combine(RuntimeAssemblyResolver.InstallDirectory, "Bin", "SourceCode.Workflow.Management.dll"));
             _type = assembly.GetType("SourceCode.Workflow.Management.WorkflowManagementServer", true);
-            _server = Activator.CreateInstance(_type, new object[] { "localhost", (uint)5555 });
+            if (settings.Integrated)
+            {
+                _server = Activator.CreateInstance(
+                    _type,
+                    new object[] {
+                        settings.Host,
+                        (uint)settings.Port
+                    });
+            }
+            else
+            {
+                _server = Activator.CreateInstance(
+                    _type,
+                    new object[] {
+                        settings.Host,
+                        (uint)settings.Port,
+                        settings.UserName,
+                        K2Connection.ReadRequiredEnvironmentVariable(
+                            settings.PasswordEnvironmentVariable),
+                        settings.SecurityLabel,
+                        true
+                    });
+            }
             _type.GetMethod("Open", Type.EmptyTypes).Invoke(_server, null);
         }
 

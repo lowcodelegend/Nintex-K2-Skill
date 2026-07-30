@@ -3,7 +3,7 @@
 From the skill directory:
 
 ```powershell
-& '.\scripts\k2wf.ps1' doctor
+& '.\scripts\k2wf.ps1' doctor '<manifest.json>'
 & '.\scripts\k2wf.ps1' plan '<manifest.json>'
 & '.\scripts\k2wf.ps1' render '<manifest.json>' --output '<workflow.json>'
 & '.\scripts\k2wf.ps1' export '<manifest.json>' --output '<workflow.json>'
@@ -20,7 +20,7 @@ From the skill directory:
 & '.\scripts\k2wf.ps1' selftest
 ```
 
-`render` does not mutate K2, but SmartForms-integrated rendering reads live SmartObject and form metadata. `export` copies the exact saved Designer JSON without locking it. Direct tasks emit and verify the manifest's explicit assignees; matrix-routed tasks emit and verify their resolver data-field destination. `deploy` uses K2's resolved logged-on AD identity, publishes the JSON, invokes K2's SmartForms integration providers, checks in the integrated form when the current identity owns its checkout, unlocks the process, and runs verification. Verification also asserts that the integrated form is checked in, plus topology, task assignment, connector geometry, required events, SmartObject mappings, task notification content, item references, Start/Task rules, and the runtime definition. `cleanup --delete-deployed` removes CLI-owned Start/Task states before deleting an instance-free workflow. The builder-only `--defer-smartforms-integration` option is safe only when a validated solution cleanup will delete the exact manifest-owned integrated Form in the next checkpoint.
+`doctor <manifest>` authenticates the declared Integrated Windows or non-integrated K2 authoring connection and reports the effective security-label identity without printing credentials. `render` does not mutate K2, but SmartForms-integrated rendering reads live SmartObject and form metadata. `export` copies the exact saved Designer JSON without locking it. Direct tasks emit and verify the manifest's explicit assignees; matrix-routed tasks emit and verify their resolver data-field destination. `deploy` uses the manifest's authenticated K2 identity, publishes the JSON, invokes K2's SmartForms integration providers, checks in the integrated form when that identity owns its checkout, unlocks the process, and runs verification. Verification also asserts that the integrated form is checked in, plus topology, task assignment, connector geometry, required events, SmartObject mappings, task notification content, item references, Start/Task rules, and the runtime definition. For a non-integrated profile, run live commands through `k2env.ps1 invoke` so the protected password environment variable exists only in the child process. `cleanup --delete-deployed` removes CLI-owned Start/Task states before deleting an instance-free workflow. The builder-only `--defer-smartforms-integration` option is safe only when a validated solution cleanup will delete the exact manifest-owned integrated Form in the next checkpoint.
 
 `unlock` is an idempotent recovery command for workflows left locked by an interrupted CLI or browser session. K2 locks are client-session-sensitive, so a workflow can appear locked by the same AD username when the browser has a different client identifier. Do not follow the unlock with `GetUserProcessKprx` or use `GetProcessJson` for inspection; those calls reacquire the lock in this K2 build. `inspect`, `export`, and `verify` use the non-locking metadata/version-history path.
 

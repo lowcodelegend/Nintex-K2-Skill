@@ -6,6 +6,8 @@ The installed HTML5 application lives under `K2 smartforms Designer\K2 workflow 
 
 `k2wf` mirrors that path through `K2DesignerManagementClient.SaveKprx`. The modern server pipeline deserializes `K2Process`, builds deployment XML, and deploys it when requested. Published runtime verification and deletion use `WorkflowManagementServer`; this does not make the legacy runtime format the authoring contract.
 
+For Integrated Windows authentication, the client retains the hosted Designer's `ConnectionClassContext` behavior. For a non-integrated label, the CLI creates the same public `K2DesignerManagementClient`, opens its public `BaseAPIConnection` with the manifest's environment-variable-backed connection string, verifies authentication mode and security label, and supplies that effective label-qualified identity to save, unlock, category, SmartObject, SmartForms, and runtime operations.
+
 Some concrete on-prem provider namespaces contain the word `Legacy`. They are adapters behind this installed modern web application. That namespace does not authorize use of the older `SourceCode.Workflow.Design` or `SourceCode.Workflow.Authoring` design-time object models.
 
 ## Observed K2 Five 5.10 contract

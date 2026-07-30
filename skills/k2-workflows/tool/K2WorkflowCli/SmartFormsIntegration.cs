@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Security.Principal;
 using System.Xml.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -171,12 +170,12 @@ namespace K2WorkflowCli
             });
         }
 
-        private static bool IsCurrentIdentity(string owner)
+        private bool IsCurrentIdentity(string owner)
         {
             if (string.IsNullOrWhiteSpace(owner)) return true;
-            var current = WindowsIdentity.GetCurrent().Name ?? string.Empty;
-            Func<string, string> normalize = value => (value ?? string.Empty).Trim().Replace("K2:", string.Empty).Replace("K2\\", string.Empty);
-            return string.Equals(normalize(owner), normalize(current), StringComparison.OrdinalIgnoreCase);
+            return K2Connection.SameIdentity(
+                owner,
+                K2Connection.DescribeIdentity(_k2));
         }
 
         private T WithFormsManager<T>(Func<FormsManager, T> action)
@@ -185,16 +184,12 @@ namespace K2WorkflowCli
             try
             {
                 manager.CreateConnection();
-                var connection = new SCConnectionStringBuilder
-                {
-                    Authenticate = true,
-                    Host = _k2.Host,
-                    Port = (uint)_k2.Port,
-                    Integrated = _k2.Integrated,
-                    IsPrimaryLogin = true,
-                    SecurityLabelName = _k2.SecurityLabel
-                };
-                manager.Connection.Open(connection.ConnectionString);
+                manager.Connection.Open(
+                    K2Connection.BuildManagementConnectionString(_k2));
+                K2Connection.AssertAuthenticated(
+                    manager.Connection,
+                    _k2,
+                    "K2 SmartForms workflow integration");
                 return action(manager);
             }
             finally

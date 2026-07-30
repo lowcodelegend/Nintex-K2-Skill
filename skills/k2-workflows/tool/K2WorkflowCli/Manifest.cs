@@ -36,8 +36,19 @@ namespace K2WorkflowCli
             if (string.IsNullOrWhiteSpace(K2.DesignerHost)) K2.DesignerHost = "smartforms";
             if (string.IsNullOrWhiteSpace(K2.Host)) K2.Host = "localhost";
             if (K2.Port == 0) K2.Port = 5555;
-            if (!K2.Integrated) K2.Integrated = true;
+            if (K2.WorkflowPort == 0) K2.WorkflowPort = 5252;
             if (string.IsNullOrWhiteSpace(K2.SecurityLabel)) K2.SecurityLabel = "K2";
+            if (K2.Port < 1 || K2.Port > 65535)
+                throw new CliException("k2.port must be between 1 and 65535.");
+            if (K2.WorkflowPort < 1 || K2.WorkflowPort > 65535)
+                throw new CliException("k2.workflowPort must be between 1 and 65535.");
+            if (!K2.Integrated)
+            {
+                Required(K2.UserName, "k2.userName");
+                Required(
+                    K2.PasswordEnvironmentVariable,
+                    "k2.passwordEnvironmentVariable");
+            }
             if (!string.Equals(K2.DesignerHost, "smartforms", StringComparison.OrdinalIgnoreCase))
                 throw new CliException("k2.designerHost must be 'smartforms' for the installed K2 Five HTML5 Workflow Designer environment.");
             if (Application == null || string.IsNullOrWhiteSpace(Application.RootCategoryPath))
@@ -83,12 +94,25 @@ namespace K2WorkflowCli
             Required(value.ResolverMethod, "workflow.caseLifecycle.resolverMethod");
             Required(value.StateSmartObject, "workflow.caseLifecycle.stateSmartObject");
             Required(value.StateMethod, "workflow.caseLifecycle.stateMethod");
-            Required(value.CaseIdInput, "workflow.caseLifecycle.caseIdInput");
+            if (string.IsNullOrWhiteSpace(value.ResolverCaseIdInput)) value.ResolverCaseIdInput = value.CaseIdInput;
+            if (string.IsNullOrWhiteSpace(value.StateCaseIdInput)) value.StateCaseIdInput = value.CaseIdInput;
+            Required(value.ResolverCaseIdInput, "workflow.caseLifecycle.resolverCaseIdInput");
+            Required(value.StateCaseIdInput, "workflow.caseLifecycle.stateCaseIdInput");
             Required(value.StageInstanceProperty, "workflow.caseLifecycle.stageInstanceProperty");
             Required(value.StageWorkflowProperty, "workflow.caseLifecycle.stageWorkflowProperty");
             Required(value.IsTerminalProperty, "workflow.caseLifecycle.isTerminalProperty");
             if (string.IsNullOrWhiteSpace(value.CaseIdDataField)) value.CaseIdDataField = "CaseId";
             if (string.IsNullOrWhiteSpace(value.ChildStageInstanceInput)) value.ChildStageInstanceInput = "CaseStageInstanceId";
+            if (value.StageWorkflows == null || value.StageWorkflows.Count != 8)
+                throw new CliException("workflow.caseLifecycle.stageWorkflows must contain the eight exact child workflow full names in lifecycle order.");
+            if (value.StageWorkflows.Any(string.IsNullOrWhiteSpace) || value.StageWorkflows.Any(x => x.IndexOf('\\') < 1))
+                throw new CliException("Each workflow.caseLifecycle.stageWorkflows entry must be '<category>\\<workflow>'.");
+            if (value.StageWorkflows.Distinct(StringComparer.Ordinal).Count() != 8)
+                throw new CliException("workflow.caseLifecycle.stageWorkflows entries must be unique.");
+            if (value.WorkflowIds == null || value.WorkflowIds.Count != 8 ||
+                value.StageWorkflows.Any(x => !value.WorkflowIds.ContainsKey(x)) ||
+                value.WorkflowIds.Any(x => x.Value <= 0))
+                throw new CliException("workflow.caseLifecycle.workflowIds must map every ordered stage workflow to its positive deployed Designer JSON process ID.");
             if (Workflow.SmartForms != null)
             {
                 Required(Workflow.SmartForms.Form, "workflow.smartForms.form");
@@ -127,12 +151,15 @@ namespace K2WorkflowCli
 
             var email = Workflow.Email;
             if (email == null) throw new CliException("workflow.email is required for request-approval.");
-            Required(email.Name, "workflow.email.name");
-            if (string.IsNullOrWhiteSpace(email.From)) email.From = "$environment:From Address";
-            Required(email.Subject, "workflow.email.subject"); Required(email.Body, "workflow.email.body");
-            if (email.To == null || email.To.Count == 0) email.To = new List<string> { "$originator" };
-            if (email.To.Any(string.IsNullOrWhiteSpace))
-                throw new CliException("workflow.email.to must contain at least one recipient.");
+            if (!email.Enabled.HasValue || email.Enabled.Value)
+            {
+                Required(email.Name, "workflow.email.name");
+                if (string.IsNullOrWhiteSpace(email.From)) email.From = "$environment:From Address";
+                Required(email.Subject, "workflow.email.subject"); Required(email.Body, "workflow.email.body");
+                if (email.To == null || email.To.Count == 0) email.To = new List<string> { "$originator" };
+                if (email.To.Any(string.IsNullOrWhiteSpace))
+                    throw new CliException("workflow.email.to must contain at least one recipient.");
+            }
 
             var task = Workflow.UserTask;
             if (task == null) throw new CliException("workflow.userTask is required for request-approval.");
@@ -229,8 +256,23 @@ namespace K2WorkflowCli
         [JsonProperty("designerHost")] public string DesignerHost { get; set; }
         [JsonProperty("host")] public string Host { get; set; }
         [JsonProperty("port")] public int Port { get; set; }
+        [JsonProperty("workflowPort")] public int WorkflowPort { get; set; }
         [JsonProperty("integrated")] public bool Integrated { get; set; }
         [JsonProperty("securityLabel")] public string SecurityLabel { get; set; }
+        [JsonProperty("domain")] public string Domain { get; set; }
+        [JsonProperty("userName")] public string UserName { get; set; }
+        [JsonProperty("passwordEnvironmentVariable")]
+        public string PasswordEnvironmentVariable { get; set; }
+
+        public K2Settings()
+        {
+            DesignerHost = "smartforms";
+            Host = "localhost";
+            Port = 5555;
+            WorkflowPort = 5252;
+            Integrated = true;
+            SecurityLabel = "K2";
+        }
     }
 
     internal sealed class ApplicationSettings
@@ -275,11 +317,14 @@ namespace K2WorkflowCli
         [JsonProperty("stateSmartObject")] public string StateSmartObject { get; set; }
         [JsonProperty("stateMethod")] public string StateMethod { get; set; }
         [JsonProperty("caseIdInput")] public string CaseIdInput { get; set; }
+        [JsonProperty("resolverCaseIdInput")] public string ResolverCaseIdInput { get; set; }
+        [JsonProperty("stateCaseIdInput")] public string StateCaseIdInput { get; set; }
         [JsonProperty("caseIdDataField")] public string CaseIdDataField { get; set; }
         [JsonProperty("stageInstanceProperty")] public string StageInstanceProperty { get; set; }
         [JsonProperty("stageWorkflowProperty")] public string StageWorkflowProperty { get; set; }
         [JsonProperty("isTerminalProperty")] public string IsTerminalProperty { get; set; }
         [JsonProperty("childStageInstanceInput")] public string ChildStageInstanceInput { get; set; }
+        [JsonProperty("stageWorkflows")] public List<string> StageWorkflows { get; set; }
         [JsonProperty("workflowIds")] public Dictionary<string, int> WorkflowIds { get; set; }
     }
 
@@ -309,6 +354,7 @@ namespace K2WorkflowCli
 
     internal sealed class EmailSettings
     {
+        [JsonProperty("enabled")] public bool? Enabled { get; set; }
         [JsonProperty("name")] public string Name { get; set; }
         [JsonProperty("from")] public string From { get; set; }
         [JsonProperty("to")] public List<string> To { get; set; }

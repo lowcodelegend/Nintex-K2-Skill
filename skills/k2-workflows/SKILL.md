@@ -9,7 +9,7 @@ Use `scripts/k2wf.ps1` for the HTML5 Designer JSON/`SaveKprx` path; never author
 
 ## Workflow
 
-1. If `$k2-builder` is installed, validate its selected environment profile before discovery. Run `doctor` and report the resolved identity and authoring model.
+1. If `$k2-builder` is installed, validate its selected environment profile before discovery. Project its K2 authentication fields into the workflow manifest, launch non-integrated commands through `k2env.ps1 invoke`, run `doctor <manifest>`, and report the resolved identity and authoring model.
 2. Read [manifest.md](references/manifest.md) and [design.md](references/design.md). Create a stable, version-free manifest. For complete solutions use the shared `<CODE>.` namespace and workflow child `<application root leaf> WFs`; never `Workflow` or `Workflows`.
 3. Run `plan`; use `render` only when JSON review is useful. Review category/name, status mappings, recipients, task actions/notification, authoritative assignment, SmartForm/rules, and primary request reference.
 4. Run `deploy ... --confirm`; it saves/publishes, integrates SmartForms, verifies, checks in a same-owner Form draft, and releases the workflow lock. Use separate `inspect`/`verify` only for drift or evidence.
@@ -32,7 +32,7 @@ If a browser/tool session left a lock, run `unlock <manifest> --confirm` and ref
 
 ## Safety and boundary
 
-- Use integrated AD authentication; never store credentials.
+- Use the manifest's validated K2 authentication context. For non-integrated labels such as `K2SQL`, require `userName` plus `passwordEnvironmentVariable`, launch live commands through the environment-profile wrapper, and never store or print the password.
 - Treat deploy/cleanup as confirmed mutations. Preserve existing workflows unless replacement is explicit.
 - SmartForms integration is additive and mutates the selected Form; preserve business-critical Forms before first integration and verify generated states.
 - Cleanup is idempotent, bounded when recovering same-owner Form drafts, and refuses foreign checkouts or workflows with runtime instances. It preserves non-empty categories; builder orchestration alone adds `--delete-root-category` at the final cleanup checkpoint.

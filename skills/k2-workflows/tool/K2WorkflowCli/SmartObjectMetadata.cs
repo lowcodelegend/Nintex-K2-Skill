@@ -126,16 +126,12 @@ namespace K2WorkflowCli
         {
             var server = new SmartObjectClientServer();
             server.CreateConnection();
-            var connection = new SCConnectionStringBuilder
-            {
-                Authenticate = true,
-                Host = k2.Host,
-                Port = (uint)k2.Port,
-                Integrated = true,
-                IsPrimaryLogin = true,
-                SecurityLabelName = k2.SecurityLabel
-            };
-            server.Connection.Open(connection.ConnectionString);
+            server.Connection.Open(
+                K2Connection.BuildManagementConnectionString(k2));
+            K2Connection.AssertAuthenticated(
+                server.Connection,
+                k2,
+                "K2 SmartObject metadata");
             return server;
         }
 
