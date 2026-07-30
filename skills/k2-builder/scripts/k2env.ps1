@@ -220,6 +220,41 @@ function Invoke-WithDeploymentCredential {
     }
 }
 
+function Invoke-WithEnvironmentProfile {
+    param([object]$Profile, [string]$EnvironmentName, [scriptblock]$Action)
+    function Read-ProfileValue {
+        param([object]$Object, [string]$Name)
+        if ($null -eq $Object) { return '' }
+        $property = $Object.PSObject.Properties[$Name]
+        if ($null -eq $property -or $null -eq $property.Value) { return '' }
+        return [string]$property.Value
+    }
+    $integratedValue = Read-ProfileValue $Profile.k2 'integratedAuthentication'
+    $values = [ordered]@{
+        K2_ENVIRONMENT_NAME = $EnvironmentName
+        K2_HOST = Read-ProfileValue $Profile.k2 'host'
+        K2_MANAGEMENT_PORT = Read-ProfileValue $Profile.k2 'managementPort'
+        K2_SECURITY_LABEL = Read-ProfileValue $Profile.k2 'securityLabel'
+        K2_INTEGRATED = $(if ($integratedValue) { ([Convert]::ToBoolean($integratedValue)).ToString().ToLowerInvariant() } else { '' })
+        K2_DEPLOYMENT_USER = Read-ProfileValue $Profile.k2 'userName'
+        K2_DEPLOYMENT_DOMAIN = Read-ProfileValue $Profile.k2 'domain'
+        K2_PASSWORD_ENVIRONMENT_VARIABLE = Read-ProfileValue $Profile.k2 'passwordEnvironmentVariable'
+    }
+    $previous = @{}
+    try {
+        foreach ($item in $values.GetEnumerator()) {
+            $previous[$item.Key] = [Environment]::GetEnvironmentVariable($item.Key, 'Process')
+            [Environment]::SetEnvironmentVariable($item.Key, $item.Value, 'Process')
+        }
+        & $Action
+    }
+    finally {
+        foreach ($item in $values.GetEnumerator()) {
+            [Environment]::SetEnvironmentVariable($item.Key, $previous[$item.Key], 'Process')
+        }
+    }
+}
+
 function Invoke-K2EnvironmentExecutable {
     param([string[]]$Tokens, [PSCredential]$Credential)
     $skillRoot = Split-Path -Parent $PSScriptRoot
@@ -279,14 +314,16 @@ if ($command -eq 'invoke') {
     }
     $name = Resolve-EnvironmentName $wrapperArguments $root -Required
     $profile = Read-EnvironmentProfile $root $name
-    if ($profile.k2.integratedAuthentication) {
-        & $childCommand @childArguments
-    }
-    else {
-        $credentialPath = Get-CredentialPath $root ([string]$profile.k2.credentialReference)
-        $credential = Import-DeploymentCredential $credentialPath ([string]$profile.k2.userName) ([string]$profile.k2.securityLabel)
-        Invoke-WithDeploymentCredential $credential ([string]$profile.k2.passwordEnvironmentVariable) {
+    Invoke-WithEnvironmentProfile $profile $name {
+        if ($profile.k2.integratedAuthentication) {
             & $childCommand @childArguments
+        }
+        else {
+            $credentialPath = Get-CredentialPath $root ([string]$profile.k2.credentialReference)
+            $credential = Import-DeploymentCredential $credentialPath ([string]$profile.k2.userName) ([string]$profile.k2.securityLabel)
+            Invoke-WithDeploymentCredential $credential ([string]$profile.k2.passwordEnvironmentVariable) {
+                & $childCommand @childArguments
+            }
         }
     }
     $global:LASTEXITCODE = $LASTEXITCODE

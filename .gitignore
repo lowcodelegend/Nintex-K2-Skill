@@ -6,10 +6,15 @@
 
 # Local tooling and test outputs
 .artifacts/
+.research/
 .tmp/
 .tools/
 .test-install*/
 dist/
+**/node_modules/
+**/coverage/
+**/.broker-deploy/
+*.jssp.local
 !skills/k2-style-profiles/assets/examples/smartobject-sidebar/dist/
 !skills/k2-style-profiles/assets/examples/smartobject-sidebar/dist/**
 !skills/k2-style-profiles/assets/examples/native-tabs-sidebar/dist/

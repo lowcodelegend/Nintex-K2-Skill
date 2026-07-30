@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "serviceType": {
+    "guid": "48d43f65-d0bd-4ee7-a8b1-2fd09854fb8e",
+    "systemName": "K2Skills.Examples.AdvancedBroker",
+    "displayName": "K2 Skills Advanced .NET Broker Examples",
+    "description": "Three bounded classic ServiceSDK examples for text/crypto, host diagnostics, and safe file catalog access.",
+    "class": "K2Skills.Examples.AdvancedBroker.AdvancedExamplesBroker",
+    "assembly": "K2Skills.Examples.AdvancedBroker.dll"
+  },
+  "serviceInstance": {
+    "guid": "c8f6628f-812d-4d5e-a7e0-ac5720708f7d",
+    "systemName": "K2Skills Examples Advanced Broker",
+    "displayName": "K2 Skills Examples - Advanced .NET Broker",
+    "description": "Disposable development examples for the k2-dotnet-service-brokers skill.",
+    "allowedRoot": "sample-files"
+  },
+  "smartObjects": {
+    "createNew": true,
+    "updateExisting": true,
+    "deleteRemoved": true
+  }
+}

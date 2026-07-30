@@ -1,0 +1,4 @@
+interface:
+  display_name: "K2 JSSP Service Brokers"
+  short_description: "Build constrained JavaScript K2 brokers"
+  default_prompt: "Use $k2-jssp-service-brokers to build, deploy, verify, or clean up a constrained JavaScript Service Provider broker for Nintex K2."

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "suiteName": "k2-skills",
-  "suiteVersion": "0.85.0",
+  "suiteVersion": "0.86.0",
   "skills": [
     {
       "name": "k2-sql-smartobjects",
@@ -112,7 +112,7 @@
     },
     {
       "name": "k2-builder",
-      "version": "0.28.1",
+      "version": "0.28.2",
       "platform": "win-x64",
       "buildScript": "skills/k2-builder/scripts/build.ps1",
       "buildParameters": {
@@ -163,6 +163,41 @@
         "path": "skills/k2-smartforms-web-components/tool/K2WebComponentCli/bin/Release/k2controls.exe",
         "arguments": ["version"],
         "expectedOutput": "k2controls 0.4.2"
+      }
+    },
+    {
+      "name": "k2-jssp-service-brokers",
+      "version": "0.1.0",
+      "platform": "win-x64",
+      "buildScript": "skills/k2-jssp-service-brokers/scripts/build-broker.ps1",
+      "buildParameters": {
+        "Clean": true
+      },
+      "builtFiles": [
+        "skills/k2-jssp-service-brokers/assets/examples/rest-shaping/dist/k2skills-rest-shaping.jssp"
+      ],
+      "versionCommand": {
+        "path": "skills/k2-jssp-service-brokers/scripts/k2jssp.ps1",
+        "arguments": ["version"],
+        "expectedOutput": "k2jssp 0.1.0"
+      }
+    },
+    {
+      "name": "k2-dotnet-service-brokers",
+      "version": "0.1.0",
+      "platform": "win-x64",
+      "buildScript": "skills/k2-dotnet-service-brokers/scripts/build-broker.ps1",
+      "buildParameters": {
+        "Configuration": "Release",
+        "Clean": true
+      },
+      "builtFiles": [
+        "skills/k2-dotnet-service-brokers/assets/examples/advanced-provider/bin/Release/K2Skills.Examples.AdvancedBroker.dll"
+      ],
+      "versionCommand": {
+        "path": "skills/k2-dotnet-service-brokers/scripts/k2broker.ps1",
+        "arguments": ["version"],
+        "expectedOutput": "k2broker 0.1.0"
       }
     }
   ]

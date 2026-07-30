@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "script": {
+    "systemName": "K2Skills.Examples.RestShaping",
+    "displayName": "K2 Skills REST Shaping Examples",
+    "description": "Three bounded JSSP examples that flatten JSONPlaceholder users, posts, and todos.",
+    "bundle": "dist/k2skills-rest-shaping.jssp"
+  },
+  "serviceInstance": {
+    "systemName": "K2Skills Examples REST Shaping",
+    "displayName": "K2 Skills Examples - REST Shaping",
+    "description": "Disposable development examples for the k2-jssp-service-brokers skill."
+  },
+  "smartObjects": {
+    "createNew": true,
+    "updateExisting": true,
+    "deleteRemoved": true
+  }
+}

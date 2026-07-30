@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{1D11BC3F-CFE0-455F-B978-9B3740A60B1B}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>K2Skills.Examples.AdvancedBroker</RootNamespace>
+    <AssemblyName>K2Skills.Examples.AdvancedBroker</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <K2InstallDir Condition=" '$(K2InstallDir)' == '' ">C:\Program Files\K2</K2InstallDir>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols><DebugType>full</DebugType><Optimize>false</Optimize>
+    <OutputPath>..\bin\Debug\</OutputPath><DefineConstants>DEBUG;TRACE</DefineConstants>
+    <WarningLevel>4</WarningLevel><PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType><Optimize>true</Optimize>
+    <OutputPath>..\bin\Release\</OutputPath><DefineConstants>TRACE</DefineConstants>
+    <WarningLevel>4</WarningLevel><PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Transactions" />
+    <Reference Include="System.Xml" />
+    <Reference Include="SourceCode.SmartObjects.Services.ServiceSDK">
+      <HintPath>$(K2InstallDir)\Host Server\Bin\SourceCode.SmartObjects.Services.ServiceSDK.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AdvancedExamplesBroker.cs" />
+    <Compile Include="TextToolkit.cs" />
+    <Compile Include="EnvironmentProbe.cs" />
+    <Compile Include="FileCatalog.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

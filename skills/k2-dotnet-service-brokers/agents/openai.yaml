@@ -1,0 +1,4 @@
+interface:
+  display_name: "K2 .NET Service Brokers"
+  short_description: "Build advanced C# K2 service brokers"
+  default_prompt: "Use $k2-dotnet-service-brokers to build, deploy, verify, or clean up a classic .NET K2 Service Broker for advanced integration scenarios."

@@ -1,6 +1,6 @@
 # Nintex K2 Skills
 
-Build self-hosted K2 Five applications from manifests, not clicks. Nine portable Agent Skills and nine operational tools design governed case-management solutions; create SQL- or SmartBox-backed SmartObjects, modern Web Component controls, custom Style Profiles, modern SmartForms, and HTML5 workflows; assemble complete verified solutions; and promote them through guarded K2 Package and Deployment releases.
+Build self-hosted K2 Five applications from manifests, not clicks. Eleven portable Agent Skills and eleven operational tools design governed case-management solutions; create SQL-, SmartBox-, JSSP-, or custom .NET-backed SmartObjects, modern Web Component controls, custom Style Profiles, modern SmartForms, and HTML5 workflows; assemble complete verified solutions; and promote them through guarded K2 Package and Deployment releases.
 
 Windows x64 only. It does not target Nintex Automation Cloud or legacy K2 Studio workflows.
 
@@ -21,6 +21,7 @@ Building and packaging the complete suite from source additionally requires:
 - The exact .NET Framework 4.8 Developer Pack/targeting pack because the CLI projects target `.NETFramework,Version=v4.8`.
 - Python 3.10 or later, available as `python` on `PATH`, for the case-management validators and agent framework.
 - [`uv`](https://docs.astral.sh/uv/), available as `uv` on `PATH`, for the case-agent MCP server and its integration tests.
+- Node.js 22 or later and npm for building and unit-testing JSSP broker bundles.
 - Optionally, a trusted WinSW 3 x64 executable when installing the case-agent MCP endpoint as an auto-starting Windows service.
 
 Install the source-build prerequisites with WinGet when they are not already present:
@@ -93,6 +94,8 @@ if ($missing) { throw "Missing installed skills: $($missing -join ', ')" }
 & "$installed\k2-smartforms-web-components\scripts\k2controls.ps1" version
 & "$installed\k2-case-management\scripts\k2caseops.ps1" version
 & "$installed\k2-package-deployment\scripts\k2package.ps1" version
+& "$installed\k2-jssp-service-brokers\scripts\k2jssp.ps1" version
+& "$installed\k2-dotnet-service-brokers\scripts\k2broker.ps1" version
 ```
 
 Restart or reload the agent session after installing so its skill inventory is rediscovered. A source checkout is not a substitute for the installed operational package.
@@ -223,6 +226,22 @@ and authenticated Runtime validation.
 - Publish and verify native Create, Save, Delete, Load, and GetList methods under `<solution>\Data`.
 - Permit safe additive updates, reject destructive model changes, and clean up only exact manifest-owned objects.
 
+### `k2jssp`
+
+- Build a single deployable `.jssp` bundle for K2's constrained, browser-like asynchronous JavaScript engine.
+- Flatten and normalize nested REST/JSON responses into explicit stable SmartObject schemas without assuming full Node.js at runtime.
+- Upload idempotently through K2's system JSSP management SmartObject, then create/refresh one Service Instance and generate its SmartObjects.
+- Unit-test schemas, mappings, input validation, and mocked XHR behavior; inspect, smoke-test, update, and dependency-order cleanup exact manifest-owned assets.
+- Include three live-ready examples: nested user/address/company flattening, calculated post excerpts, and normalized todo status.
+
+### `k2broker`
+
+- Build classic .NET Framework 4.8 C# providers against the locally installed K2 ServiceSDK without redistributing K2 assemblies.
+- Register stable Service Type and Service Instance GUIDs, coordinate the K2 Server restart, regenerate SmartObjects, and verify deployed DLL hashes.
+- Cover advanced boundaries unavailable to JSSP, including server-side cryptography, allowlisted host diagnostics, and bounded filesystem access.
+- Support static attributed schema by default and document dynamic discovery for providers that genuinely require it.
+- Clean up only the exact manifest-owned SmartObjects, Service Instance, Service Type, and broker DLL.
+
 ### `k2forms`
 
 - Generate checked-in capture, list, content, and editable-list views plus composed forms.
@@ -262,7 +281,7 @@ and authenticated Runtime validation.
 
 - Build deterministic per-skill and suite ZIPs with SHA-256 sidecars and a release manifest.
 - Install atomically to Codex, Claude Code, or a custom skill root with automatic backup and rollback.
-- Ship operational skills with compiled CLIs, capability references, wrappers, and examples—but without C# source, project files, or build scripts.
+- Ship operational skills with compiled CLIs, capability references, wrappers, and examples. Curated broker examples may include buildable source/project files under `assets/examples`; product SDK binaries, internal CLI source, and repository-only build machinery remain excluded.
 - Keep repository-level prototypes, screenshots, recordings, deployment ledgers, and solution evidence outside the operational suite ZIP; retain only curated final evidence in Git and send raw browser/video frames to ignored `.artifacts`.
 
 Installed skills are deliberately an operational boundary: agents should use the documented manifest/CLI capabilities and report unsupported requirements instead of reading implementation internals. Source remains available in this repository for explicit CLI/skill development; do that work in a repository clone and install a newly packaged release, never by editing an active skill installation.

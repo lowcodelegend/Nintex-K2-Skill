@@ -153,7 +153,8 @@ function Assert-PackageContent {
     param([Parameter(Mandatory = $true)][string]$StageRoot)
     $forbidden = @(Get-ChildItem -LiteralPath $StageRoot -Recurse -File -Force | Where-Object {
         $_.Name -match '^SourceCode\..*\.dll$' -or
-        $_.Name -match '\.(cs|csproj|sln|resx)$' -or
+        (($_.Name -match '\.(cs|csproj|sln|resx)$') -and
+            $_.FullName -notmatch '[\\/]assets[\\/]examples[\\/]') -or
         $_.FullName -match '[\\/]scripts[\\/]build\.ps1$' -or
         $_.Name -match '\.(secrets\.json|local\.json|user|suo|pdb|trx)$' -or
         $_.Name -match '^\.env(?:\..*)?$'
