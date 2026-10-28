@@ -30,15 +30,3 @@ Use an authenticated K2 Runtime session and capture:
 Reject document/control horizontal overflow, clipping, overlap, unreadable long content, missing focus, inaccessible dialogs, duplicate IDs, unexpected console/page errors, or silent network failures. Exercise populated, empty, loading, error, read-only, disabled, long-content, and reduced-motion states.
 
 For input controls, prove that K2 Form/View validation invokes the component `Validate()` contract and that invalid values never reach persistence. For dashboard controls, prove list binding, refresh, empty data, stale data, and malformed-row handling.
-
-## Northstar fidelity gate
-
-The prototype at `examples/supplier-nonconformance/gold-standard-prototype` is the visual source of truth for the canonical case homepage. Compare the Web Component harness and authenticated K2 Runtime against:
-
-- `review/command-desktop.png` at 1440×1000;
-- the prototype's mobile shell at 390×844;
-- interaction states for command search, mobile navigation, focus, notifications, and new-case navigation.
-
-Use the same browser build, viewport, device scale, fonts, and deterministic fixture data. Record pixel mismatch ratio plus perceptual diff. Require no structural mismatch and no unexplained visible pixel region. Font/network variance is a failed dependency, not an automatic waiver.
-
-Also verify semantics: one H1, landmark navigation/main, skip link, chart text alternative, colour-independent status, correct tab order, Escape-close dialog, Ctrl/Cmd+K search, and screen-reader announcements.

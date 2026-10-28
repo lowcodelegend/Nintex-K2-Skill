@@ -37,7 +37,7 @@ Keep `Application navigation` and `Command palette` as the exact visible View ti
 
 ## Browser loop
 
-Deploy the profile and native Form, then capture the authenticated Runtime at 1440×1000, 1280×800, 768×1024, and 390×844. Use the case-management capture script, compare every image to the supplier-nonconformance gold-standard prototype, correct unexplained structural or visual regions, and repeat until the acceptance gate passes.
+Deploy the profile and native Form, then capture the authenticated Runtime at 1440×1000, 1280×800, 768×1024, and 390×844. Use the attended Runtime capture helper, compare every image to the application's approved reference, and record unexplained structural or visual differences.
 
 The browser driver uses one disposable Edge profile per run and Node's built-in DevTools WebSocket (`node --experimental-websocket`). A screenshot is accepted only when the native Runtime has released its loading lifecycle and the Northstar shell reports both styles and content ready.
 

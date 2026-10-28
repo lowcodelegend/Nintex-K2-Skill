@@ -1,6 +1,6 @@
 # Nintex K2 Skills
 
-Build self-hosted K2 Five applications from manifests, not clicks. Eleven portable Agent Skills and eleven operational tools design governed case-management solutions; create SQL-, SmartBox-, JSSP-, or custom .NET-backed SmartObjects, modern Web Component controls, custom Style Profiles, modern SmartForms, and HTML5 workflows; assemble complete verified solutions; and promote them through guarded K2 Package and Deployment releases.
+Build self-hosted K2 Five applications from manifests, not clicks. Ten portable Agent Skills and ten operational tools create SQL-, SmartBox-, JSSP-, or custom .NET-backed SmartObjects, modern Web Component controls, custom Style Profiles, modern SmartForms, and HTML5 workflows; assemble complete verified solutions; and promote them through guarded K2 Package and Deployment releases.
 
 Windows x64 only. It does not target Nintex Automation Cloud or legacy K2 Studio workflows.
 
@@ -19,32 +19,23 @@ Running the installed K2 skills requires:
 Building and packaging the complete suite from source additionally requires:
 
 - The exact .NET Framework 4.8 Developer Pack/targeting pack because the CLI projects target `.NETFramework,Version=v4.8`.
-- Python 3.10 or later, available as `python` on `PATH`, for the case-management validators and agent framework.
-- [`uv`](https://docs.astral.sh/uv/), available as `uv` on `PATH`, for the case-agent MCP server and its integration tests.
 - Node.js 22 or later and npm for building and unit-testing JSSP broker bundles.
-- Optionally, a trusted WinSW 3 x64 executable when installing the case-agent MCP endpoint as an auto-starting Windows service.
 
 Install the source-build prerequisites with WinGet when they are not already present:
 
 ```powershell
 winget install --exact --id Microsoft.DotNet.Framework.DeveloperPack_4 --version 4.8
-winget install --exact --id Python.Python.3.12
-winget install --exact --id astral-sh.uv
 ```
 
 Open a new PowerShell session after installation so the updated `PATH` is available, then verify:
 
 ```powershell
-python --version
-uv --version
 Test-Path 'C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8'
 ```
 
-### Optional AI and Langflow
+### Optional Langflow integration
 
-Langflow is optional. It is not required to build or install the suite, or to create and operate the core SQL SmartObjects, SmartForms, Style Profiles, and workflows. Use Langflow only when enabling AI-assisted features such as the case command portal, conversational case intake, governed agentic case creation, or other advisory AI flows.
-
-The `k2-case-management` skill exposes its governed agent framework through a remote Streamable HTTP MCP server that Langflow can use as a tool provider. Langflow supplies the model/agent flow; the MCP server itself does not call a model. Configure Langflow only for environments that advertise the corresponding capability, keep AI output advisory and subject to human oversight, and follow the authenticated HTTPS deployment guidance in [`skills/k2-case-management/references/agentic-case-mcp.md`](skills/k2-case-management/references/agentic-case-mcp.md).
+Environment profiles can record and validate an optional Langflow endpoint. It is not required for the core K2 build tools.
 
 ## Install
 
@@ -92,7 +83,6 @@ if ($missing) { throw "Missing installed skills: $($missing -join ', ')" }
 
 & "$installed\k2-style-profiles\scripts\k2style.ps1" version
 & "$installed\k2-smartforms-web-components\scripts\k2controls.ps1" version
-& "$installed\k2-case-management\scripts\k2caseops.ps1" version
 & "$installed\k2-package-deployment\scripts\k2package.ps1" version
 & "$installed\k2-jssp-service-brokers\scripts\k2jssp.ps1" version
 & "$installed\k2-dotnet-service-brokers\scripts\k2broker.ps1" version
@@ -171,14 +161,6 @@ Claude: /k2-builder create an expense approval solution with code EXP. Plan,
         deploy in dependency order, verify it, and report artifacts and errata.
 ```
 
-For a persistent case lifecycle, start with `k2-case-management`. It defines the reusable canonical data model, parent lifecycle and child stage workflows, transitions, evidence, SLAs, human decisions, audit, and optional governed AI; it then hands supported artifact construction to `k2-builder`.
-
-```text
-Use $k2-case-management to design a supplier nonconformance case application with
-staged investigation, dual approval, SLA escalation, and private AI-assisted
-evidence summarisation, then produce the build-manifest handoff to $k2-builder.
-```
-
 For a custom modern shell, use `k2-style-profiles` before generating the consuming Forms:
 
 ```text
@@ -189,15 +171,6 @@ and authenticated Runtime validation.
 ```
 
 ## Implemented features
-
-### `k2-case-management`
-
-- Design configuration-driven case types over a reusable, extensible canonical model instead of recreating a schema for each solution.
-- Define a stable parent lifecycle workflow, standard child-stage contracts, controlled transitions/commands, rules, SLAs, assignments, evidence, decisions, audit, and bounded AI assistance.
-- Compose a canonical product UX into solution manifests: operations dashboard, personal Worklist, guided initiation, reusable case workspace, reports, empty/error/breach/read-only states, and solution-specific overlays.
-- Generate platform-neutral reference evidence, then capture authenticated native Runtime evidence at desktop, tablet, and mobile widths with overflow and browser-diagnostic gates.
-- Validate declarative case-type design YAML and produce an explicit build inventory for transformation into supported `k2-builder` manifests; the YAML is not a native K2 import format.
-- Host the optional Langflow-facing MCP endpoint as a hardened, restartable WinSW service and map its bounded read operations to deployment-specific K2 SmartObject system names.
 
 ### `k2env` and `k2build`
 

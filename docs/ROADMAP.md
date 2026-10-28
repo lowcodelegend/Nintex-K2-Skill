@@ -82,30 +82,19 @@ Next increments:
 - Add CSP/nonces and cache-policy diagnostics for hardened environments.
 - Add an export/import handoff helper for K2 Package and Deployment scenarios without weakening absolute-URL review.
 
-### 6. K2 case management — v0.4 implemented
-
-Define configuration-driven persistent cases over a canonical extensible model, stable parent lifecycle, reusable child stages, governed transitions/commands, evidence, SLAs, assignments, decisions, audit, and bounded AI assistance. Compose a reusable operations dashboard, personal work, guided initiation, case workspace, reports, state variants, and solution-specific overlays before handing construction to the specialist skills.
-
-Next increments:
-
-- Compile more lifecycle/security contracts directly into specialist manifests.
-- Add reusable CAPA, complaint, grievance, claim, request, and authorisation overlays.
-- Add automated transition/SLA boundary tests and a compact deployment-ledger result feed.
-- Extend native browser scenarios from responsive evidence into complete role-based lifecycle journeys.
-
-### 7. K2 categories and packaging
+### 6. K2 categories and packaging
 
 Manage category structure, artifact placement, dependency-aware package creation, environment-field substitution, promotion between environments, versioning, and rollback practices.
 
-### 8. K2 security and governance
+### 7. K2 security and governance
 
 Manage design-time authorization, runtime permissions, SmartObject data access policies, service-instance rights, workflow rights, identities, roles, and environment-specific security reviews.
 
-### 9. K2 integrations and extensions
+### 8. K2 integrations and extensions
 
 Handle REST/OData/web-service/assembly endpoints, custom service brokers, custom controls, custom workflow steps, JavaScript, and .NET extensions. Keep each connector family isolated behind its own reference/tooling module.
 
-### 10. K2 operations and diagnostics
+### 9. K2 operations and diagnostics
 
 Inspect workflow errors and instances, service health, SmartObject execution failures, logs, performance, reporting, deployment drift, and environment usage. Produce safe diagnostic bundles without modifying K2 databases.
 

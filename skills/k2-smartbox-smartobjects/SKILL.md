@@ -49,7 +49,7 @@ See [cli.md](references/cli.md) for command behavior and recovery rules.
 - Use exactly one key property per SmartObject. Prefer `AutoNumber` or `AutoGuid`.
 - Keep system names stable and namespace solution-owned display names with the solution short code.
 - SmartBox update is named `Save`, not `Update`.
-- Existing updates are additive only. The CLI rejects removed properties and key/type changes.
+- Existing updates are additive by default. The CLI rejects removed properties and key/type changes except the explicitly allowlisted non-key Number-to-Decimal widening described in [manifest.md](references/manifest.md). Back up records and prove the widening on a disposable SmartObject first; preserve all record and artifact identities.
 - Do not model master-detail relationships as unconstrained ID fields merely to avoid SQL.
 - Never edit K2 databases directly.
 - Never publish or delete without the explicit CLI confirmation flag.

@@ -6,14 +6,14 @@ Use the Nintex Automation K2 5.9+ `manifest.json` format. The manifest lives at 
 
 ```json
 {
-  "displayName": "Northstar Case Homepage",
-  "tagName": "northstar-case-homepage",
-  "description": "Role-aware case command centre.",
-  "icon": "northstar-icon.svg",
-  "designtimeScriptFileNames": ["northstar-designtime.js"],
-  "runtimeScriptFileNames": ["northstar-runtime.js"],
-  "designtimeStyleFileNames": ["northstar-designtime.css"],
-  "runtimeStyleFileNames": ["northstar-runtime.css"],
+  "displayName": "Example Control",
+  "tagName": "example-control",
+  "description": "A bounded native K2 Web Component.",
+  "icon": "control-icon.svg",
+  "designtimeScriptFileNames": ["control-designtime.js"],
+  "runtimeScriptFileNames": ["control-runtime.js"],
+  "designtimeStyleFileNames": ["control-designtime.css"],
+  "runtimeStyleFileNames": ["control-runtime.css"],
   "datatypes": ["Text"],
   "valuePropertyID": "Value"
 }

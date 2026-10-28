@@ -9,6 +9,8 @@ namespace K2SmartFormsCli
     {
         public static void Run()
         {
+            Assert(decimal.Parse("6.25") == 6.25m,
+                "CLI numeric parsing uses K2 invariant wire format independently of Windows regional settings");
             TestIdentityNormalization();
             TestCategoryCleanupPaths();
             TestViewOwnedMasterDetailRules();
@@ -17,6 +19,8 @@ namespace K2SmartFormsCli
             TestMissingOptionalControlMappings();
             TestRequiredReadOnlyCreateInputGate();
             TestLookupAndDefaultValueRoundTrip();
+            TestNativeSmartBoxReadOnlyIdentity();
+            TestNativeAdminCrudRoles();
             TestGovernedLookupValidationComposition();
             TestMasterButtonSuppression();
             TestNativeChartComposition();
@@ -59,6 +63,60 @@ namespace K2SmartFormsCli
             var complete = SmartFormsManager.CleanupCategoryPaths(application, true);
             Assert(complete.Last() == @"K2 Skills\APP.Application" && complete.Count == 6,
                 "builder cleanup deletes the application root last");
+        }
+
+        private static void TestNativeSmartBoxReadOnlyIdentity()
+        {
+            var view = NewView("Native identity", "NativeObject", "capture", "RecordId");
+            view.ReadOnlyProperties.Add("RecordId");
+            const string xml = "<View><Fields><Field ID='key' DataType='AutoGuid'><Name>Record ID</Name><FieldName>RecordId</FieldName></Field></Fields>" +
+                "<Controls><Control ID='key-control' Type='DataLabel' FieldID='key'><Name>Record ID Data Label</Name><Properties/></Control></Controls>" +
+                "<Layout><Control ID='key-control'/></Layout></View>";
+            var sources = new Dictionary<string, LookupRuntimeSource>();
+            var transformed = ViewLookupDefinition.Apply(xml, view, sources);
+            ViewLookupDefinition.Verify(transformed, view, sources);
+            Assert(!XDocument.Parse(transformed).Descendants("Property").Any(x => (string)x.Element("Name") == "IsReadOnly"),
+                "native identity DataLabels remain intrinsically read-only without unsupported control properties");
+            var missing = XDocument.Parse(xml);
+            missing.Descendants("Control").Where(x => x.Attribute("Type") != null).Remove();
+            AssertThrows(delegate { ViewLookupDefinition.Verify(missing.ToString(), view, sources); }, "no field");
+        }
+
+        private static void TestNativeAdminCrudRoles()
+        {
+            foreach (var updateMethod in new[] { "Save", "Update" })
+            {
+                var editor = NewView("APP.Editor", "APP_Lookup", "capture", "Code");
+                editor.Area = "admin";
+                editor.Options.Add("editable");
+                editor.Methods.AddRange(new[] { "Create", "Load", updateMethod, "Delete" });
+                var list = NewView("APP.List", "APP_Lookup", "list", "Code");
+                list.Area = "admin";
+                list.DefaultListMethod = "GetList";
+                var form = new FormDefinition { Name = "APP.Admin", Area = "admin" };
+                form.Views.AddRange(new[] { editor.Name, list.Name });
+                var manifest = new SmartFormsManifest { Name = "Native admin" };
+                manifest.Application.RootCategoryPath = @"K2 Skills\APP.Native admin";
+                manifest.Application.Theme = "Lithium";
+                manifest.Application.Views.AddRange(new[] { editor, list });
+                manifest.Application.Forms.Add(form);
+                manifest.Application.Lookups.Add(new LookupSourceDefinition
+                {
+                    Name = "Native lookup", SmartObject = "APP_Lookup", Method = "GetList",
+                    ValueProperty = "Code", DisplayProperty = "Code", AdminForm = form.Name
+                });
+                var path = System.IO.Path.GetTempFileName();
+                try
+                {
+                    var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+                    System.IO.File.WriteAllText(path, serializer.Serialize(manifest));
+                    SmartFormsManifest.Load(path);
+                    editor.Methods.Remove(updateMethod);
+                    System.IO.File.WriteAllText(path, serializer.Serialize(manifest));
+                    AssertThrows(delegate { SmartFormsManifest.Load(path); }, "CRUD capture");
+                }
+                finally { System.IO.File.Delete(path); }
+            }
         }
 
         private static void TestReplacementRecoveryClassifier()
@@ -1424,8 +1482,19 @@ namespace K2SmartFormsCli
             for (var i = 0; i < names.Length; i++)
             {
                 var key = "p" + i;
-                fields.Add(new XElement("Field", new XAttribute("ID", "field-" + key), new XElement("FieldName", names[i])));
-                controls.Add(FieldControlDefinition("label-" + key, "Label", "field-" + key));
+                var field = new XElement("Field", new XAttribute("ID", "field-" + key), new XElement("FieldName", names[i]));
+                var labelControl = FieldControlDefinition("label-" + key, "Label", "field-" + key);
+                if (i < 2)
+                {
+                    // Native SmartBox labels are unbound and named using captions,
+                    // while both properties can occupy the same generated row.
+                    var caption = i == 0 ? "Email Address" : "Phone Number";
+                    field.Add(new XElement("Name", caption), new XElement("FieldDisplayName", caption));
+                    labelControl.Attributes("FieldID").Remove();
+                    labelControl.SetElementValue("Name", caption + " Label");
+                }
+                fields.Add(field);
+                controls.Add(labelControl);
                 controls.Add(FieldControlDefinition("input-" + key, types[i], "field-" + key));
                 if (i % 2 == 0)
                 {

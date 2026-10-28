@@ -1,6 +1,6 @@
 # Northstar native SmartForms verification
 
-This disposable spike proves the case-management homepage architecture against the live K2 5.1019.25336.3 server without replacing the supplier-nonconformance production Forms.
+This disposable spike proves the case-management homepage architecture against the live K2 5.1019.25336.3 server without replacing any existing Forms.
 
 ## Live artifacts
 

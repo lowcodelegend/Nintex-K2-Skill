@@ -12,6 +12,10 @@ namespace K2SmartBoxCli
         public static int Main(string[] args)
         {
             RuntimeAssemblyResolver.Install();
+            // K2 numeric wire values use '.' regardless of the Windows locale.
+            // The SDK reader otherwise parses them with CurrentCulture (e.g.
+            // en-DE rejects 6.25), including values in unselected List columns.
+            System.Threading.Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
             try { return Cli.Run(args); }
             catch (CliException ex)
             {

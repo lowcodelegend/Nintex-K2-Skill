@@ -482,7 +482,10 @@ namespace K2SmartFormsCli
                 if (!string.Equals(form.Area, "admin", StringComparison.OrdinalIgnoreCase))
                     throw new CliException("Lookup '" + lookup.Name + "' adminForm must use area 'admin': " + lookup.AdminForm);
                 var adminViews = Application.Views.Where(x => form.Views.Contains(x.Name, StringComparer.OrdinalIgnoreCase) && string.Equals(x.SmartObject, lookup.SmartObject, StringComparison.OrdinalIgnoreCase)).ToList();
-                if (!adminViews.Any(x => (x.Type == "capture" || x.Type == "capture-list") && (x.Options.Contains("all-methods", StringComparer.OrdinalIgnoreCase) || new[] { "Create", "Update", "Delete" }.All(m => x.Methods.Contains(m, StringComparer.OrdinalIgnoreCase)))))
+                if (!adminViews.Any(x => (x.Type == "capture" || x.Type == "capture-list") &&
+                    (x.Options.Contains("all-methods", StringComparer.OrdinalIgnoreCase) ||
+                     (new[] { "Create", "Delete" }.All(m => x.Methods.Contains(m, StringComparer.OrdinalIgnoreCase)) &&
+                      new[] { "Update", "Save" }.Any(m => x.Methods.Contains(m, StringComparer.OrdinalIgnoreCase))))))
                     throw new CliException("Lookup '" + lookup.Name + "' adminForm must contain a CRUD capture view over " + lookup.SmartObject + ".");
                 if (!adminViews.Any(x => x.Type == "capture-list" || ((x.Type == "list" || x.Type == "content") && !string.IsNullOrWhiteSpace(x.DefaultListMethod))))
                     throw new CliException("Lookup '" + lookup.Name + "' adminForm must contain a List view over " + lookup.SmartObject + ".");

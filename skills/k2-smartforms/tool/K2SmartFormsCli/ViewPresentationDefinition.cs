@@ -818,7 +818,9 @@ namespace K2SmartFormsCli
             var bound = labels.Where(x =>
                 string.Equals((string)x.Attribute("FieldID"), fieldId, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(PropertyValue(x, "Field"), fieldId, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(ChildValue(x, "Name"), property + " Label", StringComparison.OrdinalIgnoreCase)).ToList();
+                string.Equals(ChildValue(x, "Name"), property + " Label", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(ChildValue(x, "Name"), ChildValue(field, "Name") + " Label", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(ChildValue(x, "Name"), ChildValue(field, "FieldDisplayName") + " Label", StringComparison.OrdinalIgnoreCase)).ToList();
             if (bound.Count == 1) return bound[0];
             if (bound.Count == 0 && labels.Count == 1) return labels[0];
             return null;

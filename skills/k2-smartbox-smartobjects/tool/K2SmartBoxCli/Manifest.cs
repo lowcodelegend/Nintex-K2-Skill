@@ -43,6 +43,7 @@ namespace K2SmartBoxCli
             Application = Application ?? new ApplicationOptions();
             K2 = K2 ?? new K2Options();
             Deployment = Deployment ?? new DeploymentOptions();
+            Deployment.NumberToDecimalProperties = Deployment.NumberToDecimalProperties ?? new List<string>();
             SmartObjects = SmartObjects ?? new List<SmartObjectDefinition>();
             Verification = Verification ?? new VerificationOptions();
             if (string.IsNullOrWhiteSpace(K2.Host)) K2.Host = "localhost";
@@ -94,12 +95,19 @@ namespace K2SmartBoxCli
                 if (item.Properties.Count(x => x.Key) != 1)
                     throw new CliException("SmartObject must declare exactly one key property: " + item.SystemName);
             }
+            foreach (var entry in Deployment.NumberToDecimalProperties)
+            {
+                if (!Deployment.UpdateExisting || !SmartObjects.Any(item => item.Properties.Any(property =>
+                    string.Equals(item.SystemName + "." + property.Name, entry, StringComparison.OrdinalIgnoreCase) &&
+                    property.Type == "decimal" && !property.Key)))
+                    throw new CliException("numberToDecimalProperties requires updateExisting=true and an exact declared non-key Decimal property: " + entry);
+            }
         }
 
         internal static string CanonicalType(string value, string label)
         {
             var normalized = (value ?? string.Empty).Replace("-", "").ToLowerInvariant();
-            var supported = new[] { "autonumber", "autoguid", "text", "memo", "number", "yesno", "date", "datetime", "guid", "file", "image" };
+            var supported = new[] { "autonumber", "autoguid", "text", "memo", "number", "decimal", "yesno", "date", "datetime", "guid", "file", "image" };
             if (!supported.Contains(normalized))
                 throw new CliException("Unsupported SmartBox type '" + value + "' for " + label + ". Supported: " + string.Join(", ", supported));
             return normalized;
@@ -114,7 +122,11 @@ namespace K2SmartBoxCli
     }
 
     public sealed class ApplicationOptions { public string RootCategoryPath { get; set; } }
-    public sealed class DeploymentOptions { public bool UpdateExisting { get; set; } }
+    public sealed class DeploymentOptions
+    {
+        public bool UpdateExisting { get; set; }
+        public List<string> NumberToDecimalProperties { get; set; }
+    }
     public sealed class VerificationOptions { public bool SmokeTestLists { get; set; } }
     public sealed class K2Options
     {

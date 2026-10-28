@@ -297,7 +297,8 @@ namespace K2SmartBoxCli
                 {
                     case "autonumber": return New("System.Int64", "UniqueIdAuto");
                     case "autoguid": return New("", "UniqueIdAuto");
-                    case "number": return New("System.Decimal", "Default");
+                    case "number":
+                    case "decimal": return New("System.Decimal", "Default");
                     case "yesno": return New("System.Boolean", "Default");
                     case "date":
                     case "datetime": return New("System.DateTime", "Default");

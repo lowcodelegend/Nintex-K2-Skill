@@ -277,6 +277,8 @@ For cascading dropdowns, declare both parent and child controls and add the join
 
 `adminForm` is optional because external masters and fixed workflow vocabularies may not be application-administered. When present, it must reference a form with `area: "admin"` that contains CRUD capture and List views over the lookup SmartObject. Business-managed lookups should declare it by default.
 
+Native SmartBox capture methods are `Create`, `Load`, `Save`, and `Delete`; select `GetList` for list Views. Admin CRUD validation accepts `Save` as the native alternative to SQL `Update`. Generated AutoGuid/AutoNumber DataLabels are intrinsically read-only and can be declared in `readOnlyProperties`; friendly SmartBox captions do not need to be renamed to technical property names.
+
 Set `area` on each view/form to `application` (the default) or `admin`. Admin artifacts deploy below `<root>\Admin`, while ordinary artifacts remain in the standard `Views` and `Forms` folders.
 
 Each form's optional `useLegacyTheme` defaults to `false`. Always keep it `false`, including when `application.styleProfile` is omitted; the CLI writes the K2 `UseLegacyTheme` property explicitly and verifies it after deployment, enabling K2's plain modern default theme when no custom Style Profile is selected. Never set it to `true`.

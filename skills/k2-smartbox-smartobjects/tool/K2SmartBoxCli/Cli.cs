@@ -11,7 +11,7 @@ namespace K2SmartBoxCli
         {
             if (args == null || args.Length == 0 || IsHelp(args[0])) { PrintHelp(); return 0; }
             var command = args[0].ToLowerInvariant();
-            if (command == "version") { Console.WriteLine("k2smartbox 0.1.1"); return 0; }
+            if (command == "version") { Console.WriteLine("k2smartbox 0.2.0"); return 0; }
             if (command == "selftest") { SelfTest(); return 0; }
             var options = ParseOptions(args.Skip(1).ToArray());
             var manifest = DeploymentManifest.Load(GetOption(options, "manifest", true));
@@ -41,24 +41,46 @@ namespace K2SmartBoxCli
 
         private static void SelfTest()
         {
+            if (decimal.Parse("6.25") != 6.25m)
+                throw new CliException("Self-test requires invariant K2 wire-number parsing.");
             var definition = new SmartObjectDefinition
             {
                 SystemName = "ABC_Request", DisplayName = "ABC.Request",
                 Properties = new List<PropertyDefinition>
                 {
                     new PropertyDefinition { Name = "Id", DisplayName = "ID", Type = "autonumber", Key = true },
-                    new PropertyDefinition { Name = "Title", DisplayName = "Title", Type = "text", Required = true, MaxLength = 200 }
+                    new PropertyDefinition { Name = "Title", DisplayName = "Title", Type = "text", Required = true, MaxLength = 200 },
+                    new PropertyDefinition { Name = "Amount", DisplayName = "Amount", Type = "decimal" }
                 }
             };
             var xml = SmartBoxDefinitionBuilder.Build(definition, Guid.NewGuid(), Guid.NewGuid(),
                 "SmartBoxService", "ABC_Request_12345678", Guid.NewGuid());
             var root = XDocument.Parse(xml).Root;
-            if (root.Element("properties").Elements("property").Count() != 2)
+            if (root.Element("properties").Elements("property").Count() != 3)
                 throw new CliException("Self-test property generation failed.");
             var methods = root.Element("methods").Elements("method").Select(x => (string)x.Attribute("name")).ToArray();
             if (!new[] { "Create", "Save", "Delete", "Load", "GetList" }.SequenceEqual(methods))
                 throw new CliException("Self-test method generation failed.");
-            Console.WriteLine("SELFTEST SUCCEEDED");
+            if (DeploymentManifest.CanonicalType("Decimal", "Amount") != "decimal" ||
+                !root.Element("extendingobject").Descendants("propertydata").Any(x =>
+                    (string)x.Attribute("name") == "Amount" && (string)x.Attribute("sotype") == "decimal" &&
+                    (string)x.Attribute("type") == "System.Decimal"))
+                throw new CliException("Self-test native Decimal generation failed.");
+            var actual = new LiveObject();
+            actual.Properties.Add("Id", new LiveProperty { Type = "autonumber", Key = true });
+            actual.Properties.Add("Title", new LiveProperty { Type = "text" });
+            actual.Properties.Add("Amount", new LiveProperty { Type = "number" });
+            var rejected = false;
+            try { K2Manager.ValidateExisting(definition, actual, true); }
+            catch (CliException) { rejected = true; }
+            if (!rejected) throw new CliException("Self-test accepted an unapproved type change.");
+            K2Manager.ValidateExisting(definition, actual, true, new[] { "ABC_Request.Amount" });
+            actual.Properties["Amount"].Key = true;
+            rejected = false;
+            try { K2Manager.ValidateExisting(definition, actual, true, new[] { "ABC_Request.Amount" }); }
+            catch (CliException) { rejected = true; }
+            if (!rejected) throw new CliException("Self-test allowed a key change during Decimal widening.");
+            Console.WriteLine("SELFTEST SUCCEEDED: native Decimal and explicit non-key Number-to-Decimal widening guards");
         }
 
         private static Dictionary<string, string> ParseOptions(string[] args)

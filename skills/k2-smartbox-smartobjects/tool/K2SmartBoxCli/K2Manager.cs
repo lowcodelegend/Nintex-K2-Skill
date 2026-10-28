@@ -58,10 +58,12 @@ namespace K2SmartBoxCli
                 {
                     if (existing.ServiceInstanceGuid != service.Guid)
                         throw new CliException("SmartObject name collides with a non-SmartBox object: " + item.SystemName);
-                    ValidateExisting(item, existing, _manifest.Deployment.UpdateExisting);
+                    ValidateExisting(item, existing, _manifest.Deployment.UpdateExisting, _manifest.Deployment.NumberToDecimalProperties);
                     var additions = item.Properties.Where(x => !existing.Properties.ContainsKey(x.Name)).Select(x => x.Name).ToArray();
-                    Console.WriteLine("  SmartObject: " + (additions.Length == 0 ? "unchanged " : "add properties ") +
-                        item.SystemName + (additions.Length == 0 ? "" : " [" + string.Join(",", additions) + "]"));
+                    var widenings = NumberToDecimalChanges(item, existing);
+                    Console.WriteLine("  SmartObject: " + (additions.Length == 0 && widenings.Length == 0 ? "unchanged " : "update ") +
+                        item.SystemName + (additions.Length == 0 ? "" : " add [" + string.Join(",", additions) + "]") +
+                        (widenings.Length == 0 ? "" : " widen Number to Decimal [" + string.Join(",", widenings) + "]"));
                 }
             }
             Console.WriteLine("  Category: " + _manifest.DataCategoryPath);
@@ -92,8 +94,8 @@ namespace K2SmartBoxCli
                         existing = LiveObject.FromXml(currentXml);
                         if (existing.ServiceInstanceGuid != service.Guid)
                             throw new CliException("SmartObject name collides with a non-SmartBox object: " + item.SystemName);
-                        ValidateExisting(item, existing, _manifest.Deployment.UpdateExisting);
-                        if (item.Properties.Count == existing.Properties.Count)
+                        ValidateExisting(item, existing, _manifest.Deployment.UpdateExisting, _manifest.Deployment.NumberToDecimalProperties);
+                        if (item.Properties.Count == existing.Properties.Count && NumberToDecimalChanges(item, existing).Length == 0)
                         {
                             Console.WriteLine("SmartObject: unchanged (" + item.SystemName + ")");
                             continue;
@@ -196,7 +198,15 @@ namespace K2SmartBoxCli
             });
         }
 
-        internal static void ValidateExisting(SmartObjectDefinition wanted, LiveObject actual, bool allowAdditions)
+        internal static string[] NumberToDecimalChanges(SmartObjectDefinition wanted, LiveObject actual)
+        {
+            return wanted.Properties.Where(property => actual.Properties.ContainsKey(property.Name) &&
+                string.Equals(actual.Properties[property.Name].Type, "number", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(property.Type, "decimal", StringComparison.OrdinalIgnoreCase)).Select(x => x.Name).ToArray();
+        }
+
+        internal static void ValidateExisting(SmartObjectDefinition wanted, LiveObject actual, bool allowAdditions,
+            IEnumerable<string> allowedNumberToDecimalProperties = null)
         {
             foreach (var liveProperty in actual.Properties)
                 if (!wanted.Properties.Any(x => string.Equals(x.Name, liveProperty.Key, StringComparison.OrdinalIgnoreCase)))
@@ -210,7 +220,11 @@ namespace K2SmartBoxCli
                         throw new CliException("SmartObject exists and differs; set deployment.updateExisting=true for additive updates: " + wanted.SystemName);
                     continue;
                 }
-                if (!string.Equals(property.Type, live.Type, StringComparison.OrdinalIgnoreCase) || property.Key != live.Key)
+                var allowedWidening = allowAdditions && !property.Key && !live.Key &&
+                    string.Equals(property.Type, "decimal", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(live.Type, "number", StringComparison.OrdinalIgnoreCase) &&
+                    (allowedNumberToDecimalProperties ?? new string[0]).Contains(wanted.SystemName + "." + property.Name, StringComparer.OrdinalIgnoreCase);
+                if ((!string.Equals(property.Type, live.Type, StringComparison.OrdinalIgnoreCase) && !allowedWidening) || property.Key != live.Key)
                     throw new CliException("Changing a SmartBox property type or key is not supported: " + wanted.SystemName + "." + property.Name);
             }
         }

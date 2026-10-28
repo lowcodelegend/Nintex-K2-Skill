@@ -7,6 +7,8 @@ namespace K2SmartFormsCli
         public static int Main(string[] args)
         {
             RuntimeAssemblyResolver.Install();
+            // Match the invariant numeric format of K2's SmartObject wire values.
+            System.Threading.Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
             try
             {
                 return Cli.Run(args);

@@ -439,7 +439,11 @@ namespace K2SmartFormsCli
         {
             foreach (var property in view.ReadOnlyProperties)
             {
-                var control = FindEditableControl(document, view, property);
+                var control = FindEditableControl(document, view, property, true);
+                // Native SmartBox generated identities are DataLabels, not editable
+                // inputs. They are intrinsically read-only and expose no IsReadOnly
+                // control property to set or verify.
+                if (string.Equals((string)control.Attribute("Type"), "DataLabel", StringComparison.OrdinalIgnoreCase)) continue;
                 var properties = control.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
                 if (properties == null) { properties = new XElement(control.Name.Namespace + "Properties"); control.Add(properties); }
                 foreach (var old in properties.Elements().Where(x => x.Name.LocalName == "Property" && string.Equals(GetPropertyName(x), "IsReadOnly", StringComparison.OrdinalIgnoreCase)).ToList()) old.Remove();
@@ -451,20 +455,22 @@ namespace K2SmartFormsCli
         {
             foreach (var property in view.ReadOnlyProperties)
             {
-                var control = FindEditableControl(document, view, property);
+                var control = FindEditableControl(document, view, property, true);
+                if (string.Equals((string)control.Attribute("Type"), "DataLabel", StringComparison.OrdinalIgnoreCase)) continue;
                 var properties = control.Elements().FirstOrDefault(x => x.Name.LocalName == "Properties");
                 if (!string.Equals(GetPropertyValue(properties, "IsReadOnly"), "true", StringComparison.OrdinalIgnoreCase))
                     throw new CliException("View '" + view.Name + "' property '" + property + "' is not read-only.");
             }
         }
 
-        private static XElement FindEditableControl(XDocument document, ViewDefinition view, string propertyName)
+        private static XElement FindEditableControl(XDocument document, ViewDefinition view, string propertyName,
+            bool allowReadOnlyDisplay = false)
         {
             var controls = document.Descendants().Where(x =>
                 x.Name.LocalName == "Control" &&
                 x.Attribute("Type") != null &&
                 !string.Equals((string)x.Attribute("Type"), "Label", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals((string)x.Attribute("Type"), "DataLabel", StringComparison.OrdinalIgnoreCase) &&
+                (allowReadOnlyDisplay || !string.Equals((string)x.Attribute("Type"), "DataLabel", StringComparison.OrdinalIgnoreCase)) &&
                 !string.Equals((string)x.Attribute("Type"), "ListDisplay", StringComparison.OrdinalIgnoreCase)).ToList();
             var field = document.Descendants().Where(x =>
                 x.Name.LocalName == "Field" &&
