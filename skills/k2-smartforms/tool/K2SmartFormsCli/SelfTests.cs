@@ -21,6 +21,7 @@ namespace K2SmartFormsCli
             TestLookupAndDefaultValueRoundTrip();
             TestNativeSmartBoxReadOnlyIdentity();
             TestNativeAdminCrudRoles();
+            TestNativeLabelWrapping();
             TestGovernedLookupValidationComposition();
             TestMasterButtonSuppression();
             TestNativeChartComposition();
@@ -63,6 +64,31 @@ namespace K2SmartFormsCli
             var complete = SmartFormsManager.CleanupCategoryPaths(application, true);
             Assert(complete.Last() == @"K2 Skills\APP.Application" && complete.Count == 6,
                 "builder cleanup deletes the application root last");
+        }
+
+        private static void TestNativeLabelWrapping()
+        {
+            const string xml = "<Definitions xmlns='urn:k2-label-wrap'><View><Controls>" +
+                "<Control ID='caption' Type='Label'><Properties><Property><Name>Text</Name><Value>Long source-derived explanation</Value></Property>" +
+                "<Property><Name>WrapText</Name><DisplayValue>false</DisplayValue><NameValue>false</NameValue><Value>false</Value></Property></Properties></Control>" +
+                "<Control ID='input' Type='TextBox'><Properties/></Control></Controls></View>" +
+                "<Form><Controls><Control ID='heading' Type='Label'><Properties/></Control></Controls></Form></Definitions>";
+            var transformed = LabelWrappingDefinition.Apply(xml);
+            LabelWrappingDefinition.Verify(transformed);
+            Assert(transformed == LabelWrappingDefinition.Apply(transformed), "native Label wrapping is idempotent");
+            var document = XDocument.Parse(transformed);
+            var labels = document.Descendants().Where(x => x.Name.LocalName == "Control" && (string)x.Attribute("Type") == "Label").ToList();
+            Assert(labels.Count == 2 && labels.All(x => x.Descendants().Any(p => p.Name.LocalName == "Name" && p.Value == "WrapText")),
+                "both View and Form Labels receive native wrapping defaults");
+            Assert(!document.Descendants().Single(x => x.Name.LocalName == "Control" && (string)x.Attribute("ID") == "input")
+                .Descendants().Any(x => x.Name.LocalName == "Name" && x.Value == "WrapText"),
+                "Label wrapping leaves unrelated controls unchanged");
+            Assert(document.Descendants().Any(x => x.Name.LocalName == "Value" && x.Value == "Long source-derived explanation"),
+                "wrapping retains the source explanation text");
+            var wrapping = labels[0].Descendants().Single(x => x.Name.LocalName == "Property" &&
+                x.Elements().Any(child => child.Name.LocalName == "Name" && child.Value == "WrapText"));
+            wrapping.Elements().Single(x => x.Name.LocalName == "NameValue").Value = "";
+            AssertThrows(delegate { LabelWrappingDefinition.Verify(document.ToString()); }, "Boolean property triple");
         }
 
         private static void TestNativeSmartBoxReadOnlyIdentity()

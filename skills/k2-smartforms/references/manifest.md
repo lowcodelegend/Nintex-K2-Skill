@@ -333,6 +333,8 @@ Supported view types are `capture`, `list`, `content`, and `capture-list`. Suppo
 
 `layoutColumns` defaults to `2`. Capture Views use K2 label-above mode, a native Table with `IsResponsive=true`, two 50% field cells, and bold colon-suffixed Labels stacked above their controls. TextArea and File rows span both columns, section boundaries restart pairing, and hiding one field preserves its adjacent cell. `colon-labels` is added automatically for capture Views.
 
+Native `Label` controls generated on Views and Forms have `WrapText=true` by default. This applies to field captions, section headings and explanatory labels without a manifest option or custom styling. The stored Boolean property includes `DisplayValue`, `NameValue`, and `Value`, all `true`. Existing deployed definitions are not silently mutated by upgrading the CLI; regenerate or use guarded `repair-view` after a disposable proof when applying the new default to an owned View.
+
 For an explicit dense-desktop exception, set `layoutColumns: 4` with `labels-left`; the CLI normalizes this to 20/30/20/30 label/control pairs. `labels-left` with `layoutColumns: 2` retains a deliberate 40/60 single-field row. Omit `labels-left` for the default.
 
 Use these Item View contracts:

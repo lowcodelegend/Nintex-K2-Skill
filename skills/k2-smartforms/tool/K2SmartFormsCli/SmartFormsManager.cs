@@ -684,6 +684,7 @@ namespace K2SmartFormsCli
             if (isMaster || isDetail || reviewRelationships.Count > 0)
                 definition = MasterDetailRules.ConfigureViewRuleSeams(definition, view.Name,
                     masterRelationships, detailRelationships, reviewRelationships);
+            definition = LabelWrappingDefinition.Apply(definition);
             VerifyRenderedView(definition, view, lookupSources);
             return definition;
         }
@@ -945,6 +946,7 @@ namespace K2SmartFormsCli
                             definition = GuidedJourneyRules.Apply(definition, form, formCommonHeader);
                             var preFill = ResolvedFormPreFill.Resolve(deploymentManager, form, _manifest.Application.Views, lookupSources);
                             definition = FormPreFillRules.Apply(definition, form, preFill);
+                            definition = LabelWrappingDefinition.Apply(definition);
                             deploymentManager.DeployForms(definition, _manifest.Application.GetFormCategoryPath(form), _manifest.Application.CheckIn);
                             var info = deploymentManager.GetForm(form.Name);
                             Console.WriteLine("Form: deployed (" + form.Name + ", " + info.Guid + ", theme " + info.Theme.Name + ", styleProfile=" + (formStyleProfile == null ? "none" : formStyleProfile.Name) + ", legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant() + ", commonHeader=" + (formCommonHeader == null ? "none" : formCommonHeader.ViewName) + ", commonFooter=" + (formCommonHeader == null || formCommonHeader.Footer == null ? "none" : formCommonHeader.Footer.ViewName) + ", tabs=" + form.Tabs.Count + ", worklist=" + form.Tabs.Any(x => x.Worklist != null).ToString().ToLowerInvariant() + ", preFill=" + (form.PreFill.EffectiveEnabled ? "test-only" : "disabled") + ")");

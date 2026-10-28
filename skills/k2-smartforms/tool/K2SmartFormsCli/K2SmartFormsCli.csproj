@@ -78,6 +78,7 @@
     <Compile Include="FormPreFillRules.cs" />
     <Compile Include="FormThemeDefinition.cs" />
     <Compile Include="GuidedJourneyRules.cs" />
+    <Compile Include="LabelWrappingDefinition.cs" />
     <Compile Include="Manifest.cs" />
     <Compile Include="MasterDetailRules.cs" />
     <Compile Include="Program.cs" />

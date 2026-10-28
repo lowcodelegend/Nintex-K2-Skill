@@ -91,7 +91,7 @@ Treat shared header/footer views as an available environment contract, not copie
 
 The discovered PSF convention uses `PSF.FrameworkHeader` plus `PSF.FrameworkFooter` and Style Profile `PSF UX v1`. When selected, the header instance name is exactly `Header`, its visible title is blank, and it is non-collapsible. Form server load first calls header `ServerPreRender`, then one transfer action sets the form name on `Main Header Data Label` and application name on `Sub Header Data Label`; those values are not header parameters. The footer remains last. Apply this only after live discovery and user selection.
 
-Capture Views default to K2's label-above mode with `colon-labels`; omitting `labels-left` is intentional. Use `toolbar` on list views. Generated labels are bold by default.
+Capture Views default to K2's label-above mode with `colon-labels`; omitting `labels-left` is intentional. Use `toolbar` on list views. Generated labels are bold by default. All newly generated native Label controls on Views and Forms also have `WrapText=true`, stored with a complete Boolean DisplayValue/NameValue/Value triple, so long captions and explanations wrap without custom CSS.
 
 The default K2 Item View layout is a responsive two-column Table. Each 50% cell stacks one bold, colon-suffixed Label above its control. Pair short, related fields in task order; make TextArea and File controls span both columns, and never pair fields across a section boundary. Hidden properties remove only their own cell so an adjacent visible field survives. Test the actual `IsResponsive` behavior at desktop, tablet, and phone widths; responsive collapse does not remove the need for sensible source order.
 
