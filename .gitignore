@@ -5,6 +5,8 @@
 *.suo
 
 # Local tooling and test outputs
+**/__pycache__/
+*.pyc
 .artifacts/
 .research/
 .tmp/

@@ -57,9 +57,12 @@
     <Compile Include="SelfTests.cs" />
     <Compile Include="SmartFormsIntegration.cs" />
     <Compile Include="WorkflowJsonBuilder.cs" />
+    <Compile Include="StageWorkflowManifest.cs" />
+    <Compile Include="StageWorkflowBuilder.cs" />
     <Compile Include="WorkflowManager.cs" />
   </ItemGroup>
   <ItemGroup><None Include="App.config" /></ItemGroup>
   <ItemGroup><EmbeddedResource Include="SmartObjectWizardDefinition.json"><LogicalName>K2WorkflowCli.SmartObjectWizardDefinition.json</LogicalName></EmbeddedResource></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="DesignerIpcFixtures.json"><LogicalName>K2WorkflowCli.DesignerIpcFixtures.json</LogicalName></EmbeddedResource></ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

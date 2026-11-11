@@ -1,0 +1,3065 @@
+{
+  "nodes": [
+    {
+      "isStartActivity": true,
+      "ui": {
+        "y": -168,
+        "topPorts": [
+          {
+            "portId": "topPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "topPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "topPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "leftPorts": [
+          {
+            "portId": "leftPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "bottomPorts": [
+          {
+            "portId": "bottomPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "bottomPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "outgoingLinkReferences": [
+              "root.links[{\"internalId\":1}]"
+            ]
+          },
+          {
+            "portId": "bottomPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "rightPorts": [
+          {
+            "portId": "rightPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "template": "StartStep",
+        "componentId": 40009,
+        "x": -784,
+        "showLabel": true,
+        "labelX": 0,
+        "labelY": -112
+      },
+      "configuration": {
+        "deadline": {
+          "actionType": 3,
+          "specificDate": {
+            "componentId": 10008
+          },
+          "expressDays": {
+            "componentId": 10008
+          },
+          "expressHours": {
+            "componentId": 10008
+          },
+          "expressMinutes": {
+            "componentId": 10008
+          },
+          "expressSeconds": {
+            "componentId": 10008
+          },
+          "noDeadline": true,
+          "withinWorkingHoursOnly": true,
+          "componentId": 30025
+        },
+        "priority": 1,
+        "decisionOptionType": 2,
+        "exceptionSettings": {
+          "logException": true,
+          "componentId": 50012
+        },
+        "componentId": 40001
+      },
+      "systemName": "StartStep 1",
+      "title": "Start",
+      "internalId": 1,
+      "componentId": 40000,
+      "customTitle": true
+    },
+    {
+      "ui": {
+        "y": 0,
+        "icon": "decisionStep",
+        "topPorts": [
+          {
+            "portId": "topPorts_0",
+            "internalId": 1,
+            "componentId": 40012,
+            "outgoingLinkReferences": [
+              "root.links[{\"internalId\":14}]"
+            ],
+            "outcomeReference": "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":7}]"
+          },
+          {
+            "portId": "topPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "topPorts_2",
+            "internalId": 3,
+            "componentId": 40012,
+            "outgoingLinkReferences": [
+              "root.links[{\"internalId\":15}]"
+            ],
+            "outcomeReference": "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":8}]"
+          }
+        ],
+        "leftPorts": [
+          {
+            "portId": "leftPorts_0",
+            "internalId": 1,
+            "componentId": 40012,
+            "incomingLinkReferences": [
+              "root.links[{\"internalId\":1}]",
+              "root.links[{\"internalId\":3}]",
+              "root.links[{\"internalId\":5}]",
+              "root.links[{\"internalId\":7}]",
+              "root.links[{\"internalId\":9}]",
+              "root.links[{\"internalId\":11}]",
+              "root.links[{\"internalId\":13}]",
+              "root.links[{\"internalId\":16}]"
+            ]
+          },
+          {
+            "portId": "leftPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "outgoingLinkReferences": [
+              "root.links[{\"internalId\":2}]"
+            ],
+            "outcomeReference": "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":1}]"
+          },
+          {
+            "portId": "leftPorts_2",
+            "internalId": 3,
+            "componentId": 40012,
+            "outgoingLinkReferences": [
+              "root.links[{\"internalId\":4}]"
+            ],
+            "outcomeReference": "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":2}]"
+          }
+        ],
+        "bottomPorts": [
+          {
+            "portId": "bottomPorts_0",
+            "internalId": 1,
+            "componentId": 40012,
+            "outgoingLinkReferences": [
+              "root.links[{\"internalId\":6}]"
+            ],
+            "outcomeReference": "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":3}]"
+          },
+          {
+            "portId": "bottomPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "bottomPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "rightPorts": [
+          {
+            "portId": "rightPorts_0",
+            "internalId": 1,
+            "componentId": 40012,
+            "outgoingLinkReferences": [
+              "root.links[{\"internalId\":12}]"
+            ],
+            "outcomeReference": "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":6}]"
+          },
+          {
+            "portId": "rightPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "outgoingLinkReferences": [
+              "root.links[{\"internalId\":10}]"
+            ],
+            "outcomeReference": "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":5}]"
+          },
+          {
+            "portId": "rightPorts_2",
+            "internalId": 3,
+            "componentId": 40012,
+            "outgoingLinkReferences": [
+              "root.links[{\"internalId\":8}]"
+            ],
+            "outcomeReference": "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":4}]"
+          }
+        ],
+        "template": "DecisionStep",
+        "componentId": 40009,
+        "x": 0,
+        "showLabel": true,
+        "labelX": 0,
+        "labelY": -112
+      },
+      "configuration": {
+        "outcomes": [
+          {
+            "title": "Review",
+            "originalTitle": "Review",
+            "internalId": 1,
+            "componentId": 30020
+          },
+          {
+            "title": "KYC",
+            "originalTitle": "KYC",
+            "internalId": 2,
+            "componentId": 30020
+          },
+          {
+            "title": "Credit",
+            "originalTitle": "Credit",
+            "internalId": 3,
+            "componentId": 30020
+          },
+          {
+            "title": "Additional Information",
+            "originalTitle": "Additional Information",
+            "internalId": 4,
+            "componentId": 30020
+          },
+          {
+            "title": "Applicant Decision",
+            "originalTitle": "Applicant Decision",
+            "internalId": 5,
+            "componentId": 30020
+          },
+          {
+            "title": "Contract Signing",
+            "originalTitle": "Contract Signing",
+            "internalId": 6,
+            "componentId": 30020
+          },
+          {
+            "title": "Finished",
+            "originalTitle": "Finished",
+            "internalId": 7,
+            "componentId": 30020
+          },
+          {
+            "title": "Unknown stage",
+            "originalTitle": "Unknown stage",
+            "internalId": 8,
+            "componentId": 30020
+          }
+        ],
+        "outcomeRule": {
+          "statements": [
+            {
+              "IfExpressions": [
+                {
+                  "expressions": [
+                    {
+                      "leftExpression": {
+                        "value": {
+                          "smartFields": [
+                            {
+                              "dataFieldReference": "root.configuration.dataFields[{\"internalId\":2}]",
+                              "internalId": 1,
+                              "componentId": 10000
+                            }
+                          ],
+                          "componentId": 10008
+                        },
+                        "directive": "k2-endpoint",
+                        "componentId": 80003
+                      },
+                      "logicalOperator": "equals",
+                      "rightExpression": {
+                        "value": {
+                          "smartFields": [
+                            {
+                              "text": "Review",
+                              "internalId": 1,
+                              "componentId": 10004
+                            }
+                          ],
+                          "componentId": 10008
+                        },
+                        "directive": "k2-endpoint",
+                        "componentId": 80003
+                      },
+                      "directive": "k2-simple-expression",
+                      "internalId": 1,
+                      "componentId": 80000
+                    }
+                  ],
+                  "directive": "k2-group-expression",
+                  "internalId": 1,
+                  "componentId": 80004
+                }
+              ],
+              "thenStatements": [
+                {
+                  "linkedOutcomeReferences": [
+                    "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":1}]"
+                  ],
+                  "directive": "k2-outcome-statement",
+                  "internalId": 1,
+                  "componentId": 80006
+                }
+              ],
+              "elseStatements": [
+                {
+                  "IfExpressions": [
+                    {
+                      "expressions": [
+                        {
+                          "leftExpression": {
+                            "value": {
+                              "smartFields": [
+                                {
+                                  "dataFieldReference": "root.configuration.dataFields[{\"internalId\":2}]",
+                                  "internalId": 1,
+                                  "componentId": 10000
+                                }
+                              ],
+                              "componentId": 10008
+                            },
+                            "directive": "k2-endpoint",
+                            "componentId": 80003
+                          },
+                          "logicalOperator": "equals",
+                          "rightExpression": {
+                            "value": {
+                              "smartFields": [
+                                {
+                                  "text": "KYC",
+                                  "internalId": 1,
+                                  "componentId": 10004
+                                }
+                              ],
+                              "componentId": 10008
+                            },
+                            "directive": "k2-endpoint",
+                            "componentId": 80003
+                          },
+                          "directive": "k2-simple-expression",
+                          "internalId": 1,
+                          "componentId": 80000
+                        }
+                      ],
+                      "directive": "k2-group-expression",
+                      "internalId": 1,
+                      "componentId": 80004
+                    }
+                  ],
+                  "thenStatements": [
+                    {
+                      "linkedOutcomeReferences": [
+                        "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":2}]"
+                      ],
+                      "directive": "k2-outcome-statement",
+                      "internalId": 1,
+                      "componentId": 80006
+                    }
+                  ],
+                  "elseStatements": [
+                    {
+                      "IfExpressions": [
+                        {
+                          "expressions": [
+                            {
+                              "leftExpression": {
+                                "value": {
+                                  "smartFields": [
+                                    {
+                                      "dataFieldReference": "root.configuration.dataFields[{\"internalId\":2}]",
+                                      "internalId": 1,
+                                      "componentId": 10000
+                                    }
+                                  ],
+                                  "componentId": 10008
+                                },
+                                "directive": "k2-endpoint",
+                                "componentId": 80003
+                              },
+                              "logicalOperator": "equals",
+                              "rightExpression": {
+                                "value": {
+                                  "smartFields": [
+                                    {
+                                      "text": "Credit",
+                                      "internalId": 1,
+                                      "componentId": 10004
+                                    }
+                                  ],
+                                  "componentId": 10008
+                                },
+                                "directive": "k2-endpoint",
+                                "componentId": 80003
+                              },
+                              "directive": "k2-simple-expression",
+                              "internalId": 1,
+                              "componentId": 80000
+                            }
+                          ],
+                          "directive": "k2-group-expression",
+                          "internalId": 1,
+                          "componentId": 80004
+                        }
+                      ],
+                      "thenStatements": [
+                        {
+                          "linkedOutcomeReferences": [
+                            "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":3}]"
+                          ],
+                          "directive": "k2-outcome-statement",
+                          "internalId": 1,
+                          "componentId": 80006
+                        }
+                      ],
+                      "elseStatements": [
+                        {
+                          "IfExpressions": [
+                            {
+                              "expressions": [
+                                {
+                                  "leftExpression": {
+                                    "value": {
+                                      "smartFields": [
+                                        {
+                                          "dataFieldReference": "root.configuration.dataFields[{\"internalId\":2}]",
+                                          "internalId": 1,
+                                          "componentId": 10000
+                                        }
+                                      ],
+                                      "componentId": 10008
+                                    },
+                                    "directive": "k2-endpoint",
+                                    "componentId": 80003
+                                  },
+                                  "logicalOperator": "equals",
+                                  "rightExpression": {
+                                    "value": {
+                                      "smartFields": [
+                                        {
+                                          "text": "Additional Information",
+                                          "internalId": 1,
+                                          "componentId": 10004
+                                        }
+                                      ],
+                                      "componentId": 10008
+                                    },
+                                    "directive": "k2-endpoint",
+                                    "componentId": 80003
+                                  },
+                                  "directive": "k2-simple-expression",
+                                  "internalId": 1,
+                                  "componentId": 80000
+                                }
+                              ],
+                              "directive": "k2-group-expression",
+                              "internalId": 1,
+                              "componentId": 80004
+                            }
+                          ],
+                          "thenStatements": [
+                            {
+                              "linkedOutcomeReferences": [
+                                "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":4}]"
+                              ],
+                              "directive": "k2-outcome-statement",
+                              "internalId": 1,
+                              "componentId": 80006
+                            }
+                          ],
+                          "elseStatements": [
+                            {
+                              "IfExpressions": [
+                                {
+                                  "expressions": [
+                                    {
+                                      "leftExpression": {
+                                        "value": {
+                                          "smartFields": [
+                                            {
+                                              "dataFieldReference": "root.configuration.dataFields[{\"internalId\":2}]",
+                                              "internalId": 1,
+                                              "componentId": 10000
+                                            }
+                                          ],
+                                          "componentId": 10008
+                                        },
+                                        "directive": "k2-endpoint",
+                                        "componentId": 80003
+                                      },
+                                      "logicalOperator": "equals",
+                                      "rightExpression": {
+                                        "value": {
+                                          "smartFields": [
+                                            {
+                                              "text": "Applicant Decision",
+                                              "internalId": 1,
+                                              "componentId": 10004
+                                            }
+                                          ],
+                                          "componentId": 10008
+                                        },
+                                        "directive": "k2-endpoint",
+                                        "componentId": 80003
+                                      },
+                                      "directive": "k2-simple-expression",
+                                      "internalId": 1,
+                                      "componentId": 80000
+                                    }
+                                  ],
+                                  "directive": "k2-group-expression",
+                                  "internalId": 1,
+                                  "componentId": 80004
+                                }
+                              ],
+                              "thenStatements": [
+                                {
+                                  "linkedOutcomeReferences": [
+                                    "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":5}]"
+                                  ],
+                                  "directive": "k2-outcome-statement",
+                                  "internalId": 1,
+                                  "componentId": 80006
+                                }
+                              ],
+                              "elseStatements": [
+                                {
+                                  "IfExpressions": [
+                                    {
+                                      "expressions": [
+                                        {
+                                          "leftExpression": {
+                                            "value": {
+                                              "smartFields": [
+                                                {
+                                                  "dataFieldReference": "root.configuration.dataFields[{\"internalId\":2}]",
+                                                  "internalId": 1,
+                                                  "componentId": 10000
+                                                }
+                                              ],
+                                              "componentId": 10008
+                                            },
+                                            "directive": "k2-endpoint",
+                                            "componentId": 80003
+                                          },
+                                          "logicalOperator": "equals",
+                                          "rightExpression": {
+                                            "value": {
+                                              "smartFields": [
+                                                {
+                                                  "text": "Contract Signing",
+                                                  "internalId": 1,
+                                                  "componentId": 10004
+                                                }
+                                              ],
+                                              "componentId": 10008
+                                            },
+                                            "directive": "k2-endpoint",
+                                            "componentId": 80003
+                                          },
+                                          "directive": "k2-simple-expression",
+                                          "internalId": 1,
+                                          "componentId": 80000
+                                        }
+                                      ],
+                                      "directive": "k2-group-expression",
+                                      "internalId": 1,
+                                      "componentId": 80004
+                                    }
+                                  ],
+                                  "thenStatements": [
+                                    {
+                                      "linkedOutcomeReferences": [
+                                        "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":6}]"
+                                      ],
+                                      "directive": "k2-outcome-statement",
+                                      "internalId": 1,
+                                      "componentId": 80006
+                                    }
+                                  ],
+                                  "elseStatements": [
+                                    {
+                                      "IfExpressions": [
+                                        {
+                                          "expressions": [
+                                            {
+                                              "leftExpression": {
+                                                "value": {
+                                                  "smartFields": [
+                                                    {
+                                                      "dataFieldReference": "root.configuration.dataFields[{\"internalId\":2}]",
+                                                      "internalId": 1,
+                                                      "componentId": 10000
+                                                    }
+                                                  ],
+                                                  "componentId": 10008
+                                                },
+                                                "directive": "k2-endpoint",
+                                                "componentId": 80003
+                                              },
+                                              "logicalOperator": "equals",
+                                              "rightExpression": {
+                                                "value": {
+                                                  "smartFields": [
+                                                    {
+                                                      "text": "Completed",
+                                                      "internalId": 1,
+                                                      "componentId": 10004
+                                                    }
+                                                  ],
+                                                  "componentId": 10008
+                                                },
+                                                "directive": "k2-endpoint",
+                                                "componentId": 80003
+                                              },
+                                              "directive": "k2-simple-expression",
+                                              "internalId": 1,
+                                              "componentId": 80000
+                                            }
+                                          ],
+                                          "directive": "k2-group-expression",
+                                          "internalId": 1,
+                                          "componentId": 80004
+                                        }
+                                      ],
+                                      "thenStatements": [
+                                        {
+                                          "linkedOutcomeReferences": [
+                                            "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":7}]"
+                                          ],
+                                          "directive": "k2-outcome-statement",
+                                          "internalId": 1,
+                                          "componentId": 80006
+                                        }
+                                      ],
+                                      "elseStatements": [
+                                        {
+                                          "IfExpressions": [
+                                            {
+                                              "expressions": [
+                                                {
+                                                  "leftExpression": {
+                                                    "value": {
+                                                      "smartFields": [
+                                                        {
+                                                          "dataFieldReference": "root.configuration.dataFields[{\"internalId\":2}]",
+                                                          "internalId": 1,
+                                                          "componentId": 10000
+                                                        }
+                                                      ],
+                                                      "componentId": 10008
+                                                    },
+                                                    "directive": "k2-endpoint",
+                                                    "componentId": 80003
+                                                  },
+                                                  "logicalOperator": "equals",
+                                                  "rightExpression": {
+                                                    "value": {
+                                                      "smartFields": [
+                                                        {
+                                                          "text": "Rejected",
+                                                          "internalId": 1,
+                                                          "componentId": 10004
+                                                        }
+                                                      ],
+                                                      "componentId": 10008
+                                                    },
+                                                    "directive": "k2-endpoint",
+                                                    "componentId": 80003
+                                                  },
+                                                  "directive": "k2-simple-expression",
+                                                  "internalId": 1,
+                                                  "componentId": 80000
+                                                }
+                                              ],
+                                              "directive": "k2-group-expression",
+                                              "internalId": 1,
+                                              "componentId": 80004
+                                            }
+                                          ],
+                                          "thenStatements": [
+                                            {
+                                              "linkedOutcomeReferences": [
+                                                "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":7}]"
+                                              ],
+                                              "directive": "k2-outcome-statement",
+                                              "internalId": 1,
+                                              "componentId": 80006
+                                            }
+                                          ],
+                                          "elseStatements": [
+                                            {
+                                              "IfExpressions": [
+                                                {
+                                                  "expressions": [
+                                                    {
+                                                      "leftExpression": {
+                                                        "value": {
+                                                          "smartFields": [
+                                                            {
+                                                              "dataFieldReference": "root.configuration.dataFields[{\"internalId\":2}]",
+                                                              "internalId": 1,
+                                                              "componentId": 10000
+                                                            }
+                                                          ],
+                                                          "componentId": 10008
+                                                        },
+                                                        "directive": "k2-endpoint",
+                                                        "componentId": 80003
+                                                      },
+                                                      "logicalOperator": "equals",
+                                                      "rightExpression": {
+                                                        "value": {
+                                                          "smartFields": [
+                                                            {
+                                                              "text": "Cancelled",
+                                                              "internalId": 1,
+                                                              "componentId": 10004
+                                                            }
+                                                          ],
+                                                          "componentId": 10008
+                                                        },
+                                                        "directive": "k2-endpoint",
+                                                        "componentId": 80003
+                                                      },
+                                                      "directive": "k2-simple-expression",
+                                                      "internalId": 1,
+                                                      "componentId": 80000
+                                                    }
+                                                  ],
+                                                  "directive": "k2-group-expression",
+                                                  "internalId": 1,
+                                                  "componentId": 80004
+                                                }
+                                              ],
+                                              "thenStatements": [
+                                                {
+                                                  "linkedOutcomeReferences": [
+                                                    "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":7}]"
+                                                  ],
+                                                  "directive": "k2-outcome-statement",
+                                                  "internalId": 1,
+                                                  "componentId": 80006
+                                                }
+                                              ],
+                                              "elseStatements": [
+                                                {
+                                                  "IfExpressions": [
+                                                    {
+                                                      "expressions": [
+                                                        {
+                                                          "leftExpression": {
+                                                            "value": {
+                                                              "smartFields": [
+                                                                {
+                                                                  "dataFieldReference": "root.configuration.dataFields[{\"internalId\":2}]",
+                                                                  "internalId": 1,
+                                                                  "componentId": 10000
+                                                                }
+                                                              ],
+                                                              "componentId": 10008
+                                                            },
+                                                            "directive": "k2-endpoint",
+                                                            "componentId": 80003
+                                                          },
+                                                          "logicalOperator": "equals",
+                                                          "rightExpression": {
+                                                            "value": {
+                                                              "smartFields": [
+                                                                {
+                                                                  "text": "",
+                                                                  "internalId": 1,
+                                                                  "componentId": 10004
+                                                                }
+                                                              ],
+                                                              "componentId": 10008
+                                                            },
+                                                            "directive": "k2-endpoint",
+                                                            "componentId": 80003
+                                                          },
+                                                          "directive": "k2-simple-expression",
+                                                          "internalId": 1,
+                                                          "componentId": 80000
+                                                        }
+                                                      ],
+                                                      "directive": "k2-group-expression",
+                                                      "internalId": 1,
+                                                      "componentId": 80004
+                                                    }
+                                                  ],
+                                                  "thenStatements": [
+                                                    {
+                                                      "linkedOutcomeReferences": [
+                                                        "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":1}]"
+                                                      ],
+                                                      "directive": "k2-outcome-statement",
+                                                      "internalId": 1,
+                                                      "componentId": 80006
+                                                    }
+                                                  ],
+                                                  "elseStatements": [
+                                                    {
+                                                      "linkedOutcomeReferences": [
+                                                        "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":8}]"
+                                                      ],
+                                                      "directive": "k2-outcome-statement",
+                                                      "internalId": 1,
+                                                      "componentId": 80006
+                                                    }
+                                                  ],
+                                                  "directive": "k2-if-then-else-statement",
+                                                  "internalId": 1,
+                                                  "componentId": 80002
+                                                }
+                                              ],
+                                              "directive": "k2-if-then-else-statement",
+                                              "internalId": 1,
+                                              "componentId": 80002
+                                            }
+                                          ],
+                                          "directive": "k2-if-then-else-statement",
+                                          "internalId": 1,
+                                          "componentId": 80002
+                                        }
+                                      ],
+                                      "directive": "k2-if-then-else-statement",
+                                      "internalId": 1,
+                                      "componentId": 80002
+                                    }
+                                  ],
+                                  "directive": "k2-if-then-else-statement",
+                                  "internalId": 1,
+                                  "componentId": 80002
+                                }
+                              ],
+                              "directive": "k2-if-then-else-statement",
+                              "internalId": 1,
+                              "componentId": 80002
+                            }
+                          ],
+                          "directive": "k2-if-then-else-statement",
+                          "internalId": 1,
+                          "componentId": 80002
+                        }
+                      ],
+                      "directive": "k2-if-then-else-statement",
+                      "internalId": 1,
+                      "componentId": 80002
+                    }
+                  ],
+                  "directive": "k2-if-then-else-statement",
+                  "internalId": 1,
+                  "componentId": 80002
+                }
+              ],
+              "directive": "k2-if-then-else-statement",
+              "internalId": 1,
+              "componentId": 80002
+            }
+          ],
+          "componentId": 80101
+        },
+        "deadline": {
+          "deadlineEmailAction": {
+            "repeatDays": {
+              "componentId": 10008
+            },
+            "repeatHours": {
+              "componentId": 10008
+            },
+            "repeatMinutes": {
+              "componentId": 10008
+            },
+            "repeatSeconds": {
+              "componentId": 10008
+            },
+            "repeatAmount": {
+              "componentId": 10008
+            },
+            "emailConfiguration": {
+              "from": {
+                "componentId": 10008
+              },
+              "subject": {
+                "componentId": 10008
+              },
+              "body": {
+                "componentId": 10008
+              },
+              "exceptionSettings": {
+                "componentId": 50012
+              },
+              "componentId": 30006
+            }
+          },
+          "deadlineSmoAction": {
+            "smartObjectReference": {
+              "componentId": 10008
+            },
+            "smartObjectMethodReference": {
+              "componentId": 10008
+            },
+            "smartObjectIdentifierReference": {
+              "componentId": 10008
+            },
+            "filter": {
+              "componentId": 80016
+            },
+            "listOptions": {
+              "componentId": 50011
+            }
+          },
+          "specificDate": {
+            "componentId": 10008
+          },
+          "expressDays": {
+            "componentId": 10008
+          },
+          "expressHours": {
+            "componentId": 10008
+          },
+          "expressMinutes": {
+            "componentId": 10008
+          },
+          "expressSeconds": {
+            "componentId": 10008
+          },
+          "noDeadline": true,
+          "dynamicWorkingHours": {
+            "componentId": 10008
+          },
+          "repetition": {
+            "repeatDays": {
+              "componentId": 10008
+            },
+            "repeatHours": {
+              "componentId": 10008
+            },
+            "repeatMinutes": {
+              "componentId": 10008
+            },
+            "repeatSeconds": {
+              "componentId": 10008
+            },
+            "repeatCount": {
+              "componentId": 10008
+            }
+          },
+          "componentId": 30025
+        },
+        "priority": 1,
+        "decisionOptionType": 1,
+        "isDecisionOutcomeCheckBoxChecked": true,
+        "exceptionSettings": {
+          "logException": true,
+          "componentId": 50012
+        },
+        "componentId": 40014
+      },
+      "systemName": "DecisionStep 2",
+      "title": "Route by NextStage",
+      "customTitle": true,
+      "internalId": 2,
+      "componentId": 40000
+    },
+    {
+      "children": [
+        {
+          "wizardId": 3004,
+          "ui": {
+            "icon": "callSubWorkflowStep",
+            "template": "SubWorkflowStep"
+          },
+          "configuration": {
+            "selectedWorkflow": {
+              "smartFields": [
+                {
+                  "text": "APP.Native Workflow Examples WFs\\APP.Example Review Stage",
+                  "internalId": 1,
+                  "componentId": 10004,
+                  "title": "APP.Example Review Stage"
+                }
+              ],
+              "componentId": 10008
+            },
+            "selectedWorkflowFullName": "APP.Native Workflow Examples WFs\\APP.Example Review Stage",
+            "synchronous": true,
+            "processSendFields": {
+              "09dfaa24-ac04-4827-8082-646bc8918f80": {
+                "value": {
+                  "smartFields": [
+                    {
+                      "dataFieldReference": "root.configuration.dataFields[{\"internalId\":1}]",
+                      "internalId": 1,
+                      "componentId": 10000
+                    }
+                  ],
+                  "componentId": 10008,
+                  "isDynamic": true
+                },
+                "tokenReference": "09dfaa24-ac04-4827-8082-646bc8918f80",
+                "componentId": 60043
+              },
+              "RequestId": {
+                "value": {
+                  "smartFields": [
+                    {
+                      "dataFieldReference": "root.configuration.dataFields[{\"internalId\":1}]",
+                      "internalId": 1,
+                      "componentId": 10000
+                    }
+                  ],
+                  "componentId": 10008,
+                  "isDynamic": true
+                },
+                "tokenReference": "RequestId",
+                "componentId": 60043
+              }
+            },
+            "subWorkflowCallType": 1,
+            "slotInstanceData": {
+              "isDynamic": true,
+              "componentId": 10008
+            },
+            "exceptionSettings": {
+              "logException": true,
+              "componentId": 50012
+            },
+            "componentId": 30022,
+            "processReturnFields": {
+              "NextStage": {
+                "smartFields": [
+                  {
+                    "text": "NextStage",
+                    "designTimeValue": "root.configuration.dataFields[{\"internalId\":2}]",
+                    "internalId": 1,
+                    "componentId": 10004
+                  }
+                ],
+                "componentId": 10008
+              }
+            }
+          },
+          "systemName": "Call Subworkflow",
+          "title": "Call Subworkflow",
+          "internalId": 1,
+          "componentId": 30021
+        }
+      ],
+      "ui": {
+        "y": 280,
+        "icon": "callSubWorkflowStep",
+        "showLabel": true,
+        "topPorts": [
+          {
+            "portId": "topPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "topPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "incomingLinkReferences": [
+              "root.links[{\"internalId\":2}]"
+            ]
+          },
+          {
+            "portId": "topPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "leftPorts": [
+          {
+            "portId": "leftPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "bottomPorts": [
+          {
+            "portId": "bottomPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "bottomPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "outgoingLinkReferences": [
+              "root.links[{\"internalId\":3}]"
+            ]
+          },
+          {
+            "portId": "bottomPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "rightPorts": [
+          {
+            "portId": "rightPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "template": "SubWorkflowStep",
+        "componentId": 40009,
+        "x": -560,
+        "labelX": 0,
+        "labelY": 42
+      },
+      "configuration": {
+        "deadline": {
+          "actionType": 3,
+          "specificDate": {
+            "componentId": 10008
+          },
+          "expressDays": {
+            "componentId": 10008
+          },
+          "expressHours": {
+            "componentId": 10008
+          },
+          "expressMinutes": {
+            "componentId": 10008
+          },
+          "expressSeconds": {
+            "componentId": 10008
+          },
+          "noDeadline": true,
+          "withinWorkingHoursOnly": true,
+          "dynamicWorkingHours": {
+            "componentId": 10008
+          },
+          "componentId": 30025
+        },
+        "priority": 1,
+        "decisionOptionType": 2,
+        "exceptionSettings": {
+          "logException": true,
+          "componentId": 50012
+        },
+        "componentId": 40001
+      },
+      "systemName": "SubWorkflowStep 3",
+      "title": "Review",
+      "internalId": 3,
+      "componentId": 40000,
+      "customTitle": true
+    },
+    {
+      "children": [
+        {
+          "wizardId": 3004,
+          "ui": {
+            "icon": "callSubWorkflowStep",
+            "template": "SubWorkflowStep"
+          },
+          "configuration": {
+            "selectedWorkflow": {
+              "smartFields": [
+                {
+                  "text": "APP.Native Workflow Examples WFs\\APP.Example KYC Stage",
+                  "internalId": 1,
+                  "componentId": 10004,
+                  "title": "APP.Example KYC Stage"
+                }
+              ],
+              "componentId": 10008
+            },
+            "selectedWorkflowFullName": "APP.Native Workflow Examples WFs\\APP.Example KYC Stage",
+            "synchronous": true,
+            "processSendFields": {
+              "09dfaa24-ac04-4827-8082-646bc8918f80": {
+                "value": {
+                  "smartFields": [
+                    {
+                      "dataFieldReference": "root.configuration.dataFields[{\"internalId\":1}]",
+                      "internalId": 1,
+                      "componentId": 10000
+                    }
+                  ],
+                  "componentId": 10008,
+                  "isDynamic": true
+                },
+                "tokenReference": "09dfaa24-ac04-4827-8082-646bc8918f80",
+                "componentId": 60043
+              },
+              "RequestId": {
+                "value": {
+                  "smartFields": [
+                    {
+                      "dataFieldReference": "root.configuration.dataFields[{\"internalId\":1}]",
+                      "internalId": 1,
+                      "componentId": 10000
+                    }
+                  ],
+                  "componentId": 10008,
+                  "isDynamic": true
+                },
+                "tokenReference": "RequestId",
+                "componentId": 60043
+              }
+            },
+            "subWorkflowCallType": 1,
+            "slotInstanceData": {
+              "isDynamic": true,
+              "componentId": 10008
+            },
+            "exceptionSettings": {
+              "logException": true,
+              "componentId": 50012
+            },
+            "componentId": 30022,
+            "processReturnFields": {
+              "NextStage": {
+                "smartFields": [
+                  {
+                    "text": "NextStage",
+                    "designTimeValue": "root.configuration.dataFields[{\"internalId\":2}]",
+                    "internalId": 1,
+                    "componentId": 10004
+                  }
+                ],
+                "componentId": 10008
+              }
+            }
+          },
+          "systemName": "Call Subworkflow",
+          "title": "Call Subworkflow",
+          "internalId": 1,
+          "componentId": 30021
+        }
+      ],
+      "ui": {
+        "y": 280,
+        "icon": "callSubWorkflowStep",
+        "showLabel": true,
+        "topPorts": [
+          {
+            "portId": "topPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "topPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "incomingLinkReferences": [
+              "root.links[{\"internalId\":4}]"
+            ]
+          },
+          {
+            "portId": "topPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "leftPorts": [
+          {
+            "portId": "leftPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "bottomPorts": [
+          {
+            "portId": "bottomPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "bottomPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "outgoingLinkReferences": [
+              "root.links[{\"internalId\":5}]"
+            ]
+          },
+          {
+            "portId": "bottomPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "rightPorts": [
+          {
+            "portId": "rightPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "template": "SubWorkflowStep",
+        "componentId": 40009,
+        "x": -336,
+        "labelX": 0,
+        "labelY": 42
+      },
+      "configuration": {
+        "deadline": {
+          "actionType": 3,
+          "specificDate": {
+            "componentId": 10008
+          },
+          "expressDays": {
+            "componentId": 10008
+          },
+          "expressHours": {
+            "componentId": 10008
+          },
+          "expressMinutes": {
+            "componentId": 10008
+          },
+          "expressSeconds": {
+            "componentId": 10008
+          },
+          "noDeadline": true,
+          "withinWorkingHoursOnly": true,
+          "dynamicWorkingHours": {
+            "componentId": 10008
+          },
+          "componentId": 30025
+        },
+        "priority": 1,
+        "decisionOptionType": 2,
+        "exceptionSettings": {
+          "logException": true,
+          "componentId": 50012
+        },
+        "componentId": 40001
+      },
+      "systemName": "SubWorkflowStep 4",
+      "title": "KYC",
+      "internalId": 4,
+      "componentId": 40000,
+      "customTitle": true
+    },
+    {
+      "children": [
+        {
+          "wizardId": 3004,
+          "ui": {
+            "icon": "callSubWorkflowStep",
+            "template": "SubWorkflowStep"
+          },
+          "configuration": {
+            "selectedWorkflow": {
+              "smartFields": [
+                {
+                  "text": "APP.Native Workflow Examples WFs\\APP.Example Credit Stage",
+                  "internalId": 1,
+                  "componentId": 10004,
+                  "title": "APP.Example Credit Stage"
+                }
+              ],
+              "componentId": 10008
+            },
+            "selectedWorkflowFullName": "APP.Native Workflow Examples WFs\\APP.Example Credit Stage",
+            "synchronous": true,
+            "processSendFields": {
+              "09dfaa24-ac04-4827-8082-646bc8918f80": {
+                "value": {
+                  "smartFields": [
+                    {
+                      "dataFieldReference": "root.configuration.dataFields[{\"internalId\":1}]",
+                      "internalId": 1,
+                      "componentId": 10000
+                    }
+                  ],
+                  "componentId": 10008,
+                  "isDynamic": true
+                },
+                "tokenReference": "09dfaa24-ac04-4827-8082-646bc8918f80",
+                "componentId": 60043
+              },
+              "RequestId": {
+                "value": {
+                  "smartFields": [
+                    {
+                      "dataFieldReference": "root.configuration.dataFields[{\"internalId\":1}]",
+                      "internalId": 1,
+                      "componentId": 10000
+                    }
+                  ],
+                  "componentId": 10008,
+                  "isDynamic": true
+                },
+                "tokenReference": "RequestId",
+                "componentId": 60043
+              }
+            },
+            "subWorkflowCallType": 1,
+            "slotInstanceData": {
+              "isDynamic": true,
+              "componentId": 10008
+            },
+            "exceptionSettings": {
+              "logException": true,
+              "componentId": 50012
+            },
+            "componentId": 30022,
+            "processReturnFields": {
+              "NextStage": {
+                "smartFields": [
+                  {
+                    "text": "NextStage",
+                    "designTimeValue": "root.configuration.dataFields[{\"internalId\":2}]",
+                    "internalId": 1,
+                    "componentId": 10004
+                  }
+                ],
+                "componentId": 10008
+              }
+            }
+          },
+          "systemName": "Call Subworkflow",
+          "title": "Call Subworkflow",
+          "internalId": 1,
+          "componentId": 30021
+        }
+      ],
+      "ui": {
+        "y": 280,
+        "icon": "callSubWorkflowStep",
+        "showLabel": true,
+        "topPorts": [
+          {
+            "portId": "topPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "topPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "incomingLinkReferences": [
+              "root.links[{\"internalId\":6}]"
+            ]
+          },
+          {
+            "portId": "topPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "leftPorts": [
+          {
+            "portId": "leftPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "bottomPorts": [
+          {
+            "portId": "bottomPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "bottomPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "outgoingLinkReferences": [
+              "root.links[{\"internalId\":7}]"
+            ]
+          },
+          {
+            "portId": "bottomPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "rightPorts": [
+          {
+            "portId": "rightPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "template": "SubWorkflowStep",
+        "componentId": 40009,
+        "x": -112,
+        "labelX": 0,
+        "labelY": 42
+      },
+      "configuration": {
+        "deadline": {
+          "actionType": 3,
+          "specificDate": {
+            "componentId": 10008
+          },
+          "expressDays": {
+            "componentId": 10008
+          },
+          "expressHours": {
+            "componentId": 10008
+          },
+          "expressMinutes": {
+            "componentId": 10008
+          },
+          "expressSeconds": {
+            "componentId": 10008
+          },
+          "noDeadline": true,
+          "withinWorkingHoursOnly": true,
+          "dynamicWorkingHours": {
+            "componentId": 10008
+          },
+          "componentId": 30025
+        },
+        "priority": 1,
+        "decisionOptionType": 2,
+        "exceptionSettings": {
+          "logException": true,
+          "componentId": 50012
+        },
+        "componentId": 40001
+      },
+      "systemName": "SubWorkflowStep 5",
+      "title": "Credit",
+      "internalId": 5,
+      "componentId": 40000,
+      "customTitle": true
+    },
+    {
+      "children": [
+        {
+          "wizardId": 3004,
+          "ui": {
+            "icon": "callSubWorkflowStep",
+            "template": "SubWorkflowStep"
+          },
+          "configuration": {
+            "selectedWorkflow": {
+              "smartFields": [
+                {
+                  "text": "APP.Native Workflow Examples WFs\\APP.Example Additional Information Stage",
+                  "internalId": 1,
+                  "componentId": 10004,
+                  "title": "APP.Example Additional Information Stage"
+                }
+              ],
+              "componentId": 10008
+            },
+            "selectedWorkflowFullName": "APP.Native Workflow Examples WFs\\APP.Example Additional Information Stage",
+            "synchronous": true,
+            "processSendFields": {
+              "09dfaa24-ac04-4827-8082-646bc8918f80": {
+                "value": {
+                  "smartFields": [
+                    {
+                      "dataFieldReference": "root.configuration.dataFields[{\"internalId\":1}]",
+                      "internalId": 1,
+                      "componentId": 10000
+                    }
+                  ],
+                  "componentId": 10008,
+                  "isDynamic": true
+                },
+                "tokenReference": "09dfaa24-ac04-4827-8082-646bc8918f80",
+                "componentId": 60043
+              },
+              "RequestId": {
+                "value": {
+                  "smartFields": [
+                    {
+                      "dataFieldReference": "root.configuration.dataFields[{\"internalId\":1}]",
+                      "internalId": 1,
+                      "componentId": 10000
+                    }
+                  ],
+                  "componentId": 10008,
+                  "isDynamic": true
+                },
+                "tokenReference": "RequestId",
+                "componentId": 60043
+              }
+            },
+            "subWorkflowCallType": 1,
+            "slotInstanceData": {
+              "isDynamic": true,
+              "componentId": 10008
+            },
+            "exceptionSettings": {
+              "logException": true,
+              "componentId": 50012
+            },
+            "componentId": 30022,
+            "processReturnFields": {
+              "NextStage": {
+                "smartFields": [
+                  {
+                    "text": "NextStage",
+                    "designTimeValue": "root.configuration.dataFields[{\"internalId\":2}]",
+                    "internalId": 1,
+                    "componentId": 10004
+                  }
+                ],
+                "componentId": 10008
+              }
+            }
+          },
+          "systemName": "Call Subworkflow",
+          "title": "Call Subworkflow",
+          "internalId": 1,
+          "componentId": 30021
+        }
+      ],
+      "ui": {
+        "y": 280,
+        "icon": "callSubWorkflowStep",
+        "showLabel": true,
+        "topPorts": [
+          {
+            "portId": "topPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "topPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "incomingLinkReferences": [
+              "root.links[{\"internalId\":8}]"
+            ]
+          },
+          {
+            "portId": "topPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "leftPorts": [
+          {
+            "portId": "leftPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "bottomPorts": [
+          {
+            "portId": "bottomPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "bottomPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "outgoingLinkReferences": [
+              "root.links[{\"internalId\":9}]"
+            ]
+          },
+          {
+            "portId": "bottomPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "rightPorts": [
+          {
+            "portId": "rightPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "template": "SubWorkflowStep",
+        "componentId": 40009,
+        "x": 112,
+        "labelX": 0,
+        "labelY": 42
+      },
+      "configuration": {
+        "deadline": {
+          "actionType": 3,
+          "specificDate": {
+            "componentId": 10008
+          },
+          "expressDays": {
+            "componentId": 10008
+          },
+          "expressHours": {
+            "componentId": 10008
+          },
+          "expressMinutes": {
+            "componentId": 10008
+          },
+          "expressSeconds": {
+            "componentId": 10008
+          },
+          "noDeadline": true,
+          "withinWorkingHoursOnly": true,
+          "dynamicWorkingHours": {
+            "componentId": 10008
+          },
+          "componentId": 30025
+        },
+        "priority": 1,
+        "decisionOptionType": 2,
+        "exceptionSettings": {
+          "logException": true,
+          "componentId": 50012
+        },
+        "componentId": 40001
+      },
+      "systemName": "SubWorkflowStep 6",
+      "title": "Additional Information",
+      "internalId": 6,
+      "componentId": 40000,
+      "customTitle": true
+    },
+    {
+      "children": [
+        {
+          "wizardId": 3004,
+          "ui": {
+            "icon": "callSubWorkflowStep",
+            "template": "SubWorkflowStep"
+          },
+          "configuration": {
+            "selectedWorkflow": {
+              "smartFields": [
+                {
+                  "text": "APP.Native Workflow Examples WFs\\APP.Example Applicant Decision Stage",
+                  "internalId": 1,
+                  "componentId": 10004,
+                  "title": "APP.Example Applicant Decision Stage"
+                }
+              ],
+              "componentId": 10008
+            },
+            "selectedWorkflowFullName": "APP.Native Workflow Examples WFs\\APP.Example Applicant Decision Stage",
+            "synchronous": true,
+            "processSendFields": {
+              "09dfaa24-ac04-4827-8082-646bc8918f80": {
+                "value": {
+                  "smartFields": [
+                    {
+                      "dataFieldReference": "root.configuration.dataFields[{\"internalId\":1}]",
+                      "internalId": 1,
+                      "componentId": 10000
+                    }
+                  ],
+                  "componentId": 10008,
+                  "isDynamic": true
+                },
+                "tokenReference": "09dfaa24-ac04-4827-8082-646bc8918f80",
+                "componentId": 60043
+              },
+              "RequestId": {
+                "value": {
+                  "smartFields": [
+                    {
+                      "dataFieldReference": "root.configuration.dataFields[{\"internalId\":1}]",
+                      "internalId": 1,
+                      "componentId": 10000
+                    }
+                  ],
+                  "componentId": 10008,
+                  "isDynamic": true
+                },
+                "tokenReference": "RequestId",
+                "componentId": 60043
+              }
+            },
+            "subWorkflowCallType": 1,
+            "slotInstanceData": {
+              "isDynamic": true,
+              "componentId": 10008
+            },
+            "exceptionSettings": {
+              "logException": true,
+              "componentId": 50012
+            },
+            "componentId": 30022,
+            "processReturnFields": {
+              "NextStage": {
+                "smartFields": [
+                  {
+                    "text": "NextStage",
+                    "designTimeValue": "root.configuration.dataFields[{\"internalId\":2}]",
+                    "internalId": 1,
+                    "componentId": 10004
+                  }
+                ],
+                "componentId": 10008
+              }
+            }
+          },
+          "systemName": "Call Subworkflow",
+          "title": "Call Subworkflow",
+          "internalId": 1,
+          "componentId": 30021
+        }
+      ],
+      "ui": {
+        "y": 280,
+        "icon": "callSubWorkflowStep",
+        "showLabel": true,
+        "topPorts": [
+          {
+            "portId": "topPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "topPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "incomingLinkReferences": [
+              "root.links[{\"internalId\":10}]"
+            ]
+          },
+          {
+            "portId": "topPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "leftPorts": [
+          {
+            "portId": "leftPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "bottomPorts": [
+          {
+            "portId": "bottomPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "bottomPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "outgoingLinkReferences": [
+              "root.links[{\"internalId\":11}]"
+            ]
+          },
+          {
+            "portId": "bottomPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "rightPorts": [
+          {
+            "portId": "rightPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "template": "SubWorkflowStep",
+        "componentId": 40009,
+        "x": 336,
+        "labelX": 0,
+        "labelY": 42
+      },
+      "configuration": {
+        "deadline": {
+          "actionType": 3,
+          "specificDate": {
+            "componentId": 10008
+          },
+          "expressDays": {
+            "componentId": 10008
+          },
+          "expressHours": {
+            "componentId": 10008
+          },
+          "expressMinutes": {
+            "componentId": 10008
+          },
+          "expressSeconds": {
+            "componentId": 10008
+          },
+          "noDeadline": true,
+          "withinWorkingHoursOnly": true,
+          "dynamicWorkingHours": {
+            "componentId": 10008
+          },
+          "componentId": 30025
+        },
+        "priority": 1,
+        "decisionOptionType": 2,
+        "exceptionSettings": {
+          "logException": true,
+          "componentId": 50012
+        },
+        "componentId": 40001
+      },
+      "systemName": "SubWorkflowStep 7",
+      "title": "Applicant Decision",
+      "internalId": 7,
+      "componentId": 40000,
+      "customTitle": true
+    },
+    {
+      "children": [
+        {
+          "wizardId": 3004,
+          "ui": {
+            "icon": "callSubWorkflowStep",
+            "template": "SubWorkflowStep"
+          },
+          "configuration": {
+            "selectedWorkflow": {
+              "smartFields": [
+                {
+                  "text": "APP.Native Workflow Examples WFs\\APP.Example Contract Signing Stage",
+                  "internalId": 1,
+                  "componentId": 10004,
+                  "title": "APP.Example Contract Signing Stage"
+                }
+              ],
+              "componentId": 10008
+            },
+            "selectedWorkflowFullName": "APP.Native Workflow Examples WFs\\APP.Example Contract Signing Stage",
+            "synchronous": true,
+            "processSendFields": {
+              "09dfaa24-ac04-4827-8082-646bc8918f80": {
+                "value": {
+                  "smartFields": [
+                    {
+                      "dataFieldReference": "root.configuration.dataFields[{\"internalId\":1}]",
+                      "internalId": 1,
+                      "componentId": 10000
+                    }
+                  ],
+                  "componentId": 10008,
+                  "isDynamic": true
+                },
+                "tokenReference": "09dfaa24-ac04-4827-8082-646bc8918f80",
+                "componentId": 60043
+              },
+              "RequestId": {
+                "value": {
+                  "smartFields": [
+                    {
+                      "dataFieldReference": "root.configuration.dataFields[{\"internalId\":1}]",
+                      "internalId": 1,
+                      "componentId": 10000
+                    }
+                  ],
+                  "componentId": 10008,
+                  "isDynamic": true
+                },
+                "tokenReference": "RequestId",
+                "componentId": 60043
+              }
+            },
+            "subWorkflowCallType": 1,
+            "slotInstanceData": {
+              "isDynamic": true,
+              "componentId": 10008
+            },
+            "exceptionSettings": {
+              "logException": true,
+              "componentId": 50012
+            },
+            "componentId": 30022,
+            "processReturnFields": {
+              "NextStage": {
+                "smartFields": [
+                  {
+                    "text": "NextStage",
+                    "designTimeValue": "root.configuration.dataFields[{\"internalId\":2}]",
+                    "internalId": 1,
+                    "componentId": 10004
+                  }
+                ],
+                "componentId": 10008
+              }
+            }
+          },
+          "systemName": "Call Subworkflow",
+          "title": "Call Subworkflow",
+          "internalId": 1,
+          "componentId": 30021
+        }
+      ],
+      "ui": {
+        "y": 280,
+        "icon": "callSubWorkflowStep",
+        "showLabel": true,
+        "topPorts": [
+          {
+            "portId": "topPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "topPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "incomingLinkReferences": [
+              "root.links[{\"internalId\":12}]"
+            ]
+          },
+          {
+            "portId": "topPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "leftPorts": [
+          {
+            "portId": "leftPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "bottomPorts": [
+          {
+            "portId": "bottomPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "bottomPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "outgoingLinkReferences": [
+              "root.links[{\"internalId\":13}]"
+            ]
+          },
+          {
+            "portId": "bottomPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "rightPorts": [
+          {
+            "portId": "rightPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "template": "SubWorkflowStep",
+        "componentId": 40009,
+        "x": 560,
+        "labelX": 0,
+        "labelY": 42
+      },
+      "configuration": {
+        "deadline": {
+          "actionType": 3,
+          "specificDate": {
+            "componentId": 10008
+          },
+          "expressDays": {
+            "componentId": 10008
+          },
+          "expressHours": {
+            "componentId": 10008
+          },
+          "expressMinutes": {
+            "componentId": 10008
+          },
+          "expressSeconds": {
+            "componentId": 10008
+          },
+          "noDeadline": true,
+          "withinWorkingHoursOnly": true,
+          "dynamicWorkingHours": {
+            "componentId": 10008
+          },
+          "componentId": 30025
+        },
+        "priority": 1,
+        "decisionOptionType": 2,
+        "exceptionSettings": {
+          "logException": true,
+          "componentId": 50012
+        },
+        "componentId": 40001
+      },
+      "systemName": "SubWorkflowStep 8",
+      "title": "Contract Signing",
+      "internalId": 8,
+      "componentId": 40000,
+      "customTitle": true
+    },
+    {
+      "ui": {
+        "icon": "endStep",
+        "y": 280,
+        "topPorts": [
+          {
+            "portId": "topPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "topPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "incomingLinkReferences": [
+              "root.links[{\"internalId\":14}]"
+            ]
+          },
+          {
+            "portId": "topPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "leftPorts": [
+          {
+            "portId": "leftPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "bottomPorts": [
+          {
+            "portId": "bottomPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "bottomPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "bottomPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "rightPorts": [
+          {
+            "portId": "rightPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "template": "EndStep",
+        "componentId": 40009,
+        "x": 1008,
+        "showLabel": true,
+        "labelX": 0,
+        "labelY": 42
+      },
+      "configuration": {
+        "deadline": {
+          "deadlineEmailAction": {
+            "repeatDays": {
+              "componentId": 10008
+            },
+            "repeatHours": {
+              "componentId": 10008
+            },
+            "repeatMinutes": {
+              "componentId": 10008
+            },
+            "repeatSeconds": {
+              "componentId": 10008
+            },
+            "repeatAmount": {
+              "componentId": 10008
+            },
+            "emailConfiguration": {
+              "from": {
+                "componentId": 10008
+              },
+              "subject": {
+                "componentId": 10008
+              },
+              "body": {
+                "componentId": 10008
+              },
+              "exceptionSettings": {
+                "componentId": 50012
+              },
+              "componentId": 30006
+            }
+          },
+          "deadlineSmoAction": {
+            "smartObjectReference": {
+              "componentId": 10008
+            },
+            "smartObjectMethodReference": {
+              "componentId": 10008
+            },
+            "smartObjectIdentifierReference": {
+              "componentId": 10008
+            },
+            "filter": {
+              "componentId": 80016
+            },
+            "listOptions": {
+              "componentId": 50011
+            }
+          },
+          "specificDate": {
+            "componentId": 10008
+          },
+          "expressDays": {
+            "componentId": 10008
+          },
+          "expressHours": {
+            "componentId": 10008
+          },
+          "expressMinutes": {
+            "componentId": 10008
+          },
+          "expressSeconds": {
+            "componentId": 10008
+          },
+          "noDeadline": true,
+          "dynamicWorkingHours": {
+            "componentId": 10008
+          },
+          "repetition": {
+            "repeatDays": {
+              "componentId": 10008
+            },
+            "repeatHours": {
+              "componentId": 10008
+            },
+            "repeatMinutes": {
+              "componentId": 10008
+            },
+            "repeatSeconds": {
+              "componentId": 10008
+            },
+            "repeatCount": {
+              "componentId": 10008
+            }
+          },
+          "componentId": 30025
+        },
+        "expectedDuration": {
+          "componentId": 30026
+        },
+        "priority": 1,
+        "exceptionSettings": {
+          "logException": true,
+          "componentId": 50012
+        },
+        "componentId": 40001
+      },
+      "systemName": "EndStep 9",
+      "title": "Finished",
+      "internalId": 9,
+      "componentId": 40000,
+      "customTitle": true
+    },
+    {
+      "children": [
+        {
+          "wizardId": 3004,
+          "ui": {
+            "icon": "callSubWorkflowStep",
+            "template": "SubWorkflowStep"
+          },
+          "configuration": {
+            "selectedWorkflow": {
+              "smartFields": [
+                {
+                  "text": "APP.Native Workflow Examples WFs\\APP.Example State Recovery",
+                  "internalId": 1,
+                  "componentId": 10004,
+                  "title": "APP.Example State Recovery"
+                }
+              ],
+              "componentId": 10008
+            },
+            "selectedWorkflowFullName": "APP.Native Workflow Examples WFs\\APP.Example State Recovery",
+            "synchronous": true,
+            "processSendFields": {
+              "09dfaa24-ac04-4827-8082-646bc8918f80": {
+                "value": {
+                  "smartFields": [
+                    {
+                      "dataFieldReference": "root.configuration.dataFields[{\"internalId\":1}]",
+                      "internalId": 1,
+                      "componentId": 10000
+                    }
+                  ],
+                  "componentId": 10008,
+                  "isDynamic": true
+                },
+                "tokenReference": "09dfaa24-ac04-4827-8082-646bc8918f80",
+                "componentId": 60043
+              },
+              "RequestId": {
+                "value": {
+                  "smartFields": [
+                    {
+                      "dataFieldReference": "root.configuration.dataFields[{\"internalId\":1}]",
+                      "internalId": 1,
+                      "componentId": 10000
+                    }
+                  ],
+                  "componentId": 10008,
+                  "isDynamic": true
+                },
+                "tokenReference": "RequestId",
+                "componentId": 60043
+              },
+              "NextStage": {
+                "value": {
+                  "smartFields": [
+                    {
+                      "dataFieldReference": "root.configuration.dataFields[{\"internalId\":2}]",
+                      "internalId": 1,
+                      "componentId": 10000
+                    }
+                  ],
+                  "componentId": 10008,
+                  "isDynamic": true
+                },
+                "tokenReference": "NextStage",
+                "componentId": 60043
+              }
+            },
+            "subWorkflowCallType": 1,
+            "slotInstanceData": {
+              "isDynamic": true,
+              "componentId": 10008
+            },
+            "exceptionSettings": {
+              "logException": true,
+              "componentId": 50012
+            },
+            "componentId": 30022,
+            "processReturnFields": {
+              "NextStage": {
+                "smartFields": [
+                  {
+                    "text": "NextStage",
+                    "designTimeValue": "root.configuration.dataFields[{\"internalId\":2}]",
+                    "internalId": 1,
+                    "componentId": 10004
+                  }
+                ],
+                "componentId": 10008
+              }
+            }
+          },
+          "systemName": "Call Subworkflow",
+          "title": "Call Subworkflow",
+          "internalId": 1,
+          "componentId": 30021
+        }
+      ],
+      "ui": {
+        "y": 280,
+        "icon": "callSubWorkflowStep",
+        "showLabel": true,
+        "topPorts": [
+          {
+            "portId": "topPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "topPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "incomingLinkReferences": [
+              "root.links[{\"internalId\":15}]"
+            ]
+          },
+          {
+            "portId": "topPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "leftPorts": [
+          {
+            "portId": "leftPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "bottomPorts": [
+          {
+            "portId": "bottomPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "bottomPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "outgoingLinkReferences": [
+              "root.links[{\"internalId\":16}]"
+            ]
+          },
+          {
+            "portId": "bottomPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "rightPorts": [
+          {
+            "portId": "rightPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "template": "SubWorkflowStep",
+        "componentId": 40009,
+        "x": 784,
+        "labelX": 0,
+        "labelY": 42
+      },
+      "configuration": {
+        "deadline": {
+          "actionType": 3,
+          "specificDate": {
+            "componentId": 10008
+          },
+          "expressDays": {
+            "componentId": 10008
+          },
+          "expressHours": {
+            "componentId": 10008
+          },
+          "expressMinutes": {
+            "componentId": 10008
+          },
+          "expressSeconds": {
+            "componentId": 10008
+          },
+          "noDeadline": true,
+          "withinWorkingHoursOnly": true,
+          "dynamicWorkingHours": {
+            "componentId": 10008
+          },
+          "componentId": 30025
+        },
+        "priority": 1,
+        "decisionOptionType": 2,
+        "exceptionSettings": {
+          "logException": true,
+          "componentId": 50012
+        },
+        "componentId": 40001
+      },
+      "systemName": "SubWorkflowStep 10",
+      "title": "Resolve unknown stage",
+      "internalId": 10,
+      "componentId": 40000,
+      "customTitle": true
+    }
+  ],
+  "links": [
+    {
+      "fromInternalId": 1,
+      "toInternalId": 2,
+      "ui": {
+        "fromPortId": "bottomPorts_1",
+        "toPortId": "leftPorts_0",
+        "path": "-784,-140,-784,-14,-28,-14",
+        "showLabel": false,
+        "template": "DefaultLine"
+      },
+      "configuration": {
+        "componentId": 40013
+      },
+      "systemName": "DefaultLine",
+      "title": "",
+      "internalId": 1,
+      "componentId": 50002
+    },
+    {
+      "fromInternalId": 2,
+      "toInternalId": 3,
+      "ui": {
+        "fromPortId": "leftPorts_1",
+        "toPortId": "topPorts_1",
+        "path": "-28,0,-112,0,-112,84,-560,84,-560,252",
+        "showLabel": false,
+        "template": "DefaultLine"
+      },
+      "configuration": {
+        "componentId": 40013,
+        "associatedOutcomeReference": "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":1}]"
+      },
+      "systemName": "DefaultLine 1",
+      "title": "Review",
+      "internalId": 2,
+      "componentId": 50002
+    },
+    {
+      "fromInternalId": 3,
+      "toInternalId": 2,
+      "ui": {
+        "fromPortId": "bottomPorts_1",
+        "toPortId": "leftPorts_0",
+        "path": "-560,308,-560,328,-448,328,-448,476,-896,476,-896,-14,-28,-14",
+        "showLabel": false,
+        "template": "DefaultLine"
+      },
+      "configuration": {
+        "componentId": 40013
+      },
+      "systemName": "DefaultLine 2",
+      "title": "",
+      "internalId": 3,
+      "componentId": 50002
+    },
+    {
+      "fromInternalId": 2,
+      "toInternalId": 4,
+      "ui": {
+        "fromPortId": "leftPorts_2",
+        "toPortId": "topPorts_1",
+        "path": "-28,14,-84,14,-84,112,-336,112,-336,252",
+        "showLabel": false,
+        "template": "DefaultLine"
+      },
+      "configuration": {
+        "componentId": 40013,
+        "associatedOutcomeReference": "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":2}]"
+      },
+      "systemName": "DefaultLine 3",
+      "title": "KYC",
+      "internalId": 4,
+      "componentId": 50002
+    },
+    {
+      "fromInternalId": 4,
+      "toInternalId": 2,
+      "ui": {
+        "fromPortId": "bottomPorts_1",
+        "toPortId": "leftPorts_0",
+        "path": "-336,308,-336,328,-224,328,-224,476,-896,476,-896,-14,-28,-14",
+        "showLabel": false,
+        "template": "DefaultLine"
+      },
+      "configuration": {
+        "componentId": 40013
+      },
+      "systemName": "DefaultLine 4",
+      "title": "",
+      "internalId": 5,
+      "componentId": 50002
+    },
+    {
+      "fromInternalId": 2,
+      "toInternalId": 5,
+      "ui": {
+        "fromPortId": "bottomPorts_0",
+        "toPortId": "topPorts_1",
+        "path": "-14,28,-14,140,-112,140,-112,252",
+        "showLabel": false,
+        "template": "DefaultLine"
+      },
+      "configuration": {
+        "componentId": 40013,
+        "associatedOutcomeReference": "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":3}]"
+      },
+      "systemName": "DefaultLine 5",
+      "title": "Credit",
+      "internalId": 6,
+      "componentId": 50002
+    },
+    {
+      "fromInternalId": 5,
+      "toInternalId": 2,
+      "ui": {
+        "fromPortId": "bottomPorts_1",
+        "toPortId": "leftPorts_0",
+        "path": "-112,308,-112,328,0,328,0,476,-896,476,-896,-14,-28,-14",
+        "showLabel": false,
+        "template": "DefaultLine"
+      },
+      "configuration": {
+        "componentId": 40013
+      },
+      "systemName": "DefaultLine 6",
+      "title": "",
+      "internalId": 7,
+      "componentId": 50002
+    },
+    {
+      "fromInternalId": 2,
+      "toInternalId": 6,
+      "ui": {
+        "fromPortId": "rightPorts_2",
+        "toPortId": "topPorts_1",
+        "path": "28,14,48,14,48,140,112,140,112,252",
+        "showLabel": false,
+        "template": "DefaultLine"
+      },
+      "configuration": {
+        "componentId": 40013,
+        "associatedOutcomeReference": "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":4}]"
+      },
+      "systemName": "DefaultLine 7",
+      "title": "Additional Information",
+      "internalId": 8,
+      "componentId": 50002
+    },
+    {
+      "fromInternalId": 6,
+      "toInternalId": 2,
+      "ui": {
+        "fromPortId": "bottomPorts_1",
+        "toPortId": "leftPorts_0",
+        "path": "112,308,112,328,224,328,224,476,-896,476,-896,-14,-28,-14",
+        "showLabel": false,
+        "template": "DefaultLine"
+      },
+      "configuration": {
+        "componentId": 40013
+      },
+      "systemName": "DefaultLine 8",
+      "title": "",
+      "internalId": 9,
+      "componentId": 50002
+    },
+    {
+      "fromInternalId": 2,
+      "toInternalId": 7,
+      "ui": {
+        "fromPortId": "rightPorts_1",
+        "toPortId": "topPorts_1",
+        "path": "28,0,84,0,84,112,336,112,336,252",
+        "showLabel": false,
+        "template": "DefaultLine"
+      },
+      "configuration": {
+        "componentId": 40013,
+        "associatedOutcomeReference": "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":5}]"
+      },
+      "systemName": "DefaultLine 9",
+      "title": "Applicant Decision",
+      "internalId": 10,
+      "componentId": 50002
+    },
+    {
+      "fromInternalId": 7,
+      "toInternalId": 2,
+      "ui": {
+        "fromPortId": "bottomPorts_1",
+        "toPortId": "leftPorts_0",
+        "path": "336,308,336,328,448,328,448,476,-896,476,-896,-14,-28,-14",
+        "showLabel": false,
+        "template": "DefaultLine"
+      },
+      "configuration": {
+        "componentId": 40013
+      },
+      "systemName": "DefaultLine 10",
+      "title": "",
+      "internalId": 11,
+      "componentId": 50002
+    },
+    {
+      "fromInternalId": 2,
+      "toInternalId": 8,
+      "ui": {
+        "fromPortId": "rightPorts_0",
+        "toPortId": "topPorts_1",
+        "path": "28,-14,112,-14,112,84,560,84,560,252",
+        "showLabel": false,
+        "template": "DefaultLine"
+      },
+      "configuration": {
+        "componentId": 40013,
+        "associatedOutcomeReference": "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":6}]"
+      },
+      "systemName": "DefaultLine 11",
+      "title": "Contract Signing",
+      "internalId": 12,
+      "componentId": 50002
+    },
+    {
+      "fromInternalId": 8,
+      "toInternalId": 2,
+      "ui": {
+        "fromPortId": "bottomPorts_1",
+        "toPortId": "leftPorts_0",
+        "path": "560,308,560,328,672,328,672,476,-896,476,-896,-14,-28,-14",
+        "showLabel": false,
+        "template": "DefaultLine"
+      },
+      "configuration": {
+        "componentId": 40013
+      },
+      "systemName": "DefaultLine 12",
+      "title": "",
+      "internalId": 13,
+      "componentId": 50002
+    },
+    {
+      "fromInternalId": 2,
+      "toInternalId": 9,
+      "ui": {
+        "fromPortId": "topPorts_0",
+        "toPortId": "topPorts_1",
+        "path": "-14,-28,-14,-48,-112,-48,-112,-140,1008,-140,1008,252",
+        "showLabel": false,
+        "template": "DefaultLine"
+      },
+      "configuration": {
+        "componentId": 40013,
+        "associatedOutcomeReference": "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":7}]"
+      },
+      "systemName": "DefaultLine 13",
+      "title": "Finished",
+      "internalId": 14,
+      "componentId": 50002
+    },
+    {
+      "fromInternalId": 2,
+      "toInternalId": 10,
+      "ui": {
+        "fromPortId": "topPorts_2",
+        "toPortId": "topPorts_1",
+        "path": "14,-28,14,-42,140,-42,140,-112,784,-112,784,252",
+        "showLabel": false,
+        "template": "DefaultLine"
+      },
+      "configuration": {
+        "componentId": 40013,
+        "associatedOutcomeReference": "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":8}]"
+      },
+      "systemName": "DefaultLine 14",
+      "title": "Unknown stage",
+      "internalId": 15,
+      "componentId": 50002
+    },
+    {
+      "fromInternalId": 10,
+      "toInternalId": 2,
+      "ui": {
+        "fromPortId": "bottomPorts_1",
+        "toPortId": "leftPorts_0",
+        "path": "784,308,784,328,896,328,896,476,-896,476,-896,-14,-28,-14",
+        "showLabel": false,
+        "template": "DefaultLine"
+      },
+      "configuration": {
+        "componentId": 40013
+      },
+      "systemName": "DefaultLine 15",
+      "title": "",
+      "internalId": 16,
+      "componentId": 50002
+    }
+  ],
+  "configuration": {
+    "processDefinitions": [
+      {
+        "internalId": 1,
+        "componentId": 20000
+      }
+    ],
+    "dataFields": [
+      {
+        "type": 6,
+        "title": "RequestId",
+        "isEmptyValue": true,
+        "internalId": 1,
+        "componentId": 50000
+      },
+      {
+        "type": 6,
+        "title": "NextStage",
+        "isEmptyValue": true,
+        "internalId": 2,
+        "componentId": 50000
+      }
+    ],
+    "processPriority": 1,
+    "exceptionSettings": {
+      "logException": true,
+      "componentId": 50012
+    },
+    "startRule": {
+      "statements": [
+        {
+          "IfExpressions": [
+            {
+              "expressions": [
+                {
+                  "leftExpression": {
+                    "value": {
+                      "componentId": 10008
+                    },
+                    "directive": "k2-endpoint",
+                    "componentId": 80003
+                  },
+                  "logicalOperator": "equals",
+                  "rightExpression": {
+                    "value": {
+                      "componentId": 10008
+                    },
+                    "directive": "k2-endpoint",
+                    "componentId": 80003
+                  },
+                  "directive": "k2-simple-expression",
+                  "internalId": 1,
+                  "componentId": 80000
+                }
+              ],
+              "directive": "k2-group-expression",
+              "internalId": 1,
+              "componentId": 80004
+            }
+          ],
+          "thenStatements": [
+            {
+              "linkedOutcomeReferences": [
+                "root.configuration.outcomes[{\"internalId\":1}]"
+              ],
+              "directive": "k2-outcome-statement",
+              "internalId": 1,
+              "componentId": 80006
+            }
+          ],
+          "elseStatements": [
+            {
+              "linkedOutcomeReferences": [
+                "root.configuration.outcomes[{\"internalId\":2}]"
+              ],
+              "directive": "k2-outcome-statement",
+              "internalId": 1,
+              "componentId": 80006
+            }
+          ],
+          "internalId": 1,
+          "componentId": 80002
+        }
+      ],
+      "componentId": 80107
+    },
+    "outcomes": [
+      {
+        "startWorkflow": true,
+        "title": "Start",
+        "originalTitle": "Start",
+        "internalId": 1,
+        "componentId": 80021
+      },
+      {
+        "title": "Don't Start",
+        "originalTitle": "Don't Start",
+        "internalId": 2,
+        "componentId": 80021
+      }
+    ]
+  },
+  "trackedReferences": [],
+  "title": "APP.Example State Router",
+  "componentId": 50001,
+  "systemName": "APP.Example State Router"
+}

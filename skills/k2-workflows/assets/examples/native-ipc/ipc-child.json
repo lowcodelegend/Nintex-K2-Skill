@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "name": "APP.Native IPC and layout example",
+  "k2": {
+    "designerHost": "smartforms",
+    "host": "localhost",
+    "port": 5555,
+    "workflowPort": 5252,
+    "integrated": true,
+    "securityLabel": "K2"
+  },
+  "application": {
+    "rootCategoryPath": "K2 Skills\\APP.Native Workflow Examples",
+    "workflowCategoryName": "APP.Native Workflow Examples WFs"
+  },
+  "workflow": {
+    "name": "APP.Example IPC Child",
+    "kind": "json-file",
+    "definitionFile": "ipc-child.definition.json",
+    "publish": true,
+    "replaceExisting": false,
+    "comment": "Adapt authentication, test identities and Form URLs before deployment."
+  }
+}

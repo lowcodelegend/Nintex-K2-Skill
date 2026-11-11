@@ -10,7 +10,7 @@ namespace K2WorkflowCli
         {
             if (args.Length == 0 || Has(args, "--help") || Has(args, "-h")) { Help(); return 0; }
             var command = args[0].ToLowerInvariant();
-            if (command == "version") { Console.WriteLine("k2wf 0.18.4"); return 0; }
+            if (command == "version") { Console.WriteLine("k2wf 0.19.0-spike.2"); return 0; }
             if (command == "selftest") { SelfTests.Run(); return 0; }
             if (command == "doctor")
             {
@@ -40,6 +40,13 @@ namespace K2WorkflowCli
                         var exportOutput = Value(args, "--output");
                         if (string.IsNullOrWhiteSpace(exportOutput)) throw new CliException("export requires --output <file>.");
                         manager.Export(Path.GetFullPath(exportOutput));
+                        return 0;
+                    case "export-id":
+                        int exportId;
+                        if (!int.TryParse(Value(args, "--id"), out exportId)) throw new CliException("export-id requires --id <Designer-process-id>.");
+                        var byIdOutput = Value(args, "--output");
+                        if (string.IsNullOrWhiteSpace(byIdOutput)) throw new CliException("export-id requires --output <file>.");
+                        manager.ExportById(exportId, Path.GetFullPath(byIdOutput));
                         return 0;
                     case "deploy": RequireConfirm(args); manager.Deploy(); manager.Verify(); return 0;
                     case "start": RequireConfirm(args); manager.Start(ParseData(args)); return 0;
@@ -83,12 +90,13 @@ namespace K2WorkflowCli
         }
         private static void Help()
         {
-            Console.WriteLine("k2wf 0.18.4 - K2 Five HTML5 Workflow Designer JSON CLI");
+            Console.WriteLine("k2wf 0.19.0-spike.2 - K2 Five HTML5 Workflow Designer JSON CLI");
             Console.WriteLine("Commands:");
             Console.WriteLine("  doctor [manifest.json]");
             Console.WriteLine("  plan <manifest.json>");
             Console.WriteLine("  render <manifest.json> --output <workflow.json>");
             Console.WriteLine("  export <manifest.json> --output <workflow.json>");
+            Console.WriteLine("  export-id <connection-manifest.json> --id <Designer-id> --output <workflow.json>");
             Console.WriteLine("  deploy <manifest.json> --confirm");
             Console.WriteLine("  start <manifest.json> --data Name=Value [--data Name=Value] --confirm");
             Console.WriteLine("  status <manifest.json>");

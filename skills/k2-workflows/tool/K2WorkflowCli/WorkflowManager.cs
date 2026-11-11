@@ -123,6 +123,13 @@ namespace K2WorkflowCli
             }
             else if (string.Equals(_manifest.Workflow.Kind, "call-subworkflow", StringComparison.OrdinalIgnoreCase))
                 json = WorkflowJsonBuilder.BuildCallSubWorkflow(_manifest.Workflow);
+            else if (string.Equals(_manifest.Workflow.Kind, "stage-router", StringComparison.OrdinalIgnoreCase))
+            {
+                ValidateStageTargets();
+                json = WorkflowJsonBuilder.BuildStageRouter(_manifest.Workflow);
+            }
+            else if (string.Equals(_manifest.Workflow.Kind, "stage-task", StringComparison.OrdinalIgnoreCase))
+                json = WorkflowJsonBuilder.BuildStageTask(_manifest.Workflow);
             else if (string.Equals(_manifest.Workflow.Kind, "case-lifecycle", StringComparison.OrdinalIgnoreCase))
             {
                 if (_caseLifecycleResolver == null) _caseLifecycleResolver = SmartObjectMetadata.LoadMethod(_manifest.K2, _manifest.Workflow.CaseLifecycle.ResolverSmartObject, _manifest.Workflow.CaseLifecycle.ResolverMethod);
@@ -133,6 +140,27 @@ namespace K2WorkflowCli
             return WorkflowJsonBuilder.ParseAndValidate(json, _manifest.Workflow.Name).ToString(Formatting.None);
         }
 
+        private void ValidateStageTargets()
+        {
+            using (var runtime = new RuntimeWorkflowManager(_manifest.K2))
+            foreach (var stage in _manifest.Workflow.StageRouter.Stages)
+            {
+                var resolved = Invoke("GetProcessId", _manifest.K2.DesignerHost, stage.Workflow);
+                if (resolved == null || Convert.ToInt32(resolved) != stage.WorkflowId)
+                    throw new CliException("Router child workflowId does not match the deployed Designer workflow: " + stage.Workflow);
+                if (runtime.GetProcessSet(stage.Workflow) == null)
+                    throw new CliException("Router child must be published before the parent: " + stage.Workflow);
+                var child = JObject.Parse(GetStringProperty(GetProcessInfo(stage.WorkflowId), "Json"));
+                var fields = child["configuration"]["dataFields"] as JArray ?? new JArray();
+                foreach (var fieldName in new[] { stage.RequestIdInput, stage.OutcomeOutput })
+                {
+                    var field = fields.Children<JObject>().SingleOrDefault(x => string.Equals((string)x["title"], fieldName, StringComparison.Ordinal));
+                    if (field == null || (int?)field["type"] != 6)
+                        throw new CliException("Router child must expose the exact text scalar field '" + fieldName + "': " + stage.Workflow);
+                }
+            }
+        }
+
         public void Plan()
         {
             var existing = GetProcessId();
@@ -141,6 +169,11 @@ namespace K2WorkflowCli
             Console.WriteLine("Definition: " + _manifest.Workflow.Kind);
             Console.WriteLine("Action: " + (existing.HasValue ? "update JSON process " + existing.Value : "create JSON process"));
             Console.WriteLine("Publish: " + _manifest.Workflow.Publish);
+            if (_manifest.Workflow.StageRouter != null)
+            {
+                Console.WriteLine("Stage routing: " + _manifest.Workflow.StageRouter.Stages.Count + " explicitly mapped synchronous children; initial=" + _manifest.Workflow.StageRouter.InitialStage);
+                Console.WriteLine("Unknown child outcome: wait for the declared exception-task assignees to Retry; no automatic success or retry.");
+            }
             ReportTaskAssignmentPolicy();
             if (_manifest.Workflow.ApprovalMatrix != null)
             {
@@ -276,6 +309,7 @@ namespace K2WorkflowCli
                 var instance = connectionType.GetMethod("OpenProcessInstance", new[] { typeof(int) }).Invoke(connection, new object[] { instanceId });
                 var fields = instance.GetType().GetProperty("DataFields").GetValue(instance, null) as System.Collections.IEnumerable;
                 Console.WriteLine("Process instance data: " + instanceId);
+                Console.WriteLine("Process instance folio: " + Convert.ToString(instance.GetType().GetProperty("Folio").GetValue(instance, null)));
                 if (fields != null) foreach (var field in fields)
                 {
                     var type = field.GetType();
@@ -413,12 +447,30 @@ namespace K2WorkflowCli
             Console.WriteLine("Exported workflow JSON: " + outputPath);
         }
 
+        public void ExportById(int processId, string outputPath)
+        {
+            if (processId <= 0) throw new CliException("A positive Designer process ID is required.");
+            var json = GetStringProperty(GetProcessInfo(processId), "Json");
+            var definition = JObject.Parse(json);
+            var directory = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
+            File.WriteAllText(outputPath, json);
+            Console.WriteLine("Exported read-only Designer process " + processId + ": " + Convert.ToString(definition["title"]));
+            Console.WriteLine("Output: " + outputPath);
+        }
+
         public void Verify()
         {
             var id = GetProcessId();
             if (!id.HasValue) throw new CliException("Saved HTML5 workflow JSON was not found.");
             var info = GetProcessInfo(id.Value);
             var root = WorkflowJsonBuilder.ParseAndValidate(GetStringProperty(info, "Json"), _manifest.Workflow.Name);
+            if (string.Equals(_manifest.Workflow.Kind, "stage-router", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(_manifest.Workflow.Kind, "stage-task", StringComparison.OrdinalIgnoreCase))
+            {
+                WorkflowJsonBuilder.VerifyStageWorkflow(root, _manifest.Workflow);
+                Console.WriteLine("Verified stage contract, task actions, native mappings, routing and connector topology.");
+            }
             if (!string.Equals(Convert.ToString(root["systemName"]), _manifest.Workflow.Name, StringComparison.Ordinal))
                 throw new CliException("Saved workflow JSON name differs from the manifest.");
             if (string.Equals(_manifest.Workflow.Kind, "request-approval", StringComparison.OrdinalIgnoreCase))
@@ -525,7 +577,10 @@ namespace K2WorkflowCli
                     throw new CliException("Saved Call Sub Workflow target differs from the manifest.");
                 var expectedWait = string.Equals(_manifest.Workflow.CallSubWorkflow.WaitFor, "none", StringComparison.OrdinalIgnoreCase) ? 0 :
                     string.Equals(_manifest.Workflow.CallSubWorkflow.WaitFor, "first", StringComparison.OrdinalIgnoreCase) ? 2 : 1;
-                if ((int?)At(call, "configuration", "waitMode") != expectedWait)
+                var multiple = string.Equals(_manifest.Workflow.CallSubWorkflow.CallType, "multiple", StringComparison.OrdinalIgnoreCase);
+                if ((int?)call["wizardId"] != 3004 || (string)call["ui"]["template"] != "SubWorkflowStep")
+                    throw new CliException("Saved Call Sub Workflow is missing its native wizard or template.");
+                if (multiple ? (int?)At(call, "configuration", "waitMode") != expectedWait : (bool?)At(call, "configuration", "synchronous") != (expectedWait != 0))
                     throw new CliException("Saved Call Sub Workflow wait mode differs from the manifest.");
                 Console.WriteLine("Verified Call Sub Workflow target and wait mode: " + _manifest.Workflow.CallSubWorkflow.Workflow);
             }
@@ -535,7 +590,7 @@ namespace K2WorkflowCli
                 if (children.Count(x => (int?)x["componentId"] == 30021) != 8 || children.Count(x => (int?)x["componentId"] == 30011) != 2)
                     throw new CliException("Saved case-lifecycle workflow must contain resolve/load events and eight canonical stage Call Sub Workflow events.");
                 var calls = children.Where(x => (int?)x["componentId"] == 30021).ToArray();
-                if (calls.Any(call => (int?)At(call, "configuration", "waitMode") != 1 || (bool?)At(call, "configuration", "synchronous") != true))
+                if (calls.Any(call => (bool?)At(call, "configuration", "synchronous") != true))
                     throw new CliException("Case lifecycle child invocation must wait synchronously for completion.");
                 var links = ((JArray)root["links"]).OfType<JObject>().ToArray();
                 var nodes = ((JArray)root["nodes"]).OfType<JObject>().ToArray();
@@ -562,7 +617,7 @@ namespace K2WorkflowCli
 
         public void ReportTaskAssignmentPolicy()
         {
-            if (!string.Equals(_manifest.Workflow.Kind, "request-approval", StringComparison.OrdinalIgnoreCase) || _manifest.Workflow.UserTask == null) return;
+            if ((!string.Equals(_manifest.Workflow.Kind, "request-approval", StringComparison.OrdinalIgnoreCase) && !string.Equals(_manifest.Workflow.Kind, "stage-task", StringComparison.OrdinalIgnoreCase)) || _manifest.Workflow.UserTask == null) return;
             var requested = _manifest.Workflow.UserTask.Assignees == null ? new string[0] : _manifest.Workflow.UserTask.Assignees.ToArray();
             Console.WriteLine("User Task requested assignees: " + (requested.Length == 0 ? "(not supplied)" : string.Join(", ", requested)));
             if (_manifest.Workflow.ApprovalMatrix != null)
@@ -679,7 +734,41 @@ namespace K2WorkflowCli
                 }
                 Console.WriteLine("Deleted workflow: " + _manifest.Workflow.ProcessFullName);
             }
+            if (deleteDeployed) RemoveOwnedWorkflowCategoryLink();
             CleanupOwnedCategories(deleteRootCategory);
+        }
+
+        private void RemoveOwnedWorkflowCategoryLink()
+        {
+            var resolved = FindCategory(_manifest.Application.WorkflowCategoryPath);
+            if (resolved == null) return;
+            var categoryId = (int)resolved["id"];
+            WithCategoryServer(delegate(CategoryServer server)
+            {
+                var manager = server.GetCategoryManager(CategorySystemId, true, true);
+                var category = manager.Categories.Cast<Category>().SingleOrDefault(x => x.Id == categoryId);
+                if (category == null) return 0;
+                var matches = category.DataList.Cast<CategoryData>().Where(x =>
+                    IsOwnedWorkflowCategoryLink(Convert.ToString(x.DataType), x.Data, x.Name, _manifest.Workflow.ProcessFullName, _manifest.Workflow.Name)).ToArray();
+                foreach (var entry in matches) server.DeleteCategoryData(entry);
+                if (matches.Length > 0)
+                {
+                    manager = server.GetCategoryManager(CategorySystemId, true, true);
+                    category = manager.Categories.Cast<Category>().SingleOrDefault(x => x.Id == categoryId);
+                    if (category != null && category.DataList.Cast<CategoryData>().Any(x =>
+                        IsOwnedWorkflowCategoryLink(Convert.ToString(x.DataType), x.Data, x.Name, _manifest.Workflow.ProcessFullName, _manifest.Workflow.Name)))
+                        throw new CliException("Owned workflow category link remains after deletion: " + _manifest.Workflow.ProcessFullName);
+                    Console.WriteLine("Removed exact workflow category link: " + _manifest.Workflow.ProcessFullName);
+                }
+                return 0;
+            });
+        }
+
+        internal static bool IsOwnedWorkflowCategoryLink(string dataType, string data, string name, string expectedFullName, string expectedName)
+        {
+            return string.Equals(dataType, "Workflow", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(data, expectedFullName, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(name, expectedName, StringComparison.OrdinalIgnoreCase);
         }
 
         private void CleanupOwnedCategories(bool deleteRootCategory)
@@ -687,7 +776,10 @@ namespace K2WorkflowCli
             WithCategoryServer(delegate(CategoryServer server)
             {
                 foreach (var path in CleanupCategoryPaths(_manifest.Application, deleteRootCategory))
-                    DeleteCategoryIfEmpty(server, path);
+                {
+                    var resolved = FindCategory(path);
+                    DeleteCategoryIfEmpty(server, path, resolved == null ? (int?)null : (int)resolved["id"]);
+                }
                 return 0;
             });
         }
@@ -700,12 +792,12 @@ namespace K2WorkflowCli
             return paths;
         }
 
-        private static void DeleteCategoryIfEmpty(CategoryServer server, string path)
+        private static void DeleteCategoryIfEmpty(CategoryServer server, string path, int? resolvedId)
         {
             var manager = server.GetCategoryManager(CategorySystemId, true, true);
             var category = manager.Categories.Cast<Category>()
                 .FirstOrDefault(x => x != null &&
-                    string.Equals(GetCategoryFullPath(x), path, StringComparison.OrdinalIgnoreCase));
+                    CategoryMatchesCleanup(x.Id, GetCategoryFullPath(x), resolvedId, path));
             if (category == null)
             {
                 Console.WriteLine("K2 category: already absent (" + path + ")");
@@ -726,9 +818,15 @@ namespace K2WorkflowCli
             server.DeleteCategory(category);
             manager = server.GetCategoryManager(CategorySystemId, true, true);
             if (manager.Categories.Cast<Category>().Any(x => x != null &&
-                string.Equals(GetCategoryFullPath(x), path, StringComparison.OrdinalIgnoreCase)))
+                CategoryMatchesCleanup(x.Id, GetCategoryFullPath(x), resolvedId, path)))
                 throw new CliException("K2 category remains after deletion: " + path);
             Console.WriteLine("K2 category: deleted (" + path + ")");
+        }
+
+        internal static bool CategoryMatchesCleanup(int actualId, string actualPath, int? resolvedId, string expectedPath)
+        {
+            // The workflow provider sanitizes the category leaf's spaces, but resolves the requested path to its exact ID.
+            return resolvedId.HasValue ? actualId == resolvedId.Value : string.Equals(actualPath, expectedPath, StringComparison.OrdinalIgnoreCase);
         }
 
         private static string GetCategoryFullPath(Category category)
@@ -791,7 +889,7 @@ namespace K2WorkflowCli
             {
                 var normalized = path.Replace('\\', '/').Trim('/');
                 var value = type.GetMethod("GetCategoryByPath").Invoke(provider, new object[] { normalized, CategorySystemId, _manifest.K2.DesignerHost });
-                return JObject.Parse(Convert.ToString(value));
+                return ParseCategoryResponse(Convert.ToString(value));
             }
             catch (TargetInvocationException ex)
             {
@@ -805,6 +903,13 @@ namespace K2WorkflowCli
         {
             var value = Invoke("GetProcessId", _manifest.K2.DesignerHost, _manifest.Workflow.ProcessFullName);
             return value == null ? (int?)null : Convert.ToInt32(value);
+        }
+
+        internal static JObject ParseCategoryResponse(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json)) return null;
+            var category = JObject.Parse(json);
+            return category["id"] == null || category["id"].Type == JTokenType.Null ? null : category;
         }
 
         private object GetProcessInfo(int id)

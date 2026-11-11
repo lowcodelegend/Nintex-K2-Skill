@@ -1,0 +1,395 @@
+{
+  "single": {
+    "children": [
+      {
+        "wizardId": 3004,
+        "ui": {
+          "icon": "callSubWorkflowStep",
+          "template": "SubWorkflowStep"
+        },
+        "configuration": {
+          "selectedWorkflow": {
+            "smartFields": [
+              {
+                "text": "Example\\Child",
+                "title": "Child",
+                "internalId": 1,
+                "componentId": 10004
+              }
+            ],
+            "componentId": 10008
+          },
+          "selectedWorkflowFullName": "Example\\Child",
+          "synchronous": true,
+          "processSendFields": {
+            "09dfaa24-ac04-4827-8082-646bc8918f80": {
+              "value": {
+                "smartFields": [
+                  {
+                    "text": "Child folio",
+                    "internalId": 1,
+                    "componentId": 10004
+                  }
+                ],
+                "isDynamic": true,
+                "componentId": 10008
+              },
+              "tokenReference": "09dfaa24-ac04-4827-8082-646bc8918f80",
+              "componentId": 60043
+            },
+            "Dummy": {
+              "value": {
+                "smartFields": [
+                  {
+                    "text": "Send to child",
+                    "internalId": 1,
+                    "componentId": 10004
+                  }
+                ],
+                "isDynamic": true,
+                "componentId": 10008
+              },
+              "tokenReference": "Dummy",
+              "componentId": 60043
+            }
+          },
+          "processReturnFields": {
+            "Dummy": {
+              "smartFields": [
+                {
+                  "text": "Return Var",
+                  "designTimeValue": "root.configuration.dataFields[{\"internalId\":1}]",
+                  "internalId": 1,
+                  "componentId": 10004
+                }
+              ],
+              "componentId": 10008
+            }
+          },
+          "subWorkflowCallType": 1,
+          "slotInstanceData": {
+            "isDynamic": true,
+            "componentId": 10008
+          },
+          "exceptionSettings": {
+            "logException": true,
+            "componentId": 50012
+          },
+          "componentId": 30022
+        },
+        "systemName": "Call Subworkflow",
+        "title": "Call Subworkflow",
+        "internalId": 1,
+        "componentId": 30021
+      }
+    ],
+    "ui": {
+      "y": 168,
+      "icon": "callSubWorkflowStep",
+      "showLabel": true,
+      "topPorts": [
+        {
+          "portId": "topPorts_0",
+          "internalId": 1,
+          "componentId": 40012
+        },
+        {
+          "portId": "topPorts_1",
+          "incomingLinkReferences": [
+            "root.links[{\"internalId\":1}]"
+          ],
+          "internalId": 2,
+          "componentId": 40012
+        },
+        {
+          "portId": "topPorts_2",
+          "internalId": 3,
+          "componentId": 40012
+        }
+      ],
+      "leftPorts": [
+        {
+          "portId": "leftPorts_0",
+          "internalId": 1,
+          "componentId": 40012
+        },
+        {
+          "portId": "leftPorts_1",
+          "internalId": 2,
+          "componentId": 40012
+        },
+        {
+          "portId": "leftPorts_2",
+          "internalId": 3,
+          "componentId": 40012
+        }
+      ],
+      "bottomPorts": [
+        {
+          "portId": "bottomPorts_0",
+          "internalId": 1,
+          "componentId": 40012
+        },
+        {
+          "portId": "bottomPorts_1",
+          "internalId": 2,
+          "componentId": 40012
+        },
+        {
+          "portId": "bottomPorts_2",
+          "internalId": 3,
+          "componentId": 40012
+        }
+      ],
+      "rightPorts": [
+        {
+          "portId": "rightPorts_0",
+          "internalId": 1,
+          "componentId": 40012
+        },
+        {
+          "portId": "rightPorts_1",
+          "internalId": 2,
+          "componentId": 40012
+        },
+        {
+          "portId": "rightPorts_2",
+          "internalId": 3,
+          "componentId": 40012
+        }
+      ],
+      "template": "SubWorkflowStep",
+      "componentId": 40009
+    },
+    "configuration": {
+      "deadline": {
+        "actionType": 3,
+        "specificDate": {
+          "componentId": 10008
+        },
+        "expressDays": {
+          "componentId": 10008
+        },
+        "expressHours": {
+          "componentId": 10008
+        },
+        "expressMinutes": {
+          "componentId": 10008
+        },
+        "expressSeconds": {
+          "componentId": 10008
+        },
+        "noDeadline": true,
+        "withinWorkingHoursOnly": true,
+        "dynamicWorkingHours": {
+          "componentId": 10008
+        },
+        "componentId": 30025
+      },
+      "priority": 1,
+      "decisionOptionType": 2,
+      "exceptionSettings": {
+        "logException": true,
+        "componentId": 50012
+      },
+      "componentId": 40001
+    },
+    "systemName": "Call Subworkflow",
+    "title": "Call Subworkflow",
+    "internalId": 2,
+    "componentId": 40000
+  },
+  "multiple": {
+    "children": [
+      {
+        "wizardId": 3004,
+        "ui": {
+          "icon": "callSubWorkflowStep",
+          "template": "SubWorkflowStep"
+        },
+        "configuration": {
+          "selectedWorkflow": {
+            "smartFields": [
+              {
+                "text": "Example\\Child",
+                "title": "Child",
+                "internalId": 1,
+                "componentId": 10004
+              }
+            ],
+            "componentId": 10008
+          },
+          "selectedWorkflowFullName": "Example\\Child",
+          "processSendFields": {
+            "09dfaa24-ac04-4827-8082-646bc8918f80": {
+              "value": {
+                "smartFields": [
+                  {
+                    "text": "Child folio",
+                    "internalId": 1,
+                    "componentId": 10004
+                  }
+                ],
+                "isDynamic": true,
+                "componentId": 10008
+              },
+              "tokenReference": "09dfaa24-ac04-4827-8082-646bc8918f80",
+              "componentId": 60043
+            },
+            "Dummy": {
+              "value": {
+                "smartFields": [
+                  {
+                    "text": "Send to child",
+                    "internalId": 1,
+                    "componentId": 10004
+                  }
+                ],
+                "isDynamic": true,
+                "componentId": 10008
+              },
+              "tokenReference": "Dummy",
+              "componentId": 60043
+            }
+          },
+          "subWorkflowCallType": 2,
+          "slotInstanceData": {
+            "smartFields": [
+              {
+                "text": "5",
+                "internalId": 1,
+                "componentId": 10004
+              }
+            ],
+            "isDynamic": true,
+            "componentId": 10008
+          },
+          "exceptionSettings": {
+            "logException": true,
+            "componentId": 50012
+          },
+          "componentId": 30022
+        },
+        "systemName": "Call Subworkflow",
+        "title": "Call Subworkflow",
+        "internalId": 1,
+        "componentId": 30021
+      }
+    ],
+    "ui": {
+      "y": 168,
+      "icon": "callSubWorkflowStep",
+      "showLabel": true,
+      "topPorts": [
+        {
+          "portId": "topPorts_0",
+          "internalId": 1,
+          "componentId": 40012
+        },
+        {
+          "portId": "topPorts_1",
+          "incomingLinkReferences": [
+            "root.links[{\"internalId\":1}]"
+          ],
+          "internalId": 2,
+          "componentId": 40012
+        },
+        {
+          "portId": "topPorts_2",
+          "internalId": 3,
+          "componentId": 40012
+        }
+      ],
+      "leftPorts": [
+        {
+          "portId": "leftPorts_0",
+          "internalId": 1,
+          "componentId": 40012
+        },
+        {
+          "portId": "leftPorts_1",
+          "internalId": 2,
+          "componentId": 40012
+        },
+        {
+          "portId": "leftPorts_2",
+          "internalId": 3,
+          "componentId": 40012
+        }
+      ],
+      "bottomPorts": [
+        {
+          "portId": "bottomPorts_0",
+          "internalId": 1,
+          "componentId": 40012
+        },
+        {
+          "portId": "bottomPorts_1",
+          "internalId": 2,
+          "componentId": 40012
+        },
+        {
+          "portId": "bottomPorts_2",
+          "internalId": 3,
+          "componentId": 40012
+        }
+      ],
+      "rightPorts": [
+        {
+          "portId": "rightPorts_0",
+          "internalId": 1,
+          "componentId": 40012
+        },
+        {
+          "portId": "rightPorts_1",
+          "internalId": 2,
+          "componentId": 40012
+        },
+        {
+          "portId": "rightPorts_2",
+          "internalId": 3,
+          "componentId": 40012
+        }
+      ],
+      "template": "SubWorkflowStep",
+      "componentId": 40009
+    },
+    "configuration": {
+      "deadline": {
+        "actionType": 3,
+        "specificDate": {
+          "componentId": 10008
+        },
+        "expressDays": {
+          "componentId": 10008
+        },
+        "expressHours": {
+          "componentId": 10008
+        },
+        "expressMinutes": {
+          "componentId": 10008
+        },
+        "expressSeconds": {
+          "componentId": 10008
+        },
+        "noDeadline": true,
+        "withinWorkingHoursOnly": true,
+        "dynamicWorkingHours": {
+          "componentId": 10008
+        },
+        "componentId": 30025
+      },
+      "priority": 1,
+      "decisionOptionType": 2,
+      "exceptionSettings": {
+        "logException": true,
+        "componentId": 50012
+      },
+      "componentId": 40001
+    },
+    "systemName": "Call Subworkflow",
+    "title": "Call Subworkflow",
+    "internalId": 2,
+    "componentId": 40000
+  }
+}

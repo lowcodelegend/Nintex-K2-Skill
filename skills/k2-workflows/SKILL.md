@@ -23,6 +23,9 @@ If a browser/tool session left a lock, run `unlock <manifest> --confirm` and ref
 
 ## Generated workflows
 
+- For native IPC authoring and readable canvas layouts, read [workflow-layout.md](references/workflow-layout.md). Every user task must feed a decision carrying all its outcomes. Keep routing-only parents to subprocess calls and decisions; place stage work and recovery in children. Run the structure validator as well as geometry checks. Prototype generator/template upgrades remain pending; Designer acceptance is separate from runtime success.
+- For a state machine where any child may select any next stage, read [state-dispatch.md](references/state-dispatch.md). Use one central dispatcher and child-returned `NextStage`, with a horizontal stage layout when requested. The earlier linear stage-router prototype does not satisfy this contract; use the checked native JSON templates while the generator port is pending.
+
 - `request-approval` is the preferred baseline: SmartForm Start → Pending status/Originator email → User Task → decision → Approved or Rejected status/Originator email. Configure exactly two actions and all three status values.
 - Without `approvalMatrix`, require `userTask.assignees`; generation and verification use each declared `$originator` or explicit K2 identity exactly. Unsupported dynamic assignee tokens are rejected.
 - With threshold, dimension, or stage routing, read [approval-matrices.md](references/approval-matrices.md). Omit direct assignees: the resolver's `ApproverValue` is authoritative and Approve loops until `HasApprover=false`.
@@ -31,6 +34,7 @@ If a browser/tool session left a lock, run `unlock <manifest> --confirm` and ref
 - For a parent lifecycle launched from a reviewed draft, set `smartForms.startOnly=true`, provide `primarySmartObject`, and target the dedicated final submit rule. Start-only integration adds StartProcess without requiring a User Task or Task state.
 - Use `start-end` only for a minimal smoke test. Use `json-file` only for compatible HTML5 Designer JSON.
 - Use `call-subworkflow` for one native child invocation with an explicit deployed target and wait policy. Deploy the child first; do not represent this primitive alone as a configuration-driven case lifecycle.
+- For an explicit parent router and stage children, read [stage-routing.md](references/stage-routing.md). `stage-router` accepts a declared stage graph, synchronous child results and rework paths without a fixed stage count or SQL resolver; `stage-task` returns one of its declared task actions. These kinds currently use explicit task URLs and scalar text fields; native SmartForms Start/Task auto-integration and business persistence are separate implementation work.
 - Use `case-lifecycle` for a configuration-driven parent that resolves and persists one lifecycle-state row, loads it through a normal SmartObject Read method, selects one of the eight canonical stage workflows, invokes it synchronously, and loops after the child persists its result. Deploy every child and its scalar stage-instance data field first.
 - For runtime validation, `start` supplies declared process data, `status` reports active/error instances, `worklist` reports current-user tasks, `instance-data` exposes diagnostic process fields, and confirmed `action` executes an explicitly named task action. These commands are test/operations aids and do not replace browser validation.
 

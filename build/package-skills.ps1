@@ -97,7 +97,7 @@ function Test-ExcludedRelativePath {
     if ($segments.Count -gt 0 -and $segments[0] -eq 'tool') {
         return $true
     }
-    if ($segments | Where-Object { $_ -in @('.git', '.vs', '.vscode', '.idea', 'bin', 'obj', 'TestResults', '.tmp', '.tools') }) {
+    if ($segments | Where-Object { $_ -in @('.git', '.vs', '.vscode', '.idea', 'bin', 'obj', 'TestResults', '.tmp', '.tools', '__pycache__') }) {
         return $true
     }
     $leaf = if ($segments.Count -eq 0) { '' } else { $segments[-1] }
@@ -105,7 +105,7 @@ function Test-ExcludedRelativePath {
         return $true
     }
     if ($leaf -match '^(Thumbs\.db|Desktop\.ini)$' -or
-        $leaf -match '\.(user|suo|pdb|trx|local\.json|secrets\.json)$' -or
+        $leaf -match '\.(user|suo|pdb|trx|pyc|pyo|local\.json|secrets\.json)$' -or
         $leaf -match '^\.env(?:\..*)?$') {
         return $true
     }

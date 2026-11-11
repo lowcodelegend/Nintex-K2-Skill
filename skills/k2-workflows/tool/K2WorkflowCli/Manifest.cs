@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 
 namespace K2WorkflowCli
 {
-    internal sealed class WorkflowManifest
+    internal sealed partial class WorkflowManifest
     {
         [JsonProperty("schemaVersion")] public int SchemaVersion { get; set; }
         [JsonProperty("name")] public string Name { get; set; }
@@ -77,13 +77,17 @@ namespace K2WorkflowCli
                 !string.Equals(Workflow.Kind, "request-approval", StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(Workflow.Kind, "call-subworkflow", StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(Workflow.Kind, "case-lifecycle", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(Workflow.Kind, "stage-router", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(Workflow.Kind, "stage-task", StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(Workflow.Kind, "json-file", StringComparison.OrdinalIgnoreCase))
-                throw new CliException("workflow.kind must be 'start-end', 'request-approval', 'call-subworkflow', 'case-lifecycle', or 'json-file'.");
+                throw new CliException("workflow.kind must be 'start-end', 'request-approval', 'call-subworkflow', 'case-lifecycle', 'stage-router', 'stage-task', or 'json-file'.");
             if (string.Equals(Workflow.Kind, "json-file", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(Workflow.DefinitionFile))
                 throw new CliException("workflow.definitionFile is required when workflow.kind is 'json-file'.");
             if (string.Equals(Workflow.Kind, "request-approval", StringComparison.OrdinalIgnoreCase)) ValidateRequestApproval();
             if (string.Equals(Workflow.Kind, "call-subworkflow", StringComparison.OrdinalIgnoreCase)) ValidateCallSubWorkflow();
             if (string.Equals(Workflow.Kind, "case-lifecycle", StringComparison.OrdinalIgnoreCase)) ValidateCaseLifecycle();
+            if (string.Equals(Workflow.Kind, "stage-router", StringComparison.OrdinalIgnoreCase)) ValidateStageRouter();
+            if (string.Equals(Workflow.Kind, "stage-task", StringComparison.OrdinalIgnoreCase)) ValidateStageTask();
         }
 
         private void ValidateCaseLifecycle()
@@ -132,8 +136,33 @@ namespace K2WorkflowCli
                 throw new CliException("workflow.callSubWorkflow.workflow must be the deployed workflow full name '<category>\\<workflow>'.");
             if (string.IsNullOrWhiteSpace(Workflow.CallSubWorkflow.Account)) Workflow.CallSubWorkflow.Account = "Originator";
             if (string.IsNullOrWhiteSpace(Workflow.CallSubWorkflow.WaitFor)) Workflow.CallSubWorkflow.WaitFor = "all";
+            if (string.IsNullOrWhiteSpace(Workflow.CallSubWorkflow.CallType)) Workflow.CallSubWorkflow.CallType = "single";
+            Workflow.CallSubWorkflow.CallType = Workflow.CallSubWorkflow.CallType.ToLowerInvariant();
+            Workflow.CallSubWorkflow.WaitFor = Workflow.CallSubWorkflow.WaitFor.ToLowerInvariant();
+            if (!new[] { "single", "multiple" }.Contains(Workflow.CallSubWorkflow.CallType, StringComparer.OrdinalIgnoreCase))
+                throw new CliException("workflow.callSubWorkflow.callType must be single or multiple.");
+            if (Workflow.CallSubWorkflow.CallType == "multiple" && string.IsNullOrWhiteSpace(Workflow.CallSubWorkflow.InstanceData) && string.IsNullOrWhiteSpace(Workflow.CallSubWorkflow.InstanceDataField))
+                throw new CliException("Multiple IPC requires instanceData (semicolon-delimited values) or instanceDataField; a numeric value is one list item, not an instance count.");
+            if (!string.IsNullOrWhiteSpace(Workflow.CallSubWorkflow.InstanceData) && !string.IsNullOrWhiteSpace(Workflow.CallSubWorkflow.InstanceDataField))
+                throw new CliException("Choose literal instanceData or instanceDataField, not both.");
             if (!new[] { "none", "all", "first" }.Contains(Workflow.CallSubWorkflow.WaitFor, StringComparer.OrdinalIgnoreCase))
                 throw new CliException("workflow.callSubWorkflow.waitFor must be 'none', 'all', or 'first'.");
+            var declared = Workflow.DataFields ?? new List<WorkflowDataFieldSettings>();
+            if (declared.Any(x => x == null || string.IsNullOrWhiteSpace(x.Name)) || declared.Select(x => x.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() != declared.Count)
+                throw new CliException("workflow.dataFields must have unique nonblank names.");
+            if (declared.Any(x => !new[] { "text", "number", "boolean" }.Contains(x.Type ?? "text", StringComparer.OrdinalIgnoreCase)))
+                throw new CliException("workflow.dataFields types must be text, number or boolean.");
+            foreach (var mapping in (Workflow.CallSubWorkflow.Inputs ?? new Dictionary<string, string>()).Concat(Workflow.CallSubWorkflow.Outputs ?? new Dictionary<string, string>()))
+                if (string.IsNullOrWhiteSpace(mapping.Key) || !declared.Any(x => string.Equals(x.Name, mapping.Value, StringComparison.OrdinalIgnoreCase)))
+                    throw new CliException("Every Call Sub Workflow input/output must name a child field and a declared parent data field.");
+            if (Workflow.CallSubWorkflow.Outputs != null && Workflow.CallSubWorkflow.Outputs.Count > 0 && string.Equals(Workflow.CallSubWorkflow.WaitFor, "none", StringComparison.OrdinalIgnoreCase))
+                throw new CliException("Call Sub Workflow outputs require waiting for child completion.");
+            if (Workflow.CallSubWorkflow.CallType == "multiple" && Workflow.CallSubWorkflow.WaitFor == "all" && Workflow.CallSubWorkflow.Outputs != null && Workflow.CallSubWorkflow.Outputs.Count > 0)
+                throw new CliException("Native Multiple/All hides the scalar return mapper. Use Multiple/First for a scalar child result or persist per-child results separately.");
+            if (Workflow.CallSubWorkflow.CallType == "single" && Workflow.CallSubWorkflow.WaitFor == "first")
+                throw new CliException("waitFor=first applies only to multiple child calls.");
+            foreach (var field in new[] { Workflow.CallSubWorkflow.FolioDataField, Workflow.CallSubWorkflow.InstanceDataField }.Where(x => !string.IsNullOrWhiteSpace(x)))
+                if (!declared.Any(x => string.Equals(x.Name, field, StringComparison.OrdinalIgnoreCase))) throw new CliException("IPC data field is not declared: " + field);
         }
 
         private void ValidateRequestApproval()
@@ -299,6 +328,8 @@ namespace K2WorkflowCli
         [JsonProperty("callSubWorkflow")] public CallSubWorkflowSettings CallSubWorkflow { get; set; }
         [JsonProperty("caseLifecycle")] public CaseLifecycleSettings CaseLifecycle { get; set; }
         [JsonProperty("dataFields")] public List<WorkflowDataFieldSettings> DataFields { get; set; }
+        [JsonProperty("stageRouter")] public StageRouterSettings StageRouter { get; set; }
+        [JsonProperty("stageTask")] public StageTaskSettings StageTask { get; set; }
         [JsonIgnore] public string ProcessFolderName { get; set; }
         [JsonIgnore] public string ProcessFullName { get { return ProcessFolderName + "\\" + Name; } }
     }
@@ -330,6 +361,11 @@ namespace K2WorkflowCli
 
     internal sealed class CallSubWorkflowSettings
     {
+        [JsonProperty("callType")] public string CallType { get; set; }
+        [JsonProperty("instanceData")] public string InstanceData { get; set; }
+        [JsonProperty("instanceDataField")] public string InstanceDataField { get; set; }
+        [JsonProperty("folio")] public string Folio { get; set; }
+        [JsonProperty("folioDataField")] public string FolioDataField { get; set; }
         [JsonProperty("workflow")] public string Workflow { get; set; }
         [JsonProperty("workflowId")] public int? WorkflowId { get; set; }
         [JsonProperty("account")] public string Account { get; set; }

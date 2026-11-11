@@ -1,0 +1,1347 @@
+{
+  "nodes": [
+    {
+      "isStartActivity": true,
+      "ui": {
+        "y": 56,
+        "topPorts": [
+          {
+            "portId": "topPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "topPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "topPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "leftPorts": [
+          {
+            "portId": "leftPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "bottomPorts": [
+          {
+            "portId": "bottomPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "bottomPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "outgoingLinkReferences": [
+              "root.links[{\"internalId\":1}]"
+            ]
+          },
+          {
+            "portId": "bottomPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "rightPorts": [
+          {
+            "portId": "rightPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "template": "StartStep",
+        "componentId": 40009,
+        "x": 0,
+        "showLabel": true,
+        "labelX": -140,
+        "labelY": -42
+      },
+      "configuration": {
+        "deadline": {
+          "actionType": 3,
+          "specificDate": {
+            "componentId": 10008
+          },
+          "expressDays": {
+            "componentId": 10008
+          },
+          "expressHours": {
+            "componentId": 10008
+          },
+          "expressMinutes": {
+            "componentId": 10008
+          },
+          "expressSeconds": {
+            "componentId": 10008
+          },
+          "noDeadline": true,
+          "withinWorkingHoursOnly": true,
+          "componentId": 30025
+        },
+        "priority": 1,
+        "decisionOptionType": 2,
+        "exceptionSettings": {
+          "logException": true,
+          "componentId": 50012
+        },
+        "componentId": 40001
+      },
+      "systemName": "StartStep 1",
+      "title": "Start",
+      "internalId": 1,
+      "componentId": 40000,
+      "customTitle": true
+    },
+    {
+      "children": [
+        {
+          "wizardId": 3000,
+          "ui": {
+            "icon": "userTaskStep",
+            "template": "DefaultStep"
+          },
+          "configuration": {
+            "instruction": {
+              "smartFields": [
+                {
+                  "text": "Review-only native example; no loan data or external integrations.",
+                  "internalId": 1,
+                  "componentId": 10004
+                }
+              ],
+              "componentId": 10008
+            },
+            "actions": [
+              {
+                "alwaysVisible": true,
+                "continueWorkflow": true,
+                "actionTitle": "Complete",
+                "originalTitle": "Complete",
+                "internalId": 1,
+                "componentId": 30019,
+                "oldReference": "root.nodes[{\"internalId\":2}].children[{\"internalId\":1}].configuration.actions[{\"internalId\":1}]"
+              }
+            ],
+            "actionStatementRuleType": 1,
+            "formConfiguration": {
+              "url": {
+                "smartFields": [
+                  {
+                    "text": "https://k2.example.invalid/Runtime/Runtime/Form/APP.Example/",
+                    "internalId": 1,
+                    "componentId": 10004
+                  }
+                ],
+                "componentId": 10008
+              },
+              "parameters": [
+                {
+                  "name": {
+                    "smartFields": [
+                      {
+                        "text": "SN",
+                        "internalId": 1,
+                        "componentId": 10004,
+                        "customTitle": "Serial Number"
+                      }
+                    ],
+                    "componentId": 10008,
+                    "type": "tworows"
+                  },
+                  "value": {
+                    "smartFields": [
+                      {
+                        "fieldName": "SerialNo",
+                        "parentName": "Task",
+                        "title": "Serial Number",
+                        "internalId": 1,
+                        "componentId": 10009
+                      }
+                    ],
+                    "componentId": 10008
+                  },
+                  "internalId": 1,
+                  "componentId": 30018
+                },
+                {
+                  "name": {
+                    "smartFields": [
+                      {
+                        "text": "RequestId",
+                        "internalId": 1,
+                        "componentId": 10004
+                      }
+                    ],
+                    "componentId": 10008
+                  },
+                  "value": {
+                    "smartFields": [
+                      {
+                        "dataFieldReference": "root.configuration.dataFields[{\"internalId\":1}]",
+                        "internalId": 1,
+                        "componentId": 10000
+                      }
+                    ],
+                    "componentId": 10008
+                  },
+                  "internalId": 2,
+                  "componentId": 30018
+                }
+              ],
+              "componentId": 30015
+            },
+            "destinationSets": [
+              {
+                "title": "K2:DOMAIN\\workflow.reviewer",
+                "destinationItems": [
+                  {
+                    "smartFields": [
+                      {
+                        "text": "K2:DOMAIN\\workflow.reviewer",
+                        "internalId": 1,
+                        "componentId": 10004
+                      }
+                    ],
+                    "componentId": 10008,
+                    "type": "User",
+                    "isDynamic": false,
+                    "internalId": 1
+                  }
+                ],
+                "isRecipient": true,
+                "internalId": 1,
+                "componentId": 80010
+              }
+            ],
+            "allRecipients": true,
+            "slots": {
+              "smartFields": [
+                {
+                  "value": 1,
+                  "internalId": 1,
+                  "componentId": 10021
+                }
+              ],
+              "componentId": 10008
+            },
+            "votingResolveGroupsToIndividuals": true,
+            "timeLine": {
+              "deadlineEmailAction": {
+                "repeatDays": {
+                  "componentId": 10008
+                },
+                "repeatHours": {
+                  "componentId": 10008
+                },
+                "repeatMinutes": {
+                  "componentId": 10008
+                },
+                "repeatSeconds": {
+                  "componentId": 10008
+                },
+                "repeatAmount": {
+                  "componentId": 10008
+                },
+                "emailConfiguration": {
+                  "from": {
+                    "componentId": 10008
+                  },
+                  "subject": {
+                    "componentId": 10008
+                  },
+                  "body": {
+                    "componentId": 10008
+                  },
+                  "exceptionSettings": {
+                    "componentId": 50012
+                  },
+                  "componentId": 30006
+                }
+              },
+              "deadlineSmoAction": {
+                "smartObjectReference": {
+                  "componentId": 10008
+                },
+                "smartObjectMethodReference": {
+                  "componentId": 10008
+                },
+                "smartObjectIdentifierReference": {
+                  "componentId": 10008
+                },
+                "filter": {
+                  "componentId": 80016
+                },
+                "listOptions": {
+                  "componentId": 50011
+                }
+              },
+              "specificDate": {
+                "componentId": 10008
+              },
+              "expressDays": {
+                "componentId": 10008
+              },
+              "expressHours": {
+                "componentId": 10008
+              },
+              "expressMinutes": {
+                "componentId": 10008
+              },
+              "expressSeconds": {
+                "componentId": 10008
+              },
+              "noDeadline": true,
+              "dynamicWorkingHours": {
+                "componentId": 10008
+              },
+              "repetition": {
+                "repeatDays": {
+                  "componentId": 10008
+                },
+                "repeatHours": {
+                  "componentId": 10008
+                },
+                "repeatMinutes": {
+                  "componentId": 10008
+                },
+                "repeatSeconds": {
+                  "componentId": 10008
+                },
+                "repeatCount": {
+                  "componentId": 10008
+                }
+              },
+              "componentId": 30025
+            },
+            "reminder": {
+              "deadlines": []
+            },
+            "emailConfiguration": {
+              "from": {
+                "componentId": 10008
+              },
+              "cc": [],
+              "bcc": [],
+              "subject": {
+                "componentId": 10008
+              },
+              "body": {
+                "componentId": 10008
+              },
+              "exceptionSettings": {
+                "componentId": 50012
+              },
+              "componentId": 30006
+            },
+            "sendNotification": false,
+            "exceptionSettings": {
+              "componentId": 50012
+            },
+            "componentId": 30010
+          },
+          "systemName": "Complete child",
+          "title": "Complete child",
+          "internalId": 1,
+          "componentId": 30009
+        }
+      ],
+      "ui": {
+        "icon": "userTaskStep",
+        "y": 224,
+        "topPorts": [
+          {
+            "portId": "topPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "topPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "incomingLinkReferences": [
+              "root.links[{\"internalId\":1}]"
+            ]
+          },
+          {
+            "portId": "topPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "leftPorts": [
+          {
+            "portId": "leftPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "bottomPorts": [
+          {
+            "portId": "bottomPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "bottomPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "outgoingLinkReferences": [
+              "root.links[{\"internalId\":2}]"
+            ]
+          },
+          {
+            "portId": "bottomPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "rightPorts": [
+          {
+            "portId": "rightPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "template": "DefaultStep",
+        "componentId": 40009,
+        "x": 0,
+        "showLabel": true,
+        "labelX": -140,
+        "labelY": -42
+      },
+      "configuration": {
+        "outcomes": [
+          {
+            "title": "Complete",
+            "originalTitle": "Complete",
+            "linkedActionReference": "root.nodes[{\"internalId\":2}].children[{\"internalId\":1}].configuration.actions[{\"internalId\":1}]",
+            "internalId": 1,
+            "componentId": 30020
+          }
+        ],
+        "datafields": [
+          {
+            "type": 6,
+            "title": "Action Result",
+            "isEmptyValue": true,
+            "hidden": true,
+            "scope": 3,
+            "internalId": 1,
+            "componentId": 50000
+          }
+        ],
+        "deadline": {
+          "deadlineEmailAction": {
+            "repeatDays": {
+              "componentId": 10008
+            },
+            "repeatHours": {
+              "componentId": 10008
+            },
+            "repeatMinutes": {
+              "componentId": 10008
+            },
+            "repeatSeconds": {
+              "componentId": 10008
+            },
+            "repeatAmount": {
+              "componentId": 10008
+            },
+            "emailConfiguration": {
+              "from": {
+                "componentId": 10008
+              },
+              "subject": {
+                "componentId": 10008
+              },
+              "body": {
+                "componentId": 10008
+              },
+              "exceptionSettings": {
+                "componentId": 50012
+              },
+              "componentId": 30006
+            }
+          },
+          "deadlineSmoAction": {
+            "smartObjectReference": {
+              "componentId": 10008
+            },
+            "smartObjectMethodReference": {
+              "componentId": 10008
+            },
+            "smartObjectIdentifierReference": {
+              "componentId": 10008
+            },
+            "filter": {
+              "componentId": 80016
+            },
+            "listOptions": {
+              "componentId": 50011
+            }
+          },
+          "specificDate": {
+            "componentId": 10008
+          },
+          "expressDays": {
+            "componentId": 10008
+          },
+          "expressHours": {
+            "componentId": 10008
+          },
+          "expressMinutes": {
+            "componentId": 10008
+          },
+          "expressSeconds": {
+            "componentId": 10008
+          },
+          "noDeadline": true,
+          "dynamicWorkingHours": {
+            "componentId": 10008
+          },
+          "repetition": {
+            "repeatDays": {
+              "componentId": 10008
+            },
+            "repeatHours": {
+              "componentId": 10008
+            },
+            "repeatMinutes": {
+              "componentId": 10008
+            },
+            "repeatSeconds": {
+              "componentId": 10008
+            },
+            "repeatCount": {
+              "componentId": 10008
+            }
+          },
+          "componentId": 30025
+        },
+        "expectedDuration": {
+          "componentId": 30026
+        },
+        "priority": 1,
+        "exceptionSettings": {
+          "logException": true,
+          "componentId": 50012
+        },
+        "componentId": 40001
+      },
+      "systemName": "DefaultStep 2",
+      "title": "Complete child",
+      "internalId": 2,
+      "componentId": 40000,
+      "customTitle": true
+    },
+    {
+      "ui": {
+        "y": 392,
+        "icon": "decisionStep",
+        "topPorts": [
+          {
+            "portId": "topPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "topPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "incomingLinkReferences": [
+              "root.links[{\"internalId\":2}]"
+            ]
+          },
+          {
+            "portId": "topPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "leftPorts": [
+          {
+            "portId": "leftPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "bottomPorts": [
+          {
+            "portId": "bottomPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "bottomPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "outgoingLinkReferences": [
+              "root.links[{\"internalId\":3}]"
+            ],
+            "outcomeReference": "root.nodes[{\"internalId\":3}].configuration.outcomes[{\"internalId\":1}]"
+          },
+          {
+            "portId": "bottomPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "rightPorts": [
+          {
+            "portId": "rightPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "template": "DecisionStep",
+        "componentId": 40009,
+        "x": 0,
+        "showLabel": true,
+        "labelX": -140,
+        "labelY": -70
+      },
+      "configuration": {
+        "outcomes": [
+          {
+            "title": "Complete",
+            "originalTitle": "Complete",
+            "internalId": 1,
+            "componentId": 30020,
+            "linkedOutcomeReference": "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":1}]"
+          }
+        ],
+        "outcomeRule": {
+          "statements": [
+            {
+              "IfExpressions": [
+                {
+                  "expressions": [
+                    {
+                      "outcomeReference": "root.nodes[{\"internalId\":2}].configuration.outcomes[{\"internalId\":1}]",
+                      "activityReference": "root.nodes[{\"internalId\":2}]",
+                      "directive": "k2-task-expression",
+                      "internalId": 1,
+                      "componentId": 80009
+                    }
+                  ],
+                  "directive": "k2-group-expression",
+                  "internalId": 1,
+                  "componentId": 80004
+                }
+              ],
+              "thenStatements": [
+                {
+                  "linkedOutcomeReferences": [
+                    "root.nodes[{\"internalId\":3}].configuration.outcomes[{\"internalId\":1}]"
+                  ],
+                  "directive": "k2-outcome-statement",
+                  "internalId": 1,
+                  "componentId": 80006
+                }
+              ],
+              "elseStatements": [],
+              "directive": "k2-if-then-else-statement",
+              "internalId": 1,
+              "componentId": 80002
+            }
+          ],
+          "componentId": 80101
+        },
+        "deadline": {
+          "deadlineEmailAction": {
+            "repeatDays": {
+              "componentId": 10008
+            },
+            "repeatHours": {
+              "componentId": 10008
+            },
+            "repeatMinutes": {
+              "componentId": 10008
+            },
+            "repeatSeconds": {
+              "componentId": 10008
+            },
+            "repeatAmount": {
+              "componentId": 10008
+            },
+            "emailConfiguration": {
+              "from": {
+                "componentId": 10008
+              },
+              "subject": {
+                "componentId": 10008
+              },
+              "body": {
+                "componentId": 10008
+              },
+              "exceptionSettings": {
+                "componentId": 50012
+              },
+              "componentId": 30006
+            }
+          },
+          "deadlineSmoAction": {
+            "smartObjectReference": {
+              "componentId": 10008
+            },
+            "smartObjectMethodReference": {
+              "componentId": 10008
+            },
+            "smartObjectIdentifierReference": {
+              "componentId": 10008
+            },
+            "filter": {
+              "componentId": 80016
+            },
+            "listOptions": {
+              "componentId": 50011
+            }
+          },
+          "specificDate": {
+            "componentId": 10008
+          },
+          "expressDays": {
+            "componentId": 10008
+          },
+          "expressHours": {
+            "componentId": 10008
+          },
+          "expressMinutes": {
+            "componentId": 10008
+          },
+          "expressSeconds": {
+            "componentId": 10008
+          },
+          "noDeadline": true,
+          "dynamicWorkingHours": {
+            "componentId": 10008
+          },
+          "repetition": {
+            "repeatDays": {
+              "componentId": 10008
+            },
+            "repeatHours": {
+              "componentId": 10008
+            },
+            "repeatMinutes": {
+              "componentId": 10008
+            },
+            "repeatSeconds": {
+              "componentId": 10008
+            },
+            "repeatCount": {
+              "componentId": 10008
+            }
+          },
+          "componentId": 30025
+        },
+        "priority": 1,
+        "decisionOptionType": 1,
+        "isDecisionOutcomeCheckBoxChecked": true,
+        "exceptionSettings": {
+          "logException": true,
+          "componentId": 50012
+        },
+        "componentId": 40014,
+        "outcomesEventReference": "root.nodes[{\"internalId\":2}].children[{\"internalId\":1}]"
+      },
+      "systemName": "DecisionStep 3",
+      "title": "Child action",
+      "customTitle": true,
+      "internalId": 3,
+      "componentId": 40000
+    },
+    {
+      "children": [
+        {
+          "wizardId": 3003,
+          "ui": {
+            "icon": "setDataFieldsStep",
+            "template": "DefaultStep"
+          },
+          "configuration": {
+            "mappings": [
+              {
+                "dataFieldReference": "root.configuration.dataFields[{\"internalId\":2}]",
+                "value": {
+                  "smartFields": [
+                    {
+                      "text": "Complete",
+                      "internalId": 1,
+                      "componentId": 10004
+                    }
+                  ],
+                  "componentId": 10008
+                },
+                "internalId": 1,
+                "componentId": 30003
+              }
+            ],
+            "exceptionSettings": {
+              "logException": true,
+              "componentId": 50012
+            },
+            "componentId": 30001
+          },
+          "systemName": "Set Variables",
+          "title": "Set Variables",
+          "internalId": 1,
+          "componentId": 30000
+        }
+      ],
+      "ui": {
+        "y": 560,
+        "icon": "setDataFieldsStep",
+        "showLabel": true,
+        "topPorts": [
+          {
+            "portId": "topPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "topPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "incomingLinkReferences": [
+              "root.links[{\"internalId\":3}]"
+            ]
+          },
+          {
+            "portId": "topPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "leftPorts": [
+          {
+            "portId": "leftPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "bottomPorts": [
+          {
+            "portId": "bottomPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "bottomPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "outgoingLinkReferences": [
+              "root.links[{\"internalId\":4}]"
+            ]
+          },
+          {
+            "portId": "bottomPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "rightPorts": [
+          {
+            "portId": "rightPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "template": "DefaultStep",
+        "componentId": 40009,
+        "x": 0,
+        "labelX": -140,
+        "labelY": -42
+      },
+      "configuration": {
+        "deadline": {
+          "actionType": 3,
+          "specificDate": {
+            "componentId": 10008
+          },
+          "expressDays": {
+            "componentId": 10008
+          },
+          "expressHours": {
+            "componentId": 10008
+          },
+          "expressMinutes": {
+            "componentId": 10008
+          },
+          "expressSeconds": {
+            "componentId": 10008
+          },
+          "noDeadline": true,
+          "withinWorkingHoursOnly": true,
+          "componentId": 30025
+        },
+        "priority": 1,
+        "decisionOptionType": 2,
+        "exceptionSettings": {
+          "logException": true,
+          "componentId": 50012
+        },
+        "componentId": 40001
+      },
+      "systemName": "DefaultStep 4",
+      "title": "Return child outcome",
+      "internalId": 4,
+      "componentId": 40000,
+      "customTitle": true
+    },
+    {
+      "ui": {
+        "icon": "endStep",
+        "y": 728,
+        "topPorts": [
+          {
+            "portId": "topPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "topPorts_1",
+            "internalId": 2,
+            "componentId": 40012,
+            "incomingLinkReferences": [
+              "root.links[{\"internalId\":4}]"
+            ]
+          },
+          {
+            "portId": "topPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "leftPorts": [
+          {
+            "portId": "leftPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "leftPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "bottomPorts": [
+          {
+            "portId": "bottomPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "bottomPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "bottomPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "rightPorts": [
+          {
+            "portId": "rightPorts_0",
+            "internalId": 1,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_1",
+            "internalId": 2,
+            "componentId": 40012
+          },
+          {
+            "portId": "rightPorts_2",
+            "internalId": 3,
+            "componentId": 40012
+          }
+        ],
+        "template": "EndStep",
+        "componentId": 40009,
+        "x": 0,
+        "showLabel": true,
+        "labelX": -140,
+        "labelY": -42
+      },
+      "configuration": {
+        "deadline": {
+          "deadlineEmailAction": {
+            "repeatDays": {
+              "componentId": 10008
+            },
+            "repeatHours": {
+              "componentId": 10008
+            },
+            "repeatMinutes": {
+              "componentId": 10008
+            },
+            "repeatSeconds": {
+              "componentId": 10008
+            },
+            "repeatAmount": {
+              "componentId": 10008
+            },
+            "emailConfiguration": {
+              "from": {
+                "componentId": 10008
+              },
+              "subject": {
+                "componentId": 10008
+              },
+              "body": {
+                "componentId": 10008
+              },
+              "exceptionSettings": {
+                "componentId": 50012
+              },
+              "componentId": 30006
+            }
+          },
+          "deadlineSmoAction": {
+            "smartObjectReference": {
+              "componentId": 10008
+            },
+            "smartObjectMethodReference": {
+              "componentId": 10008
+            },
+            "smartObjectIdentifierReference": {
+              "componentId": 10008
+            },
+            "filter": {
+              "componentId": 80016
+            },
+            "listOptions": {
+              "componentId": 50011
+            }
+          },
+          "specificDate": {
+            "componentId": 10008
+          },
+          "expressDays": {
+            "componentId": 10008
+          },
+          "expressHours": {
+            "componentId": 10008
+          },
+          "expressMinutes": {
+            "componentId": 10008
+          },
+          "expressSeconds": {
+            "componentId": 10008
+          },
+          "noDeadline": true,
+          "dynamicWorkingHours": {
+            "componentId": 10008
+          },
+          "repetition": {
+            "repeatDays": {
+              "componentId": 10008
+            },
+            "repeatHours": {
+              "componentId": 10008
+            },
+            "repeatMinutes": {
+              "componentId": 10008
+            },
+            "repeatSeconds": {
+              "componentId": 10008
+            },
+            "repeatCount": {
+              "componentId": 10008
+            }
+          },
+          "componentId": 30025
+        },
+        "expectedDuration": {
+          "componentId": 30026
+        },
+        "priority": 1,
+        "exceptionSettings": {
+          "logException": true,
+          "componentId": 50012
+        },
+        "componentId": 40001
+      },
+      "systemName": "EndStep 5",
+      "title": "End",
+      "internalId": 5,
+      "componentId": 40000,
+      "customTitle": true
+    }
+  ],
+  "links": [
+    {
+      "fromInternalId": 1,
+      "toInternalId": 2,
+      "ui": {
+        "fromPortId": "bottomPorts_1",
+        "toPortId": "topPorts_1",
+        "path": "0,84,0,104,0,140,0,140,0,176,0,196",
+        "showLabel": false,
+        "template": "DefaultLine"
+      },
+      "configuration": {
+        "componentId": 40013
+      },
+      "systemName": "DefaultLine",
+      "title": "",
+      "internalId": 1,
+      "componentId": 50002
+    },
+    {
+      "fromInternalId": 2,
+      "toInternalId": 3,
+      "ui": {
+        "fromPortId": "bottomPorts_1",
+        "toPortId": "topPorts_1",
+        "path": "0,252,0,272,0,308,0,308,0,344,0,364",
+        "showLabel": false,
+        "template": "DefaultLine"
+      },
+      "configuration": {
+        "componentId": 40013
+      },
+      "systemName": "DefaultLine 1",
+      "title": "",
+      "internalId": 2,
+      "componentId": 50002
+    },
+    {
+      "fromInternalId": 3,
+      "toInternalId": 4,
+      "ui": {
+        "fromPortId": "bottomPorts_1",
+        "toPortId": "topPorts_1",
+        "path": "0,420,0,440,0,476,0,476,0,512,0,532",
+        "showLabel": true,
+        "template": "DefaultLine"
+      },
+      "configuration": {
+        "componentId": 40013,
+        "associatedOutcomeReference": "root.nodes[{\"internalId\":3}].configuration.outcomes[{\"internalId\":1}]"
+      },
+      "systemName": "DefaultLine 2",
+      "title": "Complete",
+      "internalId": 3,
+      "componentId": 50002
+    },
+    {
+      "fromInternalId": 4,
+      "toInternalId": 5,
+      "ui": {
+        "fromPortId": "bottomPorts_1",
+        "toPortId": "topPorts_1",
+        "path": "0,588,0,608,0,644,0,644,0,680,0,700",
+        "showLabel": false,
+        "template": "DefaultLine"
+      },
+      "configuration": {
+        "componentId": 40013
+      },
+      "systemName": "DefaultLine 3",
+      "title": "",
+      "internalId": 4,
+      "componentId": 50002
+    }
+  ],
+  "configuration": {
+    "processDefinitions": [
+      {
+        "internalId": 1,
+        "componentId": 20000
+      }
+    ],
+    "dataFields": [
+      {
+        "type": 6,
+        "title": "RequestId",
+        "isEmptyValue": true,
+        "internalId": 1,
+        "componentId": 50000
+      },
+      {
+        "type": 6,
+        "title": "StageOutcome",
+        "isEmptyValue": true,
+        "internalId": 2,
+        "componentId": 50000
+      }
+    ],
+    "processPriority": 1,
+    "exceptionSettings": {
+      "logException": true,
+      "componentId": 50012
+    },
+    "startRule": {
+      "statements": [
+        {
+          "IfExpressions": [
+            {
+              "expressions": [
+                {
+                  "leftExpression": {
+                    "value": {
+                      "componentId": 10008
+                    },
+                    "directive": "k2-endpoint",
+                    "componentId": 80003
+                  },
+                  "logicalOperator": "equals",
+                  "rightExpression": {
+                    "value": {
+                      "componentId": 10008
+                    },
+                    "directive": "k2-endpoint",
+                    "componentId": 80003
+                  },
+                  "directive": "k2-simple-expression",
+                  "internalId": 1,
+                  "componentId": 80000
+                }
+              ],
+              "directive": "k2-group-expression",
+              "internalId": 1,
+              "componentId": 80004
+            }
+          ],
+          "thenStatements": [
+            {
+              "linkedOutcomeReferences": [
+                "root.configuration.outcomes[{\"internalId\":1}]"
+              ],
+              "directive": "k2-outcome-statement",
+              "internalId": 1,
+              "componentId": 80006
+            }
+          ],
+          "elseStatements": [
+            {
+              "linkedOutcomeReferences": [
+                "root.configuration.outcomes[{\"internalId\":2}]"
+              ],
+              "directive": "k2-outcome-statement",
+              "internalId": 1,
+              "componentId": 80006
+            }
+          ],
+          "internalId": 1,
+          "componentId": 80002
+        }
+      ],
+      "componentId": 80107
+    },
+    "outcomes": [
+      {
+        "startWorkflow": true,
+        "title": "Start",
+        "originalTitle": "Start",
+        "internalId": 1,
+        "componentId": 80021
+      },
+      {
+        "title": "Don't Start",
+        "originalTitle": "Don't Start",
+        "internalId": 2,
+        "componentId": 80021
+      }
+    ]
+  },
+  "trackedReferences": [],
+  "title": "APP.Example IPC Child",
+  "componentId": 50001,
+  "systemName": "APP.Example IPC Child"
+}

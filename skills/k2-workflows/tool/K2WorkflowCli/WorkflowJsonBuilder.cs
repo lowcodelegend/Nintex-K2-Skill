@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 
 namespace K2WorkflowCli
 {
-    internal static class WorkflowJsonBuilder
+    internal static partial class WorkflowJsonBuilder
     {
         public static string BuildStartEnd(string name)
         {
@@ -35,6 +35,12 @@ namespace K2WorkflowCli
                 "configuration", ProcessConfiguration(fields, Arr()), "ui", Component(50004),
                 "externalReferenceDefinitions", Arr(), "trackedReferences", Arr(),
                 "systemName", workflow.Name, "title", workflow.Name, "componentId", 50001);
+            foreach (var node in ((JArray)root["nodes"]).Children<JObject>())
+            {
+                node["ui"]["showLabel"] = true;
+                node["ui"]["labelX"] = -140;
+                node["ui"]["labelY"] = -42;
+            }
             return root.ToString(Formatting.None);
         }
 
@@ -147,28 +153,33 @@ namespace K2WorkflowCli
                 string.Equals(settings.WaitFor, "first", StringComparison.OrdinalIgnoreCase) ? 2 : 1;
             var fieldIds = parentFields.OfType<JObject>().ToDictionary(x => Convert.ToString(x["title"]), x => (int)x["internalId"], StringComparer.OrdinalIgnoreCase);
             var selectedWorkflow = !string.IsNullOrWhiteSpace(settings.WorkflowDataField) ? DataFieldExpression(fieldIds[settings.WorkflowDataField]) : LiteralExpression(settings.Workflow);
+            if (string.IsNullOrWhiteSpace(settings.WorkflowDataField)) selectedWorkflow["smartFields"][0]["title"] = settings.Workflow.Substring(settings.Workflow.LastIndexOf('\\') + 1);
             var send = new JObject();
+            const string folioKey = "09dfaa24-ac04-4827-8082-646bc8918f80";
+            var folio = string.IsNullOrWhiteSpace(settings.FolioDataField) ? LiteralExpression(settings.Folio ?? settings.Workflow.Substring(settings.Workflow.LastIndexOf('\\') + 1)) : DataFieldExpression(fieldIds[settings.FolioDataField]);
+            folio["isDynamic"] = true;
+            send[folioKey] = Mapping(folio, folioKey);
             foreach (var mapping in settings.Inputs ?? new System.Collections.Generic.Dictionary<string, string>())
                 send[mapping.Key] = Obj("value", CallInputDataFieldExpression(fieldIds[mapping.Value], mapping.Key), "tokenReference", mapping.Key, "title", mapping.Key, "componentId", 60043);
             var returned = new JObject();
             foreach (var mapping in settings.Outputs ?? new System.Collections.Generic.Dictionary<string, string>())
-                returned[mapping.Key] = Mapping(DataFieldExpression(fieldIds[mapping.Value]), mapping.Key);
+                returned[mapping.Key] = DataFieldOutputExpression(fieldIds[mapping.Value], mapping.Value);
             var configuration = Obj(
                 "selectedWorkflow", selectedWorkflow,
-                "selectedWorkflowId", settings.WorkflowId.HasValue ? new JValue(settings.WorkflowId.Value) : JValue.CreateNull(),
                 "selectedWorkflowFullName", string.IsNullOrWhiteSpace(settings.WorkflowDataField) ? settings.Workflow : null,
                 "synchronous", waitMode != 0,
-                "account", settings.Account,
-                "subWorkflowCallType", 1,
-                "slotInstanceData", Obj("smartFields", Arr(), "isDynamic", true, "componentId", 10008),
+                "account", settings.Account ?? "Originator",
+                "subWorkflowCallType", string.Equals(settings.CallType, "multiple", StringComparison.OrdinalIgnoreCase) ? 2 : 1,
+                "slotInstanceData", !string.IsNullOrWhiteSpace(settings.InstanceDataField) ? DataFieldExpression(fieldIds[settings.InstanceDataField]) : !string.IsNullOrWhiteSpace(settings.InstanceData) ? LiteralExpression(settings.InstanceData) : Obj("isDynamic", true, "componentId", 10008),
                 "waitMode", waitMode,
                 "processSendFields", send,
                 "processReturnFields", returned,
-                "componentId", 30022);
-            var ui = Obj("showInput", true, "showOutput", true, "showAccount", true,
-                "template", "SubWorkflowStep", "icon", "callSubWorkflowStep", "componentId", 30023);
-            return Obj("ui", ui, "configuration", configuration, "systemName", "Call Sub Workflow",
-                "title", "Call Sub Workflow", "internalId", 1, "componentId", 30021);
+                "exceptionSettings", Obj("logException", true, "componentId", 50012), "componentId", 30022);
+            if ((int)configuration["subWorkflowCallType"] == 1) configuration.Remove("waitMode");
+            else configuration["slotInstanceData"]["isDynamic"] = true;
+            var ui = Obj("template", "SubWorkflowStep", "icon", "callSubWorkflowStep");
+            return Obj("wizardId", 3004, "ui", ui, "configuration", configuration, "systemName", "Call Subworkflow",
+                "title", "Call Subworkflow", "internalId", 1, "componentId", 30021);
         }
 
         private static JObject LifecycleResolverEvent(CaseLifecycleSettings settings, SmartObjectMethodDescriptor resolver, string caseIdInput, int externalId, bool mapOutputs)
@@ -731,6 +742,11 @@ namespace K2WorkflowCli
         private static JObject Activity(string title, int id, int y, string template, string icon, bool start, bool end,
             string incomingReference, string outgoingReference, JObject child, JObject configuration)
         {
+            if (child != null && (int?)child["componentId"] == 30021)
+            {
+                template = "SubWorkflowStep";
+                configuration = SubWorkflowActivityConfiguration();
+            }
             var ui = Obj(
                 "y", y, "topPorts", Ports("topPorts", incomingReference, true),
                 "leftPorts", Ports("leftPorts", null, true), "bottomPorts", Ports("bottomPorts", outgoingReference, false),
@@ -742,6 +758,12 @@ namespace K2WorkflowCli
             if (start) node.AddFirst(new JProperty("isStartActivity", true));
             if (end) node["customTitle"] = true;
             return node;
+        }
+
+        private static JObject SubWorkflowActivityConfiguration()
+        {
+            var deadline = Obj("actionType", 3, "specificDate", Component(10008), "expressDays", Component(10008), "expressHours", Component(10008), "expressMinutes", Component(10008), "expressSeconds", Component(10008), "noDeadline", true, "withinWorkingHoursOnly", true, "dynamicWorkingHours", Component(10008), "componentId", 30025);
+            return Obj("deadline", deadline, "priority", 1, "decisionOptionType", 2, "exceptionSettings", Obj("logException", true, "componentId", 50012), "componentId", 40001);
         }
 
         private static JObject MultiStepActivity(string title, int id, int? x, int y, string incomingReference, string outgoingReference, JObject first, JObject second)
