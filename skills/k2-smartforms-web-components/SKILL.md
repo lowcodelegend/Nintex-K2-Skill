@@ -43,4 +43,4 @@ Require Nintex Automation K2 5.9 or later. Confirm the target server exposes Man
 - One control may declare at most one `listdata` property. `listItemsChangedCallback(itemsChangedEventArgs)` must consume `itemsChangedEventArgs.NewItems`; K2 does not pass the row array directly. Use one governed projection with a discriminator for composite dashboards.
 - Provide a useful design-time representation that never performs live SmartObject or external calls.
 - Runtime failures must render an accessible bounded error state and preserve a native recovery path.
-- Web Component packages are separate deployment dependencies. Do not assume ordinary K2 Package and Deployment owns their promotion.
+- Modern Web Component controls support K2 Package and Deployment on K2 5.9+. For application promotion, verify that P&D includes their definition and declared resources, then analyze target conflicts. A standalone ZIP is a backup or an independent control-install path, not a mandatory separate pre-install for every P&D release. See [deployment](references/deployment.md).

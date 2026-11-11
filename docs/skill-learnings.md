@@ -167,3 +167,34 @@ Copy this block for each learning and remove this comment wrapper.
 - Feedback history: 2026-10-29 — Logged as a focused follow-up, not silently included in global validation.
 
 - 2026-10-29 review — Recommended source actions: task-decision and central-NextStage generator port (K2L-0006/0007), horizontal semantic layout and return-corridor port (K2L-0005), and activity-title validation (K2L-0008). Acceptance requires saved/native/runtime/Designer parity and targeted positive/negative checks. Destination: focused source commits on spike/loan-stage-router after the user's explicit outcome acceptance. No commit/push or release upgrade yet.
+
+
+### K2L-0009 — Modern custom controls can travel through P&D
+
+- Status: implemented-locally
+- Priority: high
+- Affected skill owners: $k2-package-deployment, $k2-smartforms-web-components
+- Disposition: local-commit
+- Last reviewed: 2026-11-11
+- Observed behavior: Release planning incorrectly required the LoanPilot modern sidebar ZIP to be installed independently before Forms. Both skill entrypoints/references now distinguish modern K2 5.9+ P&D support from legacy DLL-control guidance and separately hosted assets. Standalone ZIP installation remains an independent/fallback path.
+- Evidence: Official Nintex Custom controls documentation, Considerations: https://help.nintex.com/en-US/nintexautomation/userguide/current/Content/Create/K2Designer/Controls/CustomControl/CustomControls.htm . Source checked 2026-11-11. LoanPilot v1 plan requires archive inspection of the actual control definition/resources rather than inferring inclusion from platform capability.
+- Acceptance criteria: State modern-control P&D support and target 5.9+ requirement; verify artifact/resources and target conflicts; distinguish P&D deployment access from Control Administrators management permission; preserve external asset obligations and package/deploy approval gates.
+- Feedback history: 2026-11-11 — User requested source-skill fixes plus commit/push of recent skill work. Updated entrypoints and linked deployment references; installed skills refreshed through the package installer after source validation. No K2 application/target deployment is authorized by this skill-maintenance task.
+
+### K2L-0010 — Package Data is a first-class demo-data delivery path
+
+- Status: implemented-locally
+- Priority: high
+- Affected skill owners: $k2-package-deployment
+- Disposition: local-commit
+- Last reviewed: 2026-11-11
+- Observed behavior: Planning selected a separate sample-data loader even though requested examples were native SmartBox datasets. The CLI already supports explicit include independently of data classification; the prose incorrectly restricted recommendations to reference datasets.
+- Implemented change: Document Package Data as the preferred path for explicitly selected eligible synthetic demo/sample datasets. Keep truthful transactional classification and action=include, while auto still excludes transactions. Describe whole-dataset export, separate target import decisions and absence of workflow-instance migration. Use a loader for actual subset/merge/remapping requirements, rather than requiring it for every demo.
+- Evidence: Existing k2package.ps1 Resolve-SmartObjectDataPlan eligibility logic; LoanPilot plan successfully selects six synthetic transactional datasets plus ten reference datasets. Official SmartObject Data option: https://help.nintex.com/en-US/K2cloud/userguide/current/Content/PackageAndDeploy/Create-a-Package.htm . Source checked 2026-11-11.
+- Acceptance criteria: Native provider/CRUD/key eligibility remains mandatory, explicit include preserves classification, whole-dataset semantics are disclosed and no implicit operational-history/configuration inclusion is introduced. Existing transactional auto-exclusion, SQL/external rejection and creation/deployment confirmation gates remain.
+- Feedback history: 2026-11-11 — User explicitly authorized this correction and commit/push. No CLI data-selection logic needed changing; fixed the decision guidance and added a manifest example. No application data or packages created by this repository maintenance.
+
+## Review history — 2026-11-11
+
+- Reviewed K2L-0003 through K2L-0010. User now authorizes committing/pushing the pending workflow spike, fixtures and layout tooling; prerelease labels and documented acceptance limitations remain. Workflow self-tests and three Python fixture suites pass. Package policy corrections follow verified primary documentation and the existing explicit-include capability.
+- Suggested follow-ups: K2L-0006/0007 generic task-decision/central-dispatch generator port after acceptance; K2L-0005 actual Designer readability validation; K2L-0009 modern-control archive inclusion and clean-target import evidence. These are not silently promoted or claimed complete by the documentation change.

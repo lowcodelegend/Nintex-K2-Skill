@@ -33,6 +33,10 @@ Before deployment, show all generated resolution actions and separately highligh
 
 K2 packages can contain SmartObject definitions, SmartForms Forms and Views, workflows, Style Profiles, categories, generated reports, roles, and supported controls. Exact inclusion still depends on package selection and dependency analysis.
 
+Modern K2 5.9+ Web Component controls can be packaged and deployed with the application. Inspect the generated archive to prove the control definition and declared JS/CSS/image resources are included, rather than assuming an external pre-install step is necessary or that a reference alone carries the files. Analyze existing-control conflicts on the target. Retain a standalone ZIP as a backup/manual alternative, not a mandatory second deployment. Control Administrators membership is required to manage the control afterward; P&D access can permit deploying a package containing it. Do not apply legacy DLL-control restrictions to modern controls. See [Nintex Custom controls — Considerations](https://help.nintex.com/en-US/nintexautomation/userguide/current/Content/Create/K2Designer/Controls/CustomControl/CustomControls.htm).
+
+For requested native SmartBox demo/sample data, prefer Package Data on the selected eligible datasets. Preserve transactional classification for synthetic business examples and explicitly disclose whole-dataset export. A separate sample loader is appropriate when the chosen data policy needs behavior such as selecting rows or merging. See [smartbox-data.md](smartbox-data.md).
+
 Treat the following as target prerequisites or separate deployment work:
 
 - SQL databases, schema, tables, procedures, views, constraints, and rows;
@@ -40,7 +44,7 @@ Treat the following as target prerequisites or separate deployment work:
 - workflow reporting history and workflow permissions;
 - role membership;
 - custom brokers, workflow wizards, user managers, and configuration files;
-- external web assets or independently registered components;
+- external web assets and components outside the supported P&D artifact/resource contract;
 - service instances, service types/brokers, environment fields, and themes that must already exist or be mapped.
 
 Roles package without members. Workflow deployment creates a new default version for new instances; running instances retain their original version. Forms and Views use the latest deployed definition.

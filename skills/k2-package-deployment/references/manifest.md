@@ -56,6 +56,7 @@ The manifest records intent; live K2 metadata remains authoritative.
 - `excludeTypes` accepts the same type values and excludes that entire artifact type.
 - `smartObjectData.classification` is `reference`, `transactional`, `environment`, or `unknown`.
 - `smartObjectData.action` is `auto`, `include`, or `exclude`. `auto` includes only a live packageable SmartBox reference dataset.
+- Use `action: "include"` for explicitly selected synthetic demo/sample datasets even when their classification is `transactional`; live native SmartBox eligibility is still required. For example: `{ "smartObject": "ABC_Request", "classification": "transactional", "action": "include", "reason": "User-selected synthetic demo examples; ALL current rows" }`. This does not enable row filtering or import workflow instances. Keep environment-specific configuration and operational history outside that selection unless separately reviewed.
 - `deployment.resolutions` entries require `name`, `namespace`, and one of `Default`, `Deploy`, `Exclude`, or `UseExisting`; optional `targetName` and `targetNamespace` map a reference.
 
 The wrapper refuses an `include` data action when live inspection does not prove native SmartBox eligibility.

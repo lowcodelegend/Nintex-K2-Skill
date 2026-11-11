@@ -8,7 +8,9 @@ The supported artifact is a ZIP containing JavaScript, CSS, icons/resources, and
 
 ## Deployment paths
 
-Preferred automation uses the system SmartObject `com_K2_System_CustomControls_SmartObject_CustomControlManagement`:
+For application promotion, modern controls support **K2 Package and Deployment** to K2 5.9 or later. Include the control with the consuming Forms/Views, inspect the generated archive for its definition and declared JavaScript/CSS/image resources, and analyze target-control conflicts. Do not assume a dependency reference alone contains those resources, or require a separate ZIP registration by default. P&D access can permit deploying the control; Control Administrators membership is needed to manage/edit/delete it afterward. [Nintex Custom controls — Considerations](https://help.nintex.com/en-US/nintexautomation/userguide/current/Content/Create/K2Designer/Controls/CustomControl/CustomControls.htm).
+
+For standalone control installation or a deliberate manual fallback, automation uses the system SmartObject `com_K2_System_CustomControls_SmartObject_CustomControlManagement`:
 
 1. Execute `UploadDraft` with the ZIP as `ZipFile` to validate/decompress it and obtain the manifest display name, description, and icon.
 2. Execute `RegisterControl` with the ZIP, extracted icon, display name, description, and existing ID when updating.
@@ -40,4 +42,4 @@ Treat the control as a shared platform dependency:
 
 List dependencies first. Remove every instance from Views/Forms through supported Designer or `$k2-smartforms` changes. Then delete the control in Management or through the system SmartObject. K2 rejects deletion while dependencies remain. Record that deletion removes the control for all users.
 
-Ordinary K2 Package and Deployment promotion must not be assumed to carry modern Web Component packages. Deploy and verify the control dependency before Forms/Views that reference it in every environment.
+When the release uses P&D, verify the packaged control and its consuming Forms/Views together on the target. Retain the exact ZIP as a backup; use the standalone installation path only when selected or when package inspection shows the control was omitted. Separately hosted assets outside the control ZIP still need their own deployment.

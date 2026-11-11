@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "suiteName": "k2-skills",
-  "suiteVersion": "0.87.2-spike.2",
+  "suiteVersion": "0.87.2-spike.3",
   "skills": [
     {
       "name": "k2-sql-smartobjects",
