@@ -278,6 +278,22 @@ try {
 
         $stagedSkill = Join-Path $stageRoot $skill.name
         Copy-SkillSource $skillDirectory $stagedSkill
+        Copy-Item -LiteralPath (Join-Path $repositoryRoot 'LICENSE') -Destination (Join-Path $stagedSkill 'LICENSE') -Force
+        $licenseNotice = @(
+            'Nintex K2 Skills'
+            'SPDX-License-Identifier: GPL-3.0-only'
+            ''
+            'This project is licensed under the GNU General Public License, version 3 only.'
+            'You may redistribute and/or modify it under those terms. See LICENSE.'
+            'It is provided WITHOUT ANY WARRANTY, including MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.'
+            'Third-party materials retain their respective licences.'
+            ''
+            "Source revision: $gitCommit"
+            "Corresponding source: https://github.com/lowcodelegend/Nintex-K2-Skill/archive/$gitCommit.zip"
+            'Build instructions: see README.md and docs/RELEASING.md in the source archive.'
+            'Development packages built with -AllowDirty may contain changes absent from this revision; distributors must provide their actual corresponding source.'
+        ) -join [Environment]::NewLine
+        Write-Utf8NoBom (Join-Path $stagedSkill 'LICENSING.txt') ($licenseNotice + [Environment]::NewLine)
         foreach ($builtFile in @($skill.builtFiles)) {
             Copy-DeclaredBuildFile $repositoryRoot $skillDirectory $stagedSkill ([string]$builtFile)
         }

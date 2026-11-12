@@ -13,6 +13,8 @@ Maintain suite and skill versions in `release/skills.json`. Each skill entry dec
 
 Release archives are operational packages, not development checkouts. They include the declared compiled executables/configuration, runtime wrappers, capability references, and examples. They exclude .NET source, project/solution/resource files, and `scripts/build.ps1`. Source and build support remain in the Git repository for explicit tool development.
 
+Each packaged skill includes `LICENSE` and `LICENSING.txt`, which identifies GPL-3.0-only and links to the corresponding source archive at the build's exact Git commit. Preserve these files when redistributing packages and provide the actual corresponding source for any modifications you distribute.
+
 Shipped PowerShell is limited to runtime entry points: specialist/`k2env` wrappers provide stable invocation and exit-code propagation, `k2build.ps1` is the solution orchestrator, and `copy-example.ps1` validates bundled references while copying fixtures. Runtime wrappers must fail with a reinstall message when their executable is missing; do not ship rebuild switches or source-checkout fallback logic.
 
 Do not declare or package K2's `SourceCode.*.dll` assemblies. The CLIs resolve those proprietary assemblies from the target K2 installation.
