@@ -6,11 +6,11 @@ Windows x64 only. It does not target Nintex Automation Cloud or legacy K2 Studio
 
 ## Licence
 
-Nintex K2 Skills is licensed under the [GNU General Public License, version 3 only](LICENSE) (`GPL-3.0-only`). This applies to the original skill instructions, tools, documentation, and examples in this repository unless a file states otherwise. Third-party materials retain their respective licences.
+Nintex K2 Skills is licensed under the [GNU General Public License, version 3 only](LICENSE). This applies to the original skill instructions, tools, documentation, and examples in this repository unless a file states otherwise. Third-party materials retain their respective licences.
 
 You may use, modify, and redistribute this project, including commercially, under GPLv3. When distributing covered modified versions or binaries, follow GPLv3's requirements for licensing and making the corresponding source available to recipients. The project is provided without warranty; see [LICENSE](LICENSE) for the full terms.
 
-Contributions are welcome: please share reusable fixes, improvements, and skill learnings through issues or pull requests. Contributing upstream is encouraged, but is not a licence requirement.
+Contributions are welcome: please share reusable fixes, improvements, and skill learnings through issues or pull requests. Contributing upstream is encouraged.
 
 > [!WARNING]
 > Use this toolkit only in a K2 development environment, preferably a dedicated single-user VM. Generation, replacement, workflow publication, and cleanup can make broad changes to K2 and application databases; it is not intended to run directly against shared test, staging, or production environments. Install and run Codex or Claude Code on the K2 VM itself so the agent can use the locally installed K2 assemblies, Windows identity, registry configuration, IIS metadata, and management endpoints.
