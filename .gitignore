@@ -11,6 +11,7 @@
 .research/
 .tmp/
 .tools/
+/spikes/
 .test-install*/
 dist/
 **/node_modules/

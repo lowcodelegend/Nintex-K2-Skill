@@ -3,8 +3,8 @@
 This project-local log captures reusable evidence for improving the K2 skills that created or maintained this solution. It is a handoff queue, not authorization to edit installed skills.
 
 - Initialized: 2026-10-28
-- Last reviewed: 2026-10-29
-- Next learning ID: `K2L-0009`
+- Last reviewed: 2026-11-12
+- Next learning ID: `K2L-0012`
 - Active skill owners: $k2-builder, $k2-smartbox-smartobjects, $k2-smartforms, $k2-workflows
 
 ## Status and disposition
@@ -26,6 +26,7 @@ IDs are immutable and never reused. Before adding a learning, search for equival
 
 | K2L-0004 | implemented-locally | high | $k2-workflows | local-commit | Native IPC Designer metadata and coupled wait flags |
 | K2L-0005 | ready | high | $k2-workflows | local-commit | Semantic workflow placement, native ports and independent layout acceptance |
+| K2L-0011 | proposed | high | $k2-builder, $k2-style-profiles, $k2-sql-smartobjects | undecided | Remove demo-environment bindings from reusable examples |
 
 ## Learning entries
 
@@ -198,3 +199,22 @@ Copy this block for each learning and remove this comment wrapper.
 
 - Reviewed K2L-0003 through K2L-0010. User now authorizes committing/pushing the pending workflow spike, fixtures and layout tooling; prerelease labels and documented acceptance limitations remain. Workflow self-tests and three Python fixture suites pass. Package policy corrections follow verified primary documentation and the existing explicit-include capability.
 - Suggested follow-ups: K2L-0006/0007 generic task-decision/central-dispatch generator port after acceptance; K2L-0005 actual Designer readability validation; K2L-0009 modern-control archive inclusion and clean-target import evidence. These are not silently promoted or claimed complete by the documentation change.
+
+### K2L-0011 — Reusable examples retain demo-environment bindings
+
+- Status: proposed
+- Priority: high
+- Affected skill owners: $k2-builder, $k2-style-profiles, $k2-sql-smartobjects
+- Disposition: undecided
+- Observed behavior: A tracked-text audit excluding the repository's spikes directory found demome endpoints in 30 files, including six files under packaged skills. Bundled corporate-workflow and expense-claim examples retain demo Runtime URLs and require a Style Profile named PSF UX v1; three bundled SQL manifests name the demo service account; request-management seeds a fixed demo administrator. The Northstar style example also retains demo asset URLs and a trusted authentication host. copy-example.ps1 copies these values without environment substitution.
+- Evidence: skills/k2-builder/assets/examples/{corporate-workflow,expense-claim}/{smartforms-manifest.json,solution-manifest.json}; skills/k2-builder/assets/examples/{corporate-workflow,expense-claim,request-management}/manifest.json; skills/k2-builder/assets/examples/request-management/sql/001_request_model.sql; skills/k2-style-profiles/assets/examples/northstar-native-homepage/{style-profile-manifest.json,runtime-validation.json}. Repository-only examples additionally contain a fixed workflow assignee, IIS paths, deployment identifiers, and local browser evidence paths.
+- Recommended skill change: Resolve deployment-specific URLs, SQL service principals, and workflow destinations from the validated environment or explicitly selected inputs; use reserved example hosts in portable templates. Keep recorded deployment evidence distinguishable from reusable inputs. Review fixed IIS/Edge paths separately from intentional localhost and platform defaults.
+- Acceptance criteria:
+  - Reusable packaged examples contain no demo-environment domain or demo Windows identities.
+  - Copying and configuring an example against a different validated environment produces that environment's endpoints and principals without manual searches.
+  - Preserve XML namespaces, documentation links, public mock-API examples, and intentional local debugging endpoints.
+- Feedback history: 2026-11-12 — User requested an environment-specific-value audit, identified demome as a search keyword, excluded spikes from the audit, and authorized removing the repository spikes directory. Removed that directory and ignored future local spikes. Example remediation remains a proposed follow-up.
+
+## Review history — 2026-11-12
+
+- Reviewed environment portability outside spikes. Recommended next actions: resolve copied builder example endpoints/principals; generalize Northstar asset/authentication settings; separate historical deployment evidence from reusable configuration. Destinations: focused builder/style-profile changes after authorization. Existing workflow acceptance follow-ups remain outstanding.
