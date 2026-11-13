@@ -9,7 +9,13 @@ namespace K2WorkflowCli
             RuntimeAssemblyResolver.Install();
             try { return Cli.Run(args); }
             catch (CliException ex) { Console.Error.WriteLine("ERROR: " + ex.Message); return 2; }
-            catch (Exception ex) { Console.Error.WriteLine("ERROR: " + ex.GetBaseException().Message); return 1; }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("ERROR: " + ex.GetBaseException().Message);
+                if (string.Equals(Environment.GetEnvironmentVariable("K2WF_DEBUG"), "1", StringComparison.Ordinal))
+                    Console.Error.WriteLine(ex.GetBaseException().StackTrace);
+                return 1;
+            }
         }
     }
 

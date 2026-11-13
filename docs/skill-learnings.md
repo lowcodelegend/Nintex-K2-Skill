@@ -3,8 +3,8 @@
 This project-local log captures reusable evidence for improving the K2 skills that created or maintained this solution. It is a handoff queue, not authorization to edit installed skills.
 
 - Initialized: 2026-10-28
-- Last reviewed: 2026-11-12
-- Next learning ID: `K2L-0012`
+- Last reviewed: 2026-11-13
+- Next learning ID: `K2L-0013`
 - Active skill owners: $k2-builder, $k2-smartbox-smartobjects, $k2-smartforms, $k2-workflows
 
 ## Status and disposition
@@ -21,6 +21,7 @@ IDs are immutable and never reused. Before adding a learning, search for equival
 |---|---|---|---|---|---|
 | K2L-0001 | implemented-locally | high | $k2-smartbox-smartobjects, $k2-smartforms | local-commit | Native SmartBox financial and Form generation coverage |
 | K2L-0002 | implemented-locally | medium | $k2-smartforms | local-commit | Use native text wrapping by default on generated labels |
+| K2L-0012 | implemented-locally | high | $k2-workflows, $k2-smartforms, $k2-builder | local-commit | Explicit console authoring context, category identity and truthful submission checks |
 
 | K2L-0003 | implemented-locally | high | $k2-workflows | local-commit | Explicit stage-router and arbitrary task outcomes with native IPC returns |
 
@@ -29,6 +30,19 @@ IDs are immutable and never reused. Before adding a learning, search for equival
 | K2L-0011 | proposed | high | $k2-builder, $k2-style-profiles, $k2-sql-smartobjects | undecided | Remove demo-environment bindings from reusable examples |
 
 ## Learning entries
+
+### K2L-0012 — Separate OS elevation, console authoring and workflow data contracts
+
+- Status: implemented-locally
+- Priority: high
+- Affected skill owners: $k2-workflows, $k2-smartforms, $k2-builder
+- Disposition: local-commit
+- Observed behavior: A limited administrator token hid Designer dependencies. After elevation, Integrated console authoring still failed because it used web-context helpers. Category JSON/id assumptions caused a separate null-value error; optional SmartBox date mappings caused a real runtime error.
+- Evidence: [Repair report](workflow-console-repair.md), offline regression tests, live Integrated doctor, disposable workflow publication/cleanup, published expense approval and recovered single test instance. The browser-created header lacked child rows and is not recorded as a complete UI pass.
+- Implemented change: Explicit authenticated public client in both modes; readable-path preflight; typed category display-path handling; exact request-reference checks; required-only status writes; in-place Submit presentation; invalid-child validation; multi-state/next-day Pre-fill verification; improved skill guidance.
+- Acceptance criteria: Authentication guard negatives continue to fail; publication and native integration succeed without changing credentials or deleting the Form; optional values survive status writes; browser and API persistence evidence remain distinct.
+- Feedback history:
+  - 2026-11-13 — User explicitly requested repair, root-cause/skill-report improvements, commit and push. Implemented and validated in the development repository; installed skills will be refreshed through packaging.
 
 ### K2L-0002 - Native label wrapping should default to true
 
@@ -82,6 +96,8 @@ Copy this block for each learning and remove this comment wrapper.
 -->
 
 ## Review history
+
+- 2026-11-13 — Reviewed the workflow-repair milestone. The authorized source commit contains the implementation, tests and guidance; attended two-line Submit verification remains explicitly tracked in the demo project. No unrelated working changes are included.
 
 - 2026-10-28 — Feedback loop initialized for $k2-builder, $k2-smartbox-smartobjects, $k2-smartforms; no learnings recorded yet.
 

@@ -346,16 +346,16 @@ namespace K2WorkflowCli
             var nodes = Arr(
                 Activity("Start", 1, 56, "StartStep", null, true, false, null, LinkReference(1), null, null),
                 MultiStepActivity("Status Update - Pending", 2, null, 168, LinkReference(1), LinkReference(2),
-                    SmartObjectEvent(Default(update.Name, "Status Update - Pending"), update, smartObject, 1, false, 2, 2),
+                    SmartObjectEvent(Default(update.Name, "Status Update - Pending"), update, smartObject, 1, true, 2, 2, true),
                     EmailEvent(workflow.Email, 3)),
                 Activity(workflow.UserTask.Name, 3, 336, "DefaultStep", "userTaskStep", false, false,
                     LinkReference(2), LinkReference(3), UserTaskEvent(workflow.UserTask, update.IdentifierDataField, 3, smartObject, smartForm, 4, workflow.SmartForms.TaskState, 3), UserTaskActivityConfiguration(workflow.UserTask, 3, true)),
                 DecisionActivity(4, 504),
                 BranchActivity("Status Update - Rejected", 5, 252, 504, "leftPorts", LinkReference(5),
-                    SmartObjectEvent(rejected.Name, rejected, smartObject, 1, false, 2, 2),
+                    SmartObjectEvent(rejected.Name, rejected, smartObject, 1, true, 2, 2, true),
                     EmailEvent(OutcomeEmail(workflow.Email, "Rejected"), 3)),
                 BranchActivity("Status Update - Approved", 6, -196, 504, "rightPorts", LinkReference(4),
-                    SmartObjectEvent(approved.Name, approved, smartObject, 1, false, 2, 2),
+                    SmartObjectEvent(approved.Name, approved, smartObject, 1, true, 2, 2, true),
                     EmailEvent(OutcomeEmail(workflow.Email, "Approved"), 3)));
             var root = Obj(
                 "nodes", nodes,
@@ -380,12 +380,20 @@ namespace K2WorkflowCli
                 throw new CliException("Definition must contain nodes, links, and configuration.");
             if (!((JArray)root["nodes"]).OfType<JObject>().Any(x => (bool?)x["isStartActivity"] == true))
                 throw new CliException("Definition must contain an HTML5 designer start activity.");
+            foreach (var node in (JArray)root["nodes"])
+            {
+                if (!(node is JObject) || (int?)node["componentId"] == null)
+                    throw new CliException("Every workflow activity must be a component object.");
+                var children = node["children"] as JArray;
+                if (children != null && children.Any(x => !(x is JObject) || (int?)x["componentId"] == null))
+                    throw new CliException("Activity '" + Convert.ToString(node["title"]) + "' contains a null or invalid child component.");
+            }
             root["systemName"] = expectedName;
             root["title"] = expectedName;
             return root;
         }
 
-        private static JObject SmartObjectEvent(string title, RequestStatusUpdateSettings settings, SmartObjectDescriptor smartObject, int externalId, bool itemReference, int? serviceFunctionsExternalId = null, int? methodInternalId = null)
+        private static JObject SmartObjectEvent(string title, RequestStatusUpdateSettings settings, SmartObjectDescriptor smartObject, int externalId, bool itemReference, int? serviceFunctionsExternalId = null, int? methodInternalId = null, bool preserveRequestInputs = false)
         {
             var objectReference = "root.externalReferenceDefinitions[{\"internalId\":" + externalId + "}]";
             var methodReference = objectReference + ".methods[{\"internalId\":" + (methodInternalId ?? (itemReference ? 2 : 1)) + "}]";
@@ -395,6 +403,15 @@ namespace K2WorkflowCli
                     : DataFieldExpression(1),
                 methodReference + ".inputs[{\"internalId\":" + smartObject.Identifier.InternalId + "}]");
             values[smartObject.Status.SystemName] = Mapping(LiteralExpression(settings.StatusValue), methodReference + ".inputs[{\"internalId\":" + smartObject.Status.InternalId + "}]");
+            foreach (var input in smartObject.Inputs.Where(x => x.IsRequired && x.SystemName != smartObject.Identifier.SystemName && x.SystemName != smartObject.Status.SystemName))
+            {
+                var persisted = smartObject.ReadReturns.FirstOrDefault(x => string.Equals(x.SystemName, input.SystemName, StringComparison.OrdinalIgnoreCase));
+                if ((itemReference || preserveRequestInputs) && persisted != null)
+                    values[input.SystemName] = Mapping(ItemReferencePropertyExpression(1, smartObject.DisplayName, persisted.DisplayName, persisted.InternalId),
+                        methodReference + ".inputs[{\"internalId\":" + input.InternalId + "}]");
+                else if (input.IsRequired)
+                    throw new CliException("Required status method input cannot be supplied from the persisted request: " + input.SystemName);
+            }
             var controls = new JObject();
             AddControl(controls, "spSmartObject", ExternalExpression(objectReference, smartObject.DisplayName));
             AddControl(controls, "cbbMethods", ExternalExpression(methodReference, smartObject.MethodDisplayName));

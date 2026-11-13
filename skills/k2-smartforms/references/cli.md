@@ -25,6 +25,8 @@
 
 Exit `0` means success, `2` means manifest/usage/safety validation failed, and `1` means an unexpected K2, network, or runtime error occurred. Set `K2FORMS_DEBUG=1` for full exception details.
 
+Pre-fill verification uses the authoritative base-state rule even when workflow integration adds Start/Task states. Stored generated dates and GUIDs are validated by format, not by comparing them with a freshly generated value; a Form does not drift merely because UTC midnight passed. Other literals remain exact checks. Never remove workflow states or regenerate a valid Form to work around these verifier assumptions.
+
 For interactive OIDC/forms-login Runtime checks, use `scripts/k2forms-runtime-browser.ps1 Start|Status|Wait|Capture|Stop`. This attended helper is separate from the management CLI: it launches visible Edge in the current user's desktop session, attaches only after authentication returns to the recorded Runtime origin, and writes redacted JSON plus screenshot evidence. Read [browser-verification.md](browser-verification.md) before use.
 
 The CLI resolves K2 from `K2_INSTALL_DIR`, the SourceCode registry key, or `C:\Program Files\K2`. It is a 64-bit .NET Framework executable and loads the installed K2 client assemblies at runtime. Packages must not redistribute proprietary `SourceCode.*.dll` files.

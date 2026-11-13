@@ -28,6 +28,22 @@ namespace K2WorkflowCli
             _installed = true;
         }
 
+        internal static void AssertAssemblyReadable(string path)
+        {
+            try { using (File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete)) { } }
+            catch (UnauthorizedAccessException)
+            {
+                throw new CliException("K2 assembly access denied: " + path
+                    + ". Check the Windows process elevation and file permissions before changing K2 credentials or copying assemblies.");
+            }
+            catch (System.Security.SecurityException)
+            {
+                throw new CliException("K2 assembly access denied: " + path + ". Check Windows process elevation and file permissions.");
+            }
+            catch (FileNotFoundException) { throw new CliException("Required K2 assembly was not found: " + path); }
+            catch (DirectoryNotFoundException) { throw new CliException("Required K2 assembly directory was not found: " + path); }
+        }
+
         private static Assembly ResolveAssembly(object sender, ResolveEventArgs args)
         {
             var file = new AssemblyName(args.Name).Name + ".dll";

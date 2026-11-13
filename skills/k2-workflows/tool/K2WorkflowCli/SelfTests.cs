@@ -131,7 +131,55 @@ namespace K2WorkflowCli
             Assert(
                 K2Connection.DescribeIdentity(k2sql) == "K2SQL:K2Admin",
                 "non-integrated author identity");
-            Console.WriteLine("SELFTEST SUCCEEDED: destinations, matrix routing, synchronous Call Sub Workflow generation/data mapping, ordered manifest-driven case lifecycle routing, bounded category cleanup paths, and K2SQL author identity");
+            K2Connection.AssertAuthenticationContract(true, true, true, "K2", defaults, "test");
+            Assert(WorkflowManager.CategoryDisplayPath(@"K2 Skills\APP.Application", "APP.Application_WFs", "APP.Application WFs")
+                == @"K2 Skills\APP.Application\APP.Application WFs", "sanitized category keeps its display path");
+            Assert(WorkflowManager.CategoryDisplayPath("Root/", "Native", null) == @"Root\Native", "category native-name fallback");
+            K2Connection.AssertAuthenticationContract(true, true, false, "K2SQL", k2sql, "test");
+            AssertRejected(delegate { K2Connection.AssertAuthenticationContract(false, false, true, "K2", defaults, "test"); }, "unauthenticated connection");
+            AssertRejected(delegate { K2Connection.AssertAuthenticationContract(true, true, false, "K2", defaults, "test"); }, "wrong authentication mode");
+            AssertRejected(delegate { K2Connection.AssertAuthenticationContract(true, true, true, null, defaults, "test"); }, "empty security label");
+            AssertRejected(delegate { K2Connection.AssertAuthenticationContract(true, true, true, "K2SQL", defaults, "test"); }, "wrong security label");
+            var invalidChildren = JObject.Parse(WorkflowJsonBuilder.BuildStartEnd("Test"));
+            invalidChildren["nodes"][0]["children"] = new JArray(JValue.CreateNull());
+            AssertRejected(delegate { WorkflowJsonBuilder.ParseAndValidate(invalidChildren.ToString(), "Test"); }, "null workflow child");
+            var formXml = "<Forms xmlns='urn:test'><Form ID='keep'><Controls><Control ID='button' Type='Button'><Properties><Property><Name>Text</Name><Value>Save Draft</Value></Property></Properties></Control></Controls><Events><Event ID='event' DefinitionID='rule' SourceType='Control' SourceID='button'><Handlers><Handler><Actions><Action ID='save' Type='Execute'/><Action ID='message' Type='ShowMessage'><Parameters><Parameter TargetType='MessageProperty' TargetID='Body'><SourceValue><Source SourceType='Value'>Draft only</Source></SourceValue></Parameter></Parameters></Action><Action ID='start' Type='StartProcess'/></Actions></Handler></Handlers></Event></Events></Form></Forms>";
+            bool captionChanged;
+            var presentation = new SmartFormsSettings { StartButtonText = "Submit", StartSuccessMessageBody = "Saved; submission follows." };
+            var captionXml = SmartFormsIntegrationManager.UpdateStartPresentationDefinition(formXml, "rule", presentation, out captionChanged);
+            Assert(captionChanged && captionXml.Contains("Submit") && captionXml.Contains("Saved; submission follows."), "submission presentation update");
+            var captionDocument = System.Xml.Linq.XDocument.Parse(captionXml);
+            Assert(captionDocument.Descendants().Where(x => x.Name.LocalName == "Action").Select(x => (string)x.Attribute("ID")).SequenceEqual(new[] { "save", "message", "start" }), "submission action identities and ordering preserved");
+            Assert(SmartFormsIntegrationManager.UpdateStartPresentationDefinition(captionXml, "rule", presentation, out captionChanged) == captionXml && !captionChanged, "submission presentation idempotence");
+            AssertRejected(delegate { bool changed; SmartFormsIntegrationManager.UpdateStartPresentationDefinition(formXml, "missing", presentation, out changed); }, "missing submission rule");
+            var referenceCandidates = new JArray(
+                new JObject(new JProperty("smartObjectName", "Navigation"), new JProperty("primary", true), new JProperty("smartObjectMethodName", "Load")),
+                new JObject(new JProperty("smartObjectName", "Request"), new JProperty("smartObjectMethodName", "Load"), new JProperty("primaryReference", "Navigation")));
+            var selectedReference = SmartFormsIntegrationManager.SelectPrimaryReference(referenceCandidates, "Request");
+            Assert((bool)selectedReference["primary"] && selectedReference["primaryReference"] == null
+                && referenceCandidates[1]["primaryReference"] != null, "request reference selected independently of navigation without mutating inputs");
+            referenceCandidates.Add(referenceCandidates[1].DeepClone());
+            AssertRejected(delegate { SmartFormsIntegrationManager.SelectPrimaryReference(referenceCandidates, "Request"); }, "ambiguous request reference");
+            var referenceWorkflow = new WorkflowSettings { Name = "Approval", ProcessFolderName = "APP WFs", RequestStatusUpdate = new RequestStatusUpdateSettings { SmartObject = "Request" }, SmartForms = new SmartFormsSettings { StartOnly = true } };
+            var referenceXml = "<Form><Action><Properties><Property><Name>Method</Name><Value>StartProcess</Value></Property><Property><Name>ProcessName</Name><Value>APP WFs\\Approval</Value></Property></Properties><Parameters><Parameter TargetType='ProcessItemReference' TargetID='Request'/></Parameters></Action></Form>";
+            SmartFormsIntegrationManager.VerifyWorkflowReferenceBindings(referenceXml, referenceWorkflow);
+            AssertRejected(delegate { SmartFormsIntegrationManager.VerifyWorkflowReferenceBindings(referenceXml.Replace("TargetID='Request'", "TargetID='Navigation'"), referenceWorkflow); }, "navigation bound as the workflow request");
+            var requestFields = new List<SmartObjectInputDescriptor> {
+                new SmartObjectInputDescriptor { InternalId = 1, SystemName = "Id", DisplayName = "Id", Type = "number", IsRequired = true },
+                new SmartObjectInputDescriptor { InternalId = 2, SystemName = "Status", DisplayName = "Status", Type = "text" },
+                new SmartObjectInputDescriptor { InternalId = 3, SystemName = "Title", DisplayName = "Title", Type = "text", IsRequired = true },
+                new SmartObjectInputDescriptor { InternalId = 4, SystemName = "CreatedOn", DisplayName = "Created On", Type = "dateTime" }
+            };
+            var requestObject = new SmartObjectDescriptor { SystemName = "Request", DisplayName = "Request", MethodSystemName = "Save", MethodDisplayName = "Save", MethodType = "update", DefaultLoadMethod = "Load", ReadMethodSystemName = "Load", ReadMethodDisplayName = "Load", Inputs = requestFields, ReadReturns = requestFields, Identifier = requestFields[0], Status = requestFields[1] };
+            var approval = new WorkflowSettings { Name = "Approval", RequestStatusUpdate = new RequestStatusUpdateSettings { IdentifierProperty = "Id", IdentifierDataField = "Id", StatusProperty = "Status", StatusValue = "Pending", ApprovedStatusValue = "Approved", RejectedStatusValue = "Rejected" }, Email = new EmailSettings { Name = "Update", From = "$environment:From Address", To = new List<string> { "$originator" }, Subject = "Update", Body = "Update" }, UserTask = new UserTaskSettings { Name = "Review", Instructions = "Review", Assignees = new List<string> { "$originator" }, Actions = new List<string> { "Approve", "Reject" } }, SmartForms = new SmartFormsSettings { TaskState = "Task" } };
+            var approvalForm = new SmartFormsIntegrationDescriptor { FormId = Guid.NewGuid().ToString(), SystemName = "Form", DisplayName = "Form", PrimaryItemReference = new JObject() };
+            var approvalJson = JObject.Parse(WorkflowJsonBuilder.BuildRequestApproval(approval, requestObject, approvalForm, null));
+            var statusMappings = approvalJson["nodes"].Children<JObject>()
+                .SelectMany(x => x["children"] is JArray ? x["children"].Children<JObject>() : Enumerable.Empty<JObject>())
+                .Where(x => (int?)x["componentId"] == 30011).Select(x => x["configuration"]["controlValues"]["pmInputs"]["values"]).ToArray();
+            Assert(statusMappings.Length == 3 && statusMappings.All(x => x["Title"] != null && x["CreatedOn"] == null), "all outcome status events supply required fields without writing optional empty dates");
+            Assert(statusMappings.All(x => (int?)x["Id"]["value"]["smartFields"][0]["componentId"] == 10011), "SmartForms status identifiers come from the primary request reference");
+            Console.WriteLine("SELFTEST SUCCEEDED: task routing, lifecycle generation, authentication guards, category display paths, submission presentation preservation, request-reference binding, child-component validation, and required status inputs without optional dates");
         }
 
         private static void Assert(bool condition, string name)
@@ -223,6 +271,13 @@ namespace K2WorkflowCli
         {
             try { action(); } catch (CliException) { return; }
             throw new CliException("Self-test failed: " + name + " did not reject the invalid contract.");
+        }
+
+        private static void AssertRejected(Action operation, string name)
+        {
+            try { operation(); }
+            catch (CliException) { return; }
+            throw new CliException("Self-test accepted " + name + ".");
         }
     }
 }

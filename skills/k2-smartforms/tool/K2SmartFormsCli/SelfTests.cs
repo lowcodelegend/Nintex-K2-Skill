@@ -1950,6 +1950,10 @@ namespace K2SmartFormsCli
 
         private static void TestFormPreFillRules()
         {
+            var datedTarget = new ResolvedPreFillTarget { ValueKind = "date", Value = "2026-11-13" };
+            Assert(datedTarget.MatchesValue("2026-11-12") && !datedTarget.MatchesValue("invalid"), "deployed Pre-fill dates remain valid after UTC midnight");
+            var guidTarget = new ResolvedPreFillTarget { ValueKind = "guid", Value = Guid.NewGuid().ToString() };
+            Assert(guidTarget.MatchesValue(Guid.NewGuid().ToString()) && !guidTarget.MatchesValue("invalid"), "deployed generated GUIDs are validated without regenerating their identity");
             var viewGuid = Guid.Parse("61000000-0000-0000-0000-000000000001");
             var form = new FormDefinition { Name = "Pre-fill Probe" };
             Assert(form.PreFill.EffectiveEnabled, "Pre-fill defaults to enabled");
@@ -1978,6 +1982,15 @@ namespace K2SmartFormsCli
                 "</Panels><States><State><Events/></State></States></Form></Forms>";
             var transformed = FormPreFillRules.Apply(xml, form, resolved);
             FormPreFillRules.Verify(transformed, form, resolved);
+            var integratedPreFill = XDocument.Parse(transformed);
+            var integratedStates = integratedPreFill.Descendants().Single(x => x.Name.LocalName == "States");
+            var workflowStartState = new XElement(integratedStates.Elements().First());
+            workflowStartState.SetAttributeValue("ID", "workflow-start");
+            workflowStartState.SetAttributeValue("IsDefault", "True");
+            workflowStartState.AddFirst(new XElement(workflowStartState.Name.Namespace + "Name", "Workflow Start"));
+            integratedStates.Add(workflowStartState);
+            integratedStates.Add(new XElement(integratedStates.Name.Namespace + "State", new XAttribute("ID", "workflow-task")));
+            FormPreFillRules.Verify(integratedPreFill.ToString(SaveOptions.DisableFormatting), form, resolved);
             var document = XDocument.Parse(transformed);
             var button = document.Descendants("Control").Single(x =>
                 (string)x.Element("Name") == FormPreFillRules.ButtonName &&

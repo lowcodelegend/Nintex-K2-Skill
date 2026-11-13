@@ -84,6 +84,9 @@ namespace K2SmartFormsCli
                         Property = property,
                         ControlId = (string)control.Attribute("ID"),
                         ControlName = ChildValue(control, "Name") ?? property,
+                        ValueKind = binding == null && (string.Equals((string)control.Attribute("Type"), "Calendar", StringComparison.OrdinalIgnoreCase)
+                            || new[] { "Date", "DateTime" }.Contains(PropertyValue(control, "DataType"), StringComparer.OrdinalIgnoreCase)) ? "date" :
+                            binding == null && new[] { "Guid", "AutoGuid" }.Contains(PropertyValue(control, "DataType"), StringComparer.OrdinalIgnoreCase) ? "guid" : null,
                         Value = value
                     });
                 }
@@ -274,6 +277,16 @@ namespace K2SmartFormsCli
         public string ControlId { get; set; }
         public string ControlName { get; set; }
         public string Value { get; set; }
+        public string ValueKind { get; set; }
+
+        internal bool MatchesValue(string value)
+        {
+            DateTime date;
+            Guid guid;
+            if (ValueKind == "date") return DateTime.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
+            if (ValueKind == "guid") return Guid.TryParse(value, out guid);
+            return string.Equals(value, Value, StringComparison.Ordinal);
+        }
     }
 
     internal static class FormPreFillRules
@@ -354,7 +367,8 @@ namespace K2SmartFormsCli
                     "' test-only Pre-fill button is not at the bottom of the " +
                     (definition.GuidedJourney == null ? "last visible panel." : "first guided-journey panel."));
 
-            var baseState = RequiredChild(RequiredChild(form, "States"), "State");
+            var baseState = RequiredChild(form, "States").Elements().FirstOrDefault(x => x.Name.LocalName == "State");
+            if (baseState == null) throw new CliException("K2 Form definition has no base State.");
             ControlRuleDefinition.VerifySystemEvent(baseState, buttonId, "OnClick",
                 "K2 Form '" + definition.Name + "' test-only Pre-fill button");
             var clicks = baseState.Descendants().Where(x => x.Name.LocalName == "Event" &&
@@ -381,7 +395,7 @@ namespace K2SmartFormsCli
                         string.Equals((string)x.Attribute("TargetInstanceID"), instance, StringComparison.OrdinalIgnoreCase) &&
                         string.Equals((string)x.Attribute("TargetID"), target.ControlId, StringComparison.OrdinalIgnoreCase) &&
                         string.Equals((string)x.Attribute("TargetType"), "Control", StringComparison.OrdinalIgnoreCase) &&
-                        string.Equals(ChildValue(x, "SourceValue"), target.Value, StringComparison.Ordinal)))
+                        target.MatchesValue(ChildValue(x, "SourceValue"))))
                         throw new CliException("K2 Form '" + definition.Name +
                             "' test-only Pre-fill rule omits " + target.ViewName + "." + target.Property + ".");
                 }

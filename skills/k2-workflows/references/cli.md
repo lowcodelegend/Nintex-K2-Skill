@@ -31,4 +31,8 @@ With `--delete-deployed`, cleanup also removes a remaining native Workflow categ
 
 Exit code `0` indicates success, `2` is a validation/safety error, and `1` is an unexpected runtime error.
 
+Doctor opens the actual authoring connection in both Integrated and explicit-credential modes. It reports unreadable assembly paths separately from missing files. A Windows administrator account with a limited token is not an elevated process; check elevation before altering K2 credentials or installation files. Set `K2WF_DEBUG=1` only when an unexpected failure needs its exception stack; the CLI does not print connection strings or passwords.
+
+Development builds run the offline self-tests through the existing MSBuild script. Installed release packages contain compiled tools without vendor DLLs or source.
+
 `selftest` is read-only and verifies explicit direct destinations plus the authoritative approval-matrix data-field destination without connecting to K2.

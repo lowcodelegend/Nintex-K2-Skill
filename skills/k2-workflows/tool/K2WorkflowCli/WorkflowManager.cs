@@ -42,11 +42,9 @@ namespace K2WorkflowCli
             var identity = WindowsIdentity.GetCurrent();
             var principal = new WindowsPrincipal(identity);
             System.Threading.Thread.CurrentPrincipal = principal;
-            _userName = manifest.K2.Integrated
-                ? ResolveDesignerUser(principal)
-                : K2Connection.DescribeIdentity(manifest.K2);
+            _userName = K2Connection.DescribeIdentity(manifest.K2);
             _client = CreateDesignerClient(manifest.K2);
-            _ownsDesignerConnection = !manifest.K2.Integrated;
+            _ownsDesignerConnection = true;
             _clientType = _client.GetType();
         }
 
@@ -54,9 +52,9 @@ namespace K2WorkflowCli
         {
             var webBin = RuntimeAssemblyResolver.WorkflowDesignerBin;
             foreach (var file in new[] { "SourceCode.K2Designer.dll", "SourceCode.Designer.Client.dll", "Newtonsoft.Json.dll" })
-                if (!File.Exists(Path.Combine(webBin, file))) throw new CliException("Required K2 Workflow Designer assembly is missing: " + file);
+                RuntimeAssemblyResolver.AssertAssemblyReadable(Path.Combine(webBin, file));
             foreach (var file in new[] { "SourceCode.Framework.dll", "SourceCode.HostClientAPI.dll", "SourceCode.SmartObjects.Client.dll" })
-                if (!File.Exists(Path.Combine(RuntimeAssemblyResolver.InstallDirectory, "Bin", file))) throw new CliException("Required K2 assembly is missing: " + file);
+                RuntimeAssemblyResolver.AssertAssemblyReadable(Path.Combine(RuntimeAssemblyResolver.InstallDirectory, "Bin", file));
             Console.WriteLine("K2 install: " + RuntimeAssemblyResolver.InstallDirectory);
             Console.WriteLine("Workflow designer: " + webBin);
             if (settings == null)
@@ -94,9 +92,7 @@ namespace K2WorkflowCli
                 }
                 finally
                 {
-                    CloseDesignerClient(
-                        client,
-                        !settings.Integrated);
+                    CloseDesignerClient(client, true);
                 }
             }
             Console.WriteLine("Authoring model: K2 Five HTML5 Workflow Designer JSON");
@@ -610,6 +606,14 @@ namespace K2WorkflowCli
                     if (runtime.GetProcessSet(_manifest.Workflow.ProcessFullName) == null)
                         throw new CliException("Published runtime workflow was not found.");
             }
+            if (_manifest.Workflow.SmartForms != null
+                && !string.Equals(_manifest.Workflow.Kind, "request-approval", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(_manifest.Workflow.Kind, "case-lifecycle", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Load(_manifest.Workflow);
+                new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Verify(_manifest.Workflow, _smartForm);
+                Console.WriteLine("Verified SmartForms integration for " + _manifest.Workflow.Kind + ".");
+            }
             Console.WriteLine("Verified JSON workflow: " + _manifest.Workflow.ProcessFullName + " (ID " + id.Value + ")");
             if (_manifest.Workflow.Publish) Console.WriteLine("Verified published runtime definition.");
             ReportTaskAssignmentPolicy();
@@ -832,9 +836,16 @@ namespace K2WorkflowCli
         private static string GetCategoryFullPath(Category category)
         {
             if (category == null) return null;
-            if (string.IsNullOrWhiteSpace(category.Path)) return category.Name;
-            if (string.IsNullOrWhiteSpace(category.Name)) return category.Path;
-            return category.Path.TrimEnd('\\', '/') + "\\" + category.Name;
+            return CategoryDisplayPath(category.Path, category.Name,
+                category.Metadata == null ? null : category.Metadata.DisplayName);
+        }
+
+        internal static string CategoryDisplayPath(string parentPath, string systemName, string displayName)
+        {
+            var name = string.IsNullOrWhiteSpace(displayName) ? systemName : displayName;
+            if (string.IsNullOrWhiteSpace(parentPath)) return name;
+            if (string.IsNullOrWhiteSpace(name)) return parentPath;
+            return parentPath.TrimEnd('\\', '/') + "\\" + name;
         }
 
         private T WithCategoryServer<T>(Func<CategoryServer, T> action)
@@ -868,12 +879,16 @@ namespace K2WorkflowCli
             if (root == null) throw new CliException("Application root category does not exist: " + _manifest.Application.RootCategoryPath);
             var workflows = FindCategory(_manifest.Application.WorkflowCategoryPath);
             if (workflows != null) return (int)workflows["id"];
-            var assembly = Assembly.LoadFrom(Path.Combine(RuntimeAssemblyResolver.WorkflowDesignerBin, "SourceCode.K2Designer.dll"));
-            var type = assembly.GetType("SourceCode.K2Designer.Providers.Legacy.CategoryManagementProvider", true);
-            var provider = Activator.CreateInstance(type, _client);
-            try { type.GetMethod("CreateCategory").Invoke(provider, new object[] { _manifest.Application.WorkflowCategoryName, CategorySystemId, (int)root["id"], _manifest.K2.DesignerHost }); }
-            catch (TargetInvocationException ex) { throw new CliException("Unable to create workflow category '" + _manifest.Application.WorkflowCategoryName + "': " + ex.GetBaseException().Message); }
-            finally { /* Provider shares the manager's designer client. */ }
+            WithCategoryServer(delegate(CategoryServer server)
+            {
+                var manager = server.GetCategoryManager(CategorySystemId, true, true);
+                var parent = manager.Categories.Cast<Category>().Single(x => x.Id == (int)root["id"]);
+                var category = manager.NewCategory();
+                category.Name = _manifest.Application.WorkflowCategoryName;
+                category.SetParentCategory(parent);
+                server.AddCategory(category);
+                return 0;
+            });
             workflows = FindCategory(_manifest.Application.WorkflowCategoryPath);
             if (workflows == null) throw new CliException("K2 did not return the new workflow category: " + _manifest.Application.WorkflowCategoryPath);
             Console.WriteLine("Created category: " + _manifest.Application.WorkflowCategoryPath);
@@ -882,21 +897,18 @@ namespace K2WorkflowCli
 
         private JObject FindCategory(string path)
         {
-            var assembly = Assembly.LoadFrom(Path.Combine(RuntimeAssemblyResolver.WorkflowDesignerBin, "SourceCode.K2Designer.dll"));
-            var type = assembly.GetType("SourceCode.K2Designer.Providers.Legacy.CategoryDataProvider", true);
-            var provider = Activator.CreateInstance(type, _client);
-            try
+            // The web provider returns an empty JSON object for an absent path on
+            // some builds. Use the authenticated typed category API instead.
+            return WithCategoryServer(delegate(CategoryServer server)
             {
-                var normalized = path.Replace('\\', '/').Trim('/');
-                var value = type.GetMethod("GetCategoryByPath").Invoke(provider, new object[] { normalized, CategorySystemId, _manifest.K2.DesignerHost });
-                return ParseCategoryResponse(Convert.ToString(value));
-            }
-            catch (TargetInvocationException ex)
-            {
-                if (ex.GetBaseException() is InvalidOperationException) return null;
-                throw new CliException("Unable to read K2 category '" + path + "': " + ex.GetBaseException().Message);
-            }
-            finally { /* Provider shares the manager's designer client. */ }
+                var normalized = path.Replace('/', '\\').Trim('\\');
+                var manager = server.GetCategoryManager(CategorySystemId, true, true);
+                var matches = manager.Categories.Cast<Category>().Where(x =>
+                    string.Equals(GetCategoryFullPath(x), normalized, StringComparison.OrdinalIgnoreCase)).ToArray();
+                if (matches.Length > 1) throw new CliException("Ambiguous K2 category display path: " + path);
+                var category = matches.SingleOrDefault();
+                return category == null ? null : JObject.FromObject(new { id = category.Id, name = category.Name });
+            });
         }
 
         private int? GetProcessId()
@@ -966,64 +978,41 @@ namespace K2WorkflowCli
 
         private static object CreateDesignerClient(K2Settings settings)
         {
-            if (!settings.Integrated)
+            // Console tools have no hosted Designer HTTP/ConnectionClassContext.
+            // Open the public management client explicitly for both auth modes.
+            var clientAssembly = Assembly.LoadFrom(
+                Path.Combine(
+                    RuntimeAssemblyResolver.WorkflowDesignerBin,
+                    "SourceCode.Designer.Client.dll"));
+            var clientType = clientAssembly.GetType(
+                "SourceCode.Designer.Client.K2DesignerManagementClient",
+                true);
+            var client = Activator.CreateInstance(clientType);
+            try
             {
-                var clientAssembly = Assembly.LoadFrom(
-                    Path.Combine(
-                        RuntimeAssemblyResolver.WorkflowDesignerBin,
-                        "SourceCode.Designer.Client.dll"));
-                var clientType = clientAssembly.GetType(
-                    "SourceCode.Designer.Client.K2DesignerManagementClient",
-                    true);
-                var client = Activator.CreateInstance(clientType);
-                try
-                {
-                    clientType.GetMethod(
-                        "CreateConnection",
-                        Type.EmptyTypes).Invoke(client, null);
-                    var connection = clientType.GetProperty(
-                        "Connection").GetValue(client, null)
-                        as BaseAPIConnection;
-                    if (connection == null)
-                        throw new CliException(
-                            "K2 Designer client did not create a connection.");
-                    connection.Open(
-                        K2Connection.BuildManagementConnectionString(
-                            settings));
-                    K2Connection.AssertAuthenticated(
-                        connection,
-                        settings,
-                        "K2 workflow Designer authoring");
-                    return client;
-                }
-                catch
-                {
-                    var disposable = client as IDisposable;
-                    if (disposable != null) disposable.Dispose();
-                    throw;
-                }
+                clientType.GetMethod(
+                    "CreateConnection",
+                    Type.EmptyTypes).Invoke(client, null);
+                var connection = clientType.GetProperty(
+                    "Connection").GetValue(client, null)
+                    as BaseAPIConnection;
+                if (connection == null)
+                    throw new CliException(
+                        "K2 Designer client did not create a connection.");
+                connection.Open(
+                    K2Connection.BuildManagementConnectionString(
+                        settings));
+                K2Connection.AssertAuthenticated(
+                    connection,
+                    settings,
+                    "K2 workflow Designer authoring");
+                return client;
             }
-
-            var assembly = Assembly.LoadFrom(Path.Combine(RuntimeAssemblyResolver.WorkflowDesignerBin, "SourceCode.K2Designer.dll"));
-            var type = assembly.GetType("SourceCode.K2Designer.ProcessBase.ConnectionClassContext", true);
-            var context = Activator.CreateInstance(type);
-            var method = type.GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                .Single(x => x.Name == "GetBaseApi" && !x.IsGenericMethod && x.GetParameters().Length == 0);
-            return method.Invoke(context, null);
-        }
-
-        private static string ResolveDesignerUser(IPrincipal principal)
-        {
-            var assembly = Assembly.LoadFrom(Path.Combine(RuntimeAssemblyResolver.WorkflowDesignerBin, "SourceCode.K2Designer.dll"));
-            var type = assembly.GetType("SourceCode.K2Designer.ProcessBase.ConnectionClassContext", true);
-            var context = Activator.CreateInstance(type);
-            var value = Convert.ToString(type.GetMethod("GetUser").Invoke(context, new object[] { principal }));
-            if (string.IsNullOrWhiteSpace(value))
+            catch
             {
-                var name = principal.Identity.Name;
-                return name.StartsWith("K2:", StringComparison.OrdinalIgnoreCase) ? name : "K2:" + name;
+                try { CloseDesignerClient(client, true); } catch { }
+                throw;
             }
-            return value;
         }
 
         private static string GetStringProperty(object value, string propertyName)
