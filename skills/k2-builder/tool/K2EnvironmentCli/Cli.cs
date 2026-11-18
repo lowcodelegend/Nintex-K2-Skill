@@ -23,6 +23,7 @@ namespace K2EnvironmentCli
             if (command == "validate") return Validate(store, options);
             if (command == "set-default") return SetDefault(store, options);
             if (command == "set-langflow") return SetLangflow(store, options);
+            if (command == "setup-workflow-importer") return SetupWorkflowImporter(store, options);
             if (command == "set-style-profile") return SetStyleProfile(store, options);
             if (command == "inspect-header") return InspectHeader(store, options);
             if (command == "inspect-framework") return InspectHeader(store, options);
@@ -49,6 +50,10 @@ namespace K2EnvironmentCli
             PreserveStyleProfileSelection(previous, profile);
             PreserveCommonHeaderSelection(previous, profile);
             PreserveSolutionCodeRegistrations(previous, profile);
+            if (previous != null && previous.Capabilities != null &&
+                string.Equals(previous.K2.Host, profile.K2.Host, StringComparison.OrdinalIgnoreCase) &&
+                previous.K2.ManagementPort == profile.K2.ManagementPort)
+                profile.Capabilities.WorkflowImporterSmartObjectId = previous.Capabilities.WorkflowImporterSmartObjectId;
             var validation = Validator.Validate(profile, store.ProfilePath(profile.Name));
             profile.LastValidatedUtc = validation.Valid ? validation.ValidatedUtc : null;
             if (options.IsJson) Console.WriteLine(PrettyJson.Serialize(new { profile = profile, validation = validation, persisted = validation.Valid }));
@@ -154,6 +159,19 @@ namespace K2EnvironmentCli
         {
             var name = options.Require("name"); store.SetDefault(name);
             Console.WriteLine("Default K2 environment: " + name); return 0;
+        }
+
+        private static int SetupWorkflowImporter(ProfileStore store, Options options)
+        {
+            if (!options.Has("confirm"))
+                throw new CliException("setup-workflow-importer changes K2. Review the asset directory and rerun with --confirm.");
+            var profile = store.Read(store.ResolveName(options.Get("name")));
+            var importerId = WorkflowImporterSetup.Ensure(profile.K2, options.Require("assets-directory"));
+            if (profile.Capabilities == null) profile.Capabilities = new CapabilitySettings();
+            profile.Capabilities.WorkflowImporterSmartObjectId = importerId.ToString();
+            store.Write(profile, true);
+            Console.WriteLine("Workflow Importer SmartObject: " + importerId);
+            return 0;
         }
 
         private static int SetLangflow(ProfileStore store, Options options)
@@ -634,6 +652,7 @@ namespace K2EnvironmentCli
                 urls = profile.Urls,
                 capabilities = new
                 {
+                    workflowImporterSmartObjectId = profile.Capabilities == null ? null : profile.Capabilities.WorkflowImporterSmartObjectId,
                     langflow = langflow == null ? null : new
                     {
                         configured = langflow.Configured,
@@ -737,6 +756,7 @@ namespace K2EnvironmentCli
             Console.WriteLine("  validate [--name NAME] [--output json]");
             Console.WriteLine("  list [--output json]");
             Console.WriteLine("  set-default --name NAME");
+            Console.WriteLine("  setup-workflow-importer [--name NAME] --assets-directory PATH --confirm");
             Console.WriteLine("  set-langflow [--name NAME] (--langflow-url URL [--langflow-flow-id GUID] | --no-langflow) [--output json]");
             Console.WriteLine("  set-style-profile [--name NAME] (--style-profile NAME_OR_GUID | --no-style-profile)");
             Console.WriteLine("  inspect-header [--name NAME] --hint TEXT [--output json]");

@@ -22,6 +22,12 @@ namespace K2WorkflowCli
             }
             if (args.Length < 2) throw new CliException("A manifest path is required.");
             var manifest = WorkflowManifest.Load(args[1]);
+            if (command == "import-draft")
+            {
+                RequireConfirm(args);
+                WorkflowImporter.ImportDraft(manifest, Value(args, "--importer"));
+                return 0;
+            }
             using (var manager = new WorkflowManager(manifest))
             {
                 switch (command)
@@ -98,6 +104,7 @@ namespace K2WorkflowCli
             Console.WriteLine("  export <manifest.json> --output <workflow.json>");
             Console.WriteLine("  export-id <connection-manifest.json> --id <Designer-id> --output <workflow.json>");
             Console.WriteLine("  deploy <manifest.json> --confirm");
+            Console.WriteLine("  import-draft <manifest.json> [--importer <SmartObject GUID>] --confirm");
             Console.WriteLine("  start <manifest.json> --data Name=Value [--data Name=Value] --confirm");
             Console.WriteLine("  status <manifest.json>");
             Console.WriteLine("  instance-data <manifest.json> --id <process-instance-id>");

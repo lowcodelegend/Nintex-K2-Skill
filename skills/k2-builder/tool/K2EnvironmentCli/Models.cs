@@ -23,6 +23,7 @@ namespace K2EnvironmentCli
     public sealed class CapabilitySettings
     {
         public LangflowCapability Langflow { get; set; }
+        public string WorkflowImporterSmartObjectId { get; set; }
     }
 
     public sealed class LangflowCapability

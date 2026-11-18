@@ -3,8 +3,8 @@
 This project-local log captures reusable evidence for improving the K2 skills that created or maintained this solution. It is a handoff queue, not authorization to edit installed skills.
 
 - Initialized: 2026-10-28
-- Last reviewed: 2026-11-12
-- Next learning ID: `K2L-0012`
+- Last reviewed: 2026-11-18
+- Next learning ID: `K2L-0013`
 - Active skill owners: $k2-builder, $k2-smartbox-smartobjects, $k2-smartforms, $k2-workflows
 
 ## Status and disposition
@@ -27,6 +27,7 @@ IDs are immutable and never reused. Before adding a learning, search for equival
 | K2L-0004 | implemented-locally | high | $k2-workflows | local-commit | Native IPC Designer metadata and coupled wait flags |
 | K2L-0005 | ready | high | $k2-workflows | local-commit | Semantic workflow placement, native ports and independent layout acceptance |
 | K2L-0011 | proposed | high | $k2-builder, $k2-style-profiles, $k2-sql-smartobjects | undecided | Remove demo-environment bindings from reusable examples |
+| K2L-0012 | implemented-locally | high | $k2-workflows, $k2-builder | local-commit | Author workflow drafts through the Workflow Import Service |
 
 ## Learning entries
 
@@ -218,3 +219,22 @@ Copy this block for each learning and remove this comment wrapper.
 ## Review history — 2026-11-12
 
 - Reviewed environment portability outside spikes. Recommended next actions: resolve copied builder example endpoints/principals; generalize Northstar asset/authentication settings; separate historical deployment evidence from reusable configuration. Destinations: focused builder/style-profile changes after authorization. Existing workflow acceptance follow-ups remain outstanding.
+
+### K2L-0012 — Author K2 workflow drafts through the Workflow Import Service
+
+- Status: implemented-locally
+- Priority: high
+- Affected skill owners: $k2-workflows, $k2-builder
+- Disposition: local-commit
+- Observed behavior: Nintex Product confirmed the JSONata route for custom workflow authoring. On the installed K2 build, the ConvertedWorkflow SmartObject accepts a matching XML schema and JSONata specification. Its save action creates a Designer draft.
+- Evidence: The live dedicated service accepted a versioned typed XML attachment via the list method `ConvertWorkflow`. The installed broker required the `smartForms` host value and recognized category metadata extracted from the attachment. Skip rejected a duplicate and Overwrite kept the draft ID.
+- Implemented change: Added `import-draft` and dedicated importer setup through `k2env`. Both use existing K2 identities and keep the default service instance available for standard migrations.
+- Acceptance criteria:
+  - A standard manifest can produce a draft under its exact K2 category and verify the returned identity.
+  - Setup is repeatable and the selected environment profile supplies the generated SmartObject GUID.
+  - Publishing and native SmartForms integration are tracked separately from draft import.
+- Feedback history: 2026-11-18 — Validated registration, re-run, profile execution, import and collision handling on one local K2 server. The current build's draft-only behavior sets the scope of this change.
+
+## Review history — 2026-11-18
+
+- Reviewed pending workflow and portability work at the draft-import milestone. The next workflow source change needs a Nintex-confirmed programmatic publication contract and coverage for native SmartForms integration. The environment-specific example bindings remain a separate builder follow-up.

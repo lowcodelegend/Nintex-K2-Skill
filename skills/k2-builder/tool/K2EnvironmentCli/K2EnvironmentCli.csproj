@@ -36,6 +36,14 @@
       <HintPath>$(K2InstallDir)\Bin\SourceCode.HostClientAPI.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="SourceCode.SmartObjects.Services.Management">
+      <HintPath>$(K2InstallDir)\Bin\SourceCode.SmartObjects.Services.Management.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="SourceCode.SmartObjects.Management">
+      <HintPath>$(K2InstallDir)\Bin\SourceCode.SmartObjects.Management.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="SourceCode.Forms.Management">
       <HintPath>$(K2InstallDir)\Bin\SourceCode.Forms.Management.dll</HintPath>
       <Private>False</Private>
@@ -51,6 +59,7 @@
     <Compile Include="RuntimeAssemblyResolver.cs" />
     <Compile Include="ShortCodeRegistry.cs" />
     <Compile Include="Validator.cs" />
+    <Compile Include="WorkflowImporterSetup.cs" />
   </ItemGroup>
   <ItemGroup><None Include="App.config" /></ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

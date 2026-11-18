@@ -1,0 +1,32 @@
+(
+    /* K2 converts the validated XML attachment to JSON before evaluating the spec. */
+    $source := K2SkillsWorkflow;
+    $assert($source."@version" = "1", "Unsupported workflow input version");
+    $name := $decodeUrlComponent($source."@name");
+    $assert($length($trim($name)) > 0, "A workflow name is required");
+
+    $read := function($entry) {(
+        $kind := $entry."@type";
+        $children := $append([], $entry.Entry);
+        $kind = "object" ? $reduce($children, function($object, $child) {
+            $merge([$object, { $decodeUrlComponent($child."@key"): $read($child) }])
+        }, {}) :
+        $kind = "array" ? $reduce($children, function($array, $child) {(
+            $value := $read($child);
+            $append($array, $type($value) = "array" ? [[$value]] : [$value])
+        )}, []) :
+        $kind = "string" ? $decodeUrlComponent($entry."@value") :
+        $kind = "number" ? $number($entry."@value") :
+        $kind = "boolean" ? $entry."@value" = "true" :
+        null
+    )};
+    $graph := $read($source.Graph);
+    $assert($type($graph.nodes) = "array" and $type($graph.links) = "array" and
+        $type($graph.configuration) = "object", "A K2 Designer workflow graph is required");
+
+    $merge([$graph, {
+        "componentId": 50001,
+        "systemName": $name,
+        "title": $name
+    }])
+)

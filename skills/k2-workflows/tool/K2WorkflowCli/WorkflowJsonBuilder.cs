@@ -373,7 +373,14 @@ namespace K2WorkflowCli
         public static JObject ParseAndValidate(string json, string expectedName)
         {
             JObject root;
-            try { root = JObject.Parse(json); }
+            try
+            {
+                using (var reader = new JsonTextReader(new StringReader(json)) { DateParseHandling = DateParseHandling.None })
+                {
+                    root = JObject.Load(reader);
+                    while (reader.Read()) { }
+                }
+            }
             catch (JsonException ex) { throw new CliException("Workflow definition is not valid JSON: " + ex.Message); }
             if ((int?)root["componentId"] != 50001) throw new CliException("Definition is not a K2 Five HTML5 Workflow Designer JSON process (root componentId 50001 is required).");
             if (!(root["nodes"] is JArray) || !(root["links"] is JArray) || !(root["configuration"] is JObject))

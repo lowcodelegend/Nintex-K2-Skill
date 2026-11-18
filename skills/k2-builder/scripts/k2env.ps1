@@ -230,6 +230,8 @@ function Invoke-WithEnvironmentProfile {
         return [string]$property.Value
     }
     $integratedValue = Read-ProfileValue $Profile.k2 'integratedAuthentication'
+    $capabilitiesProperty = $Profile.PSObject.Properties['capabilities']
+    $capabilities = if ($null -ne $capabilitiesProperty) { $capabilitiesProperty.Value } else { $null }
     $values = [ordered]@{
         K2_ENVIRONMENT_NAME = $EnvironmentName
         K2_HOST = Read-ProfileValue $Profile.k2 'host'
@@ -239,6 +241,7 @@ function Invoke-WithEnvironmentProfile {
         K2_DEPLOYMENT_USER = Read-ProfileValue $Profile.k2 'userName'
         K2_DEPLOYMENT_DOMAIN = Read-ProfileValue $Profile.k2 'domain'
         K2_PASSWORD_ENVIRONMENT_VARIABLE = Read-ProfileValue $Profile.k2 'passwordEnvironmentVariable'
+        K2_WORKFLOW_IMPORTER_SMARTOBJECT_ID = Read-ProfileValue $capabilities 'workflowImporterSmartObjectId'
     }
     $previous = @{}
     try {

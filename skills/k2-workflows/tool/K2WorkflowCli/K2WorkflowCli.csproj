@@ -60,6 +60,8 @@
     <Compile Include="StageWorkflowManifest.cs" />
     <Compile Include="StageWorkflowBuilder.cs" />
     <Compile Include="WorkflowManager.cs" />
+    <Compile Include="WorkflowRenderer.cs" />
+    <Compile Include="WorkflowImporter.cs" />
   </ItemGroup>
   <ItemGroup><None Include="App.config" /></ItemGroup>
   <ItemGroup><EmbeddedResource Include="SmartObjectWizardDefinition.json"><LogicalName>K2WorkflowCli.SmartObjectWizardDefinition.json</LogicalName></EmbeddedResource></ItemGroup>

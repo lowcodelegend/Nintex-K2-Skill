@@ -85,6 +85,16 @@ Validation re-probes configured Langflow availability without rerunning full K2 
 & '<k2-builder-root>\scripts\k2env.ps1' set-langflow --name spk2-local --no-langflow
 ```
 
+## Workflow Importer
+
+To author workflow drafts through the Workflow Import Service, follow the workflow skill's [asset staging and setup instructions](../../k2-workflows/references/workflow-importer.md). After discovery, run:
+
+```powershell
+& '<k2-builder-root>\scripts\k2env.ps1' setup-workflow-importer --name '<environment>' --assets-directory '<staged v1 path>' --confirm
+```
+
+The profile stores the generated SmartObject GUID in `capabilities.workflowImporterSmartObjectId`. `k2env invoke` passes that selection to `k2wf import-draft`. Repeat setup to verify the asset-path configuration after a K2 upgrade.
+
 ## Solution short-code uniqueness
 
 Discovery and refresh inventory three- or four-letter prefixes already visible on K2 Forms and Views. Before creating any solution artifacts, check and reserve a code in the selected environment:

@@ -246,7 +246,7 @@ namespace K2EnvironmentCli
             }
         }
 
-        private static string BuildConnectionString(K2Settings settings)
+        internal static string BuildConnectionString(K2Settings settings)
         {
             var builder = new SCConnectionStringBuilder
             {

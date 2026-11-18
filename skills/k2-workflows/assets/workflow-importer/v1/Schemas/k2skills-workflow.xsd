@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="K2SkillsWorkflow">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Graph" type="GraphValue" />
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" fixed="1" />
+      <xs:attribute name="name" type="xs:string" use="required" />
+      <xs:attribute name="categoryId" type="xs:positiveInteger" use="required" />
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="GraphValue">
+    <xs:sequence>
+      <xs:element name="Entry" type="GraphValue" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attribute name="key" type="xs:string" />
+    <xs:attribute name="type" use="required">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="object" />
+          <xs:enumeration value="array" />
+          <xs:enumeration value="string" />
+          <xs:enumeration value="number" />
+          <xs:enumeration value="boolean" />
+          <xs:enumeration value="null" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="value" type="xs:string" />
+  </xs:complexType>
+</xs:schema>

@@ -1,11 +1,13 @@
 ---
 name: k2-workflows
-description: Build, publish, inspect, verify, and clean up K2 Five HTML5 Workflow Designer JSON workflows using declarative manifests and the bundled k2wf .NET CLI. Use for modern JSON workflows, threshold/dimensional/multi-stage approval-matrix routing, request SmartObject status updates, Originator email, human tasks, native SmartForms Start/Task integration, K2 workflow categories, deployment/version verification, or repeatable workflow construction. Do not use for legacy K2 Studio/K2 Designer XML authoring, cloud Nintex Workflow, creating SmartForms/SmartObjects, or direct K2 database changes.
+description: Build, import, publish, inspect, verify, and clean up K2 Five HTML5 Workflow Designer JSON workflows using declarative manifests and the bundled k2wf .NET CLI. Use for modern JSON workflows, threshold/dimensional/multi-stage approval-matrix routing, request SmartObject status updates, Originator email, human tasks, native SmartForms Start/Task integration, K2 workflow categories, deployment/version verification, or repeatable workflow construction. Do not use for legacy K2 Studio/K2 Designer XML authoring, cloud Nintex Workflow, creating SmartForms/SmartObjects, or direct K2 database changes.
 ---
 
 # K2 Five workflows
 
-Use `scripts/k2wf.ps1` for the HTML5 Designer JSON/`SaveKprx` path; never author through legacy workflow APIs or edit K2 databases.
+Use `scripts/k2wf.ps1 import-draft` to author drafts through the [Workflow Import Service](references/workflow-importer.md) when the task calls for the supported JSONata path. Configure the dedicated instance during optional builder onboarding. Use K2 Designer to review and publish the imported draft.
+
+The existing `deploy` command uses the Designer client and remains available for workflows that require its automated publishing and SmartForms integration. Follow the workflow below when that path is in scope.
 
 ## Project feedback loop
 

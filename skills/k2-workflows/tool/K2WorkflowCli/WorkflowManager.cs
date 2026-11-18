@@ -20,10 +20,7 @@ namespace K2WorkflowCli
         private readonly Type _clientType;
         private readonly string _userName;
         private readonly bool _ownsDesignerConnection;
-        private SmartObjectDescriptor _smartObject;
-        private SmartObjectMethodDescriptor _approvalMatrix;
-        private SmartObjectMethodDescriptor _caseLifecycleResolver;
-        private SmartObjectMethodDescriptor _caseLifecycleState;
+        private readonly WorkflowRenderer _renderer;
         private SmartFormsIntegrationDescriptor _smartForm;
 
         private static JToken At(JToken token, params object[] path)
@@ -48,6 +45,9 @@ namespace K2WorkflowCli
             _client = CreateDesignerClient(manifest.K2);
             _ownsDesignerConnection = !manifest.K2.Integrated;
             _clientType = _client.GetType();
+            _renderer = new WorkflowRenderer(manifest, () => manifest.Workflow.SmartForms == null
+                ? null
+                : _smartForm ?? (_smartForm = new SmartFormsIntegrationManager(_client, manifest.K2.DesignerHost, manifest.K2).Load(manifest.Workflow)));
         }
 
         public static void Doctor(K2Settings settings)
@@ -105,39 +105,8 @@ namespace K2WorkflowCli
 
         public string Render()
         {
-            string json;
-            if (string.Equals(_manifest.Workflow.Kind, "json-file", StringComparison.OrdinalIgnoreCase))
-            {
-                var path = Path.GetFullPath(Path.Combine(_manifest.ManifestDirectory, _manifest.Workflow.DefinitionFile));
-                if (!File.Exists(path)) throw new CliException("Workflow definition file not found: " + path);
-                json = File.ReadAllText(path);
-            }
-            else if (string.Equals(_manifest.Workflow.Kind, "request-approval", StringComparison.OrdinalIgnoreCase))
-            {
-                if (_smartObject == null) _smartObject = SmartObjectMetadata.Load(_manifest.K2, _manifest.Workflow.RequestStatusUpdate);
-                if (_manifest.Workflow.ApprovalMatrix != null && _approvalMatrix == null)
-                    _approvalMatrix = SmartObjectMetadata.LoadMethod(_manifest.K2, _manifest.Workflow.ApprovalMatrix.SmartObject, _manifest.Workflow.ApprovalMatrix.Method);
-                if (_manifest.Workflow.SmartForms != null && _smartForm == null)
-                    _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Load(_manifest.Workflow);
-                json = WorkflowJsonBuilder.BuildRequestApproval(_manifest.Workflow, _smartObject, _smartForm, _approvalMatrix);
-            }
-            else if (string.Equals(_manifest.Workflow.Kind, "call-subworkflow", StringComparison.OrdinalIgnoreCase))
-                json = WorkflowJsonBuilder.BuildCallSubWorkflow(_manifest.Workflow);
-            else if (string.Equals(_manifest.Workflow.Kind, "stage-router", StringComparison.OrdinalIgnoreCase))
-            {
-                ValidateStageTargets();
-                json = WorkflowJsonBuilder.BuildStageRouter(_manifest.Workflow);
-            }
-            else if (string.Equals(_manifest.Workflow.Kind, "stage-task", StringComparison.OrdinalIgnoreCase))
-                json = WorkflowJsonBuilder.BuildStageTask(_manifest.Workflow);
-            else if (string.Equals(_manifest.Workflow.Kind, "case-lifecycle", StringComparison.OrdinalIgnoreCase))
-            {
-                if (_caseLifecycleResolver == null) _caseLifecycleResolver = SmartObjectMetadata.LoadMethod(_manifest.K2, _manifest.Workflow.CaseLifecycle.ResolverSmartObject, _manifest.Workflow.CaseLifecycle.ResolverMethod);
-                if (_caseLifecycleState == null) _caseLifecycleState = SmartObjectMetadata.LoadMethod(_manifest.K2, _manifest.Workflow.CaseLifecycle.StateSmartObject, _manifest.Workflow.CaseLifecycle.StateMethod);
-                json = WorkflowJsonBuilder.BuildCaseLifecycle(_manifest.Workflow, _caseLifecycleResolver, _caseLifecycleState);
-            }
-            else json = WorkflowJsonBuilder.BuildStartEnd(_manifest.Workflow.Name);
-            return WorkflowJsonBuilder.ParseAndValidate(json, _manifest.Workflow.Name).ToString(Formatting.None);
+            if (string.Equals(_manifest.Workflow.Kind, "stage-router", StringComparison.OrdinalIgnoreCase)) ValidateStageTargets();
+            return _renderer.Render().ToString(Formatting.None);
         }
 
         private void ValidateStageTargets()
@@ -508,23 +477,22 @@ namespace K2WorkflowCli
                         throw new CliException("Saved SmartForms request-approval workflow does not have the expected decision topology.");
                     if (components.Count(x => x == 30011) != (matrixEnabled ? 4 : 3) || components.Count(x => x == 30004) != 3 || components.Count(x => x == 30009) != 1)
                         throw new CliException("Saved SmartForms request-approval workflow does not contain the expected status, resolver, email, and task events.");
-                    if (_smartObject == null) _smartObject = SmartObjectMetadata.Load(_manifest.K2, _manifest.Workflow.RequestStatusUpdate);
                     var statusEvents = nodes.SelectMany(x => (x["children"] as JArray) == null ? Enumerable.Empty<JObject>() : ((JArray)x["children"]).OfType<JObject>())
                         .Where(x => (int?)x["componentId"] == 30011 && (_manifest.Workflow.ApprovalMatrix == null || !string.Equals(Convert.ToString(x["title"]), _manifest.Workflow.ApprovalMatrix.Name, StringComparison.Ordinal))).ToArray();
                     foreach (var statusEvent in statusEvents)
                     {
                         var controls = At(statusEvent, "configuration", "controlValues") as JObject;
                         var mappings = At(controls, "pmInputs", "values") as JObject;
-                        var identifierMapping = mappings == null ? null : mappings[_smartObject.Identifier.SystemName] as JObject;
-                        var statusMapping = mappings == null ? null : mappings[_smartObject.Status.SystemName] as JObject;
+                        var identifierMapping = mappings == null ? null : mappings[_renderer.SmartObject.Identifier.SystemName] as JObject;
+                        var statusMapping = mappings == null ? null : mappings[_renderer.SmartObject.Status.SystemName] as JObject;
                         if (controls == null || mappings == null || identifierMapping == null || statusMapping == null)
                             throw new CliException("A status update is not visibly mapped to both request identifier and Status properties.");
                         if (!string.Equals(Convert.ToString(At(controls, "SmartObject", "value", "smartFields", 0, "text")), "radNoOutputs", StringComparison.Ordinal) ||
-                            !string.Equals(Convert.ToString(At(controls, "spSmartObject", "value", "smartFields", 0, "title")), _smartObject.DisplayName, StringComparison.Ordinal) ||
-                            !string.Equals(Convert.ToString(At(controls, "cbbMethods", "value", "smartFields", 0, "title")), _smartObject.MethodDisplayName, StringComparison.Ordinal))
+                            !string.Equals(Convert.ToString(At(controls, "spSmartObject", "value", "smartFields", 0, "title")), _renderer.SmartObject.DisplayName, StringComparison.Ordinal) ||
+                            !string.Equals(Convert.ToString(At(controls, "cbbMethods", "value", "smartFields", 0, "title")), _renderer.SmartObject.MethodDisplayName, StringComparison.Ordinal))
                             throw new CliException("A status update cannot be rehydrated by the SmartObject Method configuration panel.");
-                        if (!Convert.ToString(identifierMapping["tokenReference"]).EndsWith("[{\"internalId\":" + _smartObject.Identifier.InternalId + "}]", StringComparison.Ordinal) ||
-                            !Convert.ToString(statusMapping["tokenReference"]).EndsWith("[{\"internalId\":" + _smartObject.Status.InternalId + "}]", StringComparison.Ordinal))
+                        if (!Convert.ToString(identifierMapping["tokenReference"]).EndsWith("[{\"internalId\":" + _renderer.SmartObject.Identifier.InternalId + "}]", StringComparison.Ordinal) ||
+                            !Convert.ToString(statusMapping["tokenReference"]).EndsWith("[{\"internalId\":" + _renderer.SmartObject.Status.InternalId + "}]", StringComparison.Ordinal))
                             throw new CliException("A status update property mapper targets the wrong SmartObject Update inputs.");
                         var wizardMappings = At(statusEvent, "wizardDefinition", "smartObjectMappings") as JArray;
                         var serviceReference = "root.externalReferenceDefinitions[{\"internalId\":2}]";
@@ -668,7 +636,6 @@ namespace K2WorkflowCli
 
         private void VerifyApprovalMatrixResolver(JObject root)
         {
-            if (_approvalMatrix == null) _approvalMatrix = SmartObjectMetadata.LoadMethod(_manifest.K2, _manifest.Workflow.ApprovalMatrix.SmartObject, _manifest.Workflow.ApprovalMatrix.Method);
             var resolver = ((JArray)root["nodes"]).OfType<JObject>()
                 .SelectMany(x => (x["children"] as JArray) == null ? Enumerable.Empty<JObject>() : ((JArray)x["children"]).OfType<JObject>())
                 .Single(x => (int?)x["componentId"] == 30011 && string.Equals(Convert.ToString(x["title"]), _manifest.Workflow.ApprovalMatrix.Name, StringComparison.Ordinal));
@@ -676,7 +643,7 @@ namespace K2WorkflowCli
             if (outputs == null) throw new CliException("Approval matrix resolver has no output mappings.");
             foreach (var propertyName in new[] { _manifest.Workflow.ApprovalMatrix.HasApproverProperty, _manifest.Workflow.ApprovalMatrix.StageProperty, _manifest.Workflow.ApprovalMatrix.ApproverProperty, _manifest.Workflow.ApprovalMatrix.ApproverTypeProperty })
             {
-                var property = _approvalMatrix.Returns.Single(x => string.Equals(x.SystemName, propertyName, StringComparison.OrdinalIgnoreCase));
+                var property = _renderer.ApprovalMatrix.Returns.Single(x => string.Equals(x.SystemName, propertyName, StringComparison.OrdinalIgnoreCase));
                 var mapping = outputs[property.SystemName] as JObject;
                 if (mapping == null || !Convert.ToString(mapping["tokenReference"]).EndsWith("[{\"internalId\":" + property.InternalId + "}]", StringComparison.Ordinal))
                     throw new CliException("Approval matrix resolver output is not mapped: " + propertyName);

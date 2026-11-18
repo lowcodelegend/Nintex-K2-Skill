@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Text;
+using System.Xml.Linq;
 using Newtonsoft.Json.Linq;
 
 namespace K2WorkflowCli
@@ -11,6 +14,7 @@ namespace K2WorkflowCli
         {
             TestStageWorkflows();
             TestDesignerIpcFixtures();
+            TestImporterAttachment();
             var task = new UserTaskSettings { Assignees = new List<string> { "$originator", "K2:DOMAIN\\approvers" } };
             string title;
             var direct = WorkflowJsonBuilder.BuildTaskDestinationItems(task, null, out title);
@@ -137,6 +141,31 @@ namespace K2WorkflowCli
         private static void Assert(bool condition, string name)
         {
             if (!condition) throw new CliException("Self-test failed: " + name + ".");
+        }
+
+        private static void TestImporterAttachment()
+        {
+            const string name = "Test + % 中";
+            const string text = "æ + % 中\r\n";
+            var graph = WorkflowJsonBuilder.ParseAndValidate(WorkflowJsonBuilder.BuildStartEnd(name), name);
+            graph["roundtrip"] = new JArray(JValue.CreateNull(), new JValue(false), new JValue(1.25),
+                new JValue(text), new JArray(), new JObject(), new JValue(string.Empty));
+            var attachment = XElement.Parse(WorkflowImporter.CreateAttachment(name, graph, 20));
+            var content = Encoding.UTF8.GetString(Convert.FromBase64String((string)attachment.Element("content")));
+            var document = XElement.Parse(content);
+            Assert((string)attachment.Element("name") == "k2skills-workflow.xml" &&
+                (string)document.Attribute("version") == "1" && (int)document.Attribute("categoryId") == 20 &&
+                WebUtility.UrlDecode((string)document.Attribute("name")) == name, "import envelope identity and category");
+            var entries = document.Element("Graph").Elements("Entry");
+            Assert(!entries.Any(x => new[] { "componentId", "title", "systemName" }.Contains((string)x.Attribute("key"))) &&
+                (int)graph["componentId"] == 50001, "import rebuilds metadata without changing rendered graph");
+            var values = entries.Single(x => (string)x.Attribute("key") == "roundtrip").Elements("Entry").ToArray();
+            Assert(values.Select(x => (string)x.Attribute("type")).SequenceEqual(
+                new[] { "null", "boolean", "number", "string", "array", "object", "string" }) &&
+                (string)values[1].Attribute("value") == "false" && (string)values[2].Attribute("value") == "1.25" &&
+                WebUtility.UrlDecode((string)values[3].Attribute("value")) == text &&
+                (string)values[6].Attribute("value") == "", "import attachment preserves JSON value types and escaping");
+            Console.WriteLine("SELFTEST Workflow Importer attachment contract passed.");
         }
 
         private static void TestStageWorkflows()

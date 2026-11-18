@@ -9,6 +9,7 @@ From the skill directory:
 & '.\scripts\k2wf.ps1' export '<manifest.json>' --output '<workflow.json>'
 & '.\scripts\k2wf.ps1' export-id '<connection-manifest.json>' --id 35 --output '<reference-workflow.json>'
 & '.\scripts\k2wf.ps1' deploy '<manifest.json>' --confirm
+& '.\scripts\k2wf.ps1' import-draft '<manifest.json>' --importer '<SmartObject GUID>' --confirm
 & '.\scripts\k2wf.ps1' start '<manifest.json>' --data CaseId=1 --confirm
 & '.\scripts\k2wf.ps1' status '<manifest.json>'
 & '.\scripts\k2wf.ps1' worklist '<manifest.json>'
@@ -28,6 +29,8 @@ From the skill directory:
 Cleanup checks runtime existence/instances once, removes SmartForms integration, unsets the K2 default runtime version, deletes exact runtime definitions without log deletion, then removes the exact Designer JSON/category link and the solution-specific `WFs` category when empty. Even when Designer and runtime definitions are already absent, direct cleanup checks for orphaned SmartForms integration and attempts the bounded category cleanup. Builder cleanup defers integration removal only because it deletes the validated manifest-owned Form next. `--delete-root-category` additionally removes the exact empty application root and is reserved for the final builder checkpoint or explicit standalone ownership.
 
 With `--delete-deployed`, cleanup also removes a remaining native Workflow category-data link only when its type, full workflow name and leaf name all match the manifest. Other links remain. Workflow-provider category names can contain sanitized spaces; cleanup uses the category ID resolved from the manifest path, then deletes the category only after it is empty.
+
+`import-draft` uses the dedicated Workflow Import Service. See [setup and import requirements](workflow-importer.md).
 
 Exit code `0` indicates success, `2` is a validation/safety error, and `1` is an unexpected runtime error.
 
