@@ -4,7 +4,6 @@ using System.IO;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using System.Security.Principal;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SourceCode.Categories.Client;
@@ -19,7 +18,6 @@ namespace K2WorkflowCli
         private readonly object _client;
         private readonly Type _clientType;
         private readonly string _userName;
-        private readonly bool _ownsDesignerConnection;
         private readonly WorkflowRenderer _renderer;
         private SmartFormsIntegrationDescriptor _smartForm;
 
@@ -36,77 +34,18 @@ namespace K2WorkflowCli
         public WorkflowManager(WorkflowManifest manifest)
         {
             _manifest = manifest;
-            var identity = WindowsIdentity.GetCurrent();
-            var principal = new WindowsPrincipal(identity);
-            System.Threading.Thread.CurrentPrincipal = principal;
-            _userName = manifest.K2.Integrated
-                ? ResolveDesignerUser(principal)
-                : K2Connection.DescribeIdentity(manifest.K2);
+            _userName = K2Connection.DescribeIdentity(manifest.K2);
             _client = CreateDesignerClient(manifest.K2);
-            _ownsDesignerConnection = !manifest.K2.Integrated;
             _clientType = _client.GetType();
             _renderer = new WorkflowRenderer(manifest, () => manifest.Workflow.SmartForms == null
                 ? null
                 : _smartForm ?? (_smartForm = new SmartFormsIntegrationManager(_client, manifest.K2.DesignerHost, manifest.K2).Load(manifest.Workflow)));
         }
 
-        public static void Doctor(K2Settings settings)
-        {
-            var webBin = RuntimeAssemblyResolver.WorkflowDesignerBin;
-            foreach (var file in new[] { "SourceCode.K2Designer.dll", "SourceCode.Designer.Client.dll", "Newtonsoft.Json.dll" })
-                if (!File.Exists(Path.Combine(webBin, file))) throw new CliException("Required K2 Workflow Designer assembly is missing: " + file);
-            foreach (var file in new[] { "SourceCode.Framework.dll", "SourceCode.HostClientAPI.dll", "SourceCode.SmartObjects.Client.dll" })
-                if (!File.Exists(Path.Combine(RuntimeAssemblyResolver.InstallDirectory, "Bin", file))) throw new CliException("Required K2 assembly is missing: " + file);
-            Console.WriteLine("K2 install: " + RuntimeAssemblyResolver.InstallDirectory);
-            Console.WriteLine("Workflow designer: " + webBin);
-            if (settings == null)
-            {
-                Console.WriteLine(
-                    "Windows identity: "
-                    + WindowsIdentity.GetCurrent().Name);
-                Console.WriteLine(
-                    "Authoring probe: manifest not supplied; "
-                    + "run doctor <manifest.json> to validate its K2 identity.");
-            }
-            else
-            {
-                var client = CreateDesignerClient(settings);
-                try
-                {
-                    var clientType = client.GetType();
-                    var connection = clientType.GetProperty(
-                        "Connection").GetValue(client, null)
-                        as BaseAPIConnection;
-                    if (connection != null)
-                        K2Connection.AssertAuthenticated(
-                            connection,
-                            settings,
-                            "K2 workflow Designer authoring");
-                    Console.WriteLine(
-                        "Designer identity: "
-                        + K2Connection.DescribeIdentity(settings));
-                    Console.WriteLine(
-                        "Authentication: "
-                        + (settings.Integrated
-                            ? "Integrated Windows"
-                            : "non-integrated "
-                                + settings.SecurityLabel));
-                }
-                finally
-                {
-                    CloseDesignerClient(
-                        client,
-                        !settings.Integrated);
-                }
-            }
-            Console.WriteLine("Authoring model: K2 Five HTML5 Workflow Designer JSON");
-            Console.WriteLine("Designer environment: smartforms");
-        }
-
-        public string Render()
+        public JObject Render()
         {
             if (string.Equals(_manifest.Workflow.Kind, "stage-router", StringComparison.OrdinalIgnoreCase)) ValidateStageTargets();
-            return _renderer.Render().ToString(Formatting.None);
+            return _renderer.Render();
         }
 
         private void ValidateStageTargets()
@@ -127,94 +66,6 @@ namespace K2WorkflowCli
                     if (field == null || (int?)field["type"] != 6)
                         throw new CliException("Router child must expose the exact text scalar field '" + fieldName + "': " + stage.Workflow);
                 }
-            }
-        }
-
-        public void Plan()
-        {
-            var existing = GetProcessId();
-            Console.WriteLine("Workflow: " + _manifest.Workflow.ProcessFullName);
-            Console.WriteLine("Category: " + _manifest.Application.WorkflowCategoryPath);
-            Console.WriteLine("Definition: " + _manifest.Workflow.Kind);
-            Console.WriteLine("Action: " + (existing.HasValue ? "update JSON process " + existing.Value : "create JSON process"));
-            Console.WriteLine("Publish: " + _manifest.Workflow.Publish);
-            if (_manifest.Workflow.StageRouter != null)
-            {
-                Console.WriteLine("Stage routing: " + _manifest.Workflow.StageRouter.Stages.Count + " explicitly mapped synchronous children; initial=" + _manifest.Workflow.StageRouter.InitialStage);
-                Console.WriteLine("Unknown child outcome: wait for the declared exception-task assignees to Retry; no automatic success or retry.");
-            }
-            ReportTaskAssignmentPolicy();
-            if (_manifest.Workflow.ApprovalMatrix != null)
-            {
-                Console.WriteLine("Approval matrix: " + _manifest.Workflow.ApprovalMatrix.MatrixCode + " via " + _manifest.Workflow.ApprovalMatrix.SmartObject + "." + _manifest.Workflow.ApprovalMatrix.Method);
-                Console.WriteLine("Approval matrix amount: request." + _manifest.Workflow.ApprovalMatrix.AmountProperty);
-                foreach (var dimension in _manifest.Workflow.ApprovalMatrix.Dimensions)
-                    Console.WriteLine("Approval matrix dimension: request." + dimension.RequestProperty + " -> " + dimension.InputProperty);
-            }
-            if (_manifest.Workflow.SmartForms != null)
-            {
-                Console.WriteLine("SmartForm: " + _manifest.Workflow.SmartForms.Form);
-                Console.WriteLine("Start state: " + _manifest.Workflow.SmartForms.StartState + " (default: " + _manifest.Workflow.SmartForms.MakeStartStateDefault + ")");
-                Console.WriteLine(_manifest.Workflow.SmartForms.StartOnly ? "Integration mode: start-only" : "Task state: " + _manifest.Workflow.SmartForms.TaskState);
-            }
-            Console.WriteLine("Rendered JSON bytes: " + System.Text.Encoding.UTF8.GetByteCount(Render()));
-        }
-
-        public void Deploy()
-        {
-            ReportTaskAssignmentPolicy();
-            var categoryId = EnsureWorkflowCategory();
-            var existing = GetProcessId();
-            if (existing.HasValue && !_manifest.Workflow.ReplaceExisting)
-                throw new CliException("Workflow already exists. Set workflow.replaceExisting to true to update it: " + _manifest.Workflow.ProcessFullName);
-            var processId = existing ?? 0;
-
-            // SaveKprx can check out an integrated form as part of publishing. Reconcile an existing
-            // workflow's tool-owned integration first so the management provider does not race that lock.
-            if (existing.HasValue && _manifest.Workflow.SmartForms != null)
-            {
-                if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Load(_manifest.Workflow);
-                new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Integrate(_manifest.Workflow, _smartForm);
-            }
-
-            var jsonId = Guid.NewGuid().ToString();
-            if (existing.HasValue)
-            {
-                var info = GetProcessInfo(existing.Value);
-                var property = info.GetType().GetProperty("JsonId");
-                if (property != null && property.GetValue(info, null) != null) jsonId = Convert.ToString(property.GetValue(info, null));
-            }
-            var clientIdentifier = Guid.NewGuid();
-            var response = Invoke("SaveKprx", _manifest.K2.DesignerHost, _userName, processId, jsonId,
-                _manifest.Workflow.ProcessFullName, Render(), categoryId.ToString(), true,
-                string.IsNullOrWhiteSpace(_manifest.Workflow.Comment) ? "Published by k2wf" : _manifest.Workflow.Comment,
-                _manifest.Workflow.Publish, true, clientIdentifier, true, true);
-            var result = JObject.Parse(Convert.ToString(response));
-            if ((bool?)result["Success"] != true)
-            {
-                var errors = result["Errors"] == null ? result.ToString(Formatting.None) :
-                    string.Join("; ", result["Errors"].Children().Select(x => x.Type == JTokenType.String ? Convert.ToString(x) : x.ToString(Formatting.None)).ToArray());
-                throw new CliException("K2 rejected the workflow: " + errors);
-            }
-            Console.WriteLine((_manifest.Workflow.Publish ? "Published" : "Saved draft") + ": " + _manifest.Workflow.ProcessFullName);
-            Console.WriteLine("JSON process ID: " + Convert.ToString(result["SavedId"]));
-            if (result["ProcID"] != null) Console.WriteLine("Runtime process ID: " + Convert.ToString(result["ProcID"]));
-            if (result["VersionNumber"] != null) Console.WriteLine("Runtime version: " + Convert.ToString(result["VersionNumber"]));
-            var savedId = Convert.ToInt32(result["SavedId"]);
-            try
-            {
-                if (_manifest.Workflow.SmartForms != null)
-                {
-                    if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Load(_manifest.Workflow);
-                    var integration = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2);
-                    integration.Integrate(_manifest.Workflow, _smartForm);
-                    integration.CheckInAfterIntegration(_smartForm);
-                }
-            }
-            finally
-            {
-                Unlock(savedId);
-                Console.WriteLine("Released designer lock: " + _manifest.Workflow.ProcessFullName);
             }
         }
 
@@ -580,17 +431,17 @@ namespace K2WorkflowCli
             }
             Console.WriteLine("Verified JSON workflow: " + _manifest.Workflow.ProcessFullName + " (ID " + id.Value + ")");
             if (_manifest.Workflow.Publish) Console.WriteLine("Verified published runtime definition.");
-            ReportTaskAssignmentPolicy();
+            ReportTaskAssignmentPolicy(_manifest.Workflow);
         }
 
-        public void ReportTaskAssignmentPolicy()
+        internal static void ReportTaskAssignmentPolicy(WorkflowSettings workflow)
         {
-            if ((!string.Equals(_manifest.Workflow.Kind, "request-approval", StringComparison.OrdinalIgnoreCase) && !string.Equals(_manifest.Workflow.Kind, "stage-task", StringComparison.OrdinalIgnoreCase)) || _manifest.Workflow.UserTask == null) return;
-            var requested = _manifest.Workflow.UserTask.Assignees == null ? new string[0] : _manifest.Workflow.UserTask.Assignees.ToArray();
+            if ((!string.Equals(workflow.Kind, "request-approval", StringComparison.OrdinalIgnoreCase) && !string.Equals(workflow.Kind, "stage-task", StringComparison.OrdinalIgnoreCase)) || workflow.UserTask == null) return;
+            var requested = workflow.UserTask.Assignees == null ? new string[0] : workflow.UserTask.Assignees.ToArray();
             Console.WriteLine("User Task requested assignees: " + (requested.Length == 0 ? "(not supplied)" : string.Join(", ", requested)));
-            if (_manifest.Workflow.ApprovalMatrix != null)
+            if (workflow.ApprovalMatrix != null)
             {
-                Console.WriteLine("User Task effective assignee: approval matrix " + _manifest.Workflow.ApprovalMatrix.MatrixCode + "." + _manifest.Workflow.ApprovalMatrix.ApproverProperty);
+                Console.WriteLine("User Task effective assignee: approval matrix " + workflow.ApprovalMatrix.MatrixCode + "." + workflow.ApprovalMatrix.ApproverProperty);
                 return;
             }
             Console.WriteLine("User Task effective assignees: " + string.Join(", ", requested));
@@ -829,24 +680,6 @@ namespace K2WorkflowCli
             }
         }
 
-        private int EnsureWorkflowCategory()
-        {
-            var root = FindCategory(_manifest.Application.RootCategoryPath);
-            if (root == null) throw new CliException("Application root category does not exist: " + _manifest.Application.RootCategoryPath);
-            var workflows = FindCategory(_manifest.Application.WorkflowCategoryPath);
-            if (workflows != null) return (int)workflows["id"];
-            var assembly = Assembly.LoadFrom(Path.Combine(RuntimeAssemblyResolver.WorkflowDesignerBin, "SourceCode.K2Designer.dll"));
-            var type = assembly.GetType("SourceCode.K2Designer.Providers.Legacy.CategoryManagementProvider", true);
-            var provider = Activator.CreateInstance(type, _client);
-            try { type.GetMethod("CreateCategory").Invoke(provider, new object[] { _manifest.Application.WorkflowCategoryName, CategorySystemId, (int)root["id"], _manifest.K2.DesignerHost }); }
-            catch (TargetInvocationException ex) { throw new CliException("Unable to create workflow category '" + _manifest.Application.WorkflowCategoryName + "': " + ex.GetBaseException().Message); }
-            finally { /* Provider shares the manager's designer client. */ }
-            workflows = FindCategory(_manifest.Application.WorkflowCategoryPath);
-            if (workflows == null) throw new CliException("K2 did not return the new workflow category: " + _manifest.Application.WorkflowCategoryPath);
-            Console.WriteLine("Created category: " + _manifest.Application.WorkflowCategoryPath);
-            return (int)workflows["id"];
-        }
-
         private JObject FindCategory(string path)
         {
             var assembly = Assembly.LoadFrom(Path.Combine(RuntimeAssemblyResolver.WorkflowDesignerBin, "SourceCode.K2Designer.dll"));
@@ -933,64 +766,24 @@ namespace K2WorkflowCli
 
         private static object CreateDesignerClient(K2Settings settings)
         {
-            if (!settings.Integrated)
+            var assembly = Assembly.LoadFrom(Path.Combine(RuntimeAssemblyResolver.InstallDirectory,
+                "Host Server", "Bin", "SourceCode.Designer.Client.dll"));
+            var type = assembly.GetType("SourceCode.Designer.Client.K2DesignerManagementClient", true);
+            var client = Activator.CreateInstance(type);
+            try
             {
-                var clientAssembly = Assembly.LoadFrom(
-                    Path.Combine(
-                        RuntimeAssemblyResolver.WorkflowDesignerBin,
-                        "SourceCode.Designer.Client.dll"));
-                var clientType = clientAssembly.GetType(
-                    "SourceCode.Designer.Client.K2DesignerManagementClient",
-                    true);
-                var client = Activator.CreateInstance(clientType);
-                try
-                {
-                    clientType.GetMethod(
-                        "CreateConnection",
-                        Type.EmptyTypes).Invoke(client, null);
-                    var connection = clientType.GetProperty(
-                        "Connection").GetValue(client, null)
-                        as BaseAPIConnection;
-                    if (connection == null)
-                        throw new CliException(
-                            "K2 Designer client did not create a connection.");
-                    connection.Open(
-                        K2Connection.BuildManagementConnectionString(
-                            settings));
-                    K2Connection.AssertAuthenticated(
-                        connection,
-                        settings,
-                        "K2 workflow Designer authoring");
-                    return client;
-                }
-                catch
-                {
-                    var disposable = client as IDisposable;
-                    if (disposable != null) disposable.Dispose();
-                    throw;
-                }
+                type.GetMethod("CreateConnection", Type.EmptyTypes).Invoke(client, null);
+                var connection = type.GetProperty("Connection").GetValue(client, null) as BaseAPIConnection;
+                if (connection == null) throw new CliException("K2 Designer client did not create a connection.");
+                connection.Open(K2Connection.BuildManagementConnectionString(settings));
+                K2Connection.AssertAuthenticated(connection, settings, "K2 workflow Designer");
+                return client;
             }
-
-            var assembly = Assembly.LoadFrom(Path.Combine(RuntimeAssemblyResolver.WorkflowDesignerBin, "SourceCode.K2Designer.dll"));
-            var type = assembly.GetType("SourceCode.K2Designer.ProcessBase.ConnectionClassContext", true);
-            var context = Activator.CreateInstance(type);
-            var method = type.GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                .Single(x => x.Name == "GetBaseApi" && !x.IsGenericMethod && x.GetParameters().Length == 0);
-            return method.Invoke(context, null);
-        }
-
-        private static string ResolveDesignerUser(IPrincipal principal)
-        {
-            var assembly = Assembly.LoadFrom(Path.Combine(RuntimeAssemblyResolver.WorkflowDesignerBin, "SourceCode.K2Designer.dll"));
-            var type = assembly.GetType("SourceCode.K2Designer.ProcessBase.ConnectionClassContext", true);
-            var context = Activator.CreateInstance(type);
-            var value = Convert.ToString(type.GetMethod("GetUser").Invoke(context, new object[] { principal }));
-            if (string.IsNullOrWhiteSpace(value))
+            catch
             {
-                var name = principal.Identity.Name;
-                return name.StartsWith("K2:", StringComparison.OrdinalIgnoreCase) ? name : "K2:" + name;
+                CloseDesignerClient(client);
+                throw;
             }
-            return value;
         }
 
         private static string GetStringProperty(object value, string propertyName)
@@ -999,33 +792,20 @@ namespace K2WorkflowCli
             return property == null ? string.Empty : Convert.ToString(property.GetValue(value, null));
         }
 
-        private static void CloseDesignerClient(
-            object client,
-            bool ownsConnection)
+        private static void CloseDesignerClient(object client)
         {
-            if (client == null) return;
             var clientType = client.GetType();
-            if (ownsConnection)
-            {
-                var connection = clientType.GetProperty(
-                    "Connection").GetValue(client, null)
-                    as BaseAPIConnection;
-                if (connection != null && connection.IsConnected)
-                    connection.Close();
-                var delete = clientType.GetMethod(
-                    "DeleteConnection",
-                    Type.EmptyTypes);
-                if (delete != null) delete.Invoke(client, null);
-            }
+            var connection = clientType.GetProperty("Connection").GetValue(client, null) as BaseAPIConnection;
+            if (connection == null) return;
+            if (connection.IsConnected) connection.Close();
+            clientType.GetMethod("DeleteConnection", Type.EmptyTypes).Invoke(client, null);
             var disposable = client as IDisposable;
             if (disposable != null) disposable.Dispose();
         }
 
         public void Dispose()
         {
-            CloseDesignerClient(
-                _client,
-                _ownsDesignerConnection);
+            CloseDesignerClient(_client);
         }
     }
 

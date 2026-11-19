@@ -14,28 +14,58 @@ namespace K2WorkflowCli
     {
         internal const string ImporterEnvironmentVariable = "K2_WORKFLOW_IMPORTER_SMARTOBJECT_ID";
 
-        public static void ImportDraft(WorkflowManifest manifest, string explicitImporter)
+        public static void Doctor(K2Settings settings, string explicitImporter)
         {
-            ValidateManifest(manifest);
-            Guid importerId;
-            var selection = explicitImporter ?? Environment.GetEnvironmentVariable(ImporterEnvironmentVariable);
-            if (!Guid.TryParse(selection, out importerId) || importerId == Guid.Empty)
-                throw new CliException("Specify the dedicated Workflow Importer SmartObject GUID with --importer or select it in the K2 environment profile.");
+            Console.WriteLine("Workflow authoring: K2 Workflow Import Service (JSONata draft import)");
+            if (settings == null) return;
 
-            var definition = new WorkflowRenderer(manifest).Render();
+            var importerId = ResolveImporter(explicitImporter);
             var server = new SmartObjectClientServer();
             try
             {
-                server.CreateConnection();
-                server.Connection.Open(K2Connection.BuildManagementConnectionString(manifest.K2));
-                K2Connection.AssertAuthenticated(server.Connection, manifest.K2, "K2 Workflow Importer");
-                var smartObject = server.GetSmartObject(importerId);
-                var method = smartObject.AllMethods.SingleOrDefault(x => x.Name == "ConvertWorkflow");
-                if (method == null)
-                    throw new CliException("The selected SmartObject has no ConvertWorkflow method.");
-                var file = smartObject.Properties["File"] as SmartFileProperty;
-                if (file == null)
-                    throw new CliException("The selected SmartObject has no File attachment property.");
+                Connect(server, settings);
+                GetImporter(server, importerId);
+                Console.WriteLine("Workflow Importer SmartObject: " + importerId);
+                Console.WriteLine("K2 identity: " + K2Connection.DescribeIdentity(settings));
+            }
+            finally { Close(server); }
+        }
+
+        public static void Plan(WorkflowManifest manifest)
+        {
+            ValidateManifest(manifest);
+            var workflow = manifest.Workflow;
+            Console.WriteLine("Workflow: " + workflow.ProcessFullName);
+            Console.WriteLine("Category: " + manifest.Application.WorkflowCategoryPath);
+            Console.WriteLine("Definition: " + workflow.Kind);
+            Console.WriteLine("Action: import Designer draft (" + (workflow.ReplaceExisting ? "Overwrite" : "Skip existing") + ")");
+            ReportDesignerSteps(manifest);
+        }
+
+        public static JObject Render(WorkflowManifest manifest)
+        {
+            var workflow = manifest.Workflow;
+            if ((workflow.SmartForms != null && string.Equals(workflow.Kind, "request-approval", StringComparison.OrdinalIgnoreCase)) ||
+                string.Equals(workflow.Kind, "stage-router", StringComparison.OrdinalIgnoreCase))
+            {
+                using (var manager = new WorkflowManager(manifest))
+                    return manager.Render();
+            }
+            return new WorkflowRenderer(manifest).Render();
+        }
+
+        public static void ImportDraft(WorkflowManifest manifest, string explicitImporter)
+        {
+            ValidateManifest(manifest);
+            var importerId = ResolveImporter(explicitImporter);
+            var definition = Render(manifest);
+            var server = new SmartObjectClientServer();
+            try
+            {
+                Connect(server, manifest.K2);
+                var smartObject = GetImporter(server, importerId);
+                var method = smartObject.AllMethods.Single(x => x.Name == "ConvertWorkflow");
+                var file = (SmartFileProperty)smartObject.Properties["File"];
                 var categoryId = EnsureCategory(manifest);
                 smartObject.MethodToExecute = method.Name;
                 file.FileName = "k2skills-workflow.xml";
@@ -48,6 +78,8 @@ namespace K2WorkflowCli
                 if (results.Count != 1)
                     throw new CliException("K2 did not return exactly one import result. Verify the category in Designer before retrying.");
                 ReportResult(results[0], categoryId, manifest.Workflow.ProcessFullName);
+                WorkflowManager.ReportTaskAssignmentPolicy(manifest.Workflow);
+                ReportDesignerSteps(manifest);
             }
             catch (SmartObjectException ex)
             {
@@ -56,24 +88,51 @@ namespace K2WorkflowCli
                 throw new CliException("Workflow Importer call failed. Verify the target in Designer before retrying. " +
                     (string.IsNullOrEmpty(messages) ? ex.Message : messages));
             }
-            finally
-            {
-                if (server.Connection != null)
-                {
-                    server.Connection.Close();
-                    server.DeleteConnection();
-                }
-            }
+            finally { Close(server); }
+        }
+
+        private static Guid ResolveImporter(string explicitImporter)
+        {
+            Guid id;
+            var selection = explicitImporter ?? Environment.GetEnvironmentVariable(ImporterEnvironmentVariable);
+            if (!Guid.TryParse(selection, out id) || id == Guid.Empty)
+                throw new CliException("Configure the dedicated Workflow Importer in the K2 environment profile or pass its SmartObject GUID with --importer.");
+            return id;
+        }
+
+        private static void Connect(SmartObjectClientServer server, K2Settings settings)
+        {
+            server.CreateConnection();
+            server.Connection.Open(K2Connection.BuildManagementConnectionString(settings));
+            K2Connection.AssertAuthenticated(server.Connection, settings, "K2 Workflow Importer");
+        }
+
+        private static SmartObject GetImporter(SmartObjectClientServer server, Guid id)
+        {
+            var smartObject = server.GetSmartObject(id);
+            if (!smartObject.AllMethods.Any(x => x.Name == "ConvertWorkflow") ||
+                !(smartObject.Properties["File"] is SmartFileProperty))
+                throw new CliException("The selected SmartObject does not expose Workflow Importer ConvertWorkflow and its File attachment.");
+            return smartObject;
+        }
+
+        private static void Close(SmartObjectClientServer server)
+        {
+            if (server.Connection == null) return;
+            server.Connection.Close();
+            server.DeleteConnection();
+        }
+
+        private static void ReportDesignerSteps(WorkflowManifest manifest)
+        {
+            if (manifest.Workflow.SmartForms != null)
+                Console.WriteLine("Configure the declared SmartForms Start/Task integration in K2 Designer.");
+            if (manifest.Workflow.Publish)
+                Console.WriteLine("Publication pending: open the imported draft and use File > Deploy in K2 Designer.");
         }
 
         private static void ValidateManifest(WorkflowManifest manifest)
         {
-            if (manifest.Workflow.Publish)
-                throw new CliException("The Workflow Importer saves a Designer draft. Set workflow.publish to false for import-draft.");
-            if (manifest.Workflow.SmartForms != null)
-                throw new CliException("Configure SmartForms integration in Designer after import. Remove workflow.smartForms for import-draft.");
-            if (string.Equals(manifest.Workflow.Kind, "stage-router", StringComparison.OrdinalIgnoreCase))
-                throw new CliException("stage-router requires Designer-side validation of deployed child workflow IDs and fields.");
             if (manifest.Workflow.Name != manifest.Workflow.Name.Trim())
                 throw new CliException("workflow.name must not begin or end with whitespace.");
             if (manifest.Workflow.Name.IndexOfAny(new[] { ':', '*', '?', '"', '<', '>', ',', '|', '(', ')', '\'', ';' }) >= 0)

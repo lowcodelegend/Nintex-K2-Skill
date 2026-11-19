@@ -103,7 +103,7 @@
     },
     {
       "name": "k2-workflows",
-      "version": "0.19.0-spike.2",
+      "version": "0.19.0-spike.3",
       "platform": "win-x64",
       "buildScript": "skills/k2-workflows/scripts/build.ps1",
       "buildParameters": {
@@ -119,12 +119,12 @@
         "arguments": [
           "version"
         ],
-        "expectedOutput": "k2wf 0.19.0-spike.2"
+        "expectedOutput": "k2wf 0.19.0-spike.3"
       }
     },
     {
       "name": "k2-builder",
-      "version": "0.28.3",
+      "version": "0.28.4",
       "platform": "win-x64",
       "buildScript": "skills/k2-builder/scripts/build.ps1",
       "buildParameters": {
@@ -139,7 +139,7 @@
         "arguments": [
           "version"
         ],
-        "expectedOutput": "k2build 0.28.1"
+        "expectedOutput": "k2build 0.28.4"
       }
     },
     {

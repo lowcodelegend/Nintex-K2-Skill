@@ -5,9 +5,7 @@ description: Build, import, publish, inspect, verify, and clean up K2 Five HTML5
 
 # K2 Five workflows
 
-Use `scripts/k2wf.ps1 import-draft` to author drafts through the [Workflow Import Service](references/workflow-importer.md) when the task calls for the supported JSONata path. Configure the dedicated instance during optional builder onboarding. Use K2 Designer to review and publish the imported draft.
-
-The existing `deploy` command uses the Designer client and remains available for workflows that require its automated publishing and SmartForms integration. Follow the workflow below when that path is in scope.
+Use `scripts/k2wf.ps1 deploy` to import workflow drafts through the [Workflow Import Service](references/workflow-importer.md). Configure a dedicated importer for the environment and run the CLI through `k2env.ps1 invoke` to select it from the profile. Apply requested SmartForms integration and publication in K2 Designer.
 
 ## Project feedback loop
 
@@ -15,10 +13,10 @@ Before the first authorized project mutation, use the sibling `$k2-builder` skil
 
 ## Workflow
 
-1. If `$k2-builder` is installed, validate its selected environment profile before discovery. Project its K2 authentication fields into the workflow manifest, launch non-integrated commands through `k2env.ps1 invoke`, run `doctor <manifest>`, and report the resolved identity and authoring model.
+1. If `$k2-builder` is installed, validate its selected environment profile before discovery. Project its K2 authentication fields into the workflow manifest, launch importer commands through `k2env.ps1 invoke` or pass the dedicated SmartObject GUID with `--importer`, run `doctor <manifest>`, and report the resolved identity and authoring model.
 2. Read [manifest.md](references/manifest.md) and [design.md](references/design.md). Create a stable, version-free manifest. For complete solutions use the shared `<CODE>.` namespace and workflow child `<application root leaf> WFs`; never `Workflow` or `Workflows`.
 3. Run `plan`; use `render` only when JSON review is useful. Review category/name, status mappings, recipients, task actions/notification, authoritative assignment, SmartForm/rules, and primary request reference.
-4. Run `deploy ... --confirm`; it saves/publishes, integrates SmartForms, verifies, checks in a same-owner Form draft, and releases the workflow lock. Use separate `inspect`/`verify` only for drift or evidence.
+4. Run `deploy ... --confirm` and record the imported draft ID. Apply any required SmartForms integration and publish in Designer when the manifest requests it. Run `verify` for the requested final state.
 5. For an authorized disposable workflow, run `cleanup ... --confirm --delete-deployed`. It checks instances once, refuses live instances, removes integration, deletes runtime definitions without log data, removes Designer JSON, and removes the exact workflow category when empty. Builder cleanup may defer integration only when it will delete the exact manifest-owned Form next.
 
 If a browser/tool session left a lock, run `unlock <manifest> --confirm` and refresh Designer. Do not inspect with `GetUserProcessKprx` or `GetProcessJson`; on K2 Five 5.10 those reads reacquire the lock. CLI reads are non-locking.
@@ -32,7 +30,7 @@ If a browser/tool session left a lock, run `unlock <manifest> --confirm` and ref
 - Without `approvalMatrix`, require `userTask.assignees`; generation and verification use each declared `$originator` or explicit K2 identity exactly. Unsupported dynamic assignee tokens are rejected.
 - With threshold, dimension, or stage routing, read [approval-matrices.md](references/approval-matrices.md). Omit direct assignees: the resolver's `ApproverValue` is authoritative and Approve loops until `HasApprover=false`.
 - Use `$environment:From Address` and `$originator` for supported dynamic fields. Prefer built-in `userTask.notification`; its templates support `{{request.<Property>}}`, `{{task.participantName}}`, and `{{task.worklistLink}}`.
-- Prefer native SmartForms integration because it creates StartProcess, LoadProcess, and ActionProcess rules. The Form must expose the request SmartObject as its primary Create reference. Deployment reconciles an existing tool-owned Start default in place and requires Task never be default.
+- Prefer native SmartForms integration because it creates StartProcess, LoadProcess, and ActionProcess rules. The Form must expose the request SmartObject as its primary Create reference. Set the requested Start default during Designer integration and keep Task non-default.
 - For a parent lifecycle launched from a reviewed draft, set `smartForms.startOnly=true`, provide `primarySmartObject`, and target the dedicated final submit rule. Start-only integration adds StartProcess without requiring a User Task or Task state.
 - Use `start-end` only for a minimal smoke test. Use `json-file` only for compatible HTML5 Designer JSON.
 - Use `call-subworkflow` for one native child invocation with an explicit deployed target and wait policy. Deploy the child first; do not represent this primitive alone as a configuration-driven case lifecycle.

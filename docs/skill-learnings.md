@@ -235,10 +235,15 @@ Copy this block for each learning and remove this comment wrapper.
   - Setup is repeatable and the selected environment profile supplies the generated SmartObject GUID.
   - Publishing and native SmartForms integration are tracked separately from draft import.
 - Feedback history: 2026-11-18 — Validated registration, re-run, profile execution, import and collision handling on one local K2 server. The current build's draft-only behavior sets the scope of this change.
+- Feedback follow-up: 2026-11-19 — Made the importer the sole workflow creation path in both skills and removed the direct Designer save. Live tests verified the default `deploy` command, duplicate rejection, alias overwrite with the same draft ID, and the Builder's pending gate while publication was outstanding. The in-process Designer web assembly was inaccessible on the test host. The authenticated Designer management client verified the draft and correctly reported that the runtime workflow was absent when the manifest requested publication. Removed the disposable drafts, categories, importer instances, and generated SmartObjects.
 
 ## Review history — 2026-11-18
 
 - Reviewed pending workflow and portability work at the draft-import milestone. The next workflow source change needs a Nintex-confirmed programmatic publication contract and coverage for native SmartForms integration. The environment-specific example bindings remain a separate builder follow-up.
+
+## Review history — 2026-11-19
+
+- Update $k2-workflows and $k2-builder in the importer branch with the live-verified draft creation path and an explicit Designer handoff. Publication and native SmartForms integration remain candidates for an upstream documentation PR once Nintex confirms the contracts and they pass live feature verification.
 
 ### K2L-0013 — Track Nintex API support by operation
 

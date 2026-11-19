@@ -17,7 +17,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if ($Command -eq 'version') {
-    Write-Output 'k2build 0.28.1'
+    Write-Output 'k2build 0.28.4'
     return
 }
 
@@ -811,7 +811,8 @@ if ($Command -in @('deploy', 'verify', 'cleanup')) {
         if (-not (Test-Path -LiteralPath $scriptPath -PathType Leaf)) { throw "Specialist wrapper not found: $scriptPath" }
 
         if ($Item.skill -eq 'k2-workflows') {
-            $arguments = @($Action, $Item.manifest)
+            $workflowAction = if ($Action -eq 'deploy') { 'import-draft' } else { $Action }
+            $arguments = @($workflowAction, $Item.manifest)
             if ($Action -in @('deploy', 'cleanup')) { $arguments += '--confirm' }
             if ($Action -eq 'cleanup') {
                 $arguments += '--delete-deployed'
@@ -864,6 +865,11 @@ if ($Command -in @('deploy', 'verify', 'cleanup')) {
         return
     }
 
+    $pendingDrafts = @()
+    foreach ($workflowItem in ($ordered | Where-Object { $_.skill -eq 'k2-workflows' })) {
+        Invoke-Specialist $workflowItem 'doctor'
+    }
+
     foreach ($item in $ordered) {
         if ($Resume) {
             Write-Output "Resume checkpoint: verifying $($item.component)"
@@ -889,7 +895,15 @@ if ($Command -in @('deploy', 'verify', 'cleanup')) {
         }
         Write-Output "Deploying checkpoint: $($item.component)"
         Invoke-Specialist $item 'deploy' -ResumeForms:($Resume -and $item.skill -eq 'k2-smartforms')
+        if ($item.skill -eq 'k2-workflows') { $pendingDrafts += $item.component }
     }
+    if ($pendingDrafts.Count -gt 0) {
+        Write-Output "Workflow drafts imported: $($pendingDrafts -join ', ')"
+        Write-Output 'Complete the publication and SmartForms integration requested by each manifest in K2 Designer. Then run k2build verify.'
+        Write-Output 'Final Builder verification gate: PENDING'
+        return
+    }
+
     $integratedWorkflows = @($workflowManifests.Values | Where-Object {
         $null -ne $_.Value -and
         $null -ne (Get-PropertyValue (Get-PropertyValue $_.Value 'workflow') 'smartForms')

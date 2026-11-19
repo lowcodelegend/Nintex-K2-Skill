@@ -93,7 +93,7 @@ To author workflow drafts through the Workflow Import Service, follow the workfl
 & '<k2-builder-root>\scripts\k2env.ps1' setup-workflow-importer --name '<environment>' --assets-directory '<staged v1 path>' --confirm
 ```
 
-The profile stores the generated SmartObject GUID in `capabilities.workflowImporterSmartObjectId`. `k2env invoke` passes that selection to `k2wf import-draft`. Repeat setup to verify the asset-path configuration after a K2 upgrade.
+The profile stores the generated SmartObject GUID in `capabilities.workflowImporterSmartObjectId`. `k2env invoke` passes that selection to `k2wf deploy` and Builder workflow checkpoints. Run Builder through the selected environment profile when deploying workflows. Repeat setup to verify the asset-path configuration after a K2 upgrade.
 
 ## Solution short-code uniqueness
 

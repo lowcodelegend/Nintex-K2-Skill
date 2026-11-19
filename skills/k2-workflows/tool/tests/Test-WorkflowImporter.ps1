@@ -5,7 +5,8 @@ $ErrorActionPreference = 'Stop'
 $skill = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $assets = Join-Path $skill 'assets\workflow-importer\v1'
 Add-Type -Path (Join-Path $K2InstallDirectory 'ServiceBroker\Newtonsoft.Json.dll')
-$assembly = [Reflection.Assembly]::LoadFrom((Join-Path $skill 'tool\K2WorkflowCli\bin\Release\k2wf.exe'))
+$exe = Join-Path $skill 'tool\K2WorkflowCli\bin\Release\k2wf.exe'
+$assembly = [Reflection.Assembly]::LoadFrom($exe)
 $builder = $assembly.GetType('K2WorkflowCli.WorkflowJsonBuilder', $true)
 $name = 'Graph roundtrip'
 $base = $builder.GetMethod('BuildStartEnd').Invoke($null, @($name))
@@ -34,3 +35,31 @@ if (-not [Newtonsoft.Json.Linq.JToken]::DeepEquals($converted, $definition)) {
     throw 'The JSONata conversion changed the rendered Designer graph.'
 }
 Write-Output 'Workflow Importer XSD and K2 JSONata round-trip passed.'
+
+$manifestPath = [IO.Path]::GetTempFileName()
+$previousErrorAction = $ErrorActionPreference
+try {
+    @{
+        schemaVersion = 1
+        name = 'Importer CLI test'
+        application = @{ rootCategoryPath = 'Importer CLI test'; workflowCategoryName = 'Importer CLI test WFs' }
+        workflow = @{ name = 'Importer CLI test'; kind = 'start-end'; publish = $true }
+    } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+
+    $plan = & $exe plan $manifestPath
+    if ($LASTEXITCODE -ne 0 -or ($plan -join "`n") -notmatch 'import Designer draft.*\r?\nPublication pending:') {
+        throw 'The plan did not describe draft import and pending publication.'
+    }
+
+    $ErrorActionPreference = 'Continue'
+    foreach ($command in @('deploy', 'import-draft')) {
+        $output = & $exe $command $manifestPath --importer 'invalid-guid' --confirm 2>&1
+        if ($LASTEXITCODE -ne 2 -or ($output -join "`n") -notmatch 'dedicated Workflow Importer') {
+            throw "$command failed to require a valid importer selection."
+        }
+    }
+    Write-Output 'Both workflow creation commands require a configured importer.'
+} finally {
+    $ErrorActionPreference = $previousErrorAction
+    Remove-Item -LiteralPath $manifestPath
+}

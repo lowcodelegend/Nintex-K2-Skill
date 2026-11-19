@@ -4,7 +4,7 @@ This earlier prototype owns transitions in the parent and does not implement NAC
 
 Use this prototype contract when a parent coordinates named child stages, including rework loops. It has no fixed stage count and requires no SQL resolver. Keep `request-approval` for its existing two-action approval/status/email topology and `case-lifecycle` for its existing resolver-based contract.
 
-Deploy the children first and record their exact deployed full names and Designer JSON process IDs. The parent checks those IDs, publication, and text input/output fields before rendering. The caller needs the appropriate native workflow Start rights; the tested call account is Originator. The tool does not grant permissions automatically.
+Import the children first and publish them in K2 Designer. Record their exact deployed full names and Designer JSON process IDs before importing the parent. The parent checks those IDs, publication, and text input/output fields before rendering. The caller needs the appropriate native workflow Start rights. The tested call account is Originator, and permissions are managed in K2.
 
 ## Child task
 

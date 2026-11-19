@@ -10,38 +10,42 @@ namespace K2WorkflowCli
         {
             if (args.Length == 0 || Has(args, "--help") || Has(args, "-h")) { Help(); return 0; }
             var command = args[0].ToLowerInvariant();
-            if (command == "version") { Console.WriteLine("k2wf 0.19.0-spike.2"); return 0; }
+            if (command == "version") { Console.WriteLine("k2wf 0.19.0-spike.3"); return 0; }
             if (command == "selftest") { SelfTests.Run(); return 0; }
             if (command == "doctor")
             {
-                WorkflowManager.Doctor(
-                    args.Length > 1
-                        ? WorkflowManifest.Load(args[1]).K2
-                        : null);
+                WorkflowImporter.Doctor(args.Length > 1 ? WorkflowManifest.Load(args[1]).K2 : null, Value(args, "--importer"));
                 return 0;
             }
             if (args.Length < 2) throw new CliException("A manifest path is required.");
             var manifest = WorkflowManifest.Load(args[1]);
-            if (command == "import-draft")
+            if (command == "deploy" || command == "import-draft")
             {
                 RequireConfirm(args);
                 WorkflowImporter.ImportDraft(manifest, Value(args, "--importer"));
+                return 0;
+            }
+            if (command == "plan")
+            {
+                WorkflowImporter.Plan(manifest);
+                return 0;
+            }
+            if (command == "render")
+            {
+                var output = Value(args, "--output");
+                if (string.IsNullOrWhiteSpace(output)) throw new CliException("render requires --output <file>.");
+                var fullPath = Path.GetFullPath(output);
+                var definition = WorkflowImporter.Render(manifest);
+                Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
+                File.WriteAllText(fullPath, definition.ToString(Newtonsoft.Json.Formatting.None));
+                Console.WriteLine("Rendered: " + fullPath);
+                WorkflowManager.ReportTaskAssignmentPolicy(manifest.Workflow);
                 return 0;
             }
             using (var manager = new WorkflowManager(manifest))
             {
                 switch (command)
                 {
-                    case "plan": manager.Plan(); return 0;
-                    case "render":
-                        var output = Value(args, "--output");
-                        if (string.IsNullOrWhiteSpace(output)) throw new CliException("render requires --output <file>.");
-                        var fullPath = Path.GetFullPath(output);
-                        Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
-                        File.WriteAllText(fullPath, manager.Render());
-                        Console.WriteLine("Rendered: " + fullPath);
-                        manager.ReportTaskAssignmentPolicy();
-                        return 0;
                     case "export":
                         var exportOutput = Value(args, "--output");
                         if (string.IsNullOrWhiteSpace(exportOutput)) throw new CliException("export requires --output <file>.");
@@ -54,7 +58,6 @@ namespace K2WorkflowCli
                         if (string.IsNullOrWhiteSpace(byIdOutput)) throw new CliException("export-id requires --output <file>.");
                         manager.ExportById(exportId, Path.GetFullPath(byIdOutput));
                         return 0;
-                    case "deploy": RequireConfirm(args); manager.Deploy(); manager.Verify(); return 0;
                     case "start": RequireConfirm(args); manager.Start(ParseData(args)); return 0;
                     case "status": manager.RuntimeStatus(); return 0;
                     case "instance-data":
@@ -96,15 +99,15 @@ namespace K2WorkflowCli
         }
         private static void Help()
         {
-            Console.WriteLine("k2wf 0.19.0-spike.2 - K2 Five HTML5 Workflow Designer JSON CLI");
+            Console.WriteLine("k2wf 0.19.0-spike.3 - K2 Five HTML5 Workflow Designer JSON CLI");
             Console.WriteLine("Commands:");
-            Console.WriteLine("  doctor [manifest.json]");
+            Console.WriteLine("  doctor [manifest.json] [--importer <SmartObject GUID>]");
             Console.WriteLine("  plan <manifest.json>");
             Console.WriteLine("  render <manifest.json> --output <workflow.json>");
             Console.WriteLine("  export <manifest.json> --output <workflow.json>");
             Console.WriteLine("  export-id <connection-manifest.json> --id <Designer-id> --output <workflow.json>");
-            Console.WriteLine("  deploy <manifest.json> --confirm");
-            Console.WriteLine("  import-draft <manifest.json> [--importer <SmartObject GUID>] --confirm");
+            Console.WriteLine("  deploy <manifest.json> [--importer <SmartObject GUID>] --confirm   Import a Designer draft");
+            Console.WriteLine("  import-draft <manifest.json> [--importer <SmartObject GUID>] --confirm   Alias for deploy");
             Console.WriteLine("  start <manifest.json> --data Name=Value [--data Name=Value] --confirm");
             Console.WriteLine("  status <manifest.json>");
             Console.WriteLine("  instance-data <manifest.json> --id <process-instance-id>");

@@ -17,15 +17,15 @@ This registers or reuses the dedicated `K2Skills_WorkflowImporter_V1` service in
 
 ## Import a manifest
 
-Set `workflow.publish` to `false`. Use an existing application root category. The command creates its workflow child category if needed. Keep `workflow.replaceExisting` false to reject collisions. An explicit true requests the Import Service's Overwrite action and saves a new draft version of the matching workflow.
+Use an existing application root category. `workflow.publish` and `workflow.smartForms` describe the intended state for Designer and subsequent verification. The command creates its workflow child category if needed. Keep `workflow.replaceExisting` false to reject collisions. An explicit true requests the Import Service's Overwrite action and saves a new draft version of the matching workflow.
 
 ```powershell
 & '<k2-builder-root>\scripts\k2env.ps1' invoke --name '<environment>' --command `
-  '<k2-workflows-root>\scripts\k2wf.ps1' import-draft '.\workflow-manifest.json' --confirm
+  '<k2-workflows-root>\scripts\k2wf.ps1' deploy '.\workflow-manifest.json' --confirm
 ```
 
-For standalone use, pass `--importer <SmartObject GUID>` to `k2wf.ps1 import-draft`. Use a SmartObject from a dedicated instance configured with the bundled assets.
+For standalone use, pass `--importer <SmartObject GUID>` to `k2wf.ps1 deploy`. Use a SmartObject from a dedicated instance configured with the bundled assets.
 
-Review the imported draft in K2 Designer, configure any required Start/Task rules there, then use **File > Deploy** to publish it. The import command rejects manifests with a `workflow.smartForms` block and the `stage-router` kind, which needs Designer-side validation of its published child workflow IDs and fields. An ambiguous response should be checked in Designer before retrying, especially with replacement enabled.
+Review the imported draft in K2 Designer, configure any required Start/Task rules there, then use **File > Deploy** to publish it. `import-draft` is an alias for `deploy`. SmartForms-enabled request approval and `stage-router` still use Designer metadata reads for graph construction and validation. An ambiguous response should be checked in Designer before retrying, especially with replacement enabled.
 
 [Nintex Workflow Import Service](https://help.nintex.com/en-US/nintexautomation/UserGuide/current/Content/ServiceBrokers/WorkflowImport/WorkflowImport.htm) · [Deploy a workflow in K2 Designer](https://help.nintex.com/en-US/nintexautomation/userguide/current/Content/K2-Workflow-Designer/Deploy/Deploy.htm)
