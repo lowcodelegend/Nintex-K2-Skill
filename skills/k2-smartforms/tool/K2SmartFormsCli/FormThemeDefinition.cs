@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Xml.Linq;
+using SourceCode.Forms.Authoring;
 
 namespace K2SmartFormsCli
 {
@@ -8,6 +9,48 @@ namespace K2SmartFormsCli
     {
         private const string LegacyThemePropertyName = "UseLegacyTheme";
         private const string StyleProfilePropertyName = "StyleProfile";
+
+        public static void ConfigureGeneratedForm(Form form, bool useLegacyTheme, Guid? styleProfileGuid, string styleProfileName)
+        {
+            var control = form.Controls.Cast<Control>().SingleOrDefault(x =>
+                string.Equals(x.Type, "Form", StringComparison.OrdinalIgnoreCase));
+            if (control == null)
+                throw new CliException("Generated K2 form must contain exactly one form control.");
+
+            var legacy = useLegacyTheme ? "true" : "false";
+            SetProperty(control, LegacyThemePropertyName, legacy, legacy);
+            if (styleProfileGuid.HasValue)
+            {
+                if (styleProfileGuid.Value == Guid.Empty || string.IsNullOrWhiteSpace(styleProfileName))
+                    throw new CliException("The selected Style Profile requires a GUID and name.");
+                SetProperty(control, StyleProfilePropertyName, styleProfileGuid.Value.ToString(), styleProfileName);
+                return;
+            }
+            var existingProfile = FindProperty(control, StyleProfilePropertyName);
+            if (existingProfile != null) control.Properties.Remove(existingProfile);
+        }
+
+        private static void SetProperty(Control control, string key, string value, string label)
+        {
+            var property = FindProperty(control, key);
+            if (property == null)
+                control.Properties.Add(new Property(key, value, label, label));
+            else
+            {
+                property.Value = value;
+                property.NameValue = label;
+                property.DisplayValue = label;
+            }
+        }
+
+        private static Property FindProperty(Control control, string key)
+        {
+            var matching = control.Properties.Cast<Property>()
+                .Where(x => string.Equals(x.Name, key, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (matching.Count > 1)
+                throw new CliException("Generated K2 form definition contains duplicate " + key + " properties.");
+            return matching.SingleOrDefault();
+        }
 
         public static string SetUseLegacyTheme(string definition, bool useLegacyTheme)
         {

@@ -14,9 +14,8 @@ $inputJson = $base.TrimEnd('}') + ', "typedFixture": ' + $fixture + '}'
 $parse = $builder.GetMethod('ParseAndValidate')
 $definition = $parse.Invoke($null, @($inputJson, $name))
 $importer = $assembly.GetType('K2WorkflowCli.WorkflowImporter', $true)
-$createAttachment = $importer.GetMethod('CreateAttachment', [Reflection.BindingFlags]'Static,NonPublic')
-$attachment = [xml]$createAttachment.Invoke($null, @($name, $definition, [int]20))
-$xml = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($attachment.file.content))
+$createInputPayload = $importer.GetMethod('CreateInputPayload', [Reflection.BindingFlags]'Static,NonPublic')
+$xml = $createInputPayload.Invoke($null, @($name, $definition, [int]20))
 
 $settings = [Xml.XmlReaderSettings]::new()
 $settings.ValidationType = 'Schema'

@@ -1,5 +1,11 @@
 # SmartForms design guide
 
+## Typed Form authoring
+
+For new Forms, use the SDK object model before calling `ToXml()`. The generator sets legacy theme mode and Style Profile references through the Form control's typed property collection. It uses typed panel and area collections for flat and tabbed layouts and typed Focus actions for list-click tab navigation when the Form has no common header, workflow start button, guided journey, or native Worklist tab.
+
+The remaining generators still edit some serialized definitions. Replace those edits by feature and verify that SDK serialization preserves the generated layout, rules, and unrelated control properties. For existing Form reconciliation, verify a representative definition round-trip before changing the write path. The SDK omitted empty default styles in a Workflow Action Form, added a RenderVersion attribute to some older Forms, and reordered Translations and States in one Form.
+
 ## CRUD shape
 
 Use a capture view for one record and a list view for browsing. For compact administration pages, place the editor before the list in a no-tabs form. For ordinary workflow applications, prefer a tabbed shell with the list first, details second, and an optional My Tasks Worklist tab. Enable:

@@ -75,11 +75,11 @@ function Get-Generated {
     Use-Server management { param($server) @($server.GetGeneratedSmartObjects($instanceGuid).SmartObjectList) }
 }
 function Set-Config([string]$xml, [string]$name, [string]$value) {
-    [xml]$doc = $xml
-    $key = $doc.SelectSingleNode("//*[local-name()='key' and translate(@name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='$($name.ToLowerInvariant())']")
+    $config = [SourceCode.SmartObjects.Services.Management.ServiceConfigInfo]::Create($xml)
+    $key = $config.ConfigSettings | Where-Object { $_.Name -ieq $name } | Select-Object -First 1
     if (-not $key) { throw "Broker configuration setting is unavailable: $name" }
-    $key.InnerText = $value
-    $doc.OuterXml
+    $key.Value = $value
+    $config.WriteXml()
 }
 function Invoke-WithK2ServerStopped([scriptblock]$Action) {
     $service = Get-Service -Name 'K2 Server' -ErrorAction Stop

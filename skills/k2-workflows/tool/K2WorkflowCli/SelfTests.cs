@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Xml.Linq;
 using Newtonsoft.Json.Linq;
 
@@ -150,10 +149,8 @@ namespace K2WorkflowCli
             var graph = WorkflowJsonBuilder.ParseAndValidate(WorkflowJsonBuilder.BuildStartEnd(name), name);
             graph["roundtrip"] = new JArray(JValue.CreateNull(), new JValue(false), new JValue(1.25),
                 new JValue(text), new JArray(), new JObject(), new JValue(string.Empty));
-            var attachment = XElement.Parse(WorkflowImporter.CreateAttachment(name, graph, 20));
-            var content = Encoding.UTF8.GetString(Convert.FromBase64String((string)attachment.Element("content")));
-            var document = XElement.Parse(content);
-            Assert((string)attachment.Element("name") == "k2skills-workflow.xml" &&
+            var document = XElement.Parse(WorkflowImporter.CreateInputPayload(name, graph, 20));
+            Assert(document.Name == "K2SkillsWorkflow" &&
                 (string)document.Attribute("version") == "1" && (int)document.Attribute("categoryId") == 20 &&
                 WebUtility.UrlDecode((string)document.Attribute("name")) == name, "import envelope identity and category");
             var entries = document.Element("Graph").Elements("Entry");

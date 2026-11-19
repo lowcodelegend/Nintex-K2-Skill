@@ -12,6 +12,11 @@ using SourceCode.Forms.Management;
 using SourceCode.Forms.Utilities;
 using SourceCode.Hosting.Client.BaseAPI;
 using SourceCode.SmartObjects.Client;
+using AuthoringAction = SourceCode.Forms.Authoring.Eventing.Action;
+using AuthoringEvent = SourceCode.Forms.Authoring.Eventing.Event;
+using AuthoringHandler = SourceCode.Forms.Authoring.Eventing.Handler;
+using AuthoringProperty = SourceCode.Forms.Authoring.Property;
+using AuthoringView = SourceCode.Forms.Authoring.View;
 using AuthoringViewType = SourceCode.Forms.Authoring.ViewType;
 using ManagementValidationPattern = SourceCode.Forms.Management.ValidationPattern;
 
@@ -601,11 +606,16 @@ namespace K2SmartFormsCli
 
                 PrepareValidationPatterns();
                 EnsureValidationPatterns(manager, true);
-                string rendered;
+                string repaired;
                 using (var renderer = new AutoGenerator(manager.Connection))
-                    rendered = RenderView(renderer, declaredView, lookupSources);
-                var repaired = RebaseViewIdentity(rendered, originalInfo.Guid, viewName);
+                    repaired = RenderView(renderer, declaredView, lookupSources, originalInfo.Guid);
                 var repairedDocument = XDocument.Parse(repaired);
+                var rootView = repairedDocument.Descendants().Single(x => x.Name.LocalName == "View");
+                var rootControl = rootView.Descendants().Single(x => x.Name.LocalName == "Control" &&
+                    string.Equals((string)x.Attribute("Type"), "View", StringComparison.OrdinalIgnoreCase));
+                if (!string.Equals((string)rootView.Attribute("ID"), originalInfo.Guid.ToString(), StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals((string)rootControl.Attribute("ID"), originalInfo.Guid.ToString(), StringComparison.OrdinalIgnoreCase))
+                    throw new CliException("Generated View '" + viewName + "' did not preserve the required live View identity.");
                 var repairedPrimarySource = PrimarySmartObjectIdentity(repairedDocument, viewName);
                 if (!string.Equals(originalPrimarySource, repairedPrimarySource, StringComparison.OrdinalIgnoreCase))
                     throw new CliException("Refusing to repair View '" + viewName +
@@ -651,7 +661,7 @@ namespace K2SmartFormsCli
         }
 
         private string RenderView(AutoGenerator renderer, ViewDefinition view,
-            IDictionary<string, LookupRuntimeSource> lookupSources)
+            IDictionary<string, LookupRuntimeSource> lookupSources, Guid? existingViewId = null)
         {
             var viewGenerator = new ViewGenerator(ParseViewType(view.Type), ParseViewOptions(view.Options));
             if (view.Type == "capture" || view.Type == "capture-list")
@@ -663,7 +673,10 @@ namespace K2SmartFormsCli
                 viewGenerator.DefaultListMethod = view.DefaultListMethod;
 
             var generated = renderer.Generate(viewGenerator, view.SmartObject, view.Name);
-            var definition = ViewLookupDefinition.Apply(generated.ToXml(), view, lookupSources);
+            var definition = existingViewId.HasValue
+                ? RebaseViewIdentity(generated, existingViewId.Value, view.Name)
+                : generated.ToXml();
+            definition = ViewLookupDefinition.Apply(definition, view, lookupSources);
             var masterRelationships = _manifest.Application.Forms.Where(f => f.MasterDetail != null &&
                     string.Equals(f.MasterDetail.MasterView, view.Name, StringComparison.OrdinalIgnoreCase))
                 .Select(f => f.MasterDetail).ToList();
@@ -717,44 +730,53 @@ namespace K2SmartFormsCli
                 MasterDetailRules.VerifyMasterViewRules(definition, view.Name, masterRelationships);
         }
 
-        internal static string RebaseViewIdentity(string definition, Guid expectedId, string viewName)
+        internal static string RebaseViewIdentity(AuthoringView view, Guid expectedId, string viewName)
         {
-            var document = XDocument.Parse(definition, LoadOptions.PreserveWhitespace);
-            var view = document.Descendants().SingleOrDefault(x => x.Name.LocalName == "View");
-            Guid generatedId;
-            if (view == null || !Guid.TryParse((string)view.Attribute("ID"), out generatedId))
+            var generatedId = view.Guid;
+            if (generatedId == Guid.Empty)
                 throw new CliException("Generated View '" + viewName + "' has no valid root View ID.");
+
+            var rootControl = view.Controls.Cast<Control>().SingleOrDefault(x =>
+                string.Equals(x.Type, "View", StringComparison.OrdinalIgnoreCase));
+            if (rootControl == null || rootControl.Guid != generatedId)
+                throw new CliException("Generated View '" + viewName + "' has no matching root View control.");
 
             var generatedValue = generatedId.ToString();
             var expectedValue = expectedId.ToString();
-            foreach (var attribute in document.Descendants().Attributes()
-                .Where(x => string.Equals(x.Value, generatedValue, StringComparison.OrdinalIgnoreCase)).ToList())
-                attribute.Value = expectedValue;
-            foreach (var textNode in document.DescendantNodes().OfType<XText>()
-                .Where(x => string.Equals(x.Value, generatedValue, StringComparison.OrdinalIgnoreCase)).ToList())
-                textNode.Value = expectedValue;
+            view.Guid = expectedId;
+            rootControl.Guid = expectedId;
+            view.Name = viewName;
+            view.DisplayName = viewName;
+            foreach (var rule in view.Events.Cast<AuthoringEvent>())
+            {
+                if (rule.SourceGuid == generatedId) rule.SourceGuid = expectedId;
+                foreach (var property in rule.Properties.Cast<AuthoringProperty>().Where(x =>
+                    string.Equals(x.Name, "ViewID", StringComparison.OrdinalIgnoreCase)))
+                {
+                    if (string.Equals(property.Value, generatedValue, StringComparison.OrdinalIgnoreCase))
+                        property.Value = expectedValue;
+                    if (string.Equals(property.NameValue, generatedValue, StringComparison.OrdinalIgnoreCase))
+                        property.NameValue = expectedValue;
+                    if (string.Equals(property.DisplayValue, generatedValue, StringComparison.OrdinalIgnoreCase))
+                        property.DisplayValue = expectedValue;
+                }
+                RebaseViewActionReferences(rule.Handlers.Cast<AuthoringHandler>(), generatedId, expectedId);
+            }
 
-            var name = view.Elements().SingleOrDefault(x => x.Name.LocalName == "Name");
-            var displayName = view.Elements().SingleOrDefault(x => x.Name.LocalName == "DisplayName");
-            if (name == null || displayName == null)
-                throw new CliException("Generated View '" + viewName + "' has no root Name/DisplayName identity.");
-            name.Value = viewName;
-            displayName.Value = viewName;
-
-            var rebased = document.ToString(SaveOptions.DisableFormatting);
-            if (rebased.IndexOf(generatedValue, StringComparison.OrdinalIgnoreCase) >= 0)
+            var rebased = view.ToXml();
+            if (generatedId != expectedId && rebased.IndexOf(generatedValue, StringComparison.OrdinalIgnoreCase) >= 0)
                 throw new CliException("Generated View '" + viewName +
-                    "' contains an unsupported composite self-reference that could not be identity-rebased.");
-            var rebasedDocument = XDocument.Parse(rebased);
-            var rebasedView = rebasedDocument.Descendants().Single(x => x.Name.LocalName == "View");
-            var viewControls = rebasedDocument.Descendants().Where(x => x.Name.LocalName == "Control" &&
-                string.Equals((string)x.Attribute("Type"), "View", StringComparison.OrdinalIgnoreCase)).ToList();
-            if (!string.Equals((string)rebasedView.Attribute("ID"), expectedValue, StringComparison.OrdinalIgnoreCase) ||
-                viewControls.Count != 1 ||
-                !string.Equals((string)viewControls[0].Attribute("ID"), expectedValue, StringComparison.OrdinalIgnoreCase))
-                throw new CliException("Generated View '" + viewName +
-                    "' did not rebase every root View self-reference to " + expectedValue + ".");
+                    "' contains an unsupported self-reference that could not be identity-rebased.");
             return rebased;
+        }
+
+        private static void RebaseViewActionReferences(IEnumerable<AuthoringHandler> handlers, Guid generatedId, Guid expectedId)
+        {
+            foreach (var action in handlers.SelectMany(handler => handler.Actions.Cast<AuthoringAction>()))
+            {
+                if (action.ViewGuid == generatedId) action.ViewGuid = expectedId;
+                RebaseViewActionReferences(action.Handlers.Cast<AuthoringHandler>(), generatedId, expectedId);
+            }
         }
 
         private static string PrimarySmartObjectIdentity(XDocument document, string viewName)
@@ -933,14 +955,15 @@ namespace K2SmartFormsCli
                             var formViews = formCommonHeader == null ? form.Views.ToArray() :
                                 new[] { formCommonHeader.ViewName }.Concat(form.Views).Concat(formCommonHeader.Footer == null ? new string[0] : new[] { formCommonHeader.Footer.ViewName }).ToArray();
                             var generated = generator.Generate(formGenerator, formViews, form.Name);
-                            var definition = FormThemeDefinition.SetUseLegacyTheme(generated.ToXml(), form.UseLegacyTheme);
-                            if (formStyleProfile != null) definition = FormThemeDefinition.SetStyleProfile(definition, formStyleProfile.Guid, formStyleProfile.Name);
-                            else
-                            {
-                                bool ignored;
-                                definition = FormThemeDefinition.RemoveStyleProfile(definition, out ignored);
-                            }
-                            definition = FormLayoutDefinition.Apply(definition, form, formCommonHeader, ResolveHeaderParameters(formCommonHeader, form), ResolveHeaderControlTransfers(formCommonHeader, form));
+                            FormThemeDefinition.ConfigureGeneratedForm(generated, form.UseLegacyTheme,
+                                formStyleProfile == null ? (Guid?)null : formStyleProfile.Guid,
+                                formStyleProfile == null ? null : formStyleProfile.Name);
+                            var usesTypedLayout = formCommonHeader == null && form.WorkflowStartButton == null &&
+                                form.GuidedJourney == null && form.Tabs.All(tab => tab.Worklist == null);
+                            if (usesTypedLayout) FormLayoutDefinition.ConfigureGeneratedLayout(generated, form);
+                            var definition = generated.ToXml();
+                            if (!usesTypedLayout)
+                                definition = FormLayoutDefinition.Apply(definition, form, formCommonHeader, ResolveHeaderParameters(formCommonHeader, form), ResolveHeaderControlTransfers(formCommonHeader, form));
                             var masterDetail = ResolvedMasterDetailRules.Resolve(deploymentManager, form, _manifest.Application.Views);
                             definition = MasterDetailRules.Apply(definition, form, masterDetail);
                             definition = GuidedJourneyRules.Apply(definition, form, formCommonHeader);

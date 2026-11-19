@@ -2,11 +2,128 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Linq;
+using SourceCode.Forms.Authoring;
+using SourceCode.Forms.Authoring.Eventing;
+using Action = System.Action;
+using RuleAction = SourceCode.Forms.Authoring.Eventing.Action;
 
 namespace K2SmartFormsCli
 {
     internal static class FormLayoutDefinition
     {
+        public static void ConfigureGeneratedLayout(Form form, FormDefinition definition)
+        {
+            var panels = form.Panels.Cast<Panel>().ToList();
+            var existing = panels.SelectMany(x => x.Areas.Cast<Area>()).ToList();
+            var viewAreas = new Dictionary<string, Area>(StringComparer.OrdinalIgnoreCase);
+            foreach (var viewName in definition.Views)
+            {
+                var area = existing.FirstOrDefault(x => x.Items.Cast<AreaItem>().Any(item =>
+                    string.Equals(item.ViewName, viewName, StringComparison.OrdinalIgnoreCase)));
+                if (area == null)
+                    throw new CliException("Generated form '" + definition.Name + "' has no area for view '" + viewName + "'.");
+                var viewItem = area.Items.Cast<AreaItem>().First(x =>
+                    string.Equals(x.ViewName, viewName, StringComparison.OrdinalIgnoreCase));
+                var control = form.Controls.Cast<Control>().SingleOrDefault(x => x.Guid == viewItem.Guid);
+                if (control == null)
+                    throw new CliException("Generated form '" + definition.Name + "' has no AreaItem control for view '" + viewName + "'.");
+
+                SetControlProperty(control, "Title", definition.ResolveViewTitle(viewName));
+                viewAreas.Add(viewName, area);
+            }
+
+            if (definition.Tabs.Count == 0)
+            {
+                if (panels.Count != 1)
+                    throw new CliException("Generated flat form '" + definition.Name + "' must contain one panel.");
+                var ordered = definition.Views.Select(x => viewAreas[x]).ToList();
+                if (!existing.SequenceEqual(ordered))
+                {
+                    foreach (var area in existing) panels[0].Areas.Remove(area);
+                    foreach (var area in ordered) panels[0].Areas.Add(area);
+                }
+                return;
+            }
+
+            foreach (var panel in panels)
+                foreach (var area in panel.Areas.Cast<Area>().ToList()) panel.Areas.Remove(area);
+            form.Panels.Clear();
+            foreach (var control in form.Controls.Cast<Control>().Where(x =>
+                string.Equals(x.Type, "Panel", StringComparison.OrdinalIgnoreCase)).ToList())
+                form.Controls.Remove(control);
+
+            form.Layout = FormLayout.TabControl;
+            foreach (var tab in definition.Tabs)
+            {
+                var panel = form.Panels.Add(tab.Name, tab.Name, PanelLayout.Rows);
+                var control = new Control(tab.Name, "Panel") { Guid = panel.Guid, DisplayName = tab.Name };
+                SetControlProperty(control, "ControlName", tab.Name);
+                SetControlProperty(control, "Title", tab.Name);
+                form.Controls.Add(control);
+                foreach (var viewName in tab.Views) panel.Areas.Add(viewAreas[viewName]);
+            }
+            ConfigureGeneratedTabNavigation(form, definition);
+        }
+
+        private static void ConfigureGeneratedTabNavigation(Form form, FormDefinition definition)
+        {
+            if (definition.ListClickTabNavigation.Count == 0) return;
+
+            var events = form.Events.Cast<Event>()
+                .Concat(form.States.Cast<State>().SelectMany(StateEvents)).ToList();
+            foreach (var navigation in definition.ListClickTabNavigation)
+            {
+                var item = form.Panels.Cast<Panel>().SelectMany(x => x.Areas.Cast<Area>())
+                    .SelectMany(x => x.Items.Cast<AreaItem>()).First(x =>
+                        string.Equals(x.ViewName, navigation.SourceView, StringComparison.OrdinalIgnoreCase));
+                var panel = form.Panels.Cast<Panel>().Single(x =>
+                    string.Equals(x.Name, navigation.TargetTab, StringComparison.OrdinalIgnoreCase));
+                var rule = events.FirstOrDefault(x => x.EventType == EventType.User &&
+                    x.SourceType == EventSourceType.View && !x.IsReference && x.InstanceGuid == item.Guid &&
+                    string.Equals(x.SourceName, navigation.SourceView, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(x.Name, "ListClick", StringComparison.OrdinalIgnoreCase));
+                if (rule == null || rule.Handlers.Count == 0)
+                    throw new CliException("Generated form '" + definition.Name + "' has no list-click rule for '" + navigation.SourceView + "'.");
+
+                var actions = rule.Handlers[0].Actions;
+                var panelId = panel.Guid.ToString();
+                foreach (var action in actions.Cast<RuleAction>().Where(x =>
+                    x.ActionType == ActionType.Focus &&
+                    x.Properties.Cast<Property>().Any(p => p.Name == "Location" && p.Value == "Form") &&
+                    x.Properties.Cast<Property>().Any(p => p.Name == "PanelID" && p.Value == panelId)).ToList())
+                    actions.Remove(action);
+
+                var focus = new RuleAction
+                {
+                    DefinitionGuid = Guid.NewGuid(),
+                    ActionType = ActionType.Focus,
+                    ExecutionType = ActionExecutionType.Synchronous
+                };
+                focus.Properties.Add(new Property("Location", "Form"));
+                focus.Properties.Add(new Property("PanelID", panelId, panel.Name, panel.Name));
+                actions.Add(focus);
+            }
+        }
+
+        private static IEnumerable<Event> StateEvents(State state)
+        {
+            return state.Events.Cast<Event>().Concat(state.States.Cast<State>().SelectMany(StateEvents));
+        }
+
+        private static void SetControlProperty(Control control, string name, string value)
+        {
+            var property = control.Properties.Cast<Property>().FirstOrDefault(x =>
+                string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
+            if (property == null)
+                control.Properties.Add(new Property(name, value, value, value));
+            else
+            {
+                property.NameValue = value;
+                property.DisplayValue = value;
+                property.Value = value;
+            }
+        }
+
         public static string RemoveFrameworkViews(string xml, IEnumerable<Guid> viewGuids, out bool changed)
         {
             var targets = new HashSet<string>((viewGuids ?? Enumerable.Empty<Guid>())

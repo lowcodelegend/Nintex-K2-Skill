@@ -41,8 +41,10 @@ namespace K2SmartFormsCli
             TestMalformedEditableListRejected();
             TestViewIdentityRebase();
             TestFlatFormViewOrdering();
+            TestTypedFlatFormViewOrdering();
             TestConditionalFormFrameworkSelection();
             TestRedundantFormFrameworkRemoval();
+            TestAuthoringThemeAssignment();
             TestFormPreFillRules();
             TestReplacementRecoveryClassifier();
             TestMultiTableWorkflowStateReconciliation();
@@ -215,6 +217,23 @@ namespace K2SmartFormsCli
             inherited.UseCommonHeader = false;
             Assert(!FormFrameworkUsage.UsesCommonFooter(application, inherited, true),
                 "declining the header also declines the footer");
+        }
+
+        private static void TestAuthoringThemeAssignment()
+        {
+            var form = new SourceCode.Forms.Authoring.Form("TypedThemeTest", "Typed Theme Test");
+            var control = new SourceCode.Forms.Authoring.Control("TypedThemeTest", "Form");
+            form.Controls.Add(control);
+            var id = Guid.NewGuid();
+            FormThemeDefinition.ConfigureGeneratedForm(form, false, id, "New Style");
+            var xml = form.ToXml();
+            var profile = FormThemeDefinition.ReadStyleProfile(xml);
+            Assert(profile != null && profile.Guid == id && profile.Name == "New Style" &&
+                FormThemeDefinition.ReadUseLegacyTheme(xml) == false, "typed authoring sets the theme and Style Profile");
+            FormThemeDefinition.ConfigureGeneratedForm(form, true, null, null);
+            xml = form.ToXml();
+            Assert(FormThemeDefinition.ReadStyleProfile(xml) == null &&
+                FormThemeDefinition.ReadUseLegacyTheme(xml) == true, "typed authoring clears the Style Profile and updates legacy mode");
         }
 
         private static void TestRedundantFormFrameworkRemoval()
@@ -1425,6 +1444,52 @@ namespace K2SmartFormsCli
                 completeInitial, "Boolean Probe", labelBooleans, initialLabelBooleans);
         }
 
+        private static void TestTypedFlatFormViewOrdering()
+        {
+            var definition = new FormDefinition { Name = "Typed Layout" };
+            definition.Views.AddRange(new[] { "Summary", "Details" });
+            definition.ViewTitles.Add("Summary", "Summary caption");
+            var form = new SourceCode.Forms.Authoring.Form("Typed Layout", "Typed Layout");
+            var panel = form.Panels.Add("Main");
+            foreach (var name in definition.Views.AsEnumerable().Reverse())
+            {
+                var view = new SourceCode.Forms.Authoring.View(name, name);
+                var area = panel.Areas.Add();
+                var item = area.Items.Add(view);
+                item.ViewName = name;
+                var control = new SourceCode.Forms.Authoring.Control(name, "AreaItem") { Guid = item.Guid };
+                form.Controls.Add(control);
+            }
+            FormLayoutDefinition.ConfigureGeneratedLayout(form, definition);
+            var xml = form.ToXml();
+            FormLayoutDefinition.Verify(xml, definition, null,
+                new Dictionary<string, string>(), new Dictionary<Guid, ResolvedHeaderControlTransfer>());
+
+            var listClick = new SourceCode.Forms.Authoring.Eventing.Event
+            {
+                Name = "ListClick",
+                SourceName = "Summary",
+                InstanceGuid = form.Panels[0].Areas[0].Items[0].Guid,
+                SourceType = SourceCode.Forms.Authoring.Eventing.EventSourceType.View,
+                EventType = SourceCode.Forms.Authoring.Eventing.EventType.User
+            };
+            var handler = new SourceCode.Forms.Authoring.Eventing.Handler();
+            var read = new SourceCode.Forms.Authoring.Eventing.Action
+            {
+                ActionType = SourceCode.Forms.Authoring.Eventing.ActionType.Execute
+            };
+            read.Properties.Add(new SourceCode.Forms.Authoring.Property("Method", "Read"));
+            handler.Actions.Add(read);
+            listClick.Handlers.Add(handler);
+            form.Events.Add(listClick);
+            definition.ListClickTabNavigation.Add(new ListClickTabNavigationDefinition { SourceView = "Summary", TargetTab = "Second" });
+            definition.Tabs.Add(new FormTabDefinition { Name = "First", Views = new List<string> { "Summary" } });
+            definition.Tabs.Add(new FormTabDefinition { Name = "Second", Views = new List<string> { "Details" } });
+            FormLayoutDefinition.ConfigureGeneratedLayout(form, definition);
+            FormLayoutDefinition.Verify(form.ToXml(), definition, null,
+                new Dictionary<string, string>(), new Dictionary<Guid, ResolvedHeaderControlTransfer>());
+        }
+
         private static void TestFlatFormViewOrdering()
         {
             var definition = new FormDefinition { Name = "Operations" };
@@ -1846,19 +1911,26 @@ namespace K2SmartFormsCli
         {
             var generatedId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
             var expectedId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
-            var source = new XDocument(
-                new XElement("SourceCode.Forms",
-                    new XElement("Views",
-                        new XElement("View", new XAttribute("ID", generatedId),
-                            new XElement("Name", "Evidence1"),
-                            new XElement("DisplayName", "Evidence1"),
-                            new XElement("Controls",
-                                new XElement("Control", new XAttribute("ID", generatedId), new XAttribute("Type", "View"))),
-                            new XElement("Events",
-                                new XElement("Event", new XAttribute("SourceID", generatedId),
-                                    new XElement("Property", new XElement("Value", generatedId))))))));
-            var rebased = SmartFormsManager.RebaseViewIdentity(
-                source.ToString(SaveOptions.DisableFormatting), expectedId, "Evidence");
+            var source = new SourceCode.Forms.Authoring.View("Evidence1", "Evidence1") { Guid = generatedId };
+            source.Controls.Add(new SourceCode.Forms.Authoring.Control { Type = "View", Guid = generatedId });
+            var rule = new SourceCode.Forms.Authoring.Eventing.Event
+            {
+                Name = "Init",
+                SourceType = SourceCode.Forms.Authoring.Eventing.EventSourceType.View,
+                SourceGuid = generatedId
+            };
+            rule.Properties.Add("ViewID", generatedId.ToString(), generatedId.ToString(), generatedId.ToString());
+            var handler = new SourceCode.Forms.Authoring.Eventing.Handler();
+            handler.Actions.Add(new SourceCode.Forms.Authoring.Eventing.Action
+            {
+                ActionType = SourceCode.Forms.Authoring.Eventing.ActionType.Transfer,
+                ViewGuid = generatedId
+            });
+            rule.Handlers.Add(handler);
+            source.Events.Add(rule);
+
+            var original = source.ToXml();
+            var rebased = SmartFormsManager.RebaseViewIdentity(source, expectedId, "Evidence");
             var document = XDocument.Parse(rebased);
             var view = document.Descendants("View").Single();
             Assert((string)view.Attribute("ID") == expectedId.ToString(), "View repair root identity rebased");
@@ -1866,16 +1938,21 @@ namespace K2SmartFormsCli
                 "View repair exact name/display name restored");
             Assert(document.Descendants("Control").Single().Attribute("ID").Value == expectedId.ToString(),
                 "View repair root control self-reference rebased");
+            var viewIdProperties = document.Descendants("Property").Where(x => (string)x.Element("Name") == "ViewID").ToList();
+            Assert((string)document.Descendants("Event").Single().Attribute("SourceID") == expectedId.ToString() &&
+                viewIdProperties.Count == 2 && viewIdProperties.SelectMany(x => x.Elements().Where(y => y.Name.LocalName != "Name"))
+                    .All(x => x.Value == expectedId.ToString()),
+                "View repair rebases the rule source, event property values, and action target");
             Assert(rebased.IndexOf(generatedId.ToString(), StringComparison.OrdinalIgnoreCase) < 0,
                 "View repair old generated identity fully removed");
 
-            var compositeDocument = XDocument.Parse(source.ToString(SaveOptions.DisableFormatting));
-            compositeDocument.Descendants("Event").Single().SetAttributeValue("Composite", generatedId + "-suffix");
-            var composite = compositeDocument.ToString(SaveOptions.DisableFormatting);
+            var composite = new SourceCode.Forms.Authoring.View(original);
+            composite.Events.Cast<SourceCode.Forms.Authoring.Eventing.Event>().Single()
+                .Properties.Add("Composite", generatedId + "-suffix");
             AssertThrows(delegate
             {
                 SmartFormsManager.RebaseViewIdentity(composite, expectedId, "Evidence");
-            }, "composite self-reference");
+            }, "unsupported self-reference");
         }
 
         private static XElement ControlDefinition(string id, string type, string value)

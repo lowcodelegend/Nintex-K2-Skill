@@ -512,18 +512,23 @@ function Invoke-Package {
     if (-not (Test-Path -LiteralPath $Plan.OutputFile -PathType Leaf)) { throw "K2 did not create the package: $($Plan.OutputFile)" }
     $packageItem = Get-Item -LiteralPath $Plan.OutputFile
     if ($packageItem.Length -gt 5MB) { throw "Created package exceeds Nintex's documented 5 MB maximum: $($packageItem.Length) bytes." }
-    Add-Type -AssemblyName System.IO.Compression.FileSystem
-    $archive = [IO.Compression.ZipFile]::OpenRead($Plan.OutputFile)
+    $inventoryPath = Join-Path ([IO.Path]::GetTempPath()) ('k2-package-inventory-' + [guid]::NewGuid().ToString('N') + '.xml')
     try {
-        $definition = $archive.GetEntry('definition.model')
-        if ($null -eq $definition) { throw 'Created package has no definition.model.' }
-        $reader = New-Object IO.StreamReader($definition.Open())
-        try { [xml]$definitionXml = $reader.ReadToEnd() } finally { $reader.Dispose() }
-        $members = $definitionXml.SelectSingleNode("/*[local-name()='model']/*[local-name()='set' and @name='Members']")
-        if ($null -eq $members -or [int]$members.GetAttribute('count') -le 0) {
-            throw 'K2 created an empty package. Review the category and installed package-configuration behavior.'
+        try {
+            Write-PackageConfig -InputFile $Plan.OutputFile -OutputFile $inventoryPath -ConnectionString $Plan.ConnectionString | Out-Null
+        } catch {
+            throw "K2 could not verify the created package through Write-PackageConfig. Review the category and package log. $($_.Exception.Message)"
         }
-    } finally { $archive.Dispose() }
+
+        [xml]$inventory = Get-Content -LiteralPath $inventoryPath -Raw
+        $namespaces = [Xml.XmlNamespaceManager]::new($inventory.NameTable)
+        $namespaces.AddNamespace('package', 'http://schemas.k2.com/Package')
+        if ($null -eq $inventory.SelectSingleNode('/package:c/package:p/package:incs/package:i', $namespaces)) {
+            throw 'K2 created a package without any reported members. Review the category and the package configuration.'
+        }
+    } finally {
+        if (Test-Path -LiteralPath $inventoryPath -PathType Leaf) { Remove-Item -LiteralPath $inventoryPath }
+    }
     $hash = (Get-FileHash -LiteralPath $Plan.OutputFile -Algorithm SHA256).Hash.ToLowerInvariant()
     Write-Output ('PACKAGE CREATED: ' + $Plan.OutputFile)
     Write-Output ('SHA-256: ' + $hash)

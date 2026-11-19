@@ -33,9 +33,13 @@ namespace K2WorkflowCli
                 var method = smartObject.AllMethods.SingleOrDefault(x => x.Name == "ConvertWorkflow");
                 if (method == null)
                     throw new CliException("The selected SmartObject has no ConvertWorkflow method.");
+                var file = smartObject.Properties["File"] as SmartFileProperty;
+                if (file == null)
+                    throw new CliException("The selected SmartObject has no File attachment property.");
                 var categoryId = EnsureCategory(manifest);
                 smartObject.MethodToExecute = method.Name;
-                smartObject.Properties["File"].Value = CreateAttachment(manifest.Workflow.Name, definition, categoryId);
+                file.FileName = "k2skills-workflow.xml";
+                file.Content = Convert.ToBase64String(Encoding.UTF8.GetBytes(CreateInputPayload(manifest.Workflow.Name, definition, categoryId)));
                 smartObject.Properties["CategoryID"].Value = categoryId.ToString(CultureInfo.InvariantCulture);
                 method.Parameters["Host"].Value = "smartForms";
                 method.Parameters["SaveAction"].Value = manifest.Workflow.ReplaceExisting ? "Overwrite" : "Skip";
@@ -76,7 +80,7 @@ namespace K2WorkflowCli
                 throw new CliException("workflow.name contains punctuation that the Workflow Importer removes.");
         }
 
-        internal static string CreateAttachment(string name, JObject definition, int categoryId)
+        internal static string CreateInputPayload(string name, JObject definition, int categoryId)
         {
             var graph = (JObject)definition.DeepClone();
             graph.Remove("componentId");
@@ -88,10 +92,7 @@ namespace K2WorkflowCli
                 new XAttribute("categoryId", categoryId),
                 EncodeValue("Graph", graph));
 
-            return new XElement("file",
-                new XElement("name", "k2skills-workflow.xml"),
-                new XElement("content", Convert.ToBase64String(Encoding.UTF8.GetBytes(input.ToString(SaveOptions.DisableFormatting)))))
-                .ToString(SaveOptions.DisableFormatting);
+            return input.ToString(SaveOptions.DisableFormatting);
         }
 
         private static XElement EncodeValue(string elementName, JToken token)

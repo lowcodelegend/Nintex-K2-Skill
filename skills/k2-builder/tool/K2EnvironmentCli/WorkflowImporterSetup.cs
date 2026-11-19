@@ -41,12 +41,12 @@ namespace K2EnvironmentCli
                 {
                     if (!services.IsServiceInstanceNameUnique(InstanceName))
                         throw new CliException("The dedicated Workflow Importer name is already in use by another service type.");
-                    var config = XDocument.Parse(services.GetServiceInstanceConfig(typeId));
-                    FindKey(config, "Schemas Path").Value = schemas;
-                    FindKey(config, "Specs Path").Value = specs;
+                    var config = ServiceConfigInfo.Create(services.GetServiceInstanceConfig(typeId));
+                    FindSetting(config, "Schemas Path").Value = schemas;
+                    FindSetting(config, "Specs Path").Value = specs;
                     instanceId = Guid.NewGuid();
                     if (!services.RegisterServiceInstance(typeId, instanceId, InstanceName, "K2 Skills Workflow Importer v1",
-                        "Imports K2 Skills workflow drafts using the v1 JSONata spec.", config.ToString(SaveOptions.DisableFormatting)))
+                        "Imports K2 Skills workflow drafts using the v1 JSONata spec.", config.WriteXml()))
                         throw new CliException("K2 did not register the dedicated Workflow Importer.");
                     Console.WriteLine("Registered Workflow Import Service instance: " + instanceId);
                 }
@@ -86,6 +86,13 @@ namespace K2EnvironmentCli
         {
             var path = Path.Combine(directory, name);
             if (!File.Exists(path)) throw new CliException("Workflow Importer asset is missing: " + path);
+        }
+
+        private static SettingKeyInfo FindSetting(ServiceConfigInfo config, string name)
+        {
+            var key = config.ConfigSettings.Cast<SettingKeyInfo>().SingleOrDefault(x => x.Name == name);
+            if (key == null) throw new CliException("The Workflow Import Service is missing configuration key: " + name);
+            return key;
         }
 
         private static XElement FindKey(XDocument config, string name)

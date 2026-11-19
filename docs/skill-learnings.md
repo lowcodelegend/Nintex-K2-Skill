@@ -3,8 +3,8 @@
 This project-local log captures reusable evidence for improving the K2 skills that created or maintained this solution. It is a handoff queue, not authorization to edit installed skills.
 
 - Initialized: 2026-10-28
-- Last reviewed: 2026-11-18
-- Next learning ID: `K2L-0013`
+- Last reviewed: 2026-11-19
+- Next learning ID: `K2L-0014`
 - Active skill owners: $k2-builder, $k2-smartbox-smartobjects, $k2-smartforms, $k2-workflows
 
 ## Status and disposition
@@ -28,6 +28,7 @@ IDs are immutable and never reused. Before adding a learning, search for equival
 | K2L-0005 | ready | high | $k2-workflows | local-commit | Semantic workflow placement, native ports and independent layout acceptance |
 | K2L-0011 | proposed | high | $k2-builder, $k2-style-profiles, $k2-sql-smartobjects | undecided | Remove demo-environment bindings from reusable examples |
 | K2L-0012 | implemented-locally | high | $k2-workflows, $k2-builder | local-commit | Author workflow drafts through the Workflow Import Service |
+| K2L-0013 | proposed | high | All ten K2 skills | upstream-docs-pr | Track Nintex API support by operation |
 
 ## Learning entries
 
@@ -238,3 +239,24 @@ Copy this block for each learning and remove this comment wrapper.
 ## Review history — 2026-11-18
 
 - Reviewed pending workflow and portability work at the draft-import milestone. The next workflow source change needs a Nintex-confirmed programmatic publication contract and coverage for native SmartForms integration. The environment-specific example bindings remain a separate builder follow-up.
+
+### K2L-0013 — Track Nintex API support by operation
+
+- Status: proposed
+- Priority: high
+- Affected skill owners: $k2-workflows, $k2-builder, $k2-smartforms, $k2-style-profiles, $k2-smartforms-web-components, $k2-package-deployment, $k2-smartbox-smartobjects, $k2-sql-smartobjects, $k2-jssp-service-brokers, $k2-dotnet-service-brokers
+- Disposition: upstream-docs-pr
+- Evidence: Reviewed all ten skills on source commit 3a5b14c. Published SDKs cover core SmartObject, SmartForms, workflow runtime and Service Broker operations. Nintex Product confirmed the Workflow Importer and JSONata draft route. The remaining automated workflow authoring flow uses Designer implementation classes. Custom-control management SmartObject methods, programmatic Style Profile lifecycle, CategoryServer calls, direct SmartForms and SmartBox definition surgery, direct JSSP file upsert, and raw KSPX archive validation have narrower or unverified public contracts. The 5.9 custom-control guide lists data-binding limitations while also describing rule-based list population. SmartForms writes AssociationSO, AssociationMethod and an initialization rule for its optional Web Component list binding, so the exact generated pattern needs confirmation.
+- Acceptance criteria:
+  - Mark documented extension points, undocumented implementation dependencies and specific vendor-confirmed operations separately in skill references.
+  - Obtain confirmation for supported workflow publish and Start/Task integration, exact Style Profile and custom-control management methods, and the shared category SDK calls.
+  - Preserve normal automation while providing a documented-interface path for operations with a validated alternative.
+- Feedback history: 2026-11-18 — Reviewed as a source audit. Prioritize the workflow migration and builder propagation first, exact Style Profile and custom-control management confirmation second, and shared category/serialized metadata dependencies third. No live K2 configuration changes.
+- Feedback follow-up: Inspected 216 installed built-in SmartObject definitions. Verified Management Category ListByParentCategoryId and GetCategoryById with read-only calls. Its AddCategory method maps to CreateCategory, Read_1 maps to GetCategoryIdByPath, and Read maps to DeleteCategoryAndData. The K2 Management broker is classified as internal by Nintex, so confirm exact methods before treating these as supported replacements. No matching draft publication, Style Profile lifecycle or generic package methods surfaced. JSSP and custom-control registration already use system SmartObjects. No live mutations.
+- Feedback follow-up: The installed typed Forms SDK round-tripped tabs and basic event actions. Source changes move generated Form theme properties, plain layouts and list-click tab focus to typed authoring APIs. SmartForms self-tests and an in-memory probe using live View metadata passed. An unmodified existing Workflow Action Form dropped Styles/Style elements on FromXml/ToXml, so a blanket migration could alter existing artifacts. The SmartBox SDK extender generates CRUD, but the same provider metadata, identities and method contracts need parity checks. SQL authoring exposes typed MapParameter/MapProperty methods, with live definition parity pending. No K2 artifacts were changed.
+- Feedback follow-up: 2026-11-19 — Replaced package archive inspection with Write-PackageConfig, importer attachment XML with SmartFileProperty, and service key edits across importer onboarding, classic .NET and SQL brokers with ServiceConfigInfo. A package export succeeded, all three SQL authentication modes serialized correctly, and workflow and SQL self-tests passed. The SmartObject SDK produced the system mapping in memory but retained a caller parameter and changed serialized metadata on sampled definitions. Continue with representative typed SmartBox and SQL authoring parity checks and feature-level SmartForms tests before moving the remaining definition writes.
+- Feedback follow-up: 2026-11-19 — View repair now uses the Authoring model to set the live ID on the generated View, root control, and rule references before serialization. The Release self-test passed. Capture, list, and editable-list Views generated from live metadata matched the former identity rewrite and kept the intended GUID through rendering and hydration. A 24-Form and 24-View scan found no missing element paths after excluding empty default style blocks. A deeper Form comparison still found added RenderVersion attributes in older definitions and reordered Translations and States in one Form.
+- Verification candidates: 2026-11-19 — The documented SmartBox extender generated CRUD for AutoNumber, AutoGuid, Guid, Text, and Number keys. Adding a typed SmartBox property, setting its extender maxlength metadata, and using UpdateSmartBoxProperty for Number to Decimal preserved sampled identities and method names in memory. Create still needs validation of provider identity, required inputs, and default methods. The SQL candidates used MapParameter with explicit caller parameter removal, and SmartPropertyDefinition.Type=File with provider String preserved, on representative non-SQL provider definitions. The local SQL broker had zero registered instances.
+- Next review: Verify SmartBox create, populated update, and cleanup in a disposable category before an upstream code change. Verify a generated SQL SmartObject with a varchar(max) file column and a ConnectedUserFQN procedure under two callers before an upstream code change. Use Designer-generated fixtures to verify advanced Forms controls, layout, and rules before changing their implementation.
+- Live verification: 2026-11-19 — Using the isolated API Support Validation 7322259 category and SQL fixture database, the SmartBox authoring SDK created CRUD objects, preserved a populated row through adding a length-limited Text field and widening Number to Decimal, and round-tripped fractional values. Direct deletion of a separate populated user SmartBox fixture succeeded after AutoGuid generation. The live generated SQL SmartObject accepted the typed File override and round-tripped the filename and exact bytes through varchar(max). Typed MapParameter plus removal of the caller parameter returned the current K2 caller to the stored procedure. The second caller was unavailable.
+- Live verification: 2026-11-19 — Typed Form authoring deployed two tabs, a checked-in Style Profile, and a native Worklist control and Navigate rule that survived check-in and reload. The published list View advanced from version 1 to 2 with GUID, category, and dependent Form preserved. The validation Forms remain published. Runtime routes reached the K2 sign-in page. Task click and native Start/Task rules remain unverified because the installed Workflow Designer assembly returned Access Denied on fixture publication and the browser route requires an authenticated session.

@@ -568,24 +568,23 @@ namespace K2SqlCli
 
         private string BuildSqlServiceConfig(ServiceManagementServer server)
         {
-            var document = XDocument.Parse(server.GetServiceInstanceConfig(SqlServerServiceTypeGuid));
-            SetKey(document, "Database", _manifest.K2.ServiceInstance.Database);
-            SetKey(document, "Server", _manifest.K2.ServiceInstance.SqlServer);
-            SetKey(document, "On Different SQL Server", Bool(_manifest.K2.ServiceInstance.OnDifferentSqlServer));
-            SetKey(document, "Command Timeout", _manifest.K2.ServiceInstance.CommandTimeoutSeconds.ToString(CultureInfo.InvariantCulture));
-            SetKey(document, "Use Native SQL Execution", Bool(_manifest.K2.ServiceInstance.UseNativeSqlExecution));
-            SetKey(document, "Use SQL paging", Bool(_manifest.K2.ServiceInstance.UseSqlPaging));
-            SetKey(document, "Encrypt connection", Bool(_manifest.K2.ServiceInstance.EncryptConnection));
+            var config = ServiceConfigInfo.Create(server.GetServiceInstanceConfig(SqlServerServiceTypeGuid));
+            var service = _manifest.K2.ServiceInstance;
+            SetKey(config, "Database", service.Database);
+            SetKey(config, "Server", service.SqlServer);
+            SetKey(config, "On Different SQL Server", Bool(service.OnDifferentSqlServer));
+            SetKey(config, "Command Timeout", service.CommandTimeoutSeconds.ToString(CultureInfo.InvariantCulture));
+            SetKey(config, "Use Native SQL Execution", Bool(service.UseNativeSqlExecution));
+            SetKey(config, "Use SQL paging", Bool(service.UseSqlPaging));
+            SetKey(config, "Encrypt connection", Bool(service.EncryptConnection));
 
-            var authentication = document.Descendants("serviceauthentication").First();
-            var mode = _manifest.K2.ServiceInstance.AuthenticationMode.ToLowerInvariant();
-            authentication.SetAttributeValue("impersonate", Bool(mode == "impersonate"));
-            authentication.SetAttributeValue("enforceimpersonation", Bool(mode == "impersonate"));
-            var username = authentication.Element("username");
-            var password = authentication.Element("password");
-            username.Value = mode == "static" ? _manifest.K2.ServiceInstance.UserName : string.Empty;
-            password.Value = mode == "static" ? ReadRequiredEnvironmentVariable(_manifest.K2.ServiceInstance.PasswordEnvironmentVariable) : string.Empty;
-            return document.ToString(SaveOptions.DisableFormatting);
+            var authentication = config.ServiceAuthentication;
+            var mode = service.AuthenticationMode.ToLowerInvariant();
+            authentication.Impersonate = mode == "impersonate";
+            authentication.EnforceImpersonation = mode == "impersonate";
+            authentication.UserName = mode == "static" ? service.UserName : string.Empty;
+            authentication.Password = mode == "static" ? ReadRequiredEnvironmentVariable(service.PasswordEnvironmentVariable) : string.Empty;
+            return config.WriteXml();
         }
 
         private ServiceInstanceState FindServiceInstance(ServiceManagementServer server)
@@ -678,11 +677,11 @@ namespace K2SqlCli
             }
         }
 
-        private static void SetKey(XDocument document, string name, string value)
+        private static void SetKey(ServiceConfigInfo config, string name, string value)
         {
-            var key = document.Descendants("key").FirstOrDefault(x => string.Equals((string)x.Attribute("name"), name, StringComparison.OrdinalIgnoreCase));
+            var key = config.ConfigSettings.Cast<SettingKeyInfo>()
+                .FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
             if (key == null) throw new CliException("The installed SQL Server Service type does not expose setting: " + name);
-            key.RemoveNodes();
             key.Value = value ?? string.Empty;
         }
 

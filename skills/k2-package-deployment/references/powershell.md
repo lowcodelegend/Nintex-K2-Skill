@@ -14,4 +14,4 @@ The local `New-Package` parameter is `InputFileName`, despite some Nintex pages 
 
 Never pass `NoAnalyze`. PowerShell deployment cannot deploy packages containing SharePoint artifacts.
 
-On the validated K2 5.10 installation, a rootless hand-authored include configuration returned a syntactically valid but empty package. Require a solution root category and reject a generated archive whose top-level Members count is zero.
+On the validated K2 5.10 installation, a rootless hand-authored include configuration returned a syntactically valid but empty package. Require a solution root category. Use the documented Write-PackageConfig cmdlet to verify that K2 can open the package and that the generated includes list contains members.

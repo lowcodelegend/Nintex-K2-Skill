@@ -1,6 +1,6 @@
 # Import workflow drafts with JSONata
 
-Use this path to author a Designer draft from a k2wf manifest through the Workflow Import Service. The CLI resolves the manifest and any SmartObject metadata into a workflow graph, sends a versioned XML attachment to the dedicated `ConvertWorkflow` SmartObject method, and checks the returned workflow name, category and draft ID. K2 validates the attachment against the bundled XSD and runs the matching JSONata spec to produce the Designer JSON. The existing graph generator supplies nodes, links and configuration for each workflow kind.
+Use this path to author a Designer draft from a k2wf manifest through the Workflow Import Service. The CLI resolves the manifest and any SmartObject metadata into a workflow graph, sends a versioned XML attachment to the dedicated `ConvertWorkflow` SmartObject method, and checks the returned workflow name, category and draft ID. The SDK file property supplies the attachment name and content. K2 validates the input against the bundled XSD and runs the matching JSONata spec to produce the Designer JSON. The existing graph generator supplies nodes, links and configuration for each workflow kind.
 
 ## Configure the environment once
 
