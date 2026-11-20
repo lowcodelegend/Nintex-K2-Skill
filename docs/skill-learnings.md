@@ -3,8 +3,8 @@
 This project-local log captures reusable evidence for improving the K2 skills that created or maintained this solution. It is a handoff queue, not authorization to edit installed skills.
 
 - Initialized: 2026-10-28
-- Last reviewed: 2026-11-19
-- Next learning ID: `K2L-0014`
+- Last reviewed: 2026-11-20
+- Next learning ID: `K2L-0015`
 - Active skill owners: $k2-builder, $k2-smartbox-smartobjects, $k2-smartforms, $k2-workflows
 
 ## Status and disposition
@@ -21,6 +21,7 @@ IDs are immutable and never reused. Before adding a learning, search for equival
 |---|---|---|---|---|---|
 | K2L-0001 | implemented-locally | high | $k2-smartbox-smartobjects, $k2-smartforms | local-commit | Native SmartBox financial and Form generation coverage |
 | K2L-0002 | implemented-locally | medium | $k2-smartforms | local-commit | Use native text wrapping by default on generated labels |
+| K2L-0014 | implemented-locally | high | $k2-workflows, $k2-smartforms, $k2-builder | local-commit | Explicit console authoring context, category identity and truthful submission checks |
 
 | K2L-0003 | implemented-locally | high | $k2-workflows | local-commit | Explicit stage-router and arbitrary task outcomes with native IPC returns |
 
@@ -31,6 +32,19 @@ IDs are immutable and never reused. Before adding a learning, search for equival
 | K2L-0013 | proposed | high | All ten K2 skills | upstream-docs-pr | Track Nintex API support by operation |
 
 ## Learning entries
+
+### K2L-0014 — Separate OS elevation, console authoring and workflow data contracts
+
+- Status: implemented-locally
+- Priority: high
+- Affected skill owners: $k2-workflows, $k2-smartforms, $k2-builder
+- Disposition: local-commit
+- Observed behavior: A limited administrator token hid Designer dependencies. After elevation, Integrated console authoring still failed because it used web-context helpers. Category JSON/id assumptions caused a separate null-value error; optional SmartBox date mappings caused a real runtime error.
+- Evidence: [Repair report](workflow-console-repair.md), offline regression tests, live Integrated doctor, disposable workflow publication/cleanup, published expense approval and recovered single test instance. The browser-created header lacked child rows and is not recorded as a complete UI pass.
+- Implemented change: Explicit authenticated public client in both modes; readable-path preflight; typed category display-path handling; exact request-reference checks; required-only status writes; in-place Submit presentation; invalid-child validation; multi-state/next-day Pre-fill verification; improved skill guidance.
+- Acceptance criteria: Authentication guard negatives continue to fail; publication and native integration succeed without changing credentials or deleting the Form; optional values survive status writes; browser and API persistence evidence remain distinct.
+- Feedback history:
+  - 2026-11-13 — User explicitly requested repair, root-cause/skill-report improvements, commit and push. Implemented and validated in the development repository; installed skills will be refreshed through packaging.
 
 ### K2L-0002 - Native label wrapping should default to true
 
@@ -84,6 +98,8 @@ Copy this block for each learning and remove this comment wrapper.
 -->
 
 ## Review history
+
+- 2026-11-13 — Reviewed the workflow-repair milestone. The authorized source commit contains the implementation, tests and guidance; attended two-line Submit verification remains explicitly tracked in the demo project. No unrelated working changes are included.
 
 - 2026-10-28 — Feedback loop initialized for $k2-builder, $k2-smartbox-smartobjects, $k2-smartforms; no learnings recorded yet.
 
@@ -244,6 +260,12 @@ Copy this block for each learning and remove this comment wrapper.
 ## Review history — 2026-11-19
 
 - Update $k2-workflows and $k2-builder in the importer branch with the live-verified draft creation path and an explicit Designer handoff. Publication and native SmartForms integration remain candidates for an upstream documentation PR once Nintex confirms the contracts and they pass live feature verification.
+
+## Review history — 2026-11-20
+
+- Consolidated the importer and console-auth branches in the release source. The console learning moved to `K2L-0014` because both branches had used `K2L-0012`. Retained the integrated and explicit authentication checks, required SmartObject input mappings, request-reference validation, and SmartForms Pre-fill checks. Designer applies the declared submission text and rules. The CLI verifies them on the checked-in Form.
+- Live K2 verification passed for the normal `deploy` command, duplicate rejection, overwrite retaining draft ID, and reuse of a workflow category whose system name differed from its display name. Builder reported draft publication pending and verification required an actual runtime definition. Attended Designer publication and the two-line SmartForms submission journey need separate acceptance evidence.
+- The Windows release build exposed a CRLF owner-line match failure in the Builder's feedback initializer. Corrected the regex and verified it with the existing idempotency test. The full suite built with Node.js 22 selected for broker tests.
 
 ### K2L-0013 — Track Nintex API support by operation
 

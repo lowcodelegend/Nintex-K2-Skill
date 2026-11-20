@@ -31,7 +31,9 @@ namespace K2WorkflowCli
             _client = client;
             _host = host;
             _k2 = k2;
-            var assembly = Assembly.LoadFrom(System.IO.Path.Combine(RuntimeAssemblyResolver.WorkflowDesignerBin, "SourceCode.K2Designer.dll"));
+            var path = System.IO.Path.Combine(RuntimeAssemblyResolver.WorkflowDesignerBin, "SourceCode.K2Designer.dll");
+            RuntimeAssemblyResolver.AssertAssemblyReadable(path);
+            var assembly = Assembly.LoadFrom(path);
             _dataType = assembly.GetType("SourceCode.K2Designer.Providers.Legacy.SmartFormsDataProvider", true);
             _managementType = assembly.GetType("SourceCode.K2Designer.Providers.Legacy.SmartFormsManagementProvider", true);
         }
@@ -72,11 +74,12 @@ namespace K2WorkflowCli
             {
                 var content = GetContent(id, workflow.ProcessFullName, true);
                 var expectedSmartObject = workflow.RequestStatusUpdate == null ? workflow.SmartForms.PrimarySmartObject : workflow.RequestStatusUpdate.SmartObject;
-                primary = (content["itemReferences"] as JArray ?? new JArray()).OfType<JObject>()
-                    .FirstOrDefault(x => (bool?)x["primary"] == true &&
-                        string.Equals(Convert.ToString(x["smartObjectName"]), expectedSmartObject, StringComparison.OrdinalIgnoreCase));
+                primary = SelectPrimaryReference(content["itemReferences"] as JArray, expectedSmartObject);
+                if (primary == null && Environment.GetEnvironmentVariable("K2WF_DEBUG") == "1")
+                    Console.WriteLine("Primary reference diagnostics: " + new JArray((content["itemReferences"] as JArray ?? new JArray()).OfType<JObject>()
+                        .Select(x => O("name", x["name"], "smartObjectName", x["smartObjectName"], "primary", x["primary"], "method", x["smartObjectMethodName"], "methodType", x["smartObjectMehtodType"], "primaryReference", x["primaryReference"]))).ToString(Formatting.None));
                 if (primary == null)
-                    throw new CliException("The SmartForm does not expose the configured primary SmartObject Create reference: " + expectedSmartObject);
+                    throw new CliException("The SmartForm does not expose an unambiguous configured request SmartObject reference: " + expectedSmartObject);
             }
             return new SmartFormsIntegrationDescriptor
             {
@@ -87,11 +90,30 @@ namespace K2WorkflowCli
             };
         }
 
-        public void Integrate(WorkflowSettings workflow, SmartFormsIntegrationDescriptor form)
+        internal static JObject SelectPrimaryReference(JArray references, string expectedSmartObject)
         {
-            if (form == null) return;
-            IntegrateStart(workflow, form);
-            if (!workflow.SmartForms.StartOnly) IntegrateTask(workflow, form);
+            var matches = (references ?? new JArray()).OfType<JObject>().Where(x =>
+                string.Equals(Convert.ToString(x["smartObjectName"]), expectedSmartObject, StringComparison.OrdinalIgnoreCase)).ToArray();
+            var primaries = matches.Where(x => (bool?)x["primary"] == true).ToArray();
+            if (primaries.Length > 1) throw new CliException("Ambiguous primary request reference: " + expectedSmartObject);
+            var primary = primaries.SingleOrDefault();
+            if (primary == null)
+            {
+                var creates = matches.Where(x => string.Equals(Convert.ToString(x["smartObjectMethodName"]), "Create", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(Convert.ToString(x["smartObjectMehtodType"]), "create", StringComparison.OrdinalIgnoreCase)).ToArray();
+                if (creates.Length > 1) throw new CliException("Ambiguous primary request Create reference: " + expectedSmartObject);
+                primary = creates.SingleOrDefault();
+                // Once integrated, GetFormContent commonly reports default Load
+                // references and marks the first (possibly navigation) View primary.
+                if (primary == null && matches.Length == 1) primary = matches[0];
+                if (primary == null && matches.Length > 1) throw new CliException("Ambiguous request reference: " + expectedSmartObject);
+            }
+            if (primary == null) return null;
+            var selected = (JObject)primary.DeepClone();
+            selected.Remove("primaryReference");
+            selected["primary"] = true;
+            selected["startMode"] = "smartForms";
+            return selected;
         }
 
         public void Verify(WorkflowSettings workflow, SmartFormsIntegrationDescriptor form)
@@ -124,14 +146,13 @@ namespace K2WorkflowCli
                 throw new CliException("SmartForm must have exactly one default state when the workflow Start state is default: " + workflow.SmartForms.Form + ".");
 
             AssertCheckedIn(form);
+            WithFormsManager(delegate(FormsManager manager)
+            {
+                VerifyWorkflowReferenceBindings(manager.GetFormDefinition(new Guid(form.FormId)), workflow);
+                return 0;
+            });
 
             Console.WriteLine("Verified SmartForm states: Start default=" + startIsDefault.ToString().ToLowerInvariant() + (workflow.SmartForms.StartOnly ? ", start-only=true" : ", Task default=false"));
-        }
-
-        public void CheckInAfterIntegration(SmartFormsIntegrationDescriptor form)
-        {
-            if (form == null) return;
-            CheckInOwnedForm(form, "integration");
         }
 
         private bool CheckInOwnedForm(SmartFormsIntegrationDescriptor form, string operation)
@@ -266,67 +287,6 @@ namespace K2WorkflowCli
             }
         }
 
-        private void IntegrateStart(WorkflowSettings workflow, SmartFormsIntegrationDescriptor form)
-        {
-            var current = GetContent(form.FormId, workflow.ProcessFullName, true);
-            if (!string.IsNullOrWhiteSpace(Nested(current, "workflowAction", "id")))
-            {
-                var currentStateId = Convert.ToString(current["workflowActionStateId"]);
-                var currentStates = JArray.Parse(InvokeData("GetFormStates", _host, form.FormId));
-                var currentState = currentStates.OfType<JObject>().FirstOrDefault(x =>
-                    string.Equals(Convert.ToString(x["id"]), currentStateId, StringComparison.OrdinalIgnoreCase));
-                var currentIsDefault = currentState != null && GetDefaultStateIds(form.FormId).Contains(currentStateId);
-                if (currentIsDefault == workflow.SmartForms.MakeStartStateDefault) return;
-
-                Console.WriteLine("Reconciling SmartForm Start default state: " + currentIsDefault.ToString().ToLowerInvariant() +
-                    " -> " + workflow.SmartForms.MakeStartStateDefault.ToString().ToLowerInvariant());
-                UpdateExistingStartDefault(workflow, form, current, currentStateId);
-                return;
-            }
-            var state = BaseState(form.FormId);
-            var rule = SelectRule(form.FormId, Convert.ToString(state["id"]), true, workflow.SmartForms.StartRuleContains);
-            var tree = GetRuleTree(form.FormId, state, rule, workflow.ProcessFullName, true);
-            var handler = tree.OfType<JObject>().FirstOrDefault();
-            var actions = handler == null ? null : handler["actions"] as JArray;
-            var preceding = actions == null ? null : actions.OfType<JObject>().LastOrDefault(x => x["id"] != null);
-            var payload = O(
-                "formSystemName", form.SystemName, "formName", form.DisplayName,
-                "processName", workflow.ProcessFullName, "stateName", workflow.SmartForms.StartState,
-                "stateId", string.Empty, "makeDefaultState", workflow.SmartForms.MakeStartStateDefault,
-                "ruleId", rule["definitionGuid"], "ruleInstanceId", rule["instanceGuid"], "ruleSubFormId", rule["subFormGuid"],
-                "precedingActionId", preceding == null ? null : preceding["id"], "handlerId", handler == null ? null : handler["id"],
-                "itemReferences", new JArray(form.PrimaryItemReference.DeepClone()), "actionId", string.Empty,
-                "folio", Expression(workflow.Name), "moveAction", false);
-            InvokeManagement("UpdateForm", _host, payload.ToString(Formatting.None));
-            Console.WriteLine("Integrated SmartForm Start state: " + workflow.SmartForms.StartState);
-        }
-
-        private void UpdateExistingStartDefault(WorkflowSettings workflow, SmartFormsIntegrationDescriptor form, JObject current, string stateId)
-        {
-            var action = current["workflowAction"] as JObject;
-            var actionRule = current["workflowActionRule"] as JObject;
-            var actionRuleId = actionRule == null ? string.Empty : Convert.ToString(actionRule["id"]);
-            var rules = JArray.Parse(InvokeData("GetFormRules", _host, form.FormId, stateId, true));
-            var rule = rules.OfType<JObject>().FirstOrDefault(x =>
-                new[] { "id", "definitionGuid", "instanceGuid" }.Any(name =>
-                    string.Equals(Convert.ToString(x[name]), actionRuleId, StringComparison.OrdinalIgnoreCase)))
-                ?? rules.OfType<JObject>().FirstOrDefault(x => (bool?)x["isDefault"] == true)
-                ?? rules.OfType<JObject>().FirstOrDefault();
-            if (action == null || rule == null) throw new CliException("Existing SmartForm Start integration is missing its action or rule metadata.");
-
-            var itemReferences = current["itemReferences"] as JArray ?? new JArray();
-            var payload = O(
-                "formSystemName", form.SystemName, "formName", form.DisplayName,
-                "processName", workflow.ProcessFullName, "stateName", workflow.SmartForms.StartState,
-                "stateId", stateId, "makeDefaultState", workflow.SmartForms.MakeStartStateDefault,
-                "ruleId", rule["definitionGuid"], "ruleInstanceId", rule["instanceGuid"], "ruleSubFormId", rule["subFormGuid"],
-                "precedingActionId", action["previousActionId"], "handlerId", action["handlerId"],
-                "itemReferences", itemReferences.DeepClone(), "actionId", action["id"],
-                "folio", Expression(workflow.Name), "moveAction", false);
-            InvokeManagement("UpdateForm", _host, payload.ToString(Formatting.None));
-            Console.WriteLine("Updated SmartForm Start default state in place: " + workflow.SmartForms.StartState);
-        }
-
         private HashSet<string> GetDefaultStateIds(string formId)
         {
             return WithFormsManager(delegate(FormsManager manager)
@@ -340,54 +300,57 @@ namespace K2WorkflowCli
             });
         }
 
-        private void IntegrateTask(WorkflowSettings workflow, SmartFormsIntegrationDescriptor form)
-        {
-            var activity = workflow.ProcessFullName + "\\Task";
-            var current = GetContent(form.FormId, activity, false);
-            if (!string.IsNullOrWhiteSpace(Nested(current, "workflowAction", "id"))) return;
-            var state = BaseState(form.FormId);
-            var rule = SelectRule(form.FormId, Convert.ToString(state["id"]), false, "Initializing");
-            var payload = O(
-                "formSystemName", form.SystemName, "afterSubmitNavigateToForm", string.Empty, "afterSubmitNavigateToUrl", string.Empty,
-                "formName", form.DisplayName, "activityName", activity, "activityDisplayName", workflow.UserTask.Name,
-                "stateName", workflow.SmartForms.TaskState, "stateId", string.Empty, "rule", rule.DeepClone(),
-                "itemReferences", new JArray(form.PrimaryItemReference.DeepClone()), "actionType", "workflowview",
-                "viewAt", string.IsNullOrWhiteSpace(workflow.SmartForms.WorkflowStripLocation) ? "bottom" : workflow.SmartForms.WorkflowStripLocation,
-                "actionCommand", "showmessage", "actionMessage", "Worklist item submitted successfully.", "allocateWorkflow", true,
-                "actionId", null, "previousActionGuid", null, "handlerGuid", null, "previousHandlerGuid", null,
-                "afterSubmitRuleId", string.Empty, "afterSubmitRuleInstanceId", string.Empty);
-            InvokeManagement("PublishClientEvent", _host, payload.ToString(Formatting.None));
-            Console.WriteLine("Integrated SmartForm task state: " + workflow.SmartForms.TaskState);
-        }
-
         private JObject GetContent(string formId, string fqn, bool start)
         {
             return JObject.Parse(InvokeData("GetFormContent", _host, formId, fqn, start, string.Empty));
         }
 
-        private JObject BaseState(string formId)
+        internal static void VerifyWorkflowReferenceBindings(string xml, WorkflowSettings workflow)
         {
-            var states = JArray.Parse(InvokeData("GetFormStates", _host, formId));
-            var state = states.OfType<JObject>().FirstOrDefault(x => (bool?)x["isBase"] == true) ?? states.OfType<JObject>().FirstOrDefault();
-            if (state == null) throw new CliException("SmartForm has no state available for workflow integration.");
-            return state;
+            var expected = workflow.RequestStatusUpdate == null ? workflow.SmartForms.PrimarySmartObject : workflow.RequestStatusUpdate.SmartObject;
+            if (string.IsNullOrWhiteSpace(expected)) throw new CliException("An integrated workflow must declare its request SmartObject.");
+            var document = XDocument.Parse(xml);
+            var actions = document.Descendants().Where(x => x.Name.LocalName == "Action").ToArray();
+            var starts = actions.Where(x => ReadProperty(x, "Method") == "StartProcess" && ReadProperty(x, "ProcessName") == workflow.ProcessFullName).ToArray();
+            if (starts.Length != 1 || !starts[0].Descendants().Any(x => x.Name.LocalName == "Parameter"
+                && (string)x.Attribute("TargetType") == "ProcessItemReference" && (string)x.Attribute("TargetID") == expected))
+                throw new CliException("Workflow StartProcess must bind exactly one start to the configured request reference: " + expected);
+            VerifyStartPresentation(document, starts[0], workflow.SmartForms);
+            if (workflow.SmartForms.StartOnly) return;
+            var loads = actions.Where(x => ReadProperty(x, "Method") == "LoadProcess" && ReadProperty(x, "ActivityFullName") == workflow.ProcessFullName + "\\Task").ToArray();
+            if (loads.Length != 1 || !loads[0].Descendants().Any(x => x.Name.LocalName == "Result"
+                && (string)x.Attribute("SourceType") == "ProcessItemReference" && (string)x.Attribute("SourceID") == expected))
+                throw new CliException("Workflow task LoadProcess must bind to the configured request reference: " + expected);
         }
 
-        private JObject SelectRule(string formId, string stateId, bool start, string contains)
+        private static void VerifyStartPresentation(XDocument document, XElement start, SmartFormsSettings settings)
         {
-            var rules = JArray.Parse(InvokeData("GetFormRules", _host, formId, stateId, start));
-            var rule = rules.OfType<JObject>().FirstOrDefault(x => !string.IsNullOrWhiteSpace(contains) &&
-                Convert.ToString(x["displayName"]).IndexOf(contains, StringComparison.OrdinalIgnoreCase) >= 0)
-                ?? rules.OfType<JObject>().FirstOrDefault(x => (bool?)x["isDefault"] == true)
-                ?? rules.OfType<JObject>().FirstOrDefault();
-            if (rule == null) throw new CliException("SmartForm state has no rule available for workflow integration.");
-            return rule;
+            var messages = new[] { new { Key = "Title", Text = settings.StartSuccessMessageTitle },
+                new { Key = "Body", Text = settings.StartSuccessMessageBody } };
+            if (string.IsNullOrWhiteSpace(settings.StartButtonText) && messages.All(x => string.IsNullOrWhiteSpace(x.Text))) return;
+
+            var rule = start.Ancestors().FirstOrDefault(x => x.Name.LocalName == "Event" && (string)x.Attribute("SourceType") == "Control");
+            var controlId = rule == null ? null : (string)rule.Attribute("SourceID");
+            var button = string.IsNullOrWhiteSpace(controlId) ? null : document.Descendants().SingleOrDefault(x =>
+                x.Name.LocalName == "Control" && (string)x.Attribute("Type") == "Button" && (string)x.Attribute("ID") == controlId);
+            if (button == null) throw new CliException("Submission text requires a native Button on the workflow Start rule.");
+            if (!string.IsNullOrWhiteSpace(settings.StartButtonText) && ReadProperty(button, "Text") != settings.StartButtonText)
+                throw new CliException("SmartForm submission Button text differs from smartForms.startButtonText.");
+
+            var parameters = document.Descendants().Where(x => x.Name.LocalName == "Event" && (string)x.Attribute("SourceID") == controlId)
+                .SelectMany(x => x.Descendants()).Where(x => x.Name.LocalName == "Action" && (string)x.Attribute("Type") == "ShowMessage")
+                .SelectMany(x => x.Descendants()).Where(x => x.Name.LocalName == "Parameter" && (string)x.Attribute("TargetType") == "MessageProperty");
+            foreach (var message in messages.Where(x => !string.IsNullOrWhiteSpace(x.Text)))
+                if (!parameters.Where(x => (string)x.Attribute("TargetID") == message.Key).SelectMany(x => x.Descendants())
+                    .Any(x => x.Name.LocalName == "Source" && (string)x.Attribute("SourceType") == "Value" && x.Value == message.Text))
+                    throw new CliException("SmartForm submission feedback differs from smartForms.startSuccessMessage" + message.Key + ".");
         }
 
-        private JArray GetRuleTree(string formId, JObject state, JObject rule, string fqn, bool start)
+        private static string ReadProperty(XElement element, string name)
         {
-            return JArray.Parse(InvokeData("GetRuleHandlersConditionsAndActions", _host, formId, Convert.ToString(state["id"]),
-                Convert.ToString(rule["id"]), Convert.ToString(rule["displayName"]), Convert.ToString(rule["instanceGuid"]), fqn, start));
+            return element.Elements().Where(x => x.Name.LocalName == "Properties").Elements()
+                .Where(x => x.Name.LocalName == "Property" && x.Elements().Any(n => n.Name.LocalName == "Name" && n.Value == name))
+                .SelectMany(x => x.Elements()).Where(x => x.Name.LocalName == "Value").Select(x => x.Value).FirstOrDefault();
         }
 
         private string InvokeData(string name, params object[] args) { return Convert.ToString(InvokeProvider(_dataType, name, args)); }
@@ -398,11 +361,6 @@ namespace K2WorkflowCli
             var provider = Activator.CreateInstance(type, _client);
             try { return type.GetMethods().Single(x => x.Name == name && x.GetParameters().Length == args.Length).Invoke(provider, args); }
             catch (TargetInvocationException ex) { throw new CliException("SmartForms integration failed: " + ex.GetBaseException().Message); }
-        }
-
-        private static JObject Expression(string text)
-        {
-            return O("smartFields", new JArray(O("text", text, "title", text, "internalId", 1, "componentId", 10004)), "componentId", 10008);
         }
 
         private static JObject O(params object[] pairs)

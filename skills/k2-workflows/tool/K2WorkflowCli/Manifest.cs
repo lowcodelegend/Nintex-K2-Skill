@@ -448,6 +448,9 @@ namespace K2WorkflowCli
         [JsonProperty("startState")] public string StartState { get; set; }
         [JsonProperty("taskState")] public string TaskState { get; set; }
         [JsonProperty("startRuleContains")] public string StartRuleContains { get; set; }
+        [JsonProperty("startButtonText")] public string StartButtonText { get; set; }
+        [JsonProperty("startSuccessMessageTitle")] public string StartSuccessMessageTitle { get; set; }
+        [JsonProperty("startSuccessMessageBody")] public string StartSuccessMessageBody { get; set; }
         [JsonProperty("makeStartStateDefault")] public bool MakeStartStateDefault { get; set; }
         [JsonProperty("workflowStripLocation")] public string WorkflowStripLocation { get; set; }
         [JsonProperty("startOnly")] public bool StartOnly { get; set; }

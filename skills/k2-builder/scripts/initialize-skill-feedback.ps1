@@ -128,7 +128,7 @@ function Initialize-FeedbackLoop {
         }
     } else {
         $existingLearnings = [IO.File]::ReadAllText($learningsPath)
-        $ownerPattern = '(?m)^- Active skill owners:[ \t]*(?<owners>[^\r\n]+?)[ \t]*$'
+        $ownerPattern = '(?m)^- Active skill owners:[ \t]*(?<owners>[^\r\n]+?)[ \t]*(?=\r?$)'
         $ownerMatch = [Regex]::Match($existingLearnings, $ownerPattern)
         if ($ownerMatch.Success) {
             $existingOwners = @($ownerMatch.Groups['owners'].Value.Split(',') |

@@ -34,4 +34,8 @@ With `--delete-deployed`, cleanup also removes a remaining native Workflow categ
 
 Exit code `0` indicates success, `2` is a validation/safety error, and `1` is an unexpected runtime error.
 
+With a manifest, `doctor` opens the importer SmartObject connection in Integrated or explicit-credential mode. Commands that need Designer assemblies distinguish an unreadable path from a missing file. Check Windows process elevation when a protected assembly is unreadable. Use `K2WF_DEBUG=1` to include the exception stack on unexpected failures.
+
+Development builds run the offline self-tests through the existing MSBuild script. Installed release packages contain compiled tools without vendor DLLs or source.
+
 `selftest` is read-only and verifies explicit direct destinations plus the authoritative approval-matrix data-field destination without connecting to K2.

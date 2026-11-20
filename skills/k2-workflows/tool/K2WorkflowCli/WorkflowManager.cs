@@ -429,6 +429,14 @@ namespace K2WorkflowCli
                     if (runtime.GetProcessSet(_manifest.Workflow.ProcessFullName) == null)
                         throw new CliException("Published runtime workflow was not found.");
             }
+            if (_manifest.Workflow.SmartForms != null
+                && !string.Equals(_manifest.Workflow.Kind, "request-approval", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(_manifest.Workflow.Kind, "case-lifecycle", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_smartForm == null) _smartForm = new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Load(_manifest.Workflow);
+                new SmartFormsIntegrationManager(_client, _manifest.K2.DesignerHost, _manifest.K2).Verify(_manifest.Workflow, _smartForm);
+                Console.WriteLine("Verified SmartForms integration for " + _manifest.Workflow.Kind + ".");
+            }
             Console.WriteLine("Verified JSON workflow: " + _manifest.Workflow.ProcessFullName + " (ID " + id.Value + ")");
             if (_manifest.Workflow.Publish) Console.WriteLine("Verified published runtime definition.");
             ReportTaskAssignmentPolicy(_manifest.Workflow);
@@ -643,16 +651,23 @@ namespace K2WorkflowCli
 
         internal static bool CategoryMatchesCleanup(int actualId, string actualPath, int? resolvedId, string expectedPath)
         {
-            // The workflow provider sanitizes the category leaf's spaces, but resolves the requested path to its exact ID.
+            // The category system name can differ from its display name.
             return resolvedId.HasValue ? actualId == resolvedId.Value : string.Equals(actualPath, expectedPath, StringComparison.OrdinalIgnoreCase);
         }
 
         private static string GetCategoryFullPath(Category category)
         {
             if (category == null) return null;
-            if (string.IsNullOrWhiteSpace(category.Path)) return category.Name;
-            if (string.IsNullOrWhiteSpace(category.Name)) return category.Path;
-            return category.Path.TrimEnd('\\', '/') + "\\" + category.Name;
+            return CategoryDisplayPath(category.Path, category.Name,
+                category.Metadata == null ? null : category.Metadata.DisplayName);
+        }
+
+        internal static string CategoryDisplayPath(string parentPath, string systemName, string displayName)
+        {
+            var name = string.IsNullOrWhiteSpace(displayName) ? systemName : displayName;
+            if (string.IsNullOrWhiteSpace(parentPath)) return name;
+            if (string.IsNullOrWhiteSpace(name)) return parentPath;
+            return parentPath.TrimEnd('\\', '/') + "\\" + name;
         }
 
         private T WithCategoryServer<T>(Func<CategoryServer, T> action)
@@ -682,21 +697,22 @@ namespace K2WorkflowCli
 
         private JObject FindCategory(string path)
         {
-            var assembly = Assembly.LoadFrom(Path.Combine(RuntimeAssemblyResolver.WorkflowDesignerBin, "SourceCode.K2Designer.dll"));
-            var type = assembly.GetType("SourceCode.K2Designer.Providers.Legacy.CategoryDataProvider", true);
-            var provider = Activator.CreateInstance(type, _client);
-            try
+            return WithCategoryServer(delegate(CategoryServer server)
             {
-                var normalized = path.Replace('\\', '/').Trim('/');
-                var value = type.GetMethod("GetCategoryByPath").Invoke(provider, new object[] { normalized, CategorySystemId, _manifest.K2.DesignerHost });
-                return ParseCategoryResponse(Convert.ToString(value));
-            }
-            catch (TargetInvocationException ex)
-            {
-                if (ex.GetBaseException() is InvalidOperationException) return null;
-                throw new CliException("Unable to read K2 category '" + path + "': " + ex.GetBaseException().Message);
-            }
-            finally { /* Provider shares the manager's designer client. */ }
+                var manager = server.GetCategoryManager(CategorySystemId, true, true);
+                var category = FindCategory(manager, path);
+                return category == null ? null : JObject.FromObject(new { id = category.Id, name = category.Name });
+            });
+        }
+
+        internal static Category FindCategory(CategoryManager manager, string path)
+        {
+            var normalized = path.Replace('/', '\\').Trim('\\');
+            var matches = manager.Categories.Cast<Category>().Where(x => !x.IsRoot && (
+                string.Equals(GetCategoryFullPath(x), normalized, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(CategoryDisplayPath(x.Path, x.Name, null), normalized, StringComparison.OrdinalIgnoreCase))).ToArray();
+            if (matches.Length > 1) throw new CliException("Ambiguous K2 category path: " + path);
+            return matches.SingleOrDefault();
         }
 
         private int? GetProcessId()
@@ -766,8 +782,10 @@ namespace K2WorkflowCli
 
         private static object CreateDesignerClient(K2Settings settings)
         {
-            var assembly = Assembly.LoadFrom(Path.Combine(RuntimeAssemblyResolver.InstallDirectory,
-                "Host Server", "Bin", "SourceCode.Designer.Client.dll"));
+            var path = Path.Combine(RuntimeAssemblyResolver.InstallDirectory,
+                "Host Server", "Bin", "SourceCode.Designer.Client.dll");
+            RuntimeAssemblyResolver.AssertAssemblyReadable(path);
+            var assembly = Assembly.LoadFrom(path);
             var type = assembly.GetType("SourceCode.Designer.Client.K2DesignerManagementClient", true);
             var client = Activator.CreateInstance(type);
             try
@@ -781,7 +799,7 @@ namespace K2WorkflowCli
             }
             catch
             {
-                CloseDesignerClient(client);
+                try { CloseDesignerClient(client); } catch { }
                 throw;
             }
         }

@@ -208,9 +208,9 @@ namespace K2WorkflowCli
                 server.Connection.Open(K2Connection.BuildManagementConnectionString(manifest.K2));
                 K2Connection.AssertAuthenticated(server.Connection, manifest.K2, "K2 category lookup");
                 var manager = server.GetCategoryManager(1, false, true);
-                var category = FindCategory(manager, manifest.Application.WorkflowCategoryPath);
+                var category = WorkflowManager.FindCategory(manager, manifest.Application.WorkflowCategoryPath);
                 if (category != null) return category.Id;
-                var parent = FindCategory(manager, manifest.Application.RootCategoryPath);
+                var parent = WorkflowManager.FindCategory(manager, manifest.Application.RootCategoryPath);
                 if (parent == null)
                     throw new CliException("Application root category does not exist: " + manifest.Application.RootCategoryPath);
 
@@ -220,7 +220,7 @@ namespace K2WorkflowCli
                 child.SetParentCategory(parent);
                 server.AddCategory(child);
                 manager = server.GetCategoryManager(1, false, true);
-                category = FindCategory(manager, manifest.Application.WorkflowCategoryPath);
+                category = WorkflowManager.FindCategory(manager, manifest.Application.WorkflowCategoryPath);
                 if (category == null)
                     throw new CliException("K2 did not return the new workflow category: " + manifest.Application.WorkflowCategoryPath);
                 return category.Id;
@@ -233,17 +233,6 @@ namespace K2WorkflowCli
                     server.DeleteConnection();
                 }
             }
-        }
-
-        private static Category FindCategory(CategoryManager manager, string path)
-        {
-            return manager.Categories.Cast<Category>().SingleOrDefault(x => !x.IsRoot && string.Equals(
-                NormalizePath((x.Path ?? "") + "\\" + x.Name),
-                NormalizePath(path), StringComparison.OrdinalIgnoreCase));
-        }
-        private static string NormalizePath(string path)
-        {
-            return path.Replace('/', '\\').Trim('\\');
         }
 
         private static void ReportResult(SmartObject result, int categoryId, string expectedName)

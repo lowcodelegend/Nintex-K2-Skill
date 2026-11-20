@@ -6,7 +6,9 @@ The installed HTML5 application lives under `K2 smartforms Designer\K2 workflow 
 
 `k2wf deploy` submits the graph to the Workflow Import Service, which applies the configured JSONata spec and saves a Designer draft. Publish in Designer. Published runtime verification and deletion use `WorkflowManagementServer`.
 
-For Integrated Windows authentication, the client retains the hosted Designer's `ConnectionClassContext` behavior. For a non-integrated label, the CLI creates the same public `K2DesignerManagementClient`, opens its public `BaseAPIConnection` with the manifest's environment-variable-backed connection string, verifies authentication mode and security label, and supplies that effective label-qualified identity to save, unlock, category, SmartObject, SmartForms, and runtime operations.
+Both authentication modes use the validated manifest for the Workflow Importer SmartObject connection. Designer metadata reads, unlock, and cleanup use an explicit `K2DesignerManagementClient` management connection. The CLI checks authentication mode and security label and closes its connections. Non-integrated passwords are supplied through `k2env invoke`.
+
+Use the authenticated CategoryServer API for category reads and creation. Identify workflow folders by their display path: K2 may persist an underscore-sanitized system name while retaining the requested display name. An empty JSON result from a web category provider is not proof that a category exists, and must never be cast directly to an integer ID. Refuse ambiguous display paths and preserve the existing application root.
 
 Some concrete on-prem provider namespaces contain the word `Legacy`. They are adapters behind this installed modern web application. That namespace does not authorize use of the older `SourceCode.Workflow.Design` or `SourceCode.Workflow.Authoring` design-time object models.
 

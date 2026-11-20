@@ -78,25 +78,38 @@ namespace K2WorkflowCli
             K2Settings settings,
             string operation)
         {
-            if (connection == null
-                || !connection.IsConnected
-                || !connection.IsAuthenticated)
+            AssertAuthenticationContract(
+                connection != null && connection.IsConnected,
+                connection != null && connection.IsAuthenticated,
+                connection != null && connection.Integrated,
+                connection == null ? null : connection.SecurityLabelName,
+                settings, operation);
+        }
+
+        internal static void AssertAuthenticationContract(
+            bool connected, bool authenticated, bool integrated,
+            string securityLabel, K2Settings settings, string operation)
+        {
+            if (!connected || !authenticated)
             {
                 throw new CliException(
                     operation + " connection is not authenticated.");
             }
-            if (connection.Integrated != settings.Integrated)
+            if (integrated != settings.Integrated)
             {
                 throw new CliException(
                     operation + " authentication mode does not match the manifest.");
             }
             if (!string.Equals(
-                connection.SecurityLabelName,
+                securityLabel,
                 settings.SecurityLabel,
                 StringComparison.OrdinalIgnoreCase))
             {
                 throw new CliException(
-                    operation + " security label does not match the manifest.");
+                    operation + " security label does not match the manifest (expected '"
+                    + settings.SecurityLabel + "', received '"
+                    + (string.IsNullOrWhiteSpace(securityLabel) ? "<empty>" : securityLabel)
+                    + "').");
             }
         }
 
