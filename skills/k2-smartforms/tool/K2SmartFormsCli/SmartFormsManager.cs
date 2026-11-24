@@ -970,6 +970,7 @@ namespace K2SmartFormsCli
                             var preFill = ResolvedFormPreFill.Resolve(deploymentManager, form, _manifest.Application.Views, lookupSources);
                             definition = FormPreFillRules.Apply(definition, form, preFill);
                             definition = LabelWrappingDefinition.Apply(definition);
+                            FormRuleReferenceDefinition.Verify(definition, form.Name);
                             deploymentManager.DeployForms(definition, _manifest.Application.GetFormCategoryPath(form), _manifest.Application.CheckIn);
                             var info = deploymentManager.GetForm(form.Name);
                             Console.WriteLine("Form: deployed (" + form.Name + ", " + info.Guid + ", theme " + info.Theme.Name + ", styleProfile=" + (formStyleProfile == null ? "none" : formStyleProfile.Name) + ", legacyTheme=" + form.UseLegacyTheme.ToString().ToLowerInvariant() + ", commonHeader=" + (formCommonHeader == null ? "none" : formCommonHeader.ViewName) + ", commonFooter=" + (formCommonHeader == null || formCommonHeader.Footer == null ? "none" : formCommonHeader.Footer.ViewName) + ", tabs=" + form.Tabs.Count + ", worklist=" + form.Tabs.Any(x => x.Worklist != null).ToString().ToLowerInvariant() + ", preFill=" + (form.PreFill.EffectiveEnabled ? "test-only" : "disabled") + ")");
@@ -1439,6 +1440,7 @@ namespace K2SmartFormsCli
                 string roundTrip;
                 if (isForm)
                 {
+                    FormRuleReferenceDefinition.Verify(definition, name);
                     VerifyFormControlAvailability(definition, name, formControlFlags);
                     VerifyFormBooleanControlProperties(definition, name, formBooleanControlProperties,
                         formInitialBooleanControlProperties);

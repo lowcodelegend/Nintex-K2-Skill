@@ -17,7 +17,7 @@ Before the first authorized project mutation, use the sibling `$k2-builder` skil
 2. Start from [package-manifest.template.json](assets/package-manifest.template.json). Keep credentials out of the manifest.
 3. Run `doctor`, then `plan`. The plan must list every discovered artifact, package/reference/exclusion boundary, SmartObject storage provider, SmartBox dataset included or excluded, and external prerequisite. For modern custom controls, verify P&D inclusion of the definition/resources instead of requiring a separate ZIP installation by default. For requested native SmartBox demo/sample datasets, use Package Data for the explicitly selected datasets; use a separate loader when selected-row or merge behavior is needed.
 4. Present that complete plan to the user and ask for confirmation. Never infer confirmation from an earlier build/deploy request.
-5. After confirmation, run `package -Confirm`. Preserve the generated package XML, `.kspx`, log, and SHA-256.
+5. After confirmation, run `package -Confirm`. Compare K2's read-back inventory with every reviewed definition/dataset, and preserve the generated package XML, `.kspx`, log, and SHA-256. Report large-package warnings alongside native validation; do not reject solely by file size or omit reviewed artifacts to reduce it.
 6. Run `plan-deploy`. Review every generated `Default`, `Deploy`, `Exclude`, and `UseExisting` resolution. Do not use `-NoAnalyze`.
 7. Present the deployment plan and ask for a second confirmation. Call out every SmartObject data deployment and any overwrite-like resolution.
 8. Run `deploy -Confirm`, then verify the target application through its ordinary runtime entry points.

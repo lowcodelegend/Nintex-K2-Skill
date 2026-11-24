@@ -25,9 +25,11 @@ Before deployment, show all generated resolution actions and separately highligh
 - Exclude packaged SmartObject data at deployment until an explicit reviewed resolution changes it to `Deploy`.
 - Analyze deployments; never expose `NoAnalyze` as a normal option.
 - Stop on conflicts or failures rather than accepting a partial release.
-- Keep packages at or below Nintex's documented 5 MB maximum.
+- Report the actual package size. Nintex's published performance considerations state a 5 MB maximum, but native export/open can succeed above that size on self-hosted builds. Warn above 5 MB and retain target-analysis evidence; do not impose a wrapper-only rejection or remove reviewed artifacts solely to reduce file size. See [Nintex package and deployment considerations](https://help.nintex.com/en-US/nintexautomation/userguide/5.9.1/Content/PackageAndDeploy/PandD-Considerations.htm).
 - Deploy packages sequentially.
 - Preserve `.kspx`, package/deployment XML, logs, SHA-256, manifest checksum, source revision, and verification evidence.
+
+Write every reviewed category-derived and explicit artifact into the native include configuration. A category root plus explicit includes may omit descendants. After creation, use K2's Write-PackageConfig output to compare the actual definition and selected SmartBox-data inventory against the plan; a nonempty archive alone is insufficient.
 
 ## Included and external artifacts
 

@@ -1,5 +1,7 @@
 # k2forms CLI
 
+Generation and `verify` reject missing/conflicting View context on Form SetControlProperties actions and unscoped View sources inside Form validation expressions. These checks complement authoring-model hydration; successful XML round trips alone do not prove that K2 Designer or P&D can resolve a rule reference.
+
 ## Commands
 
 | Command | Mutates K2 | Behavior |

@@ -76,6 +76,7 @@
     <Compile Include="FormActionAlignment.cs" />
     <Compile Include="FormLayoutDefinition.cs" />
     <Compile Include="FormPreFillRules.cs" />
+    <Compile Include="FormRuleReferenceDefinition.cs" />
     <Compile Include="FormThemeDefinition.cs" />
     <Compile Include="GuidedJourneyRules.cs" />
     <Compile Include="LabelWrappingDefinition.cs" />

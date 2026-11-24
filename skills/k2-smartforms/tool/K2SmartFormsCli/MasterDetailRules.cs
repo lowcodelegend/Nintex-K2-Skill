@@ -1189,6 +1189,7 @@ namespace K2SmartFormsCli
                                 expression);
                         control.Add(new XElement(ns + "Conditions", expression));
                     }
+                    FormRuleReferenceDefinition.ScopeValidationSources(control, masterInstance);
                     return control;
                 }))));
             return groupId;

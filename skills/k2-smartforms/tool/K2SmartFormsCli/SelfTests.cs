@@ -15,6 +15,7 @@ namespace K2SmartFormsCli
             TestCategoryCleanupPaths();
             TestViewOwnedMasterDetailRules();
             TestMasterDetailValidationComposition();
+            TestFormRuleReferenceScopes();
             TestReusableViewValidationPatternOwnership();
             TestMissingOptionalControlMappings();
             TestRequiredReadOnlyCreateInputGate();
@@ -452,6 +453,15 @@ namespace K2SmartFormsCli
             MasterDetailRules.Verify(transformed, formDefinition, resolved);
             var document = XDocument.Parse(transformed);
             var group = document.Descendants("ValidationGroup").Single();
+            Assert(group.Descendants("Item").Where(x => (string)x.Attribute("SourceType") == "Control")
+                .All(x => (string)x.Attribute("SourceInstanceID") == "master-instance"),
+                "Form Boolean, numeric and optional-blank validation expression sources carry the master View instance");
+            FormRuleReferenceDefinition.Verify(transformed, formDefinition.Name);
+            var unscopedValidation = XDocument.Parse(transformed);
+            unscopedValidation.Descendants("ValidationGroup").Single().Descendants("Item")
+                .First(x => (string)x.Attribute("SourceType") == "Control").Attribute("SourceInstanceID").Remove();
+            AssertThrows(delegate { FormRuleReferenceDefinition.Verify(unscopedValidation.ToString(), formDefinition.Name); },
+                "explicit valid SourceInstanceID");
             Assert((string)group.Element("Name") == "ValidationGroupForEvent", "native validation-group name");
             var saveEvent = document.Descendants("Event").Single(x => (string)x.Attribute("SourceName") == "btnSave");
             var saveButtonId = (string)saveEvent.Attribute("SourceID");
@@ -686,6 +696,55 @@ namespace K2SmartFormsCli
             {
                 MasterDetailRules.VerifyMasterViewRules(invalidMaster.ToString(), "Claim", new[] { contract });
             }, "canonical Handler Location 'view'");
+        }
+
+        private static void TestFormRuleReferenceScopes()
+        {
+            const string xml = "<Form xmlns='urn:scope-regression' ID='form'><Name>Scoped Form</Name>" +
+                "<Controls><Control ID='local' Type='TextBox'/></Controls>" +
+                "<Items><Item ID='view-instance' ViewID='view'/><Item ID='other-instance' ViewID='other-view'/></Items>" +
+                "<States><State><Events><Event><Handlers><Handler><Actions>" +
+                "<Action Type='Transfer' InstanceID='view-instance'><Properties>" +
+                "<Property><Name>DesignTemplate</Name><Value>SetControlProperties</Value></Property>" +
+                "<Property><Name>ViewID</Name><Value>view</Value></Property>" +
+                "<Property><Name>ControlID</Name><Value>view-control</Value></Property></Properties>" +
+                "<Parameters><Parameter TargetInstanceID='view-instance' TargetPath='view-control' TargetType='ControlProperty'/></Parameters>" +
+                "</Action></Actions></Handler></Handlers></Event></Events></State></States>" +
+                "<ValidationGroups><ValidationGroup><ValidationGroupControls>" +
+                "<ValidationGroupControl ControlID='view-control' InstanceID='view-instance'><Conditions><Equals>" +
+                "<Item SourceType='Control' SourceID='view-control' SourceInstanceID='view-instance'/>" +
+                "<Item SourceType='Value'>True</Item></Equals></Conditions></ValidationGroupControl>" +
+                "</ValidationGroupControls></ValidationGroup></ValidationGroups></Form>";
+            FormRuleReferenceDefinition.Verify(xml, "Scoped Form");
+            var document = XDocument.Parse(xml);
+            var viewProperty = document.Descendants().Single(x => x.Name.LocalName == "Property" &&
+                x.Elements().Any(y => y.Name.LocalName == "Name" && y.Value == "ViewID"));
+            viewProperty.Remove();
+            AssertThrows(delegate { FormRuleReferenceDefinition.Verify(document.ToString(), "Scoped Form"); }, "owning ViewID");
+            document = XDocument.Parse(xml);
+            document.Descendants().Single(x => x.Name.LocalName == "Action").Elements().First(x => x.Name.LocalName == "Properties")
+                .Add(new XElement(document.Root.Name.Namespace + "Property",
+                    new XElement(document.Root.Name.Namespace + "Name", "FormID"),
+                    new XElement(document.Root.Name.Namespace + "Value", "form")));
+            AssertThrows(delegate { FormRuleReferenceDefinition.Verify(document.ToString(), "Scoped Form"); }, "not FormID");
+            document = XDocument.Parse(xml);
+            document.Descendants().Single(x => x.Name.LocalName == "Parameter").SetAttributeValue("TargetInstanceID", "other-instance");
+            AssertThrows(delegate { FormRuleReferenceDefinition.Verify(document.ToString(), "Scoped Form"); }, "conflicting View instance");
+            document = XDocument.Parse(xml);
+            var source = document.Descendants().Single(x => x.Name.LocalName == "Item" && (string)x.Attribute("SourceType") == "Control");
+            source.Attribute("SourceInstanceID").Remove();
+            AssertThrows(delegate { FormRuleReferenceDefinition.Verify(document.ToString(), "Scoped Form"); }, "explicit valid SourceInstanceID");
+            var member = source.Ancestors().Single(x => x.Name.LocalName == "ValidationGroupControl");
+            FormRuleReferenceDefinition.ScopeValidationSources(member, "view-instance");
+            FormRuleReferenceDefinition.Verify(document.ToString(), "Scoped Form");
+            Assert(member.Descendants().Single(x => x.Name.LocalName == "Item" && (string)x.Attribute("SourceType") == "Value")
+                .Attribute("SourceInstanceID") == null, "scoping validation sources leaves literal constants unchanged");
+            source.SetAttributeValue("SourceInstanceID", "deleted-instance");
+            AssertThrows(delegate { FormRuleReferenceDefinition.Verify(document.ToString(), "Scoped Form"); }, "explicit valid SourceInstanceID");
+            source.SetAttributeValue("SourceInstanceID", "other-instance");
+            FormRuleReferenceDefinition.Verify(document.ToString(), "Scoped Form");
+            source.Attribute("SourceInstanceID").Remove(); source.SetAttributeValue("SourceID", "local");
+            FormRuleReferenceDefinition.Verify(document.ToString(), "Scoped Form");
         }
 
         private static void TestMasterDetailValidationComposition()

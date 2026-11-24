@@ -3,8 +3,8 @@
 This project-local log captures reusable evidence for improving the K2 skills that created or maintained this solution. It is a handoff queue, not authorization to edit installed skills.
 
 - Initialized: 2026-10-28
-- Last reviewed: 2026-11-20
-- Next learning ID: `K2L-0015`
+- Last reviewed: 2026-11-24
+- Next learning ID: `K2L-0017`
 - Active skill owners: $k2-builder, $k2-smartbox-smartobjects, $k2-smartforms, $k2-workflows
 
 ## Status and disposition
@@ -21,6 +21,8 @@ IDs are immutable and never reused. Before adding a learning, search for equival
 |---|---|---|---|---|---|
 | K2L-0001 | implemented-locally | high | $k2-smartbox-smartobjects, $k2-smartforms | local-commit | Native SmartBox financial and Form generation coverage |
 | K2L-0002 | implemented-locally | medium | $k2-smartforms | local-commit | Use native text wrapping by default on generated labels |
+| K2L-0015 | implemented-locally | high | $k2-smartforms | local-commit | Scope Form validation expression sources and verify embedded View property-action context |
+| K2L-0016 | implemented-locally | high | $k2-package-deployment | local-commit | Export every reviewed artifact, verify native inventory and report size as an evidenced warning |
 | K2L-0014 | implemented-locally | high | $k2-workflows, $k2-smartforms, $k2-builder | local-commit | Explicit console authoring context, category identity and truthful submission checks |
 
 | K2L-0003 | implemented-locally | high | $k2-workflows | local-commit | Explicit stage-router and arbitrary task outcomes with native IPC returns |
@@ -287,3 +289,21 @@ Copy this block for each learning and remove this comment wrapper.
 - Next review: Verify SmartBox create, populated update, and cleanup in a disposable category before an upstream code change. Verify a generated SQL SmartObject with a varchar(max) file column and a ConnectedUserFQN procedure under two callers before an upstream code change. Use Designer-generated fixtures to verify advanced Forms controls, layout, and rules before changing their implementation.
 - Live verification: 2026-11-19 — Using the isolated API Support Validation 7322259 category and SQL fixture database, the SmartBox authoring SDK created CRUD objects, preserved a populated row through adding a length-limited Text field and widening Number to Decimal, and round-tripped fractional values. Direct deletion of a separate populated user SmartBox fixture succeeded after AutoGuid generation. The live generated SQL SmartObject accepted the typed File override and round-tripped the filename and exact bytes through varchar(max). Typed MapParameter plus removal of the caller parameter returned the current K2 caller to the stored procedure. The second caller was unavailable.
 - Live verification: 2026-11-19 — Typed Form authoring deployed two tabs, a checked-in Style Profile, and a native Worklist control and Navigate rule that survived check-in and reload. The published list View advanced from version 1 to 2 with GUID, category, and dependent Form preserved. The validation Forms remain published. Runtime routes reached the K2 sign-in page. Task click and native Start/Task rules remain unverified because the installed Workflow Designer assembly returned Access Denied on fixture publication and the browser route requires an authenticated session.
+
+### K2L-0015 - Form rule references need explicit View context
+
+- Status: implemented-locally. Priority: high. Affected skill owner: $k2-smartforms. Disposition: local-commit. Last reviewed: 2026-11-24.
+- Observed behavior: Native P&D rejected Form validation expressions for 13 View controls even though their ValidationGroupControl members had InstanceID. The 26 nested control-source Items lacked SourceInstanceID. The shared master-detail generator had this defect for Boolean, numeric-bound and optional-blank conditions. Separately, a project-local Form coordinator emitted 283 SetControlProperties actions using FormID for View controls and omitting ViewID. The global control GUIDs existed, so GUID-only checks and native Authoring round trips missed the scope errors.
+- Implemented change: Scope generated master-detail validation sources to the master View instance. Check property-action ViewID/instance consistency and validation-source instance references before Form deployment and during native-hydration verification. Preserve literal constants, local Form-control sources, explicit valid cross-View references and inherited subform rules. The project-local coordinator was corrected in its own project; this repository adds a guard against that shape rather than claiming the shared generator previously emitted those actions.
+- Evidence: New namespace-aware positive/negative Form-rule self-tests, existing master-detail Boolean/range/optional validation fixtures, complete SmartForms build/self-tests and Runtime/Calendar helper checks pass. Against the live repro snapshots, the shared verifier accepts all 27 repaired Forms and rejects the seven original invalid Forms. Native P&D exported the repaired solution after the 26 missing source references were fixed. No private assemblies, customer definitions, credentials or raw application data are committed.
+- Acceptance criteria: Generated condition sources carry the correct instance; missing/deleted/conflicting contexts fail before publication; intended values, conditions and IDs remain unchanged; native P&D resolves the repaired references. XML hydration alone is not promoted to browser acceptance.
+- Feedback history: 2026-11-24 - User explicitly requested fixing the skill repository and committing/pushing to remote master. Corrected the shared generator, added regression/verification coverage and updated the skill contract. Native application repairs remain outside this source repository.
+
+### K2L-0016 - Package inventory must match the plan; size reporting must match native behavior
+
+- Status: implemented-locally. Priority: high. Affected skill owner: $k2-package-deployment. Disposition: local-commit. Last reviewed: 2026-11-24.
+- Observed behavior: The plan listed category-derived and explicit artifacts, but configuration serialization included only explicit artifacts. With a category root plus explicit includes, a real export omitted 18 of 27 planned Forms. A nonempty-archive check did not detect the incomplete release. Configuration now explicitly selects every reviewed artifact, respecting excluded types, and compares K2 Write-PackageConfig read-back against every planned definition and selected SmartBox dataset.
+- Size evidence: Nintex's official 5.9.1 package considerations page, Performance, states a 5 MB maximum: https://help.nintex.com/en-US/nintexautomation/userguide/5.9.1/Content/PackageAndDeploy/PandD-Considerations.htm . The skill added its own unconditional post-export size rejection. The installed self-hosted engine successfully created and reopened exports around 9-10 MiB. The user supplied a similar manual export and requested that the hard gate be corrected. Keep the official statement and measured size visible as a warning; do not present a wrapper-only rejection as a native failure or silently omit artifacts to meet it. Intended-target compatibility/analysis remains required.
+- Validation: Pure PowerShell tests cover category plus explicit selection, excluded types/data, retained native validation, missing definition rejection and missing selected-data rejection. Live native export/read-back matches 27 Forms, 59 Views, 31 SmartObjects, nine workflows and 16 selected whole SmartBox datasets. The archive has 173 members, including actual modern-control JS/CSS/image resources, and is 10,201,725 bytes. Native deployment configuration generation on the source environment succeeds; no target deployment is claimed.
+- Acceptance criteria: Complete reviewed selection, native read-back equality, preserved exclusions/data approval, accurate size warning, and native target analysis without NoAnalyze. Raw packages and source application data remain outside the skill repository.
+- Feedback history: 2026-11-24 - Implemented the selection/completeness checks and size-policy correction within the user-authorized skill repair. Keep source validation distinct from clean-target acceptance. Recommend an upstream regression fixture based on this failure mode, already included in the source tests.

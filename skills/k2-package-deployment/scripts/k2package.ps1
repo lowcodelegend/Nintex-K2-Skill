@@ -12,7 +12,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
 
-$script:ToolVersion = '0.1.1'
+$script:ToolVersion = '0.1.2'
 $script:SmartBoxServiceClass = 'SourceCode.SmartObjects.Services.SmartBox.SBService'
 $script:SqlServiceClass = 'SourceCode.SmartObjects.Services.SQL.SqlServerService'
 $script:SmartBoxServiceTypeGuid = [Guid]'bb835c3f-aecb-4182-9ab3-26724c3a8860'
@@ -438,6 +438,34 @@ function Get-ExcludeNamespace {
     }
 }
 
+function Get-SelectedPackageArtifacts {
+    param($Plan)
+    # A category root does not reliably select its descendants once explicit
+    # includes are present. Export every artifact shown in the reviewed plan.
+    @($Plan.Artifacts | Where-Object { $_.Type -notin $Plan.ExcludeTypes } | Sort-Object Type, Name -Unique)
+}
+
+function Assert-PackageInventory {
+    param($Plan, [xml]$Inventory)
+    $namespaces = [Xml.XmlNamespaceManager]::new($Inventory.NameTable)
+    $namespaces.AddNamespace('package', 'http://schemas.k2.com/Package')
+    $members = @($Inventory.SelectNodes('/package:c/package:p/package:incs/package:i', $namespaces))
+    if ($members.Count -eq 0) { throw 'K2 created a package without any reported members. Review the category and the package configuration.' }
+    foreach ($item in @(Get-SelectedPackageArtifacts $Plan)) {
+        $namespace = Get-ArtifactNamespace $item.Type
+        if (-not @($members | Where-Object { $_.GetAttribute('n') -eq $item.Name -and $_.GetAttribute('ns') -eq $namespace }).Count) {
+            throw ('Created package omits a reviewed artifact: {0}: {1}' -f $item.Type, $item.Name)
+        }
+    }
+    foreach ($item in @($Plan.DataDecisions | Where-Object { $_.PackageData })) {
+        $namespace = 'urn:SourceCode/SmartObjects/SmartObjectData?' + $item.SmartObject
+        $name = $item.SmartObject + ' Data'
+        if (-not @($members | Where-Object { $_.GetAttribute('n') -eq $name -and $_.GetAttribute('ns') -eq $namespace }).Count) {
+            throw ('Created package omits reviewed SmartBox data: ' + $item.SmartObject)
+        }
+    }
+}
+
 function Write-PackageConfiguration {
     param($Plan, [string]$Path)
     $settings = New-Object Xml.XmlWriterSettings
@@ -460,11 +488,11 @@ function Write-PackageConfiguration {
             }
             $writer.WriteEndElement()
         }
-        $explicit = @($Plan.Artifacts | Where-Object { $_.Source -eq 'explicit' })
+        $selected = @(Get-SelectedPackageArtifacts $Plan)
         $data = @($Plan.DataDecisions | Where-Object { $_.PackageData })
-        if ($explicit.Count -gt 0 -or $data.Count -gt 0) {
+        if ($selected.Count -gt 0 -or $data.Count -gt 0) {
             $writer.WriteStartElement('incs')
-            foreach ($item in $explicit) {
+            foreach ($item in $selected) {
                 $writer.WriteStartElement('i')
                 $writer.WriteAttributeString('n', $item.Name)
                 $writer.WriteAttributeString('ns', (Get-ArtifactNamespace $item.Type))
@@ -511,7 +539,9 @@ function Invoke-Package {
     New-Package @parameters
     if (-not (Test-Path -LiteralPath $Plan.OutputFile -PathType Leaf)) { throw "K2 did not create the package: $($Plan.OutputFile)" }
     $packageItem = Get-Item -LiteralPath $Plan.OutputFile
-    if ($packageItem.Length -gt 5MB) { throw "Created package exceeds Nintex's documented 5 MB maximum: $($packageItem.Length) bytes." }
+    if ($packageItem.Length -gt 5MB) {
+        Write-Warning ("Package size is $($packageItem.Length) bytes. Nintex's published performance considerations state a 5 MB maximum, but this is not a universal native-engine rejection. Retain the size warning and validate the package against the intended target; do not shrink or omit reviewed artifacts to satisfy a wrapper-only size gate.")
+    }
     $inventoryPath = Join-Path ([IO.Path]::GetTempPath()) ('k2-package-inventory-' + [guid]::NewGuid().ToString('N') + '.xml')
     try {
         try {
@@ -521,11 +551,7 @@ function Invoke-Package {
         }
 
         [xml]$inventory = Get-Content -LiteralPath $inventoryPath -Raw
-        $namespaces = [Xml.XmlNamespaceManager]::new($inventory.NameTable)
-        $namespaces.AddNamespace('package', 'http://schemas.k2.com/Package')
-        if ($null -eq $inventory.SelectSingleNode('/package:c/package:p/package:incs/package:i', $namespaces)) {
-            throw 'K2 created a package without any reported members. Review the category and the package configuration.'
-        }
+        Assert-PackageInventory $Plan $inventory
     } finally {
         if (Test-Path -LiteralPath $inventoryPath -PathType Leaf) { Remove-Item -LiteralPath $inventoryPath }
     }
